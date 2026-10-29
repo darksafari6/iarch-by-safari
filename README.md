@@ -1,0 +1,200 @@
+<p align="center">
+  <img src="https://img.shields.io/gitlab/contributors/minimalinux/minimaDots" alt="Contributors">
+  <img src="https://img.shields.io/gitlab/last-commit/minimalinux/minimaDots" alt="Last Commit">
+  <img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License">
+</p>
+
+<div align="center">
+<details>
+  <summary><b>▶️ Click to view Video Trailer</b></summary>
+  <br>
+  <a href="https://www.youtube.com/watch?v=HJhm0aT3lNw">
+    <img src="https://img.youtube.com/vi/HJhm0aT3lNw/hqdefault.jpg" alt="Watch Trailer" height="250">
+  </a>
+</details>
+</div>
+
+
+
+### Fresh Arch Install Requirement
+
+**This configuration is tailored for a FRESH INSTALL of VANILLA ARCH LINUX using the archinstall script with the Hyprland profile.** In archinstall choose NetworkManager (default backend) and leave sddm as the greeter. The script will replace sddm for Noctalia-Greeter. We strongly advise against attempting this installation on derivative distributions (such as CachyOS, Manjaro, etc.) as package and configuration conflicts are highly likely.
+
+## 🚀 Arch Installation Guide
+
+### Prerequisites
+
+```bash
+sudo pacman -S git
+```
+
+### Step 1: Clone the Repository
+
+Open your terminal and clone the repository using `git`:
+
+```bash
+git clone https://github.com/darksafari6/minimaLinux.git
+```
+
+### Step 2: Change directory to the repo
+```bash
+cd ./minimaLinux
+```
+
+### Step 3: Make the install script executable
+
+```bash
+chmod +x ./install.sh
+```
+
+### Step 4: Run the install script, YIPPE
+```bash
+sudo ./install.sh
+```
+
+### Fedora Installation 
+
+<details>
+  <summary align="center"><b>📸 Click to view Screenshot</b></summary>
+  <p align="center">
+    <img src="Fedora.png" height="350" style="vertical-align: middle;">
+  </p>
+</details>
+
+We recommend using a fresh install of Fedora using the Fedora Everything install ISO with package selections seen in the above screenshot.
+
+The Fedora installer will enable the following COPR repositories to provide additional packages needed for the setup:
+
+- [lionheartp/Hyprland](https://copr.fedorainfracloud.org/coprs/lionheartp/Hyprland/)
+- [leloubil/wl-clip-persist](https://copr.fedorainfracloud.org/coprs/leloubil/wl-clip-persist/)
+- [tofik/nwg-shell](https://copr.fedorainfracloud.org/coprs/tofik/nwg-shell/)
+
+We are also using [Satty](https://github.com/gabm/Satty) for screen annotations. 
+
+Credit goes to these developers for their excellent work.
+
+To install on Fedora, follow these steps:
+
+1. Install Git:
+   ```bash
+   sudo dnf install git -y
+   ```
+
+2. Clone the repository:
+   ```bash
+   git clone https://github.com/darksafari6/minimaLinux.git
+   ```
+
+3. Change into the project directory:
+   ```bash
+   cd minimaLinux
+   ```
+
+4. Make the Fedora installer executable:
+   ```bash
+   chmod +x ./fedora_install.sh
+   ```
+
+5. Run the Fedora installer:
+   ```bash
+   sudo ./fedora_install.sh
+   ```
+
+
+### Development Status
+
+This script, is now released. It is no longer in beta state. This project originally started as a vibe coded project to see what we could get away with. It quickly turned into only being an outline, as A.I is too frustrating to deal with after more than 80 lines of code. The rest, is completely scripted by tonekneeo, and myself.
+
+### Lua Update
+
+The Hyprland configuration now uses Lua-based. The old .conf-based structure is no longer used.
+
+We have also switched over to Noctalia v5.
+
+### What this does
+
+This script turns a fresh Arch + Hyprland or Fedora setup into the minimaLinux desktop by installing required packages, dropping useless ones and adding preconfigured streamlined dotfiles.
+
+### Nvidia Users
+
+NVIDIA Users: On line 32 of the startup.lua change local enable_nvidia_optional = false to local enable_nvidia_optional = true
+
+The script will prompt the user and update the startup.lua as needed.
+
+### Credits
+
+The primary application bar (`noctalia`) is based on the exceptional work by **Noctalia**. All credit for the bar's design and functionality goes to them:
+
+> [**noctalia-dev**](https://noctalia.dev/)
+
+### Community
+
+Join the Discord server: [HERE](https://discord.gg/rQTabZmYHh)
+
+
+## 📦 What's Included?
+
+This repository provides comprehensive configurations for a complete, customized Hyprland desktop environment.
+
+| Component | Description |
+| :--- | :--- |
+| **`hypr`** | Main Hyprland configuration, including keybinds, window rules, and workspace setup. **(Requires customization)** |
+| **`kitty`** | Configuration for the primary GPU-accelerated terminal emulator. |
+| **`fish`** | Configuration for the Fish shell, including custom functions and the Starship prompt. |
+| **`Noctalia`** | The main bar, includes various theming settings, general use case settings. It's very much an all in one. |
+| **`fastfetch`** | Configuration for displaying system information with custom images/ASCII art. |
+| **`install.sh`** | An automated script for package installation and configuration deployment. |
+| **`uninstall.sh`** | A script to revert changes and restore previous configurations (if a backup exists). |
+
+---
+
+## ✨ minimaOS Glass Desktop (Noctalia v5+)
+
+The minimaOS profile adds an iPhone-inspired glass aesthetic to the existing Noctalia v5+ session: a rounded translucent top bar, floating Control Center, a magnified dock, translucent Settings, top-right notification cards, and a custom dark/light palette. It keeps Linux-native services and permissions; unsupported hardware controls are not faked.
+
+- Main profile: [`.config/noctalia/config.toml`](.config/noctalia/config.toml)
+- Custom palette: [`.config/noctalia/palettes/minimaOS.json`](.config/noctalia/palettes/minimaOS.json)
+- Architecture, backup, and recovery notes: [`docs/minimaOS-Glass-Experience.md`](docs/minimaOS-Glass-Experience.md)
+- Read-only system diagnostics: run `bash scripts/minimaos-healthcheck.sh` as your normal desktop user.
+
+**Shortcuts:** `SUPER + I` opens Control Center; `SUPER + SHIFT + N` opens notification history; `SUPER + SHIFT + A` opens audio; `SUPER + SHIFT + W` opens network; `SUPER + SHIFT + B` opens Bluetooth. `SUPER + T` continues to open Settings.
+
+The profile targets Noctalia v5+; Noctalia v4 uses a different configuration model. After applying a profile, run `noctalia config validate` and verify the live Wayland session before removing backups. See the [Noctalia v5+ configuration docs](https://docs.noctalia.dev/noctalia/configuration/) for configuration precedence and validation.
+
+Notification sound uses Noctalia's built-in Freedesktop sound theme at a restrained volume. An arbitrary custom iPhone-style sound file is not wired up because a supported custom-file hook was not verified; this avoids introducing a conflicting notification daemon.
+
+---
+
+## ⚙️ Customization Required
+
+These dotfiles are provided strictly as a **template**. You **must** review and customize several files to align with your specific hardware, desired aesthetics, and system paths.
+
+| File/Section | Customization Needed | Notes |
+| :--- | :--- | :--- |
+| **`hypr/monitors.lua`** | Monitor setup (resolution, scaling, refresh rate). | The current default is `monitor=,preferred,auto,1`. You may use `nwg-displays` to help configure and export precise settings. |
+| **`hypr/keybind.lua`** | Set bindings here. | Super+E is to open your file explorer. Super+D is the app launcher. |
+| **Theming** | Color schemes, fonts, and global aesthetic settings. | The default theme is minimal. Customize these within Noctalia's settings, go to color scheme, and then templates, you can set kitty, GTK, or whatever else you would like to match your color scheme. |
+| *NOTE ON THEMING* | adw-gtk3-dark | This will be needed to make changes to GTK. This comes preinstalled, you will have to set it in GTK Settings. |
+| **`fastfetch/config.jsonc`** | Theming/Images. | Update the configuration for your specific image or ASCII art display. |
+
+---
+
+
+
+### Additional Install Notes
+
+For extra setup and troubleshooting details (including Arch ISO Wi-Fi setup before archinstall), see [InstallNotes.md](InstallNotes.md).
+
+
+Note: The install.sh script handles package installation via your package manager and deploys the dotfiles. Any existing config files that would be overwritten are first backed up with a `.bak.<timestamp>` suffix in `~/.config`, allowing `uninstall.sh` to restore them later.
+
+## 🗑️ Uninstallation
+If you need to revert the changes, navigate to the repository directory and run:
+
+```bash
+./uninstall.sh
+```
+
+This will restore any backed-up config files found in `~/.config` to their previous state.
+
+> **Note:** Installed packages are **not** automatically removed. If you wish to uninstall them, you will need to do so manually via your package manager.
