@@ -1,0 +1,75 @@
+name: minimaOS static checks
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Bash syntax
+        run: |
+          bash -n install.sh
+          bash -n uninstall.sh
+          bash -n fedora_install.sh
+          bash -n scripts/minimaos-healthcheck.sh
+          bash -n scripts/minimaos-control-center.sh
+
+      - name: Validate TOML and palette JSON
+        run: |
+          python - <<'PY'
+          import json
+          import tomllib
+          from pathlib import Path
+
+          config = Path(".config/noctalia/config.toml")
+          palette = Path(".config/noctalia/palettes/minimaOS.json")
+
+          parsed = tomllib.loads(config.read_text(encoding="utf-8"))
+          colors = json.loads(palette.read_text(encoding="utf-8"))
+
+          assert parsed["theme"]["custom_palette"] == "minimaOS"
+          assert parsed["shell"]["settings_window_translucent"] is True
+          assert parsed["shell"]["panel"]["transparency_mode"] == "glass"
+          assert parsed["bar"]["default"]["compositor_blur"] is True
+          assert parsed["dock"]["enabled"] is True
+          assert parsed["notification"]["enable_daemon"] is True
+          assert parsed["audio"]["enable_notification_sounds"] is True
+
+          fields = {
+              "mPrimary", "mOnPrimary", "mSecondary", "mOnSecondary",
+              "mTertiary", "mOnTertiary", "mError", "mOnError",
+              "mSurface", "mOnSurface", "mSurfaceVariant",
+              "mOnSurfaceVariant", "mOutline", "mShadow", "mHover", "mOnHover"
+          }
+          assert set(colors["dark"]) >= fields
+          assert set(colors["light"]) >= fields
+          for variant in ("dark", "light"):
+              for key in fields:
+                  value = colors[variant][key]
+                  assert isinstance(value, str) and value.startswith("#") and len(value) == 7, (variant, key, value)
+
+          print("TOML parsed; glass profile and both palette variants passed structural checks.")
+          PY
+
+      - name: Check keybindings were added without replacing current shortcuts
+        run: |
+          grep -F 'SUPER + I' .config/hypr/keybind.lua
+          grep -F 'SUPER + SHIFT + N' .config/hypr/keybind.lua
+          grep -F 'SUPER + SHIFT + A' .config/hypr/keybind.lua
+          grep -F 'SUPER + SHIFT + W' .config/hypr/keybind.lua
+          grep -F 'SUPER + SHIFT + B' .config/hypr/keybind.lua
