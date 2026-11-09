@@ -1,0 +1,162 @@
+# minimaOS glass-first profile for Noctalia v5+
+# Noctalia owns real desktop integrations and notification delivery.
+[theme]
+mode = "dark"
+shell_mode = "dark"
+source = "custom"
+custom_palette = "minimaOS"
+sync_color_scheme = true
+pure_black_dark = false
+
+[shell]
+corner_radius_scale = 1.35
+button_borders = false
+input_borders = true
+popup_borders = true
+card_borders = true
+show_close_buttons = true
+popup_shadows = true
+font_family = "sans-serif"
+time_format = "{:%H:%M}"
+date_format = "%a, %x"
+telemetry_enabled = false
+settings_window_translucent = true
+settings_show_advanced = false
+settings_expand_all_groups = false
+app_icon_colorize = false
+clipboard_enabled = true
+clipboard_confirm_clear_history = true
+
+[shell.animation]
+enabled = true
+speed = 1.0
+
+[shell.shadow]
+direction = "down"
+alpha = 0.58
+
+[shell.panel]
+transparency_mode = "glass"
+borders = true
+border_color = "outline_variant"
+border_width = 1.0
+shadow = true
+list_item_background = false
+floating_layer = "overlay"
+launcher_placement = "floating"
+clipboard_placement = "floating"
+control_center_placement = "floating"
+wallpaper_placement = "floating"
+session_placement = "floating"
+polkit_placement = "floating"
+launcher_position = "center"
+clipboard_position = "center"
+control_center_position = "top_right"
+wallpaper_position = "center"
+session_position = "center"
+polkit_position = "center"
+floating_offset = 10
+open_near_click_control_center = true
+
+[shell.launcher]
+layout = "full"
+width = 760
+search_position = "bottom"
+default_view = "recent"
+categories = true
+show_navigation_labels = true
+show_settings_button = true
+show_session_button = true
+show_icons = true
+track_usage = true
+sort_by_usage = true
+
+[bar]
+order = ["default"]
+
+[bar.default]
+position = "top"
+enabled = true
+auto_hide = false
+reserve_space = true
+layer = "top"
+thickness = 40
+background_opacity = 0.62
+compositor_blur = true
+border = "outline_variant"
+border_width = 1.0
+shadow = true
+contact_shadow = false
+radius = 22
+margin_ends = 14
+margin_edge = 8
+padding = 12
+widget_spacing = 8
+scale = 1.0
+font_scale = 1.0
+capsule = true
+capsule_fill = "surface_container"
+capsule_opacity = 0.82
+capsule_border = "outline_variant"
+capsule_border_width = 1
+capsule_radius = 18
+start = ["launcher", "workspaces"]
+center = ["clock"]
+end = ["media", "network", "bluetooth", "volume", "brightness", "battery", "notifications", "control-center", "session"]
+
+[dock]
+enabled = true
+position = "bottom"
+active_monitor_only = false
+icon_size = 44
+main_axis_padding = 18
+cross_axis_padding = 10
+item_spacing = 8
+background_opacity = 0.72
+compositor_blur = true
+border = "outline_variant"
+border_width = 1.0
+shadow = true
+radius = 24
+margin_ends = 0
+margin_edge = 12
+show_running = true
+auto_hide = false
+reserve_space = false
+layer = "top"
+active_scale = 1.05
+inactive_scale = 0.90
+magnification = true
+magnification_scale = 1.18
+
+[control_center]
+sidebar = "full"
+width = 700
+
+[notification]
+enable_daemon = true
+show_app_name = true
+show_actions = true
+position = "top_right"
+layer = "top"
+scale = 1.0
+width = 380
+background_opacity = 0.84
+border = true
+border_color = "outline_variant"
+border_width = 1.0
+offset_x = 18
+offset_y = 12
+collapse_on_dismiss = true
+keep_dismissed_in_history = true
+max_visible = 4
+history_retention_hours = 168
+
+[audio]
+enable_sounds = true
+enable_notification_sounds = true
+enable_volume_sounds = true
+enable_power_sounds = true
+enable_screenshot_sounds = true
+sound_volume = 0.38
+sound_theme = "freedesktop"
