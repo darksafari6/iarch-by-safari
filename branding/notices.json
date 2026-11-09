@@ -1,0 +1,330 @@
+{
+  "notices_version": 1,
+  "updated": "2026-11-09",
+  "verification": {
+    "date": "2026-11-09",
+    "method": "Upstream project metadata and LICENSE/COPYING files read through the GitHub REST API on the tag or branch named in each entry.",
+    "unverified_registry": "docs/UNVERIFIED.md"
+  },
+  "intro": [
+    "This repository is licensed as a whole under the GNU General Public License version 3.0; the full text is in LICENSE.txt and is not reproduced here.",
+    "iArch by Safari is an independent product. It ships configuration for third-party projects and a small amount of vendored third-party code and assets, listed below.",
+    "The product name shown in the desktop session is iArch by Safari. Upstream project names are intentionally kept out of the everyday UI; this file and the Settings page About -> Open-source licenses are the only places where third-party credit is displayed. See docs/BRANDING.md.",
+    "Packages that the installer only downloads from your distribution are licensed by that distribution. They are listed for completeness, not redistributed here."
+  ],
+  "kinds": {
+    "vendored-code": "Third-party source code stored inside this repository.",
+    "derived-config": "Configuration or color values in this repository derived from a third-party project.",
+    "runtime-dependency": "Third-party software this configuration targets or launches; not redistributed here.",
+    "asset": "Binary or artwork assets stored inside this repository.",
+    "infrastructure": "Third-party network service, repository or registry used by the installer or the shell."
+  },
+  "components": [
+    {
+      "id": "hyprland-keybinds-plugin",
+      "name": "Hyprland Keybinds (Noctalia plugin)",
+      "kind": "vendored-code",
+      "purpose": "Bar widget, panel and settings page that view and edit the Hyprland keybinds file.",
+      "upstream": "",
+      "version": "1.0.0",
+      "license": "MIT",
+      "copyright": "Copyright (c) tonekneeo (year not stated in manifest.json)",
+      "license_text": "mit",
+      "used_by": [
+        ".config/noctalia/plugins/hyprland-keybinds/"
+      ],
+      "notes": "Authored for this repository and declared MIT in its own manifest.json. It follows the Noctalia plugin API conventions but is not a copy of the upstream keybind-cheatsheet plugin, which has a different id, author, version and file set.",
+      "verify_ids": ["TP-01", "TP-02"]
+    },
+    {
+      "id": "pipewire-virtual-surround",
+      "name": "PipeWire filter-chain virtual surround configuration",
+      "kind": "derived-config",
+      "purpose": "Convolver sink that plays 7.1 virtual surround through stereo headphones using HRIR files.",
+      "upstream": "https://gitlab.freedesktop.org/pipewire/pipewire",
+      "version": "",
+      "license": "MIT",
+      "copyright": "Copyright (c) PipeWire contributors",
+      "license_text": "mit",
+      "used_by": [
+        "pipewire/pipewire.conf.d/sink-virtual-surround-7.1-hesuvi.conf"
+      ],
+      "notes": "The convolver graph follows the upstream filter-chain virtual surround example. Paths and the HeSuVi 14-channel WAV layout were adapted for this repository.",
+      "verify_ids": ["TP-07"]
+    },
+    {
+      "id": "tokyo-night-colors",
+      "name": "Tokyo Night color values",
+      "kind": "derived-config",
+      "purpose": "Terminal and shell color scheme values.",
+      "upstream": "https://github.com/folke/tokyonight.nvim",
+      "version": "",
+      "license": "Apache-2.0",
+      "copyright": "Copyright (c) Folke Lemaitre",
+      "license_text": "",
+      "used_by": [
+        ".config/kitty/minima-colors.conf",
+        ".config/noctalia/settings.json"
+      ],
+      "notes": "Color values only. The Apache License 2.0 text is available in the upstream repository; no upstream source code is stored here.",
+      "verify_ids": ["TP-08"]
+    },
+    {
+      "id": "noctalia",
+      "name": "Noctalia",
+      "kind": "runtime-dependency",
+      "purpose": "Wayland desktop shell: bar, dock, launcher, Control Center, notifications, lock screen, greeter and Settings. Launched by the session and driven with the noctalia command.",
+      "upstream": "https://github.com/noctalia-dev/noctalia",
+      "version": "v5.4.1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2026 noctalia-dev",
+      "license_text": "",
+      "used_by": [
+        ".config/noctalia/config.toml",
+        ".config/noctalia/palettes/",
+        ".config/hypr/keybind.lua",
+        ".config/hypr/startup.lua",
+        "scripts/iarch-control-center.sh",
+        "scripts/iarch-healthcheck.sh",
+        "install.sh"
+      ],
+      "notes": "Configuration keys in this repository were checked against the upstream v5.4.1 schema; see docs/UNVERIFIED.md for what still needs a live-session check.",
+      "verify_ids": ["TP-09"]
+    },
+    {
+      "id": "hyprland",
+      "name": "Hyprland",
+      "kind": "runtime-dependency",
+      "purpose": "Wayland compositor. The session configuration is written in its Lua configuration API.",
+      "upstream": "https://github.com/hyprwm/Hyprland",
+      "version": "",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2022-2026, vaxerski",
+      "license_text": "",
+      "used_by": [
+        ".config/hypr/"
+      ],
+      "notes": "",
+      "verify_ids": ["TP-10"]
+    },
+    {
+      "id": "fastfetch",
+      "name": "fastfetch",
+      "kind": "runtime-dependency",
+      "purpose": "System information display used in the terminal.",
+      "upstream": "https://github.com/fastfetch-cli/fastfetch",
+      "version": "",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2021-2023 Linus Dierheimer; Copyright (c) 2022-2026 Carter Li",
+      "license_text": "",
+      "used_by": [
+        ".config/fastfetch/config.jsonc"
+      ],
+      "notes": "",
+      "verify_ids": []
+    },
+    {
+      "id": "kitty",
+      "name": "kitty",
+      "kind": "runtime-dependency",
+      "purpose": "GPU accelerated terminal emulator.",
+      "upstream": "https://github.com/kovidgoyal/kitty",
+      "version": "",
+      "license": "GPL-3.0-only",
+      "copyright": "Copyright (c) Kovid Goyal",
+      "license_text": "",
+      "used_by": [
+        ".config/kitty/"
+      ],
+      "notes": "",
+      "verify_ids": []
+    },
+    {
+      "id": "fish",
+      "name": "fish shell",
+      "kind": "runtime-dependency",
+      "purpose": "Interactive shell used by the terminal profile.",
+      "upstream": "https://github.com/fish-shell/fish-shell",
+      "version": "",
+      "license": "GPL-2.0-only",
+      "copyright": "Copyright (C) 2005-2009 Axel Liljencrantz and fish-shell contributors",
+      "license_text": "",
+      "used_by": [
+        ".config/fish/config.fish"
+      ],
+      "notes": "Upstream COPYING also covers components under other licenses; see that file for the authoritative list.",
+      "verify_ids": []
+    },
+    {
+      "id": "starship",
+      "name": "Starship",
+      "kind": "runtime-dependency",
+      "purpose": "Cross-shell prompt.",
+      "upstream": "https://github.com/starship/starship",
+      "version": "",
+      "license": "ISC",
+      "copyright": "Copyright (c) 2019-2022, Starship Contributors",
+      "license_text": "",
+      "used_by": [
+        ".config/starship.toml",
+        ".config/minimalinux/starship-detailed.toml",
+        ".config/minimalinux/starship-minimal.toml"
+      ],
+      "notes": "",
+      "verify_ids": []
+    },
+    {
+      "id": "satty",
+      "name": "Satty",
+      "kind": "runtime-dependency",
+      "purpose": "Screenshot annotation tool bound to a keybind.",
+      "upstream": "https://github.com/gabm/Satty",
+      "version": "",
+      "license": "MPL-2.0",
+      "copyright": "See upstream source headers",
+      "license_text": "",
+      "used_by": [
+        ".config/hypr/keybind.lua"
+      ],
+      "notes": "",
+      "verify_ids": []
+    },
+    {
+      "id": "adw-gtk3",
+      "name": "adw-gtk3",
+      "kind": "runtime-dependency",
+      "purpose": "GTK 3 theme used to match the shell look in classic GTK applications.",
+      "upstream": "https://github.com/lassekongo83/adw-gtk3",
+      "version": "",
+      "license": "LGPL-2.1-only",
+      "copyright": "See upstream source headers",
+      "license_text": "",
+      "used_by": [
+        ".config/gtk-3.0/settings.ini",
+        "install.sh",
+        "fedora_install.sh"
+      ],
+      "notes": "",
+      "verify_ids": []
+    },
+    {
+      "id": "papirus-icon-theme",
+      "name": "Papirus icon theme",
+      "kind": "runtime-dependency",
+      "purpose": "Icon theme selected by the session presets.",
+      "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
+      "version": "",
+      "license": "GPL-3.0-only",
+      "copyright": "Copyright (c) Papirus Development Team",
+      "license_text": "",
+      "used_by": [
+        ".config/gtk-3.0/settings.ini",
+        "install.sh"
+      ],
+      "notes": "",
+      "verify_ids": []
+    },
+    {
+      "id": "session-helpers",
+      "name": "Session helper utilities",
+      "kind": "runtime-dependency",
+      "purpose": "Small tools the session calls for screenshots, clipboard, media keys, volume and policy authentication: hyprshot, grim, slurp, wl-clip-persist, pamixer, playerctl, polkit-gnome-authentication-agent-1, gnome-keyring-daemon, EasyEffects, ddcutil.",
+      "upstream": "Each project's own repository",
+      "version": "",
+      "license": "Varies per package",
+      "copyright": "See each package",
+      "license_text": "",
+      "used_by": [
+        ".config/hypr/keybind.lua",
+        ".config/hypr/startup.lua",
+        "install.sh"
+      ],
+      "notes": "Installed from the distribution or AUR; each package ships its own license. Nothing from these projects is stored in this repository.",
+      "verify_ids": ["TP-11"]
+    },
+    {
+      "id": "appearance-packages",
+      "name": "Fonts, icon and cursor themes installed by the installer",
+      "kind": "runtime-dependency",
+      "purpose": "Bibata cursor theme, Yaru and Humanity icon themes, Papirus folders, Noto emoji, DejaVu and Symbola fonts, and the Microsoft core fonts package offered on Arch.",
+      "upstream": "Each project's own repository",
+      "version": "",
+      "license": "Varies per package",
+      "copyright": "See each package",
+      "license_text": "",
+      "used_by": [
+        "install.sh",
+        "fedora_install.sh"
+      ],
+      "notes": "Installed from the distribution; licenses come from the distribution package metadata. Nothing from these projects is stored in this repository.",
+      "verify_ids": ["TP-12"]
+    },
+    {
+      "id": "hesuvi-hrir-assets",
+      "name": "HeSuVi HRIR audio assets",
+      "kind": "asset",
+      "purpose": "Impulse response WAV files selectable by the virtual surround convolver profile.",
+      "upstream": "",
+      "version": "",
+      "license": "TODO(verify)",
+      "copyright": "TODO(verify)",
+      "license_text": "",
+      "used_by": [
+        "pipewire/hrir/"
+      ],
+      "notes": "624 WAV files, about 32 MB. Several names refer to commercial vendor surround products, so the redistribution rights are not established. Review before publishing a release or mirroring this repository.",
+      "verify_ids": ["TP-03"]
+    },
+    {
+      "id": "fastfetch-logo-assets",
+      "name": "fastfetch ASCII logo files",
+      "kind": "asset",
+      "purpose": "Selectable artwork for the system information display.",
+      "upstream": "",
+      "version": "",
+      "license": "TODO(verify)",
+      "copyright": "TODO(verify)",
+      "license_text": "",
+      "used_by": [
+        ".config/fastfetch/logo/"
+      ],
+      "notes": "Seven .icon files of artwork derived from anime franchises. Authorship and redistribution rights are not established.",
+      "verify_ids": ["TP-04"]
+    },
+    {
+      "id": "chaotic-aur",
+      "name": "Chaotic-AUR",
+      "kind": "infrastructure",
+      "purpose": "Third-party Arch repository and keyring enabled by the Arch installer for prebuilt AUR packages.",
+      "upstream": "https://aur.chaotic.cx/",
+      "version": "",
+      "license": "Service terms of the operator",
+      "copyright": "Chaotic-AUR maintainers",
+      "license_text": "",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "The installer edits /etc/pacman.conf and imports the signing key. Review before running; the package builds come from third parties.",
+      "verify_ids": ["TP-05"]
+    },
+    {
+      "id": "noctalia-plugin-registry",
+      "name": "Noctalia plugin registry",
+      "kind": "infrastructure",
+      "purpose": "Remote plugin index the shell can install plugins from.",
+      "upstream": "https://github.com/noctalia-dev/noctalia-plugins",
+      "version": "",
+      "license": "No license file published upstream at verification time",
+      "copyright": "noctalia-dev and individual plugin authors",
+      "license_text": "",
+      "used_by": [
+        ".config/noctalia/plugins.json"
+      ],
+      "notes": "Referenced by URL only; no plugin source is downloaded into this repository by the installer. The registry publishes no top-level LICENSE file, and each plugin carries its own manifest license.",
+      "verify_ids": ["TP-06"]
+    }
+  ],
+  "license_texts": {
+    "mit": "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."
+  }
+}
