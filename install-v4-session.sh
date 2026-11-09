@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Install minimaLinux alongside an existing desktop, not over it.
+# Install the iArch by Safari isolated session alongside an existing desktop, not over it.
 set -Eeuo pipefail
 
 usage() {
     cat <<'HELP'
 Usage: ./install-v4-session.sh [OPTIONS]
 
-Install the minimaLinux Wayland session for the current user.
+Install the iArch by Safari isolated Wayland session for the current user.
 
   -v, --verbose        Show commands and detailed progress (no shell tracing).
   --skip-packages      Only deploy the session; dependencies must already exist.
@@ -210,7 +210,7 @@ if $glass; then info 'Experimental glass preset: enabled (notification sound sta
 if ((${#optional_packages[@]})); then info "Optional packages: ${optional_packages[*]}"; else info 'Optional packages: none'; fi
 if $welcome; then info 'First-login welcome screen: enabled'; else info 'First-login welcome screen: disabled'; fi
 info "Session configuration: $config"
-info 'Existing minimaLinux configuration will be backed up on reinstall.'
+info 'Existing iArch by Safari session configuration will be backed up on reinstall.'
 info 'The system-wide session entries need sudo; Noctalia v4 is downloaded from GitHub.'
 if ! $yes; then
     read_choice '  Continue with this setup? [y/N]: '
@@ -358,7 +358,7 @@ if [[ -e $config || -L $config ]]; then
     backup=$(mktemp -d "$HOME/.config/minimalinux.backup.$(date +%Y%m%d-%H%M%S).XXXXXXXX")
     rmdir "$backup"
     run mv -- "$config" "$backup"
-    info "Previous minimaLinux configuration backed up to $backup"
+    info "Previous session configuration backed up to $backup"
     log_line "BACKUP original=$config saved=$backup"
 fi
 if ! mv -- "$stage" "$config"; then
@@ -373,6 +373,6 @@ trap - EXIT
 
 log_line 'SUCCESS session configuration and launchers installed; no packages were removed'
 printf '\n%s%s  All set!%s\n' "$bold" "$green" "$reset"
-info 'Log out, then select minimaLinux in your display manager session menu.'
+info 'Log out, then select iArch by Safari (isolated session) in your display manager session menu.'
 info 'Super+Return: terminal   Super+K: customize   Super+Shift+M: log out'
 info 'Monitor settings: ~/.config/minimalinux/hypr/monitors.conf'

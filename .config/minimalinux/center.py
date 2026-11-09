@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""minimaLinux's session customization center (GTK 3)."""
+"""iArch by Safari session customization center (GTK 3)."""
 import argparse
 import configparser
 import json
@@ -11,7 +11,7 @@ import backend
 
 
 def main():
-    parser = argparse.ArgumentParser(description='minimaLinux customization center')
+    parser = argparse.ArgumentParser(description='iArch by Safari customization center')
     parser.add_argument('--welcome-once', action='store_true')
     parser.add_argument('--shortcuts', action='store_true')
     args = parser.parse_args()
@@ -32,14 +32,14 @@ def main():
 
     class Center(Gtk.Window):
         def __init__(self):
-            super().__init__(title='minimaLinux · Customize')
+            super().__init__(title='iArch by Safari · Customize')
             self.set_default_size(820, 650)
             self.set_border_width(18)
             self.connect('destroy', Gtk.main_quit)
             outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             self.add(outer)
             title = Gtk.Label()
-            title.set_markup('<span size="x-large" weight="bold">Make minimaLinux yours</span>')
+            title.set_markup('<span size="x-large" weight="bold">Make iArch by Safari yours</span>')
             title.set_xalign(0)
             outer.pack_start(title, False, False, 0)
             subtitle = Gtk.Label(label='Choose your look, discover shortcuts, and set up your desktop.')
@@ -48,7 +48,7 @@ def main():
             self.notebook = Gtk.Notebook()
             self.notebook.set_scrollable(True)
             outer.pack_start(self.notebook, True, True, 0)
-            self.status = Gtk.Label(label='Changes stay in your minimaLinux session.')
+            self.status = Gtk.Label(label='Changes stay in your iArch by Safari session.')
             self.status.set_xalign(0)
             self.status.set_line_wrap(True)
             try:
@@ -126,7 +126,7 @@ def main():
             preview = self.label(box, '')
             def update_preview(*_):
                 preset = backend.THEMES[self.theme.get_active_text()]
-                preview.set_text('Preview: background #' + preset['bg'] + '  •  accent #' + preset['accent'] + '  •  text #' + preset['fg'] + '\nComponents: Noctalia, Hyprland border, Kitty colors, GTK preference.')
+                preview.set_text('Preview: background #' + preset['bg'] + '  •  accent #' + preset['accent'] + '  •  text #' + preset['fg'] + '\nComponents: shell, compositor border, terminal colors, GTK preference.')
             self.theme.connect('changed', update_preview)
             update_preview()
             icon_names = list(backend.ICONS)
@@ -141,9 +141,9 @@ def main():
             def apply():
                 warnings = backend.theme(self.theme.get_active_text(), backend.ICONS[self.icon.get_active_text()], self.font.get_font_name())
                 suffix = (' Skipped: ' + '; '.join(warnings) + '.') if warnings else ''
-                return 'Theme saved. Restart applications and terminals for GTK and Kitty changes.' + suffix
+                return 'Theme saved. Restart applications and terminals for the GTK and terminal changes.' + suffix
             self.button(box, 'Apply appearance', apply)
-            self.label(box, 'GTK 4/libadwaita and sandboxed apps may use their own theme. Noctalia colors follow the selected scheme, not the wallpaper.')
+            self.label(box, 'GTK 4/libadwaita and sandboxed apps may use their own theme. Shell colors follow the selected scheme, not the wallpaper.')
 
         def wallpaper_page(self):
             box = self.page('Wallpaper')
@@ -169,14 +169,14 @@ def main():
                 if not path or not Path(path).is_file():
                     raise ValueError('Choose an existing image first.')
                 backend.ipc('wallpaper', 'set', path, 'all')
-                return 'Wallpaper sent to Noctalia for all monitors. Keep the image at this path.'
+                return 'Wallpaper sent to the shell for all monitors. Keep the image at this path.'
             self.button(box, 'Set wallpaper', apply)
-            self.button(box, 'Open Noctalia wallpaper picker', lambda: (backend.ipc('wallpaper', 'toggle') or 'Opened wallpaper picker.'))
-            self.label(box, 'Noctalia must be running. For wallpaper-generated colors, enable “use wallpaper colors” in Noctalia settings.')
+            self.button(box, 'Open the wallpaper picker', lambda: (backend.ipc('wallpaper', 'toggle') or 'Opened wallpaper picker.'))
+            self.label(box, 'The shell must be running. For wallpaper-generated colors, enable “use wallpaper colors” in Settings.')
 
         def terminal_page(self):
             box = self.page('Terminal')
-            self.label(box, 'Choose a Kitty font, size and Fish prompt for new terminals.')
+            self.label(box, 'Choose a terminal font, size and prompt style for new terminals.')
             profiles = ['JetBrains Mono', 'Monospace']
             theme_names = list(backend.THEMES)
             try:
@@ -200,13 +200,13 @@ def main():
             def apply():
                 backend.terminal_profile(self.term_font.get_active_text(), self.size.get_value(), self.prompt.get_active_text())
                 backend.terminal_colors(self.term_theme.get_active_text())
-                return 'Terminal profile saved. Open a new Kitty window to use it.'
+                return 'Terminal profile saved. Open a new terminal window to use it.'
             self.button(box, 'Apply terminal profile', apply)
             self.label(box, 'Fish: Right accepts suggestions, Tab completes, Ctrl+R searches history, and z jumps to recent directories.')
 
         def desktop_page(self):
             box = self.page('Bar & lock')
-            self.label(box, 'Adjust Noctalia’s bar and lock screen. The lock screen uses your wallpaper and system authentication.')
+            self.label(box, 'Adjust the bar and the lock screen. The lock screen uses your wallpaper and system authentication.')
             positions = ['top', 'bottom', 'left', 'right']
             densities = ['comfortable', 'default', 'compact']
             clocks = ['digital', 'analog', 'custom']
@@ -222,14 +222,14 @@ def main():
                 if self.avatar.get_filename():
                     general['avatarImage'] = self.avatar.get_filename()
                 backend.desktop_settings({'bar': {'position': self.bar_pos.get_active_text(), 'density': self.density.get_active_text()}, 'general': general})
-                return 'Bar and lock screen settings saved. Noctalia reloads its settings.'
+                return 'Bar and lock screen settings saved. The shell reloads its settings.'
             self.button(box, 'Apply bar and lock settings', apply)
-            self.button(box, 'Open advanced Noctalia settings', lambda: (backend.ipc('settings', 'toggle') or 'Opened Noctalia settings.'))
-            self.label(box, 'Use advanced Noctalia settings to choose bar widgets, system stats, and power controls.')
+            self.button(box, 'Open advanced settings', lambda: (backend.ipc('settings', 'toggle') or 'Opened settings.'))
+            self.label(box, 'Use advanced settings to choose bar widgets, system stats, and power controls.')
 
         def shortcuts_page(self):
             box = self.page('Shortcuts')
-            self.label(box, 'Search the keybindings in your current Hyprland configuration.')
+            self.label(box, 'Search the keybindings in your current session configuration.')
             search = Gtk.SearchEntry()
             box.pack_start(search, False, False, 0)
             result = Gtk.ListBox()
@@ -266,7 +266,7 @@ def main():
                 self.app_checks[name] = check
             def install():
                 backend.install_optional([name for name, check in self.app_checks.items() if check.get_active()])
-                return 'Package installation opened in Kitty. Review the pacman prompt and result there.'
+                return 'Package installation opened in a terminal. Review the package manager prompt and result there.'
             self.button(box, 'Install selected apps…', install)
 
     window = Center()

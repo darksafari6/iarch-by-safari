@@ -70,8 +70,8 @@ fi
 [[ ! -e "$HOME/.config/minimalinux/quickshell/noctalia-shell/.git" ]]
 grep -Fq '$HOME/.config/minimalinux/hypr/monitors.conf' "$HOME/.config/minimalinux/hypr/hyprland.conf"
 grep -Fq '~/.config/minimalinux/hypr/keybinds.conf' "$HOME/.config/minimalinux/noctalia/plugins/hyprland-keybinds/manifest.json"
-grep -Fq 'Name=minimaLinux' "$MOCK_ROOT/usr/share/wayland-sessions/minimalinux.desktop"
-grep -Fq 'Name=minimaLinux Customize' "$MOCK_ROOT/usr/share/applications/minimalinux-customize.desktop"
+grep -Fq 'Name=iArch by Safari (isolated session)' "$MOCK_ROOT/usr/share/wayland-sessions/minimalinux.desktop"
+grep -Fq 'Name=iArch by Safari Customize' "$MOCK_ROOT/usr/share/applications/minimalinux-customize.desktop"
 [[ -f "$HOME/.config/minimalinux/minimalinux/center.py" ]]
 grep -Fq -- '--welcome-once' "$HOME/.config/minimalinux/hypr/startup.conf"
 bash "$MOCK_ROOT/usr/local/bin/minimalinux-session"

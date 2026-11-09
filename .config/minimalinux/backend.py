@@ -58,7 +58,7 @@ def settings_update(changes):
 
 def ipc(*args):
     if os.environ.get('XDG_CONFIG_HOME') != str(ROOT):
-        raise RuntimeError('Open minimaLinux to control its Noctalia session.')
+        raise RuntimeError('Open an iArch by Safari session to control it.')
     if not shutil.which('qs'):
         raise RuntimeError('Noctalia is not running or qs is not installed.')
     try:
