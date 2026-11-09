@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Managed by minimaLinux session installer
+set -euo pipefail
+config="$HOME/.config/minimalinux/minimalinux/center.py"
+if [[ ! -f $config ]]; then
+    echo "Install minimaLinux for this user first." >&2
+    exit 1
+fi
+exec python3 "$config" "$@"

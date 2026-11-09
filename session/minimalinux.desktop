@@ -1,0 +1,8 @@
+[Desktop Entry]
+# Managed by minimaLinux session installer
+Name=minimaLinux
+Comment=Hyprland desktop with minimaLinux dotfiles
+Exec=/usr/local/bin/minimalinux-session
+TryExec=/usr/local/bin/minimalinux-session
+Type=Application
+DesktopNames=Hyprland

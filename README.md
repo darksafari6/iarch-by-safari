@@ -18,6 +18,8 @@
 
 
 
+> **Safety and version note:** The original v5 Arch and Fedora installers make system-wide package, repository, service and login-manager changes. They are not the isolated v4 installer and have not been validated by this PR in a real session. Review [the v5 port status](docs/V5-PORT-STATUS.md) and the scripts before use. The isolated legacy-v4 session is available separately via [`install-v4-session.sh`](docs/V4-SESSION.md); it does not install Noctalia v5.
+
 ### Fresh Arch Install Requirement
 
 **This configuration is tailored for a FRESH INSTALL of VANILLA ARCH LINUX using the archinstall script with the Hyprland profile.** In archinstall choose NetworkManager (default backend) and leave sddm as the greeter. The script will replace sddm for Noctalia-Greeter. We strongly advise against attempting this installation on derivative distributions (such as CachyOS, Manjaro, etc.) as package and configuration conflicts are highly likely.
@@ -163,7 +165,7 @@ The minimaOS profile adds an iPhone-inspired glass aesthetic to the existing Noc
 
 The profile targets Noctalia v5+; Noctalia v4 uses a different configuration model. After applying a profile, run `noctalia config validate` and verify the live Wayland session before removing backups. See the [Noctalia v5+ configuration docs](https://docs.noctalia.dev/noctalia/configuration/) for configuration precedence and validation.
 
-Notification sound uses Noctalia's built-in Freedesktop sound theme at a restrained volume. An arbitrary custom iPhone-style sound file is not wired up because a supported custom-file hook was not verified; this avoids introducing a conflicting notification daemon.
+Notification sound is disabled in the profile by default; enabling it uses Noctalia's built-in Freedesktop sound theme at a restrained volume. GUI-managed overrides may take precedence. An arbitrary custom iPhone-style sound file is not wired up because a supported custom-file hook was not verified; this avoids introducing a conflicting notification daemon.
 
 ---
 
@@ -200,3 +202,7 @@ If you need to revert the changes, navigate to the repository directory and run:
 This will restore any backed-up config files found in `~/.config` to their previous state.
 
 > **Note:** Installed packages are **not** automatically removed. If you wish to uninstall them, you will need to do so manually via your package manager.
+
+## Experimental isolated v4 session
+
+The earlier independent Quickshell v4 session remains available via `./install-v4-session.sh` and `./uninstall-v4-session.sh`. See [v4 session documentation](docs/V4-SESSION.md) and [v4 glass limitations](docs/GLASS-UI.md). It is separate from the v5 workflow and is not validated on a live system. For an existing v5 shell, the experimental backup-first profile helper is documented in [v5 port status](docs/V5-PORT-STATUS.md).

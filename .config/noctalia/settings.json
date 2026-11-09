@@ -1,0 +1,83 @@
+{
+  "settingsVersion": 49,
+  "general": {
+    "animationSpeed": 1,
+    "showChangelogOnStartup": false
+  },
+  "ui": {
+    "fontDefault": "Noto Sans",
+    "fontFixed": "JetBrainsMono Nerd Font Mono",
+    "tooltipsEnabled": true,
+    "panelBackgroundOpacity": 0.97
+  },
+  "bar": {
+    "floating": true,
+    "marginVertical": 8,
+    "marginHorizontal": 12,
+    "density": "comfortable",
+    "backgroundOpacity": 0.97,
+    "widgets": {
+      "left": [
+        {
+          "id": "Launcher"
+        },
+        {
+          "id": "Clock"
+        },
+        {
+          "id": "SystemMonitor"
+        },
+        {
+          "id": "ActiveWindow"
+        }
+      ],
+      "center": [
+        {
+          "id": "Workspace"
+        }
+      ],
+      "right": [
+        {
+          "id": "Tray"
+        },
+        {
+          "id": "NotificationHistory"
+        },
+        {
+          "id": "Battery"
+        },
+        {
+          "id": "Volume"
+        },
+        {
+          "id": "Brightness"
+        },
+        {
+          "id": "ControlCenter"
+        },
+        {
+          "id": "SessionMenu"
+        }
+      ]
+    }
+  },
+  "location": {
+    "weatherEnabled": false
+  },
+  "wallpaper": {
+    "enabled": true,
+    "useSolidColor": true,
+    "solidColor": "#1a1b26"
+  },
+  "colorSchemes": {
+    "useWallpaperColors": false,
+    "predefinedScheme": "Tokyo Night",
+    "darkMode": true
+  },
+  "appLauncher": {
+    "terminalCommand": "kitty -e",
+    "iconMode": "native",
+    "showCategories": true,
+    "sortByMostUsed": true
+  }
+}

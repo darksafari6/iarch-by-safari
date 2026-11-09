@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Managed by minimaLinux session installer
+set -euo pipefail
+# Separate configuration avoids replacing the user's existing desktop dotfiles.
+export XDG_CONFIG_HOME="$HOME/.config/minimalinux"
+# Keep Noctalia wallpaper and other cache state separate from other sessions.
+export NOCTALIA_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/minimalinux/noctalia/"
+if [[ ! -f "$XDG_CONFIG_HOME/hypr/hyprland.conf" ]]; then
+    echo "minimaLinux is not installed for this user: $XDG_CONFIG_HOME/hypr/hyprland.conf is missing." >&2
+    exit 1
+fi
+exec Hyprland --config "$XDG_CONFIG_HOME/hypr/hyprland.conf"

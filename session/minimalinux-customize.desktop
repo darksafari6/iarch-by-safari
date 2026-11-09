@@ -1,0 +1,9 @@
+[Desktop Entry]
+# Managed by minimaLinux session installer
+Type=Application
+Name=minimaLinux Customize
+Comment=Themes, wallpaper, shortcuts and desktop setup
+Exec=/usr/local/bin/minimalinux-customize
+Icon=preferences-desktop-theme
+Categories=Settings;DesktopSettings;
+Terminal=false

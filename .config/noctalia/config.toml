@@ -102,7 +102,7 @@ capsule_border_width = 1
 capsule_radius = 18
 start = ["launcher", "workspaces"]
 center = ["clock"]
-end = ["media", "network", "bluetooth", "volume", "brightness", "battery", "notifications", "control-center", "session"]
+end = ["media", "tray", "network", "bluetooth", "volume", "brightness", "battery", "notifications", "control-center", "session"]
 
 [dock]
 enabled = true
@@ -154,7 +154,7 @@ history_retention_hours = 168
 
 [audio]
 enable_sounds = true
-enable_notification_sounds = true
+enable_notification_sounds = false
 enable_volume_sounds = true
 enable_power_sounds = true
 enable_screenshot_sounds = true

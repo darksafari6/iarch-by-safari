@@ -914,47 +914,71 @@ install_optional_packages() {
 deploy_configs() {
     echo "Deploying configuration files..."
     
-    CONFIG_SOURCE_ROOT="$REPO_DIR/.config"
-    
-    if [ ! -d "$CONFIG_SOURCE_ROOT" ]; then
-        echo "FATAL ERROR: Could not find the '.config' directory inside your repository at '$REPO_DIR'."
-        return
+    # Build a v5-only payload: the repository also retains an isolated v4
+    # session, whose Hyprlang/JSON files must not replace the v5 Lua profile.
+    local staged_config
+    staged_config=$(mktemp -d) || return 1
+    if ! bash "$REPO_DIR/lib/stage-v5-config.sh" "$REPO_DIR/.config" "$staged_config"; then
+        rm -rf -- "$staged_config"
+        echo "FATAL ERROR: Unable to stage v5 configuration." >&2
+        return 1
+    fi
+    CONFIG_SOURCE_ROOT="$staged_config"
+
+    if ! sudo -u "$ACTUAL_USER" mkdir -p "$CONFIG_DIR"; then
+        rm -rf -- "$staged_config"
+        return 1
     fi
 
-    # Ensure target .config directory exists
-    sudo -u "$ACTUAL_USER" mkdir -p "$CONFIG_DIR"
-
-    # Back up any existing configs that would be overwritten
-    BACKUP_TIMESTAMP=$(date +%s)
+    # Check every backup destination before moving any existing config.
+    BACKUP_TIMESTAMP="$(date +%Y%m%d-%H%M%S-%N).$RANDOM"
+    local item name target backup
+    for item in "$CONFIG_SOURCE_ROOT"/*; do
+        name=$(basename "$item")
+        backup="$CONFIG_DIR/$name.bak.$BACKUP_TIMESTAMP"
+        if [ -e "$backup" ] || [ -L "$backup" ]; then
+            echo "Backup destination already exists: $backup" >&2
+            rm -rf -- "$staged_config"
+            return 1
+        fi
+    done
     echo "Backing up existing configuration files..."
-
     for item in "$CONFIG_SOURCE_ROOT"/*; do
         name=$(basename "$item")
         target="$CONFIG_DIR/$name"
-        if [ "$name" = "hypr" ]; then
-            continue
-        fi
-
+        backup="$CONFIG_DIR/$name.bak.$BACKUP_TIMESTAMP"
         if [ -e "$target" ] || [ -L "$target" ]; then
-            echo "  -> Backing up: $name to $name.bak.$BACKUP_TIMESTAMP"
-            mv "$target" "$CONFIG_DIR/$name.bak.$BACKUP_TIMESTAMP"
+            echo "  -> Backing up: $name to $(basename "$backup")"
+            if ! mv -- "$target" "$backup"; then
+                echo "Backup failed; previously moved backups are retained under $CONFIG_DIR." >&2
+                rm -rf -- "$staged_config"
+                return 1
+            fi
         fi
     done
-
-    if [ -e "$CONFIG_DIR/hypr" ] || [ -L "$CONFIG_DIR/hypr" ]; then
-        echo "  -> Backing up: hypr to hypr.bak.$BACKUP_TIMESTAMP"
-        mv "$CONFIG_DIR/hypr" "$CONFIG_DIR/hypr.bak.$BACKUP_TIMESTAMP"
-    fi
+    # Do not copy over paths recreated during backup.
+    for item in "$CONFIG_SOURCE_ROOT"/*; do
+        target="$CONFIG_DIR/$(basename "$item")"
+        if [ -e "$target" ] || [ -L "$target" ]; then
+            echo "Destination appeared during deployment: $target; backups retained." >&2
+            rm -rf -- "$staged_config"
+            return 1
+        fi
+    done
 
     # Copy all configuration files from repo/.config to ~/.config
     echo "Copying configuration files from $CONFIG_SOURCE_ROOT to $CONFIG_DIR..."
     cp -rf "$CONFIG_SOURCE_ROOT"/* "$CONFIG_DIR"/
-    
-    if [ $? -eq 0 ]; then
+    local copy_status=$?
+    rm -rf -- "$staged_config"
+
+    if [ "$copy_status" -eq 0 ]; then
         echo "Configuration files copied successfully!"
         
         # Fix ownership since we're running as root
-        chown -R "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR"
+        for name in fastfetch fish hypr kitty noctalia starship.toml; do
+            chown -R "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR/$name" || return 1
+        done
 
         # If ddcutil was enabled, make sure Noctalia uses DDC monitor control.
         if [ "$DDCUTIL_ENABLED" -eq 1 ] && [ -f "$CONFIG_DIR/noctalia/settings.json" ]; then
@@ -985,7 +1009,8 @@ PY
             fi
         fi
     else
-        echo "ERROR: Failed to copy configuration files."
+        echo "ERROR: Failed to copy configuration files." >&2
+        return 1
     fi
 }
 
@@ -1455,7 +1480,7 @@ setup_ddcutil
 set_default_file_manager
 
 # Deploy Configurations
-deploy_configs
+deploy_configs || { echo "Configuration deployment failed; stopping." >&2; exit 1; }
 
 # Copy backup config files if available
 copy_backup_configs
