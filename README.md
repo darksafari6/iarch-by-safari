@@ -33,12 +33,12 @@ sudo pacman -S git
 Open your terminal and clone the repository using `git`:
 
 ```bash
-git clone https://github.com/darksafari6/minimaLinux.git
+git clone https://github.com/darksafari6/iarch-by-safari.git
 ```
 
 ### Step 2: Change directory to the repo
 ```bash
-cd ./minimaLinux
+cd ./iarch-by-safari
 ```
 
 ### Step 3: Make the install script executable
@@ -82,12 +82,12 @@ To install on Fedora, follow these steps:
 
 2. Clone the repository:
    ```bash
-   git clone https://github.com/darksafari6/minimaLinux.git
+   git clone https://github.com/darksafari6/iarch-by-safari.git
    ```
 
 3. Change into the project directory:
    ```bash
-   cd minimaLinux
+   cd iarch-by-safari
    ```
 
 4. Make the Fedora installer executable:
