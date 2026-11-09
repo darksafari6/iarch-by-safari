@@ -177,15 +177,15 @@ Notes:
 The reboot question loops intentionally. Reboot is strongly recommended so group, module, and config changes fully apply before normal use.
 
 
-## minimaOS Glass Profile
+## iArch by Safari Glass Profile
 
-The repository now ships an optional Noctalia v5+ glass-first profile in `.config/noctalia/`. The current installer already deploys repository `.config` entries and backs up an existing `~/.config/noctalia` before copying. Do not apply this TOML profile to Noctalia v4.
+The repository now ships an optional Noctalia v5+ glass-first profile in `.config/noctalia/`. The current installer already deploys repository `.config` entries and backs up an existing `~/.config/noctalia` before copying. Do not apply this TOML profile to the legacy v4 shell.
 
 Before a live-session test:
 
 ~~~bash
 noctalia config validate
-bash scripts/minimaos-healthcheck.sh
+bash scripts/iarch-healthcheck.sh
 ~~~
 
 Shortcuts: `SUPER + I` opens Control Center; `SUPER + SHIFT + N` opens notification history; `SUPER + SHIFT + A` audio controls; `SUPER + SHIFT + W` network; `SUPER + SHIFT + B` Bluetooth. `SUPER + T` continues to open Settings.

@@ -6,7 +6,7 @@ set -euo pipefail
 src=$1 dest=$2
 [[ -d $src && -d $dest && ! -L $dest ]] || { echo 'Missing source or unsafe staging directory' >&2; exit 1; }
 [[ -z $(ls -A -- "$dest") ]] || { echo 'Destination must be empty' >&2; exit 1; }
-for path in fastfetch fish kitty starship.toml hypr/Scripts hypr/animations.lua hypr/animations/default.lua hypr/hyprland.lua hypr/inputs.lua hypr/keybind.lua hypr/monitors.lua hypr/startup.lua hypr/themes/theme.lua hypr/windowrules.lua noctalia/config.toml noctalia/palettes/minimaOS.json; do
+for path in fastfetch fish kitty starship.toml hypr/Scripts hypr/animations.lua hypr/animations/default.lua hypr/hyprland.lua hypr/inputs.lua hypr/keybind.lua hypr/monitors.lua hypr/startup.lua hypr/themes/theme.lua hypr/windowrules.lua noctalia/config.toml noctalia/palettes/iarch-midnight.json; do
     [[ -e "$src/$path" && ! -L "$src/$path" ]] || { echo "Missing or symlinked v5 source: $path" >&2; exit 1; }
     mkdir -p -- "$dest/$(dirname -- "$path")"
     cp -a -- "$src/$path" "$dest/$path"

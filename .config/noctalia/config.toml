@@ -1,10 +1,11 @@
-# minimaOS glass-first profile for Noctalia v5+
-# Noctalia owns real desktop integrations and notification delivery.
+# iArch by Safari — glass-first profile (Noctalia v5+ configuration format).
+# The shell owns real desktop integrations and notification delivery; this file
+# only sets values. Naming and credit policy: docs/BRANDING.md.
 [theme]
 mode = "dark"
 shell_mode = "dark"
 source = "custom"
-custom_palette = "minimaOS"
+custom_palette = "iarch-midnight"
 sync_color_scheme = true
 pure_black_dark = false
 

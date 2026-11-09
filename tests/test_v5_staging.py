@@ -17,7 +17,7 @@ class V5Staging(unittest.TestCase):
             self.assertTrue((dest / 'hypr/hyprland.lua').is_file())
             self.assertTrue((dest / 'hypr/keybind.lua').is_file())
             self.assertTrue((dest / 'noctalia/config.toml').is_file())
-            self.assertTrue((dest / 'noctalia/palettes/minimaOS.json').is_file())
+            self.assertTrue((dest / 'noctalia/palettes/iarch-midnight.json').is_file())
             self.assertTrue((dest / 'kitty/minima-colors.conf').is_file())
             self.assertFalse((dest / 'hypr/hyprland.conf').exists())
             self.assertFalse((dest / 'hypr/startup.conf').exists())

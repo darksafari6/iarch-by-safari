@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Read-only diagnostics for the minimaOS Noctalia/Hyprland profile.
+# Read-only diagnostics for the iArch by Safari Hyprland session profile.
 # This script never installs packages, edits config, or changes services.
 set -o pipefail
 
@@ -10,8 +10,8 @@ ok()   { printf '[ OK ] %s\n' "$1"; }
 warn() { printf '[WARN] %s\n' "$1"; }
 fail() { printf '[FAIL] %s\n' "$1"; FAILED=1; }
 
-printf '\nminimaOS desktop health check\n'
-printf '%s\n' '=============================='
+printf '\niArch by Safari desktop health check\n'
+printf '%s\n' '================================='
 
 if [ "$(id -u)" -eq 0 ]; then
     warn "Run this as your normal desktop user, not through sudo."
@@ -67,7 +67,7 @@ fi
 printf '\nNotes:\n'
 printf '%s\n' '- Network, Bluetooth, brightness, and battery controls depend on real hardware and services.'
 printf '%s\n' '- This check does not toggle radios, restart services, or change system files.'
-printf '%s\n' '- See docs/minimaOS-Glass-Experience.md for recovery and setup instructions.'
+printf '%s\n' '- See docs/glass-experience.md for recovery and setup instructions.'
 
 if [ "$FAILED" -ne 0 ]; then
     exit 1

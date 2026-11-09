@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Safe, fixed-command shortcuts for Noctalia v5+ IPC.
-# Usage: scripts/minimaos-control-center.sh [home|audio|network|bluetooth|notifications|power|monitor|settings|wallpaper|launcher|session]
+# Safe, fixed-command shortcuts for the shell IPC used by iArch by Safari (Noctalia v5+).
+# Usage: scripts/iarch-control-center.sh [home|audio|network|bluetooth|notifications|power|monitor|settings|wallpaper|launcher|session]
 set -e
 
 if ! command -v noctalia >/dev/null 2>&1; then

@@ -1,5 +1,8 @@
 # Noctalia v5 port — experimental and incomplete
 
+> **Historical document.** Kept because it records why the current rules exist.
+> For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
+
 The current pull request branched from `30208a3`. The current `main` independently moved to Hyprland Lua and Noctalia v5 and added a minimaOS glass profile, Fedora installer, a different Arch installer and a rollback script. The PR's isolated v4 session uses Hyprlang, Quickshell, and `settings.json`. They are different architectures; resolving the conflicts by choosing one entire side would silently drop features or break the other workflow.
 
 ## Audit and priorities
@@ -12,7 +15,7 @@ The current pull request branched from `30208a3`. The current `main` independent
 
 ## Experimental v5 profile helper
 
-`python3 tools/v5_profile.py --apply` requires a normal user, an existing Noctalia config-home directory, Noctalia **5.4.1**, and confirmation. Run outside the active Noctalia session. It makes a private staging copy of the existing `noctalia` directory, replaces only `config.toml` and `palettes/minimaOS.json` in that copy, and invokes `noctalia config validate` on the staged directory. On success it moves the original directory to a unique `noctalia.backup.<timestamp>.<random>` next to it and installs the staged copy. Unsafe symlinked target/managed paths are refused. Other files within the directory are preserved; GUI-managed state outside it is not modified and may override the profile. If the stage fails validation or deployment fails, the original stays in place or is restored. A failure that prevents restoring is reported with the backup location. No packages, services or login manager are touched.
+`python3 tools/v5_profile.py --apply` requires a normal user, an existing Noctalia config-home directory, Noctalia **5.4.1**, and confirmation. Run outside the active Noctalia session. It makes a private staging copy of the existing `noctalia` directory, replaces only `config.toml` and `palettes/iarch-midnight.json` in that copy, and invokes `noctalia config validate` on the staged directory. On success it moves the original directory to a unique `noctalia.backup.<timestamp>.<random>` next to it and installs the staged copy. Unsafe symlinked target/managed paths are refused. Other files within the directory are preserved; GUI-managed state outside it is not modified and may override the profile. If the stage fails validation or deployment fails, the original stays in place or is restored. A failure that prevents restoring is reported with the backup location. No packages, services or login manager are touched.
 
 For explicit rollback, again outside the active session, run `python3 tools/v5_profile.py --restore /full/path/to/noctalia.backup.NAME` using the actual backup. The selected backup is copied, not consumed; the current directory is moved to another backup. `NOCTALIA_CONFIG_HOME`, then `XDG_CONFIG_HOME`, then `~/.config` determine the config home; use an absolute path. This helper changes the selected Noctalia configuration, not the isolated v4 session. Do not use both shells as notification owners in one session.
 

@@ -1,6 +1,6 @@
 # Settings below apply only to interactive terminals, not scripts or SSH commands.
 if status is-interactive
-    set -g fish_greeting "Welcome to minimaLinux · Super+D opens the launcher"
+    set -g fish_greeting "Welcome to iArch by Safari · Super+D opens the launcher"
 
     # Fish provides autosuggestions and syntax highlighting out of the box.
     # Right arrow accepts a suggestion; Ctrl+Right accepts the next word.
