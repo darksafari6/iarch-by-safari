@@ -1,14 +1,31 @@
 #!/usr/bin/env bash
 
-# minimaLinux configuration rollback.
+# iArch by Safari configuration rollback.
+#
 # This script never deletes an active user configuration. If a timestamped
 # backup exists, it moves the active file aside and restores the latest backup.
 # If no backup exists, the active configuration is preserved.
+#
+# Switches honoured through lib/iarch-common.sh:
+#   IARCH_ASSUME_YES=1  skip the confirmation prompt
+#   IARCH_DRY_RUN=1     report what would be restored and change nothing
+#   IARCH_VERBOSE=1     show each step
+#
+# Installed packages, display-manager settings and other system-level changes
+# are not reverted here; see docs/ARCHITECTURE.md.
 
 set -u
 
+repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+# shellcheck source=lib/iarch-common.sh
+if ! . "$repo_dir/lib/iarch-common.sh"; then
+    echo "Could not load $repo_dir/lib/iarch-common.sh" >&2
+    exit 1
+fi
+iarch::load_product || exit 1
+
 CONFIG_DIR="$HOME/.config"
-STAMP="$(date +%Y%m%d-%H%M%S)"
+STAMP="$(iarch::stamp)"
 TARGETS=(
     "hypr"
     "noctalia"
@@ -19,70 +36,50 @@ TARGETS=(
     "pipewire"
 )
 
-confirm_action() {
-    local response
-    read -r -p "Restore minimaLinux configuration backups now? (y/N): " response
-    case "$response" in
-        y|Y|yes|YES) return 0 ;;
-        *) echo "Cancelled; no files were changed."; exit 0 ;;
-    esac
-}
-
-path_exists() {
-    [ -e "$1" ] || [ -L "$1" ]
-}
-
-latest_backup_for() {
-    local target="$1"
-    local candidate
-    local latest=""
-
-    for candidate in "$CONFIG_DIR/$target".bak.*; do
-        path_exists "$candidate" || continue
-        if [ -z "$latest" ] || [[ "$candidate" > "$latest" ]]; then
-            latest="$candidate"
-        fi
-    done
-
-    printf '%s' "$latest"
-}
-
 restore_target() {
     local target="$1"
     local active="$CONFIG_DIR/$target"
-    local backup
-    local preserved
+    local backup preserved
 
-    backup="$(latest_backup_for "$target")"
+    backup="$(iarch::latest_backup "$active")"
 
     if [ -z "$backup" ]; then
-        echo "[KEEP] No timestamped backup for $target; preserving the current path."
+        iarch::info "[KEEP] no timestamped backup for $target; preserving the current path."
         return 0
     fi
 
-    if path_exists "$active"; then
-        preserved="$CONFIG_DIR/$target.minimaLinux-preserved.$STAMP"
+    if iarch::path_exists "$active"; then
+        preserved="$(iarch::unique_path "$CONFIG_DIR/$target.iarch-preserved.$STAMP")"
+        if iarch::dry_run; then
+            iarch::info "[DRY] would move $active aside as $(basename -- "$preserved")"
+            iarch::info "[DRY] would restore $target from $(basename -- "$backup")"
+            return 0
+        fi
         if ! mv -- "$active" "$preserved"; then
-            echo "[FAIL] Could not preserve current $active; not restoring $backup." >&2
+            iarch::error "[FAIL] could not preserve the current $active; not restoring $backup."
             return 1
         fi
-        echo "[KEEP] Current configuration moved to $preserved"
+        iarch::info "[KEEP] current configuration moved to $(basename -- "$preserved")"
+    elif iarch::dry_run; then
+        iarch::info "[DRY] would restore $target from $(basename -- "$backup")"
+        return 0
     fi
 
     if mv -- "$backup" "$active"; then
-        echo "[RESTORED] $target from $(basename "$backup")"
+        iarch::info "[RESTORED] $target from $(basename -- "$backup")"
     else
-        echo "[FAIL] Could not restore $backup." >&2
+        iarch::error "[FAIL] could not restore $backup."
         return 1
     fi
 }
 
-echo "======================================================"
-echo " minimaLinux configuration rollback"
-echo "======================================================"
+iarch::heading "$IARCH_PRODUCT_NAME configuration rollback"
 echo "No packages or system services will be removed."
 echo "Active files are preserved before a backup is restored."
-confirm_action
+if ! iarch::confirm "Restore $IARCH_PRODUCT_NAME configuration backups now?"; then
+    echo "Cancelled; no files were changed."
+    exit 0
+fi
 
 failed=0
 for target in "${TARGETS[@]}"; do
@@ -97,5 +94,4 @@ else
 fi
 echo "The cloned repository was not removed; delete it manually after confirming recovery."
 echo "Installed packages, display-manager settings, and system-level changes are not automatically reverted."
-echo "======================================================"
 exit "$failed"
