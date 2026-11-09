@@ -4,6 +4,8 @@
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License">
 </p>
 
+<p align="center"><strong>iArch by Safari</strong> is maintained as a standalone GitHub repository, not as a fork of another GitHub repository.</p>
+
 <div align="center">
 <details>
   <summary><b>▶️ Click to view Video Trailer</b></summary>
