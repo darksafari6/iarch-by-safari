@@ -28,6 +28,14 @@ jobs:
           bash -n fedora_install.sh
           bash -n scripts/minimaos-healthcheck.sh
           bash -n scripts/minimaos-control-center.sh
+          bash -n install-v4-session.sh uninstall-v4-session.sh lib/stage-v5-config.sh
+
+      - name: Run isolated installer and profile tests
+        run: |
+          ./tests/session-install.sh
+          ./tests/managed-files.sh
+          ./tests/package-audit.sh
+          python -m unittest discover -s tests -p 'test_*.py'
 
       - name: Validate TOML and palette JSON
         run: |
@@ -48,7 +56,7 @@ jobs:
           assert parsed["bar"]["default"]["compositor_blur"] is True
           assert parsed["dock"]["enabled"] is True
           assert parsed["notification"]["enable_daemon"] is True
-          assert parsed["audio"]["enable_notification_sounds"] is True
+          assert parsed["audio"]["enable_notification_sounds"] is False
 
           fields = {
               "mPrimary", "mOnPrimary", "mSecondary", "mOnSecondary",
