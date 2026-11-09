@@ -48,7 +48,7 @@ jobs:
                 -e 's#cd minimaLinux#cd iarch-by-safari#g' \
                 "$file"
             fi
-          done < <(find destination -type f -not -path '*/.git/*' -print0)
+          done < <(find destination -type f -not -path '*/.git/*' -not -path 'destination/.github/workflows/*' -print0)
 
           rm -rf destination/.config/kitty/kitty-themes
 
