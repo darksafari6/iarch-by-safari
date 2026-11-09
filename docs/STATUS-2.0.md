@@ -1,5 +1,8 @@
 # minimaLinux 2.0 — work in progress
 
+> **Historical document.** Kept because it records why the current rules exist.
+> For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
+
 The [audit](AUDIT.md) describes the starting point and the original feature map. The following changes are incremental; this is **not a completed or production-validated 2.0 release**.
 
 ## Implemented and covered by isolated tests

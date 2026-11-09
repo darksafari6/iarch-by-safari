@@ -1,17 +1,20 @@
 # minimaLinux
 
+> **Historical document.** Kept because it records why the current rules exist.
+> For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
+
 minimaLinux is a set of Hyprland dotfiles with the [Noctalia shell](https://github.com/noctalia-dev/noctalia-shell), Kitty, Fish and other desktop tools. Install it alongside an existing Arch Linux desktop and choose **minimaLinux** at the login screen.
 
 ## Desktop preview
 
-![Example of the minimaLinux Hyprland desktop with a Tokyo Night-style theme and Noctalia bar](../TokyoNight.png)
+![Example of the minimaLinux Hyprland desktop with a Tokyo Night-style theme and Noctalia bar](../assets/screenshots/desktop-tokyo-night.png)
 
 *An example of a customized minimaLinux desktop. The current installation uses a solid dark wallpaper by default; wallpaper, bar layout and colors can be changed in Noctalia settings.*
 
 <details>
 <summary>See another desktop example</summary>
 
-![Example of the minimaLinux desktop with a red wallpaper and top bar](../Red.png)
+![Example of the minimaLinux desktop with a red wallpaper and top bar](../assets/screenshots/desktop-red.png)
 
 </details>
 
@@ -66,7 +69,7 @@ If you do not use a display manager, log out of your graphical session and start
 - Copies these dotfiles and Noctalia v4 source to `~/.config/minimalinux/`, leaving the existing `~/.config/hypr`, Noctalia, Kitty, Fish and other configs in place. Reinstalling saves the previous minimaLinux directory as `~/.config/minimalinux.backup.*` rather than merging or deleting it. Restore it manually if needed.
 - Installs the system-wide session launcher, login entry, and **minimaLinux Customize** application launcher. The installer refuses to overwrite unmanaged files at those paths.
 - In the minimaLinux session, `XDG_CONFIG_HOME` points at `~/.config/minimalinux`. This affects **all** programs launched in that session, not just Hyprland: their preferences or browser profiles may differ from your usual session. Other XDG data, system services, packages, and user files are shared; this is not a sandbox. D-Bus-activated services can also share state with other sessions.
-- The old fresh-install-only script is retained as `legacy-install.sh` for reference. It makes extensive system and config changes and is **not** the supported way to install the separate session.
+- The old fresh-install-only script is retained as `legacy/legacy-install.sh` for reference. It makes extensive system and config changes and is **not** the supported way to install the separate session.
 
 ## Using and customizing the session
 
@@ -113,7 +116,7 @@ python3 tools/recover_session.py --restore ~/.config/minimalinux.backup.NAME
 
 Recovery requires confirmation, copies the chosen backup without deleting it, and moves the current session config to a new backup first. Symlink backups are not restored automatically. Diagnostics do not change services or drivers. When supported by the installed Hyprland and an `XDG_RUNTIME_DIR` exists, diagnostics run `Hyprland --verify-config`; Hyprland itself may write a runtime log. `python3 tools/diagnose.py --repair` currently reports that no automated repair is available and makes no changes.
 
-The original optional printer, Bluetooth, gaming, browser, audio and DDC/CI flows remain in `legacy-install.sh`, but **are not yet available in the supported session installer**. The legacy script also modifies repositories, services, configuration ownership, and packages and is not a safe substitute for an existing desktop. See [the audit](AUDIT.md) and [2.0 status](STATUS-2.0.md) before using or contributing to it.
+The original optional printer, Bluetooth, gaming, browser, audio and DDC/CI flows remain in `legacy/legacy-install.sh`, but **are not yet available in the supported session installer**. The legacy script also modifies repositories, services, configuration ownership, and packages and is not a safe substitute for an existing desktop. See [the audit](AUDIT.md) and [2.0 status](STATUS-2.0.md) before using or contributing to it.
 
 To add a preset today, define its supported Noctalia v4 scheme and colors in `.config/minimalinux/backend.py`, expose its name in the installer if desired, and test on the target versions. This is not yet a standalone declarative theme format; unsupported components and custom schemes require manual validation.
 

@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="https://img.shields.io/gitlab/contributors/minimalinux/minimaDots" alt="Contributors">
-  <img src="https://img.shields.io/gitlab/last-commit/minimalinux/minimaDots" alt="Last Commit">
+  <img src="https://img.shields.io/github/contributors/darksafari6/iarch-by-safari" alt="Contributors">
+  <img src="https://img.shields.io/github/last-commit/darksafari6/iarch-by-safari" alt="Last Commit">
   <img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License">
 </p>
 
@@ -61,7 +61,7 @@ sudo ./install.sh
 <details>
   <summary align="center"><b>📸 Click to view Screenshot</b></summary>
   <p align="center">
-    <img src="Fedora.png" height="350" style="vertical-align: middle;">
+    <img src="assets/screenshots/fedora-install-selection.png" height="350" style="vertical-align: middle;">
   </p>
 </details>
 
@@ -117,7 +117,7 @@ We have also switched over to Noctalia v5.
 
 ### What this does
 
-This script turns a fresh Arch + Hyprland or Fedora setup into the minimaLinux desktop by installing required packages, dropping useless ones and adding preconfigured streamlined dotfiles.
+This script turns a fresh Arch + Hyprland or Fedora setup into an iArch by Safari desktop by installing required packages, dropping useless ones and adding preconfigured streamlined dotfiles.
 
 ### Nvidia Users
 
@@ -125,11 +125,19 @@ NVIDIA Users: On line 32 of the startup.lua change local enable_nvidia_optional 
 
 The script will prompt the user and update the startup.lua as needed.
 
-### Credits
+### Credits and licenses
 
-The primary application bar (`noctalia`) is based on the exceptional work by **Noctalia**. All credit for the bar's design and functionality goes to them:
+iArch by Safari is free software under the GPL-3.0 license; the complete text is in [LICENSE.txt](LICENSE.txt).
 
-> [**noctalia-dev**](https://noctalia.dev/)
+Every third-party project, artwork file and audio asset this product builds on is listed with its license and copyright holder in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). That file is generated from [`branding/notices.json`](branding/notices.json):
+
+```bash
+python3 tools/notices.py --check    # CI: notices file matches its source
+python3 tools/notices.py --write    # regenerate after editing notices.json
+python3 tools/iarch_brand.py --check  # product naming is consistent
+```
+
+Upstream project names are deliberately kept out of the everyday UI. The bar, launcher, notifications, lock screen, greeter, terminal greeting and system information output say **iArch by Safari**. Credit lives in the notices file and, in the desktop, under Settings → About → Open-source licenses — that page is built in a later step and is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), it does not exist yet.
 
 ### Community
 
@@ -152,20 +160,36 @@ This repository provides comprehensive configurations for a complete, customized
 
 ---
 
-## ✨ minimaOS Glass Desktop (Noctalia v5+)
+## ✨ Glass Desktop Profile
 
-The minimaOS profile adds an iPhone-inspired glass aesthetic to the existing Noctalia v5+ session: a rounded translucent top bar, floating Control Center, a magnified dock, translucent Settings, top-right notification cards, and a custom dark/light palette. It keeps Linux-native services and permissions; unsupported hardware controls are not faked.
+The iArch by Safari glass profile adds an iPhone-inspired glass aesthetic to the session: a rounded translucent top bar, floating Control Center, a magnified dock, translucent Settings, top-right notification cards, and a custom dark/light palette. It keeps Linux-native services and permissions; unsupported hardware controls are not faked.
 
 - Main profile: [`.config/noctalia/config.toml`](.config/noctalia/config.toml)
-- Custom palette: [`.config/noctalia/palettes/minimaOS.json`](.config/noctalia/palettes/minimaOS.json)
-- Architecture, backup, and recovery notes: [`docs/minimaOS-Glass-Experience.md`](docs/minimaOS-Glass-Experience.md)
-- Read-only system diagnostics: run `bash scripts/minimaos-healthcheck.sh` as your normal desktop user.
+- Custom palette: [`.config/noctalia/palettes/iarch-midnight.json`](.config/noctalia/palettes/iarch-midnight.json)
+- Architecture, backup, and recovery notes: [`docs/glass-experience.md`](docs/glass-experience.md)
+- Read-only system diagnostics: run `bash scripts/iarch-healthcheck.sh` as your normal desktop user.
 
 **Shortcuts:** `SUPER + I` opens Control Center; `SUPER + SHIFT + N` opens notification history; `SUPER + SHIFT + A` opens audio; `SUPER + SHIFT + W` opens network; `SUPER + SHIFT + B` opens Bluetooth. `SUPER + T` continues to open Settings.
 
 The profile targets Noctalia v5+; Noctalia v4 uses a different configuration model. After applying a profile, run `noctalia config validate` and verify the live Wayland session before removing backups. See the [Noctalia v5+ configuration docs](https://docs.noctalia.dev/noctalia/configuration/) for configuration precedence and validation.
 
 Notification sound is disabled in the profile by default; enabling it uses Noctalia's built-in Freedesktop sound theme at a restrained volume. GUI-managed overrides may take precedence. An arbitrary custom iPhone-style sound file is not wired up because a supported custom-file hook was not verified; this avoids introducing a conflicting notification daemon.
+
+---
+
+## 📚 Documentation
+
+| Document | What it covers |
+| :--- | :--- |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Repository map, the two configuration payloads, runtime map, safety and performance contracts, testing map |
+| [`docs/BRANDING.md`](docs/BRANDING.md) | Naming and credit policy, and the checklist for a new UI string |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | The six-part plan towards the fully glass session |
+| [`docs/UNVERIFIED.md`](docs/UNVERIFIED.md) | Every claim that is not proven yet, with an id the code refers to |
+| [`docs/glass-experience.md`](docs/glass-experience.md) | Glass profile behaviour, manual application and rollback |
+| [`InstallNotes.md`](InstallNotes.md) | Long-form installation and troubleshooting notes |
+| [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | Third-party projects, artwork and audio assets, with licenses |
+
+Historical documents ([`docs/V4-SESSION.md`](docs/V4-SESSION.md), [`docs/V4-INSTALL-NOTES.md`](docs/V4-INSTALL-NOTES.md), [`docs/GLASS-UI.md`](docs/GLASS-UI.md), [`docs/AUDIT.md`](docs/AUDIT.md), [`docs/STATUS-2.0.md`](docs/STATUS-2.0.md), [`docs/V5-PORT-STATUS.md`](docs/V5-PORT-STATUS.md)) describe the frozen legacy v4 session and past audits. They are marked with a banner and are not instructions for the current session.
 
 ---
 

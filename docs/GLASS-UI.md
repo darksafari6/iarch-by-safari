@@ -1,5 +1,8 @@
 # Experimental glass preset: audit and test plan
 
+> **Historical document.** Kept because it records why the current rules exist.
+> For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
+
 This is an **incremental, opt-in preset**, not the completed iPhone Glass UI upgrade. It changes only a freshly staged minimaLinux session; it does not alter the currently running desktop or merge an existing user's Noctalia settings. No Arch/Hyprland graphical session, audio device or real services were available for validation here. See [STATUS-2.0.md](STATUS-2.0.md) and [AUDIT.md](AUDIT.md) for the wider installer and feature audit.
 
 ## Stage A — source and compatibility audit

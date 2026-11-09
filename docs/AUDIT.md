@@ -1,5 +1,8 @@
 # minimaLinux 2.0 — repository audit
 
+> **Historical document.** Kept because it records why the current rules exist.
+> For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
+
 Audit baseline: `main` / `30208a39101737c5e273ab99e7696dad6a5af7a7`, plus the existing uncommitted work on `arena/0f1423cc-minimalinux`. This document distinguishes the default-branch installer from the newer session installer already present in the working tree. No production installer was run during this audit.
 
 ## Inventory
@@ -10,7 +13,7 @@ The newer working-tree session adds a GTK/Python customization center, GTK setti
 
 ## Existing feature and side-effect map
 
-| Feature | Default-branch implementation (preserved as `legacy-install.sh` in the existing worktree) | Isolated v4 `install-v4-session.sh` |
+| Feature | Default-branch implementation (preserved as `legacy/legacy-install.sh`) | Isolated v4 `install-v4-session.sh` |
 |---|---|---|
 | User/target | Root via sudo, discovers `SUDO_USER`; deploys to `~/.config` | Normal user with sudo; isolated `~/.config/minimalinux` and system-wide Wayland entry |
 | Core packages | `PACKAGES` array near line 305 of legacy script, includes GTK, Thunar extras, codecs, filesystems, build tools, audio and more | Smaller `core_packages` array; Noctalia v4 source and AUR `noctalia-qs` |

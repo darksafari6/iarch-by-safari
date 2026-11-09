@@ -1,5 +1,8 @@
 # Session installation notes
 
+> **Historical document.** Kept because it records why the current rules exist.
+> For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
+
 The supported installer is `./install-v4-session.sh`, run as the user who will log in. It installs Arch packages with pacman, `noctalia-qs` with an existing `yay` or `paru`, downloads Noctalia v4.4.0 from GitHub, and registers a Wayland session with sudo. It does not configure a display manager, GPU driver, audio system, network, or login service. Make sure those already work on your machine. See the README for requirements and the login steps.
 
 ## Guided installation
