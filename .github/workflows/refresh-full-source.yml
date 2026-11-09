@@ -35,10 +35,9 @@ jobs:
           set -euo pipefail
           rsync -a --delete \
             --exclude='.git/' \
-            --exclude='.github/workflows/refresh-full-source.yml' \
+            --exclude='.github/workflows/' \
             source/ destination/
 
-          # Repoint installation and clone references at this independent repo.
           while IFS= read -r -d '' file; do
             if grep -Iq . "$file"; then
               sed -i \
@@ -51,11 +50,8 @@ jobs:
             fi
           done < <(find destination -type f -not -path '*/.git/*' -print0)
 
-          # This source has an orphaned Kitty gitlink but no .gitmodules URL.
-          # Do not ship a broken, uninitializable submodule entry.
           rm -rf destination/.config/kitty/kitty-themes
 
-          # Label the project as a standalone repo (not a GitHub fork).
           if ! grep -q 'standalone GitHub repository' destination/README.md; then
             python - <<'PY'
           from pathlib import Path
@@ -68,8 +64,6 @@ jobs:
           p.write_text(text)
           PY
           fi
-
-          rm -f destination/.github/workflows/refresh-full-source.yml
 
       - name: Commit the full refreshed source
         working-directory: destination
