@@ -14,6 +14,23 @@ Verification log for upstream APIs: **2026-11-09**, Noctalia `v5.4.1` docs and s
 Hyprland `main` at `a1d7a78b` read through the GitHub REST API; the resulting load-graph and payload
 assertions live in `tests/test_payload_map.py`. Tooling: `python3 -m unittest discover -s tests`.
 
+Verification log for the glass design system (Part 2): **2026-11-10**, read through the GitHub REST
+API at the tag each generator targets rather than at `main`, so a leaf cannot be emitted that the
+installed release does not have. Hyprland **`v0.57.2`**: `src/config/values/ConfigValues.cpp`
+(decoration, blur and its eleven variants, shadow, dim, general gaps and border), `src/desktop/rule/Rule.cpp`
+(the eighteen rule match properties), `src/config/lua/bindings/LuaBindingsInternal.hpp` (window rule
+effects), `LuaBindingsConfigRules.cpp` (layer rule effects, `hl.curve`, `hl.env`),
+`src/config/lua/types/LuaConfigGradient.cpp` (gradient tables take `colors` plus `angle` in degrees),
+`src/config/shared/parserUtils/ParserUtils.cpp` (accepted colour strings), `src/config/lua/ConfigManager.cpp`
+(`luaL_openlibs`, and a missing `require` raises so the caller can `pcall` it). Kvantum **`master`**:
+`Kvantum/doc/Theme-Config` (`translucent_windows`, `reduce_window_opacity`, `reduce_menu_opacity`,
+`blurring`, `composite`, `opaque`, `respect_DE`), `Kvantum/style/kvantum.json` (the style keys are
+`kvantum` and `kvantum-dark`), `Kvantum/style/themeconfig/defaulttheme.qrc` (a compiled-in default
+SVG, so an INI-only theme still resolves element art). Noctalia **`v5.4.1`**:
+`src/theme/custom_palettes.cpp` (palette files are `{"dark": {...}, "light": {...}}` with `m`-prefixed
+camelCase colour keys, unprefixed accepted as a fallback). Tooling:
+`python3 iarch/cli/contrast_check.py` and `python3 -m unittest discover -s tests`.
+
 ## How to close an item
 
 1. Reproduce it on the target system (Arch or Fedora, real Hyprland session).
@@ -46,6 +63,7 @@ assertions live in `tests/test_payload_map.py`. Tooling: `python3 -m unittest di
 | --- | --- | --- | --- |
 | UI-01 | How Noctalia Settings labels a custom palette | The palette file is named from `IARCH_PALETTE_ID`; upstream documents the file-stem lookup but does not document whether the picker prettifies the stem, so the on-screen label for `iarch-midnight` was not observed | Naming the palette in documentation |
 | SES-01 | Runtime behavior of `.config/hypr/Scripts/workspace.sh` (`SUPER + TAB`, next workspace on the focused monitor) | **Syntax verified, behavior not observed.** Hyprland `main` at `a1d7a78b`: `src/ipc/s1/Commands.cpp` `dispatchRequest` wraps its argument in `hl.dispatch(...)` when the config provider is Lua, and `hl.dsp.focus{workspace = …}` is registered in `src/config/lua/bindings/LuaBindingsDispatchers.cpp`, so `hyprctl dispatch "hl.dsp.focus({ workspace = N })"` is the current form — the pre-Lua `hyprctl dispatch workspace N` form would now be a Lua error. No compositor was available here to confirm the workspace actually changes, or that the 250 ms lock file debounce feels right | Claiming the shortcut works |
+| SES-02 | The layer namespaces Noctalia v5 registers with the compositor | `data/design/tokens.json` `surfaces.entries` lists ten namespaces (`noctalia-bar`, `-dock`, `-launcher`, `-control-center`, `-notifications`, `-settings`, `-lock`, `-clipboard`, `-session`, `-polkit`) and `surfaces.verified` is `false`. The *rule syntax* is verified -- `hl.layer_rule` and its effect names come from `src/config/lua/bindings/LuaBindingsConfigRules.cpp` `LAYER_RULE_EFFECT_DESCS` and the match property `namespace` from `src/desktop/rule/Rule.cpp` at Hyprland `v0.57.2` -- but no compositor was running here, so `hyprctl layers` was never read and the namespace strings themselves are the documented expectation, not an observation. A rule that matches nothing is inert rather than harmful. `iarch-doctor layers` prints the live namespaces so this row can be closed in one session | Claiming the glass layer rules apply to a specific shell surface |
 | UI-02 | Shortcut overlay surface for the v5 session | The legacy v4 customization center binds `Super+H` to a GTK window; the v5 equivalent is planned for a later part and no supported API has been selected yet | Binding `Super+H` on v5 |
 | PERF-01 | Measured effect of the Performance overlay | `profiles/performance.toml` only lowers values of keys that already exist in the shipped profile; frame timing, blur cost and input latency were not measured on real hardware | Claiming a performance gain |
 | INS-01 | Safety of `install.sh` package operations | It runs `pacman -S --noconfirm`, `pacman -Syu --noconfirm`, `yay -S --noconfirm noctalia-greeter-git` and, after an interactive approval, `pacman -Rns --noconfirm`. That conflicts with the safety contract in `docs/ARCHITECTURE.md`; the safer flow is scheduled work, not a claim made today | Recommending `install.sh` unattended |

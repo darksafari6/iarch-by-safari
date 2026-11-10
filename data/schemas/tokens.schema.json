@@ -1,0 +1,439 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/tokens.schema.json",
+  "title": "iArch by Safari glass design tokens",
+  "description": "Schema for data/design/tokens.json. Numeric bounds that mirror a Hyprland config leaf are set to the min/max Hyprland itself enforces at v0.57.2, so a token that could never be applied fails here instead of in the user's session. Design-only values with no compositor equivalent (radius.pill) are unconstrained; iarch/cli clamps them per target.",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "radius",
+    "spacing",
+    "motion",
+    "font",
+    "accent",
+    "default_intensity",
+    "intensities",
+    "layout",
+    "app_classes",
+    "window_opacity",
+    "surfaces",
+    "hyprland"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_generated": { "type": "string" },
+    "version": { "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "docs": { "type": "string" },
+
+    "radius": {
+      "type": "object",
+      "required": ["xs", "sm", "md", "lg", "pill", "power", "window", "panel", "card", "button", "input", "tooltip"],
+      "additionalProperties": false,
+      "properties": {
+        "xs": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "sm": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "md": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "lg": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "pill": { "type": "integer", "minimum": 100 },
+        "power": { "type": "number", "minimum": 1, "maximum": 10 },
+        "window": { "$ref": "#/definitions/radius_role" },
+        "panel": { "$ref": "#/definitions/radius_role" },
+        "card": { "$ref": "#/definitions/radius_role" },
+        "button": { "$ref": "#/definitions/radius_role" },
+        "input": { "$ref": "#/definitions/radius_role" },
+        "tooltip": { "$ref": "#/definitions/radius_role" }
+      }
+    },
+
+    "spacing": {
+      "type": "object",
+      "required": ["xs", "sm", "md", "lg", "xl", "xxl"],
+      "additionalProperties": false,
+      "properties": {
+        "xs": { "type": "integer", "minimum": 0 },
+        "sm": { "type": "integer", "minimum": 0 },
+        "md": { "type": "integer", "minimum": 0 },
+        "lg": { "type": "integer", "minimum": 0 },
+        "xl": { "type": "integer", "minimum": 0 },
+        "xxl": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "motion": {
+      "type": "object",
+      "required": ["fast_ms", "normal_ms", "slow_ms", "easing", "spring"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string" },
+        "fast_ms": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "normal_ms": { "type": "integer", "minimum": 0, "maximum": 2000 },
+        "slow_ms": { "type": "integer", "minimum": 0, "maximum": 4000 },
+        "easing": {
+          "type": "object",
+          "required": ["standard", "emphasized", "decelerate", "accelerate"],
+          "additionalProperties": false,
+          "properties": {
+            "standard": { "$ref": "#/definitions/bezier" },
+            "emphasized": { "$ref": "#/definitions/bezier" },
+            "decelerate": { "$ref": "#/definitions/bezier" },
+            "accelerate": { "$ref": "#/definitions/bezier" }
+          }
+        },
+        "spring": {
+          "type": "object",
+          "required": ["stiffness", "damping", "mass"],
+          "additionalProperties": false,
+          "description": "hl.curve(name, { type = \"spring\", ... }) rejects any of the three below 0.5.",
+          "properties": {
+            "stiffness": { "type": "number", "minimum": 0.5 },
+            "damping": { "type": "number", "minimum": 0.5 },
+            "mass": { "type": "number", "minimum": 0.5 }
+          }
+        }
+      }
+    },
+
+    "font": {
+      "type": "object",
+      "required": ["ui", "mono", "emoji", "sizes", "weights", "line_height", "fallback"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string" },
+        "ui": { "type": "string", "minLength": 1 },
+        "ui_display": { "type": "string", "minLength": 1 },
+        "mono": { "type": "string", "minLength": 1 },
+        "emoji": { "type": "string", "minLength": 1 },
+        "sizes": {
+          "type": "object",
+          "required": ["xs", "sm", "md", "lg", "xl", "xxl"],
+          "additionalProperties": false,
+          "properties": {
+            "xs": { "type": "integer", "minimum": 6, "maximum": 72 },
+            "sm": { "type": "integer", "minimum": 6, "maximum": 72 },
+            "md": { "type": "integer", "minimum": 6, "maximum": 72 },
+            "lg": { "type": "integer", "minimum": 6, "maximum": 72 },
+            "xl": { "type": "integer", "minimum": 6, "maximum": 72 },
+            "xxl": { "type": "integer", "minimum": 6, "maximum": 128 }
+          }
+        },
+        "weights": {
+          "type": "object",
+          "required": ["regular", "medium", "semibold", "bold"],
+          "additionalProperties": false,
+          "properties": {
+            "regular": { "type": "integer", "minimum": 100, "maximum": 900 },
+            "medium": { "type": "integer", "minimum": 100, "maximum": 900 },
+            "semibold": { "type": "integer", "minimum": 100, "maximum": 900 },
+            "bold": { "type": "integer", "minimum": 100, "maximum": 900 }
+          }
+        },
+        "line_height": { "type": "number", "minimum": 1.0, "maximum": 2.5 },
+        "fallback": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["family", "script"],
+            "additionalProperties": false,
+            "properties": {
+              "family": { "type": "string", "minLength": 1 },
+              "script": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+
+    "accent": { "$ref": "#/definitions/accent_roles" },
+
+    "default_intensity": { "$ref": "#/definitions/intensity_name" },
+
+    "intensities": {
+      "type": "object",
+      "required": ["crystal", "frosted", "soft", "performance"],
+      "additionalProperties": false,
+      "properties": {
+        "crystal": { "$ref": "#/definitions/intensity" },
+        "frosted": { "$ref": "#/definitions/intensity" },
+        "soft": { "$ref": "#/definitions/intensity" },
+        "performance": { "$ref": "#/definitions/intensity" }
+      }
+    },
+
+    "layout": {
+      "type": "object",
+      "required": ["gaps_in", "gaps_out", "float_gaps", "border_size", "resize_on_border", "border"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string" },
+        "gaps_in": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "gaps_out": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "float_gaps": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "border_size": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "resize_on_border": { "type": "boolean" },
+        "border": {
+          "type": "object",
+          "required": ["angle_deg", "active", "inactive"],
+          "additionalProperties": false,
+          "properties": {
+            "angle_deg": { "type": "number", "minimum": 0, "maximum": 360 },
+            "active": {
+              "type": "object",
+              "required": ["from_role", "from_alpha", "to_role", "to_alpha"],
+              "additionalProperties": false,
+              "properties": {
+                "from_role": { "$ref": "#/definitions/accent_role_name" },
+                "from_alpha": { "$ref": "#/definitions/alpha" },
+                "to_role": { "$ref": "#/definitions/accent_role_name" },
+                "to_alpha": { "$ref": "#/definitions/alpha" }
+              }
+            },
+            "inactive": {
+              "type": "object",
+              "required": ["color", "alpha"],
+              "additionalProperties": false,
+              "properties": {
+                "color": { "$ref": "#/definitions/hex_color" },
+                "alpha": { "$ref": "#/definitions/alpha" }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "app_classes": {
+      "type": "object",
+      "required": ["terminal", "file_manager", "editor", "iarch_app", "browser", "video", "opaque_always"],
+      "additionalProperties": false,
+      "description": "Window-class regular expressions per opacity group. Values are RE2 patterns anchored the way .config/hypr/windowrules.lua already anchors them.",
+      "properties": {
+        "_note": { "type": "string" },
+        "terminal": { "$ref": "#/definitions/class_list" },
+        "file_manager": { "$ref": "#/definitions/class_list" },
+        "editor": { "$ref": "#/definitions/class_list" },
+        "iarch_app": { "$ref": "#/definitions/class_list" },
+        "browser": { "$ref": "#/definitions/class_list" },
+        "video": { "$ref": "#/definitions/class_list" },
+        "opaque_always": { "$ref": "#/definitions/class_list" }
+      }
+    },
+
+    "window_opacity": {
+      "type": "object",
+      "required": ["terminal", "file_manager", "editor", "iarch_app", "browser", "video", "opaque_always", "fullscreen_override"],
+      "additionalProperties": false,
+      "properties": {
+        "terminal": { "$ref": "#/definitions/alpha" },
+        "file_manager": { "$ref": "#/definitions/alpha" },
+        "editor": { "$ref": "#/definitions/alpha" },
+        "iarch_app": { "$ref": "#/definitions/alpha" },
+        "browser": { "$ref": "#/definitions/alpha" },
+        "video": { "$ref": "#/definitions/alpha" },
+        "opaque_always": { "$ref": "#/definitions/alpha" },
+        "fullscreen_override": { "$ref": "#/definitions/alpha" }
+      }
+    },
+
+    "surfaces": {
+      "type": "object",
+      "required": ["verified", "entries"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string" },
+        "verified": {
+          "type": "boolean",
+          "description": "False until the namespaces have been compared against `hyprctl layers` output from a running session."
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "namespace", "blur", "ignore_alpha", "xray", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "namespace": { "type": "string", "minLength": 1 },
+              "blur": { "type": "boolean" },
+              "blur_popups": { "type": "boolean" },
+              "ignore_alpha": { "$ref": "#/definitions/alpha" },
+              "xray": { "type": "boolean" },
+              "dim_around": { "type": "boolean" },
+              "order": { "type": "integer" },
+              "above_lock": { "type": "integer", "minimum": 0, "maximum": 2 },
+              "no_screen_share": { "type": "boolean" },
+              "description": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+
+    "hyprland": {
+      "type": "object",
+      "required": ["verified_against", "source", "leaves", "ranges", "blur_variants", "animated_blur_variants", "window_rule_effects", "layer_rule_effects", "rule_match_properties"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string" },
+        "verified_against": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "source": { "type": "string" },
+        "leaves": { "$ref": "#/definitions/string_list" },
+        "ranges": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "number" }
+          }
+        },
+        "blur_variants": { "$ref": "#/definitions/string_list" },
+        "animated_blur_variants": { "$ref": "#/definitions/string_list" },
+        "window_rule_effects": { "$ref": "#/definitions/string_list" },
+        "window_rule_effects_note": { "type": "string" },
+        "layer_rule_effects": { "$ref": "#/definitions/string_list" },
+        "rule_match_properties": { "$ref": "#/definitions/string_list" }
+      }
+    }
+  },
+
+  "definitions": {
+    "alpha": { "type": "number", "minimum": 0, "maximum": 1 },
+    "hex_color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "radius_role": { "enum": ["xs", "sm", "md", "lg", "pill"] },
+    "accent_role_name": { "enum": ["primary", "secondary", "success", "warning", "danger"] },
+    "intensity_name": { "enum": ["crystal", "frosted", "soft", "performance"] },
+    "string_list": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "class_list": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "accent_roles": {
+      "type": "object",
+      "required": ["primary", "secondary", "success", "warning", "danger"],
+      "additionalProperties": false,
+      "properties": {
+        "primary": { "$ref": "#/definitions/hex_color" },
+        "secondary": { "$ref": "#/definitions/hex_color" },
+        "success": { "$ref": "#/definitions/hex_color" },
+        "warning": { "$ref": "#/definitions/hex_color" },
+        "danger": { "$ref": "#/definitions/hex_color" }
+      }
+    },
+    "bezier": {
+      "type": "object",
+      "required": ["type", "points"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "bezier" },
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    },
+    "intensity": {
+      "type": "object",
+      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "blur": {
+          "type": "object",
+          "required": [
+            "enabled", "variant", "size", "passes", "noise", "contrast",
+            "brightness", "vibrancy", "xray", "ignore_opacity",
+            "new_optimizations", "popups", "special"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "variant": { "enum": ["kawase", "frost", "ripple", "drops", "water", "fluid_jar", "prism", "heat_shimmer", "acrylic", "aurora", "haze"] },
+            "size": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "passes": { "type": "integer", "minimum": 0, "maximum": 10 },
+            "noise": { "type": "number", "minimum": 0, "maximum": 1 },
+            "contrast": { "type": "number", "minimum": 0, "maximum": 2 },
+            "brightness": { "type": "number", "minimum": 0, "maximum": 2 },
+            "vibrancy": { "type": "number", "minimum": 0, "maximum": 1 },
+            "xray": { "type": "boolean" },
+            "ignore_opacity": { "type": "boolean" },
+            "new_optimizations": { "type": "boolean" },
+            "popups": { "type": "boolean" },
+            "special": { "type": "boolean" }
+          }
+        },
+        "glass": {
+          "type": "object",
+          "required": ["tint_alpha", "tint_alpha_strong", "border_alpha", "highlight_alpha", "shadow_alpha"],
+          "additionalProperties": false,
+          "properties": {
+            "tint_alpha": { "$ref": "#/definitions/alpha" },
+            "tint_alpha_strong": { "$ref": "#/definitions/alpha" },
+            "border_alpha": { "$ref": "#/definitions/alpha" },
+            "highlight_alpha": { "$ref": "#/definitions/alpha" },
+            "shadow_alpha": { "$ref": "#/definitions/alpha" }
+          }
+        },
+        "shadow": {
+          "type": "object",
+          "required": ["enabled", "range", "render_power", "color", "color_inactive", "offset", "scale", "sharp"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "range": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "render_power": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "color": { "$ref": "#/definitions/hex_color" },
+            "color_inactive": { "$ref": "#/definitions/hex_color" },
+            "offset": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "type": "number" }
+            },
+            "scale": { "type": "number", "minimum": 0.01, "maximum": 2 },
+            "sharp": { "type": "boolean" }
+          }
+        },
+        "window": {
+          "type": "object",
+          "required": ["active_opacity", "inactive_opacity", "fullscreen_opacity", "dim_inactive", "dim_strength"],
+          "additionalProperties": false,
+          "properties": {
+            "active_opacity": { "$ref": "#/definitions/alpha" },
+            "inactive_opacity": { "$ref": "#/definitions/alpha" },
+            "fullscreen_opacity": { "$ref": "#/definitions/alpha" },
+            "dim_inactive": { "type": "boolean" },
+            "dim_strength": { "$ref": "#/definitions/alpha" }
+          }
+        },
+        "terminal": {
+          "type": "object",
+          "required": ["background_opacity"],
+          "additionalProperties": false,
+          "properties": {
+            "background_opacity": { "$ref": "#/definitions/alpha" }
+          }
+        }
+      }
+    }
+  }
+}

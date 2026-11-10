@@ -107,7 +107,13 @@ jobs:
               "data/contacts.default.json": "data/schemas/contacts.schema.json",
               "data/keybinds.default.json": "data/schemas/keybinds.schema.json",
               "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
+              "data/design/tokens.json": "data/schemas/tokens.schema.json",
               "data/licenses.json": "data/schemas/licenses.schema.json",
+              # Colour presets are a family under one schema.
+              **{
+                  p.as_posix(): "data/schemas/preset.schema.json"
+                  for p in sorted(Path("data/design/presets").glob("*.json"))
+              },
           }
 
           documents = {p.as_posix() for p in Path("data").rglob("*.json")}
@@ -137,6 +143,31 @@ jobs:
 
           print(f"{len(PAIRS)} documents validated, {len(schemas)} schemas checked, "
                 f"{len(documents)} JSON files in data/")
+          PY
+
+      - name: Check every colour preset clears the WCAG contrast gate
+        run: |
+          set -euo pipefail
+          # The same gate iarch-theme runs before it will apply a preset: text
+          # roles at 4.5:1, non-text UI at 3:1. Exit 1 lists the offending pair.
+          python iarch/cli/contrast_check.py --quiet
+          python iarch/cli/contrast_check.py --json > /tmp/contrast.json
+          python - <<'PY'
+          import json
+
+          payload = json.loads(open("/tmp/contrast.json", encoding="utf-8").read())
+          assert payload["ok"], "a preset is below the contrast floor"
+          presets = payload["presets"]
+          expected = {
+              "midnight-glass", "frosted-light", "aurora",
+              "crimson-plasma", "tokyo-night-glass", "mono-ice",
+          }
+          assert set(presets) == expected, f"presets changed: {sorted(set(presets) ^ expected)}"
+          for name, entry in sorted(presets.items()):
+              assert entry["gated"] >= 30, f"{name}: only {entry['gated']} gated pairs"
+              assert not entry["failures"], f"{name}: {entry['failures']}"
+              print(f"{name}: {entry['gated']} gated pairs, "
+                    f"lowest {entry['lowest_gated']}:1")
           PY
 
       - name: Validate TOML and palette JSON

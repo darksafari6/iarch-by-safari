@@ -1,0 +1,222 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/preset.schema.json",
+  "title": "iArch by Safari colour preset",
+  "description": "Schema for data/design/presets/*.json. A preset owns colours and choices only; geometry, blur, motion and the font stack come from data/design/tokens.json. Every text/background pair a preset declares is measured by iarch/cli/contrast_check.py, and applying a preset that fails the contrast gate is refused.",
+  "type": "object",
+  "required": [
+    "version",
+    "id",
+    "name",
+    "mode",
+    "description",
+    "default_intensity",
+    "palette",
+    "terminal",
+    "gtk",
+    "cursor",
+    "icons",
+    "wallpaper",
+    "noctalia"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_generated": { "type": "string" },
+    "version": { "const": 1 },
+    "id": { "$ref": "#/definitions/id" },
+    "name": { "type": "string", "minLength": 2 },
+    "mode": { "enum": ["dark", "light"] },
+    "description": { "type": "string", "minLength": 10 },
+    "default_intensity": { "enum": ["crystal", "frosted", "soft", "performance"] },
+
+    "palette": {
+      "type": "object",
+      "required": [
+        "background", "surface", "surface_variant",
+        "on_background", "on_surface", "on_surface_variant",
+        "outline", "outline_variant", "shadow", "text_disabled",
+        "accent", "on_accent"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "background": { "$ref": "#/definitions/hex_color" },
+        "surface": { "$ref": "#/definitions/hex_color" },
+        "surface_variant": { "$ref": "#/definitions/hex_color" },
+        "on_background": { "$ref": "#/definitions/hex_color" },
+        "on_surface": { "$ref": "#/definitions/hex_color" },
+        "on_surface_variant": { "$ref": "#/definitions/hex_color" },
+        "outline": { "$ref": "#/definitions/hex_color" },
+        "outline_variant": { "$ref": "#/definitions/hex_color" },
+        "shadow": { "$ref": "#/definitions/hex_color" },
+        "text_disabled": { "$ref": "#/definitions/hex_color" },
+        "accent": { "$ref": "#/definitions/accent_roles" },
+        "on_accent": {
+          "type": "object",
+          "description": "Label colour drawn inside each accent fill (a suggested button, a selected row).",
+          "required": ["primary", "secondary", "success", "warning", "danger"],
+          "additionalProperties": false,
+          "properties": {
+            "primary": { "$ref": "#/definitions/hex_color" },
+            "secondary": { "$ref": "#/definitions/hex_color" },
+            "success": { "$ref": "#/definitions/hex_color" },
+            "warning": { "$ref": "#/definitions/hex_color" },
+            "danger": { "$ref": "#/definitions/hex_color" }
+          }
+        }
+      }
+    },
+
+    "terminal": {
+      "type": "object",
+      "required": ["colors", "background_opacity_from_tokens", "padding_px", "tab_bar_style", "tab_bar_separator"],
+      "additionalProperties": false,
+      "properties": {
+        "colors": {
+          "type": "object",
+          "required": [
+            "background", "foreground", "cursor", "cursor_text",
+            "selection_background", "selection_foreground", "url_color",
+            "color0", "color1", "color2", "color3", "color4", "color5", "color6", "color7",
+            "color8", "color9", "color10", "color11", "color12", "color13", "color14", "color15"
+          ],
+          "additionalProperties": false,
+          "patternProperties": { "^[a-z0-9_]+$": { "$ref": "#/definitions/hex_color" } }
+        },
+        "background_opacity_from_tokens": {
+          "type": "boolean",
+          "description": "True means the opacity comes from intensities.<level>.terminal.background_opacity; a false value pins terminal.colors.background_opacity below."
+        },
+        "background_opacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "padding_px": { "type": "integer", "minimum": 0, "maximum": 64 },
+        "tab_bar_style": { "enum": ["powerline", "separator", "fade", "slant", "custom", "hidden"] },
+        "tab_bar_separator": { "type": "string" }
+      }
+    },
+
+    "gtk": {
+      "type": "object",
+      "required": ["accent", "theme_dark", "theme_light", "sidebar_alpha_delta"],
+      "additionalProperties": false,
+      "properties": {
+        "accent": { "$ref": "#/definitions/hex_color" },
+        "theme_dark": { "type": "string", "minLength": 1 },
+        "theme_light": { "type": "string", "minLength": 1 },
+        "sidebar_alpha_delta": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.4,
+          "description": "How much more opaque a sidebar is than the window behind it."
+        }
+      }
+    },
+
+    "cursor": {
+      "type": "object",
+      "required": ["theme", "size"],
+      "additionalProperties": false,
+      "properties": {
+        "theme": { "type": "string", "minLength": 1 },
+        "size": { "type": "integer", "minimum": 8, "maximum": 128 }
+      }
+    },
+
+    "icons": {
+      "type": "object",
+      "required": ["theme", "available"],
+      "additionalProperties": false,
+      "description": "The chosen icon theme plus the list the Settings app offers in its Icons dropdown (Part 4). Every entry must be open-licensed and credited in THIRD_PARTY_NOTICES.md.",
+      "properties": {
+        "theme": { "type": "string", "minLength": 1 },
+        "available": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "theme", "license", "upstream", "package_arch", "package_fedora"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/definitions/id" },
+              "name": { "type": "string", "minLength": 1 },
+              "theme": { "type": "string", "minLength": 1 },
+              "license": { "type": "string", "minLength": 1 },
+              "upstream": { "type": "string", "pattern": "^https://" },
+              "package_arch": { "type": "string" },
+              "package_fedora": { "type": "string" },
+              "verified": { "type": "boolean" },
+              "note": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "wallpaper": {
+      "type": "object",
+      "required": ["kind", "path", "credit"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["generated", "bundled"] },
+        "path": { "type": "string", "pattern": "^assets/wallpapers/" },
+        "credit": { "type": "string", "minLength": 1 },
+        "generate": {
+          "type": "object",
+          "description": "Input for iarch/cli/gen_wallpapers.py; required when kind is generated.",
+          "required": ["style", "stops", "seed"],
+          "additionalProperties": false,
+          "properties": {
+            "style": { "enum": ["mesh", "aurora", "radial", "diagonal", "plasma"] },
+            "stops": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 6,
+              "items": { "$ref": "#/definitions/hex_color" }
+            },
+            "seed": { "type": "integer", "minimum": 0 },
+            "grain": { "type": "number", "minimum": 0, "maximum": 0.2 },
+            "vignette": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    },
+
+    "noctalia": {
+      "type": "object",
+      "required": ["palette_id", "palette_name"],
+      "additionalProperties": false,
+      "properties": {
+        "palette_id": {
+          "type": "string",
+          "pattern": "^iarch-[a-z0-9-]+$",
+          "description": "Stem of the file in ~/.config/noctalia/palettes/ and the value written to theme.custom_palette."
+        },
+        "palette_name": { "type": "string", "minLength": 2 }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "if": { "properties": { "wallpaper": { "properties": { "kind": { "const": "generated" } } } } },
+      "then": { "properties": { "wallpaper": { "required": ["generate"] } } }
+    }
+  ],
+
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "hex_color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "accent_roles": {
+      "type": "object",
+      "required": ["primary", "secondary", "success", "warning", "danger"],
+      "additionalProperties": false,
+      "properties": {
+        "primary": { "$ref": "#/definitions/hex_color" },
+        "secondary": { "$ref": "#/definitions/hex_color" },
+        "success": { "$ref": "#/definitions/hex_color" },
+        "warning": { "$ref": "#/definitions/hex_color" },
+        "danger": { "$ref": "#/definitions/hex_color" }
+      }
+    }
+  }
+}

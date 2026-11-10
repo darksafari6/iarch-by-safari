@@ -1,0 +1,121 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "id": "tokyo-night-glass",
+  "name": "Tokyo Night Glass",
+  "mode": "dark",
+  "description": "The cool blue-grey scheme this repository already shipped as a wallpaper, turned into a glass preset: muted indigo surfaces, sky and periwinkle accents, and a terminal palette that matches the art.",
+  "default_intensity": "frosted",
+
+  "palette": {
+    "background": "#16161e",
+    "surface": "#1f2029",
+    "surface_variant": "#272833",
+    "on_background": "#e1e4f2",
+    "on_surface": "#e1e4f2",
+    "on_surface_variant": "#a9b1d6",
+    "outline": "#6f7690",
+    "outline_variant": "#3b3d52",
+    "shadow": "#0d0d14",
+    "text_disabled": "#828aa5",
+    "accent": {
+      "primary": "#7aa2ff",
+      "secondary": "#7dcfff",
+      "success": "#9ece6a",
+      "warning": "#e0af68",
+      "danger": "#f7768e"
+    },
+    "on_accent": {
+      "primary": "#0b1024",
+      "secondary": "#071a24",
+      "success": "#10200a",
+      "warning": "#241703",
+      "danger": "#280a12"
+    }
+  },
+
+  "terminal": {
+    "colors": {
+      "background": "#16161e",
+      "foreground": "#c0caf5",
+      "cursor": "#7aa2ff",
+      "cursor_text": "#0b1024",
+      "selection_background": "#2d3047",
+      "selection_foreground": "#dfe4ff",
+      "url_color": "#7dcfff",
+      "color0": "#2f3349",
+      "color1": "#f7768e",
+      "color2": "#9ece6a",
+      "color3": "#e0af68",
+      "color4": "#7aa2ff",
+      "color5": "#bb9af7",
+      "color6": "#7dcfff",
+      "color7": "#a9b1d6",
+      "color8": "#565f89",
+      "color9": "#ff8fa3",
+      "color10": "#b5e88a",
+      "color11": "#f0c987",
+      "color12": "#9ab8ff",
+      "color13": "#cba9f9",
+      "color14": "#9adcf9",
+      "color15": "#d5dcfa"
+    },
+    "background_opacity_from_tokens": true,
+    "padding_px": 14,
+    "tab_bar_style": "powerline",
+    "tab_bar_separator": "  \u2502  "
+  },
+
+  "gtk": {
+    "accent": "#7aa2ff",
+    "theme_dark": "adw-gtk3-dark",
+    "theme_light": "adw-gtk3",
+    "sidebar_alpha_delta": 0.06
+  },
+
+  "cursor": { "theme": "Bibata-Modern-Classic", "size": 24 },
+
+  "icons": {
+    "theme": "Papirus-Dark",
+    "available": [
+      {
+        "id": "papirus-dark",
+        "name": "Papirus (dark)",
+        "theme": "Papirus-Dark",
+        "license": "GPL-3.0",
+        "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
+        "package_arch": "papirus-icon-theme",
+        "package_fedora": "papirus-icon-theme",
+        "verified": false
+      },
+      {
+        "id": "papirus-light",
+        "name": "Papirus (light)",
+        "theme": "Papirus-Light",
+        "license": "GPL-3.0",
+        "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
+        "package_arch": "papirus-icon-theme",
+        "package_fedora": "papirus-icon-theme",
+        "verified": false
+      },
+      {
+        "id": "yaru",
+        "name": "Yaru",
+        "theme": "Yaru",
+        "license": "GPL-3.0 and CC-BY-SA-4.0 icons",
+        "upstream": "https://github.com/ubuntu/yaru",
+        "package_arch": "yaru-icon-theme",
+        "package_fedora": "yaru-icon-theme",
+        "verified": false
+      }
+    ]
+  },
+
+  "wallpaper": {
+    "kind": "bundled",
+    "path": "assets/wallpapers/desktop-tokyo-night.webp",
+    "credit": "Shipped with this repository before Part 2 and converted from PNG to WebP in Task 6 of Part 1; the original is kept at assets/wallpapers/originals/desktop-tokyo-night.png. The colour scheme it illustrates is documented in THIRD_PARTY_NOTICES.md (tokyonight.nvim, Apache-2.0); the hex values below were chosen to match the artwork and are not copied from that project's source. Reused here only as this preset's background; not modified."
+  },
+
+  "noctalia": { "palette_id": "iarch-tokyo-night", "palette_name": "iArch Tokyo Night" }
+}

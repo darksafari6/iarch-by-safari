@@ -22,7 +22,15 @@ PAIRS = {
     "data/contacts.default.json": "data/schemas/contacts.schema.json",
     "data/keybinds.default.json": "data/schemas/keybinds.schema.json",
     "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
+    "data/design/tokens.json": "data/schemas/tokens.schema.json",
     "data/licenses.json": "data/schemas/licenses.schema.json",
+    # Colour presets are a family under one schema; expanding the directory keeps
+    # a newly added preset mapped automatically, while a JSON file anywhere else
+    # in data/ still has to be listed by hand above.
+    **{
+        f"data/design/presets/{path.name}": "data/schemas/preset.schema.json"
+        for path in sorted((ROOT / "data" / "design" / "presets").glob("*.json"))
+    },
 }
 
 PALETTE_FIELDS = {

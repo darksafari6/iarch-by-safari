@@ -1,0 +1,121 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "id": "crimson-plasma",
+  "name": "Crimson Plasma",
+  "mode": "dark",
+  "description": "Ember red over near-black, built around the red wallpaper this repository already shipped. Warm accents, so the glass tint reads as heat behind the surface rather than frost.",
+  "default_intensity": "frosted",
+
+  "palette": {
+    "background": "#14070a",
+    "surface": "#1e0c11",
+    "surface_variant": "#291218",
+    "on_background": "#ffe9ec",
+    "on_surface": "#ffe9ec",
+    "on_surface_variant": "#f0bcc4",
+    "outline": "#966770",
+    "outline_variant": "#4a2028",
+    "shadow": "#0a0305",
+    "text_disabled": "#b98b93",
+    "accent": {
+      "primary": "#ff6b81",
+      "secondary": "#ff9f6b",
+      "success": "#5fd39b",
+      "warning": "#ffc65c",
+      "danger": "#ff4d6d"
+    },
+    "on_accent": {
+      "primary": "#2b0710",
+      "secondary": "#2b1200",
+      "success": "#04231a",
+      "warning": "#2b1c00",
+      "danger": "#2b0209"
+    }
+  },
+
+  "terminal": {
+    "colors": {
+      "background": "#14070a",
+      "foreground": "#ffe9ec",
+      "cursor": "#ff6b81",
+      "cursor_text": "#2b0710",
+      "selection_background": "#43161f",
+      "selection_foreground": "#fff3f5",
+      "url_color": "#ff9f6b",
+      "color0": "#33171d",
+      "color1": "#ff7b8a",
+      "color2": "#7ee0a8",
+      "color3": "#ffc65c",
+      "color4": "#ff9f6b",
+      "color5": "#f7a1c4",
+      "color6": "#6fd6d0",
+      "color7": "#e8cdd2",
+      "color8": "#5c343c",
+      "color9": "#ff9aa6",
+      "color10": "#9cebbc",
+      "color11": "#ffd684",
+      "color12": "#ffb98f",
+      "color13": "#fbbcd6",
+      "color14": "#8fe4de",
+      "color15": "#fff1f3"
+    },
+    "background_opacity_from_tokens": true,
+    "padding_px": 14,
+    "tab_bar_style": "powerline",
+    "tab_bar_separator": "  \u2502  "
+  },
+
+  "gtk": {
+    "accent": "#ff6b81",
+    "theme_dark": "adw-gtk3-dark",
+    "theme_light": "adw-gtk3",
+    "sidebar_alpha_delta": 0.07
+  },
+
+  "cursor": { "theme": "Bibata-Modern-Classic", "size": 24 },
+
+  "icons": {
+    "theme": "Papirus-Dark",
+    "available": [
+      {
+        "id": "papirus-dark",
+        "name": "Papirus (dark)",
+        "theme": "Papirus-Dark",
+        "license": "GPL-3.0",
+        "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
+        "package_arch": "papirus-icon-theme",
+        "package_fedora": "papirus-icon-theme",
+        "verified": false
+      },
+      {
+        "id": "papirus-light",
+        "name": "Papirus (light)",
+        "theme": "Papirus-Light",
+        "license": "GPL-3.0",
+        "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
+        "package_arch": "papirus-icon-theme",
+        "package_fedora": "papirus-icon-theme",
+        "verified": false
+      },
+      {
+        "id": "yaru",
+        "name": "Yaru",
+        "theme": "Yaru",
+        "license": "GPL-3.0 and CC-BY-SA-4.0 icons",
+        "upstream": "https://github.com/ubuntu/yaru",
+        "package_arch": "yaru-icon-theme",
+        "package_fedora": "yaru-icon-theme",
+        "verified": false
+      }
+    ]
+  },
+
+  "wallpaper": {
+    "kind": "bundled",
+    "path": "assets/wallpapers/desktop-red.webp",
+    "credit": "Shipped with this repository before Part 2 and converted from PNG to WebP in Task 6 of Part 1; the original is kept at assets/wallpapers/originals/desktop-red.png. Provenance of the artwork itself is recorded in THIRD_PARTY_NOTICES.md (fastfetch-logo-assets / TP-03). Reused here only as this preset's background; not modified."
+  },
+
+  "noctalia": { "palette_id": "iarch-crimson-plasma", "palette_name": "iArch Crimson Plasma" }
+}
