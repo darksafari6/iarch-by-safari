@@ -18,15 +18,13 @@ the map. Read it before changing anything.
 ├── LICENSE.txt               GPL-3.0 license for this repository. Never edit or remove.
 ├── THIRD_PARTY_NOTICES.md    Generated. Third-party credit; edit branding/notices.json instead.
 │
-├── .config/                  The session payload (see "Two payloads" below).
-│   ├── hypr/                 Compositor configuration: *.lua is current, *.conf is legacy v4.
-│   ├── noctalia/             Shell configuration: config.toml + palettes/ (v5), settings.json + plugins/ (v4).
+├── .config/                  The v5 session payload only (see "Two payloads" below).
+│   ├── hypr/                 Compositor configuration, Lua API only.
+│   ├── noctalia/             Shell configuration: config.toml + palettes/.
 │   ├── fastfetch/            System information layout and artwork.
 │   ├── kitty/                Terminal configuration and generated color/profile includes.
 │   ├── fish/                 Interactive shell configuration, including the greeting.
-│   ├── gtk-3.0/, gtk-4.0/    GTK theme and icon preferences.
-│   ├── starship.toml         Prompt configuration.
-│   └── minimalinux/          Frozen legacy v4 customization center (Python/GTK 3).
+│   └── starship.toml         Prompt configuration.
 │
 ├── branding/                 Product identity, machine-readable.
 │   ├── product.env           The only definition of the product name, ids and runtime paths.
@@ -56,10 +54,10 @@ the map. Read it before changing anything.
 │   ├── iarch-healthcheck.sh  Read-only diagnostics; changes nothing.
 │   └── iarch-control-center.sh  Allowlisted IPC shortcuts for the shell.
 │
-├── session/                  Wayland session launchers and menu entries for the legacy v4 session.
 ├── pipewire/                 Optional virtual-surround convolver profile and HRIR assets.
-├── assets/screenshots/       Images used by README and docs.
-├── legacy/                   Reference code that is not a supported entry point.
+├── assets/
+│   ├── branding/             The original logo artwork, colour and mono.
+│   └── screenshots/          Images used by README and docs.
 ├── docs/                     This directory.
 ├── tests/                    Shell and Python tests. See "Testing map".
 ├── trailer/                  Release video asset, not referenced by the session.
@@ -67,8 +65,14 @@ the map. Read it before changing anything.
 ├── install.sh                Arch installer: system-wide, root, fresh install.
 ├── fedora_install.sh         Fedora installer: system-wide, root, fresh install.
 ├── uninstall.sh              Restores timestamped backups; never deletes an active config.
-├── install-v4-session.sh     Installs the isolated legacy session for one user.
-└── uninstall-v4-session.sh   Removes only the managed launchers of that session.
+│
+└── legacy/                   The frozen v4 payload and its two deprecated scripts.
+    ├── install-v4-session.sh Deprecate-on-sight installer for the isolated legacy session.
+    ├── uninstall-v4-session.sh Removes only the managed launchers of that session.
+    ├── session/              Wayland session launchers and menu entries of the v4 session.
+    ├── config/               The v4 payload: Hyprlang *.conf, GTK 3/4 settings, the v4
+    │                         noctalia settings/plugins and the frozen customization center.
+    └── docs/                 Historical v4 session and glass documents.
 ```
 
 ## Two payloads
@@ -78,10 +82,10 @@ single easiest way to break a session, so every installer stages exactly one.
 
 | | Current session (v5) | Legacy isolated session (v4) |
 | --- | --- | --- |
-| Compositor config | `.config/hypr/*.lua` (Lua API) | `.config/hypr/*.conf` (Hyprlang) |
-| Shell config | `.config/noctalia/config.toml` + `palettes/*.json` | `.config/noctalia/settings.json` + `plugins/` |
+| Compositor config | `.config/hypr/*.lua` (Lua API) | `legacy/config/hypr/*.conf` (Hyprlang) |
+| Shell config | `.config/noctalia/config.toml` + `palettes/*.json` | `legacy/config/noctalia/settings.json` + `plugins/` |
 | IPC used by keybinds | `noctalia msg ...` | `qs -c noctalia-shell ipc call ...` |
-| Deployed by | `install.sh`, `fedora_install.sh` via `lib/stage-v5-config.sh` | `install-v4-session.sh` (copies `.config` wholesale) |
+| Deployed by | `install.sh`, `fedora_install.sh` via `lib/stage-v5-config.sh` | `legacy/install-v4-session.sh` (stages `.config` and `legacy/config`) |
 | Config root | `~/.config` | `~/.config/minimalinux` (its own `XDG_CONFIG_HOME`) |
 | Status | Supported | Frozen. Kept working, not developed further |
 

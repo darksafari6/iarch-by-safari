@@ -1,20 +1,25 @@
 # minimaLinux
 
 > **Historical document.** Kept because it records why the current rules exist.
-> For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
+> For today's session see [ARCHITECTURE.md](../../docs/ARCHITECTURE.md) and [ROADMAP.md](../../docs/ROADMAP.md).
+
+
+> **Path note.** This document was written before the v4 payload moved into
+> `legacy/`; every command and path here that starts with `./` or names a
+> repository file now lives one directory deeper, e.g. `./legacy/install-v4-session.sh`.
 
 minimaLinux is a set of Hyprland dotfiles with the [Noctalia shell](https://github.com/noctalia-dev/noctalia-shell), Kitty, Fish and other desktop tools. Install it alongside an existing Arch Linux desktop and choose **minimaLinux** at the login screen.
 
 ## Desktop preview
 
-![Example of the minimaLinux Hyprland desktop with a Tokyo Night-style theme and Noctalia bar](../assets/screenshots/desktop-tokyo-night.png)
+![Example of the minimaLinux Hyprland desktop with a Tokyo Night-style theme and Noctalia bar](../../assets/screenshots/desktop-tokyo-night.png)
 
 *An example of a customized minimaLinux desktop. The current installation uses a solid dark wallpaper by default; wallpaper, bar layout and colors can be changed in Noctalia settings.*
 
 <details>
 <summary>See another desktop example</summary>
 
-![Example of the minimaLinux desktop with a red wallpaper and top bar](../assets/screenshots/desktop-red.png)
+![Example of the minimaLinux desktop with a red wallpaper and top bar](../../assets/screenshots/desktop-red.png)
 
 </details>
 
@@ -39,7 +44,7 @@ Run as your **normal user**, not `sudo ./install-v4-session.sh`. The script asks
 
 For an opt-in translucent Noctalia v4 bar, panels and notifications, run `./install-v4-session.sh --glass`. This stages a fresh configuration and backs up an existing minimaLinux session; it does **not** merge your custom settings. The preset has not been tested in a real graphical session and is not the complete requested Glass UI. Sound is off by default. Read the [glass audit, limitations, test plan and rollback instructions](GLASS-UI.md) before trying it.
 
-A separate Noctalia v5 profile deployment helper is under development; see the [v5 port status](V5-PORT-STATUS.md). This session installer targets v4; the main v5 installer is a separate workflow.
+A separate Noctalia v5 profile deployment helper is under development; see the [v5 port status](../../docs/V5-PORT-STATUS.md). This session installer targets v4; the main v5 installer is a separate workflow.
 
 ### Installer choices
 
@@ -116,7 +121,7 @@ python3 tools/recover_session.py --restore ~/.config/minimalinux.backup.NAME
 
 Recovery requires confirmation, copies the chosen backup without deleting it, and moves the current session config to a new backup first. Symlink backups are not restored automatically. Diagnostics do not change services or drivers. When supported by the installed Hyprland and an `XDG_RUNTIME_DIR` exists, diagnostics run `Hyprland --verify-config`; Hyprland itself may write a runtime log. `python3 tools/diagnose.py --repair` currently reports that no automated repair is available and makes no changes.
 
-The original optional printer, Bluetooth, gaming, browser, audio and DDC/CI flows remain in `legacy/legacy-install.sh`, but **are not yet available in the supported session installer**. The legacy script also modifies repositories, services, configuration ownership, and packages and is not a safe substitute for an existing desktop. See [the audit](AUDIT.md) and [2.0 status](STATUS-2.0.md) before using or contributing to it.
+The original optional printer, Bluetooth, gaming, browser, audio and DDC/CI flows remain in `legacy/legacy-install.sh`, but **are not yet available in the supported session installer**. The legacy script also modifies repositories, services, configuration ownership, and packages and is not a safe substitute for an existing desktop. See [the audit](../../docs/AUDIT.md) and [2.0 status](../../docs/STATUS-2.0.md) before using or contributing to it.
 
 To add a preset today, define its supported Noctalia v4 scheme and colors in `.config/minimalinux/backend.py`, expose its name in the installer if desired, and test on the target versions. This is not yet a standalone declarative theme format; unsupported components and custom schemes require manual validation.
 

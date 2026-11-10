@@ -1,9 +1,14 @@
 # Experimental glass preset: audit and test plan
 
 > **Historical document.** Kept because it records why the current rules exist.
-> For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
+> For today's session see [ARCHITECTURE.md](../../docs/ARCHITECTURE.md) and [ROADMAP.md](../../docs/ROADMAP.md).
 
-This is an **incremental, opt-in preset**, not the completed iPhone Glass UI upgrade. It changes only a freshly staged minimaLinux session; it does not alter the currently running desktop or merge an existing user's Noctalia settings. No Arch/Hyprland graphical session, audio device or real services were available for validation here. See [STATUS-2.0.md](STATUS-2.0.md) and [AUDIT.md](AUDIT.md) for the wider installer and feature audit.
+
+> **Path note.** This document was written before the v4 payload moved into
+> `legacy/`; every command and path here that starts with `./` or names a
+> repository file now lives one directory deeper, e.g. `./legacy/install-v4-session.sh`.
+
+This is an **incremental, opt-in preset**, not the completed iPhone Glass UI upgrade. It changes only a freshly staged minimaLinux session; it does not alter the currently running desktop or merge an existing user's Noctalia settings. No Arch/Hyprland graphical session, audio device or real services were available for validation here. See [STATUS-2.0.md](../../docs/STATUS-2.0.md) and [AUDIT.md](../../docs/AUDIT.md) for the wider installer and feature audit.
 
 ## Stage A — source and compatibility audit
 
@@ -31,7 +36,7 @@ python3 tools/recover_session.py
 python3 tools/recover_session.py --restore /full/path/to/minimalinux.backup.NAME
 ```
 
-Select the actual pre-install backup shown by the first command. Recovery copies it, keeps the selected backup, and moves the current session to a separate pre-restore backup. Alternatively reinstall without `--glass` (this also replaces, rather than merges, session settings). Packages/system launchers are not rolled back by either method; see [AUDIT.md](AUDIT.md).
+Select the actual pre-install backup shown by the first command. Recovery copies it, keeps the selected backup, and moves the current session to a separate pre-restore backup. Alternatively reinstall without `--glass` (this also replaces, rather than merges, session settings). Packages/system launchers are not rolled back by either method; see [AUDIT.md](../../docs/AUDIT.md).
 
 Log in to minimaLinux. Open Noctalia Settings (Super+T), Notifications → Sounds, and enable sound if desired; adjust its volume there. The preselected file is `minimalinux-twinkle.wav` in the Noctalia source sound directory. Install `qt6-multimedia` and its appropriate Arch multimedia backend separately if needed, after reviewing package changes. Set panel/notification opacity to 1 in Noctalia settings for contrast, disable animation in its UI settings for reduced motion, or disable compositor blur for performance. Theme choices, colors and keybindings remain independently configurable.
 

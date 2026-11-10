@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 export LC_MESSAGES=C
@@ -429,6 +428,7 @@ enable_colors() {
         MAGENTA="${BOLD}\e[35m"
         CYAN="${BOLD}\e[36m"
     fi
+    # shellcheck disable=SC2034  # palette entries are defined together; not all are used
     readonly ALL_OFF BOLD BLUE GREEN RED YELLOW CYAN MAGENTA
 }
 

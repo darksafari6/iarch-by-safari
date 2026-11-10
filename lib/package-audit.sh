@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Read-only package inventory for the installer. No package removal is performed.
 PACKAGE_AUDIT_STARTED=false
 PACKAGE_AUDIT_BEFORE=''

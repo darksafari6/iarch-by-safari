@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build only the v5/Lua config payload in a caller-owned empty directory.
-# V4 configs live alongside it in the repository and must not reach this payload.
+# The v4 payload lives under legacy/config/ and must never reach this payload.
 set -euo pipefail
 [[ $# == 2 ]] || { echo 'Usage: stage-v5-config.sh SOURCE DESTINATION' >&2; exit 2; }
 src=$1 dest=$2

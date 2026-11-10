@@ -2,7 +2,7 @@
 
 sleep 0.05
 
-LOCK_FILE="/tmp/hypr-workspace-next.lock"
+LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/hypr-workspace-next.lock"
 NOW_MS=$(date +%s%3N)
 
 if [ -f "$LOCK_FILE" ]; then
@@ -21,19 +21,6 @@ focus_workspace() {
     else
         hyprctl dispatch "hl.dsp.focus({ workspace = \"$ws\" })"
     fi
-}
-
-move_window_to_workspace() {
-    local ws="$1"
-    if [[ "$ws" =~ ^[0-9]+$ ]]; then
-        hyprctl dispatch "hl.dsp.window.move({ workspace = $ws })"
-    else
-        hyprctl dispatch "hl.dsp.window.move({ workspace = \"$ws\" })"
-    fi
-}
-
-close_active_window() {
-    hyprctl dispatch "hl.dsp.window.close()"
 }
 
 FOCUSED_MONITOR_NAME=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
@@ -60,10 +47,7 @@ if [ ${#ACTIVE_IDS[@]} -eq 0 ]; then
     exit 0
 fi
 
-HIGHEST_ACTIVE="${ACTIVE_IDS[$((${#ACTIVE_IDS[@]} - 1))]}"
 LOWEST_ACTIVE="${ACTIVE_IDS[0]}"
-NUM_ACTIVE=${#ACTIVE_IDS[@]}
-
 
 NEXT_TARGET_FOUND="false"
 

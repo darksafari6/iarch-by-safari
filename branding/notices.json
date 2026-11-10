@@ -31,10 +31,13 @@
       "copyright": "Copyright (c) tonekneeo (year not stated in manifest.json)",
       "license_text": "mit",
       "used_by": [
-        ".config/noctalia/plugins/hyprland-keybinds/"
+        "legacy/config/noctalia/plugins/hyprland-keybinds/"
       ],
       "notes": "Authored for this repository and declared MIT in its own manifest.json. It follows the Noctalia plugin API conventions but is not a copy of the upstream keybind-cheatsheet plugin, which has a different id, author, version and file set.",
-      "verify_ids": ["TP-01", "TP-02"]
+      "verify_ids": [
+        "TP-01",
+        "TP-02"
+      ]
     },
     {
       "id": "pipewire-virtual-surround",
@@ -50,7 +53,9 @@
         "pipewire/pipewire.conf.d/sink-virtual-surround-7.1-hesuvi.conf"
       ],
       "notes": "The convolver graph follows the upstream filter-chain virtual surround example. Paths and the HeSuVi 14-channel WAV layout were adapted for this repository.",
-      "verify_ids": ["TP-07"]
+      "verify_ids": [
+        "TP-07"
+      ]
     },
     {
       "id": "tokyo-night-colors",
@@ -64,10 +69,12 @@
       "license_text": "",
       "used_by": [
         ".config/kitty/minima-colors.conf",
-        ".config/noctalia/settings.json"
+        "legacy/config/noctalia/settings.json"
       ],
       "notes": "Color values only. The Apache License 2.0 text is available in the upstream repository; no upstream source code is stored here.",
-      "verify_ids": ["TP-08"]
+      "verify_ids": [
+        "TP-08"
+      ]
     },
     {
       "id": "noctalia",
@@ -89,7 +96,9 @@
         "install.sh"
       ],
       "notes": "Configuration keys in this repository were checked against the upstream v5.4.1 schema; see docs/UNVERIFIED.md for what still needs a live-session check.",
-      "verify_ids": ["TP-09"]
+      "verify_ids": [
+        "TP-09"
+      ]
     },
     {
       "id": "hyprland",
@@ -105,7 +114,9 @@
         ".config/hypr/"
       ],
       "notes": "",
-      "verify_ids": ["TP-10"]
+      "verify_ids": [
+        "TP-10"
+      ]
     },
     {
       "id": "fastfetch",
@@ -167,8 +178,8 @@
       "license_text": "",
       "used_by": [
         ".config/starship.toml",
-        ".config/minimalinux/starship-detailed.toml",
-        ".config/minimalinux/starship-minimal.toml"
+        "legacy/config/minimalinux/starship-detailed.toml",
+        "legacy/config/minimalinux/starship-minimal.toml"
       ],
       "notes": "",
       "verify_ids": []
@@ -200,7 +211,7 @@
       "copyright": "See upstream source headers",
       "license_text": "",
       "used_by": [
-        ".config/gtk-3.0/settings.ini",
+        "legacy/config/gtk-3.0/settings.ini",
         "install.sh",
         "fedora_install.sh"
       ],
@@ -218,7 +229,7 @@
       "copyright": "Copyright (c) Papirus Development Team",
       "license_text": "",
       "used_by": [
-        ".config/gtk-3.0/settings.ini",
+        "legacy/config/gtk-3.0/settings.ini",
         "install.sh"
       ],
       "notes": "",
@@ -240,7 +251,9 @@
         "install.sh"
       ],
       "notes": "Installed from the distribution or AUR; each package ships its own license. Nothing from these projects is stored in this repository.",
-      "verify_ids": ["TP-11"]
+      "verify_ids": [
+        "TP-11"
+      ]
     },
     {
       "id": "appearance-packages",
@@ -257,7 +270,9 @@
         "fedora_install.sh"
       ],
       "notes": "Installed from the distribution; licenses come from the distribution package metadata. Nothing from these projects is stored in this repository.",
-      "verify_ids": ["TP-12"]
+      "verify_ids": [
+        "TP-12"
+      ]
     },
     {
       "id": "hesuvi-hrir-assets",
@@ -273,7 +288,9 @@
         "pipewire/hrir/"
       ],
       "notes": "624 WAV files, about 32 MB. Several names refer to commercial vendor surround products, so the redistribution rights are not established. Review before publishing a release or mirroring this repository.",
-      "verify_ids": ["TP-03"]
+      "verify_ids": [
+        "TP-03"
+      ]
     },
     {
       "id": "fastfetch-logo-assets",
@@ -289,7 +306,9 @@
         ".config/fastfetch/logo/"
       ],
       "notes": "Seven .icon files of artwork derived from anime franchises. Authorship and redistribution rights are not established.",
-      "verify_ids": ["TP-04"]
+      "verify_ids": [
+        "TP-04"
+      ]
     },
     {
       "id": "chaotic-aur",
@@ -305,7 +324,9 @@
         "install.sh"
       ],
       "notes": "The installer edits /etc/pacman.conf and imports the signing key. Review before running; the package builds come from third parties.",
-      "verify_ids": ["TP-05"]
+      "verify_ids": [
+        "TP-05"
+      ]
     },
     {
       "id": "noctalia-plugin-registry",
@@ -318,10 +339,12 @@
       "copyright": "noctalia-dev and individual plugin authors",
       "license_text": "",
       "used_by": [
-        ".config/noctalia/plugins.json"
+        "legacy/config/noctalia/plugins.json"
       ],
       "notes": "Referenced by URL only; no plugin source is downloaded into this repository by the installer. The registry publishes no top-level LICENSE file, and each plugin carries its own manifest license.",
-      "verify_ids": ["TP-06"]
+      "verify_ids": [
+        "TP-06"
+      ]
     }
   ],
   "license_texts": {

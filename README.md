@@ -18,7 +18,7 @@
 
 
 
-> **Safety and version note:** The original v5 Arch and Fedora installers make system-wide package, repository, service and login-manager changes. They are not the isolated v4 installer and have not been validated by this PR in a real session. Review [the v5 port status](docs/V5-PORT-STATUS.md) and the scripts before use. The isolated legacy-v4 session is available separately via [`install-v4-session.sh`](docs/V4-SESSION.md); it does not install Noctalia v5.
+> **Safety and version note:** The original v5 Arch and Fedora installers make system-wide package, repository, service and login-manager changes. They are not the isolated v4 installer and have not been validated by this PR in a real session. Review [the v5 port status](docs/V5-PORT-STATUS.md) and the scripts before use. The isolated legacy-v4 session is available separately via [`legacy/install-v4-session.sh`](legacy/docs/V4-SESSION.md); it does not install Noctalia v5.
 
 ### Fresh Arch Install Requirement
 
@@ -111,7 +111,7 @@ This script, is now released. It is no longer in beta state. This project origin
 
 ### Lua Update
 
-The Hyprland configuration now uses Lua-based. The old .conf-based structure is no longer used.
+The Hyprland configuration now uses Lua. The old `.conf`-based structure is no longer loaded; it lives under `legacy/config/hypr/` next to the rest of the frozen v4 payload, and nothing in the v5 session reads it.
 
 We have also switched over to Noctalia v5.
 
@@ -189,7 +189,7 @@ Notification sound is disabled in the profile by default; enabling it uses Nocta
 | [`InstallNotes.md`](InstallNotes.md) | Long-form installation and troubleshooting notes |
 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | Third-party projects, artwork and audio assets, with licenses |
 
-Historical documents ([`docs/V4-SESSION.md`](docs/V4-SESSION.md), [`docs/V4-INSTALL-NOTES.md`](docs/V4-INSTALL-NOTES.md), [`docs/GLASS-UI.md`](docs/GLASS-UI.md), [`docs/AUDIT.md`](docs/AUDIT.md), [`docs/STATUS-2.0.md`](docs/STATUS-2.0.md), [`docs/V5-PORT-STATUS.md`](docs/V5-PORT-STATUS.md)) describe the frozen legacy v4 session and past audits. They are marked with a banner and are not instructions for the current session.
+Historical documents ([`legacy/docs/V4-SESSION.md`](legacy/docs/V4-SESSION.md), [`legacy/docs/V4-INSTALL-NOTES.md`](legacy/docs/V4-INSTALL-NOTES.md), [`legacy/docs/GLASS-UI.md`](legacy/docs/GLASS-UI.md), [`docs/AUDIT.md`](docs/AUDIT.md), [`docs/STATUS-2.0.md`](docs/STATUS-2.0.md), [`docs/V5-PORT-STATUS.md`](docs/V5-PORT-STATUS.md)) describe the frozen legacy v4 session and past audits. They are marked with a banner and are not instructions for the current session.
 
 ---
 
@@ -227,6 +227,6 @@ This will restore any backed-up config files found in `~/.config` to their previ
 
 > **Note:** Installed packages are **not** automatically removed. If you wish to uninstall them, you will need to do so manually via your package manager.
 
-## Experimental isolated v4 session
+## Deprecated isolated v4 session
 
-The earlier independent Quickshell v4 session remains available via `./install-v4-session.sh` and `./uninstall-v4-session.sh`. See [v4 session documentation](docs/V4-SESSION.md) and [v4 glass limitations](docs/GLASS-UI.md). It is separate from the v5 workflow and is not validated on a live system. For an existing v5 shell, the experimental backup-first profile helper is documented in [v5 port status](docs/V5-PORT-STATUS.md).
+The earlier independent Quickshell v4 session is deprecated and kept only for existing installs: `./legacy/install-v4-session.sh` and `./legacy/uninstall-v4-session.sh`, both marked as such in their headers. See [v4 session documentation](legacy/docs/V4-SESSION.md) and [v4 glass limitations](legacy/docs/GLASS-UI.md). It is separate from the v5 workflow and is not validated on a live system. For an existing v5 shell, the experimental backup-first profile helper is documented in [v5 port status](docs/V5-PORT-STATUS.md).

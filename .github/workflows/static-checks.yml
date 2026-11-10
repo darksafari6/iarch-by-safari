@@ -1,8 +1,8 @@
-name: minimaOS static checks
+name: iArch static checks
 
 on:
   push:
-    branches: [main, "feature/**"]
+    branches: [main, "feature/**", "arena/**"]
   pull_request:
   workflow_dispatch:
 
@@ -23,19 +23,29 @@ jobs:
 
       - name: Check Bash syntax
         run: |
-          bash -n install.sh
-          bash -n uninstall.sh
-          bash -n fedora_install.sh
-          bash -n scripts/iarch-healthcheck.sh
-          bash -n scripts/iarch-control-center.sh
-          bash -n install-v4-session.sh uninstall-v4-session.sh lib/stage-v5-config.sh
+          set -euo pipefail
+          # Every tracked shell script, plus the two launcher scripts that have
+          # no shebang (they are executed through /usr/bin/env bash by the
+          # Wayland session entry).
+          mapfile -t scripts < <(git ls-files '*.sh' | sort)
+          scripts+=(legacy/session/minimalinux-session legacy/session/minimalinux-customize)
+          printf 'bash -n on %s files\n' "${#scripts[@]}"
+          for script in "${scripts[@]}"; do
+            [[ -f "$script" ]] || { echo "missing script: $script" >&2; exit 1; }
+            bash -n "$script"
+          done
 
       - name: Run isolated installer and profile tests
         run: |
+          set -euo pipefail
           ./tests/session-install.sh
           ./tests/managed-files.sh
           ./tests/package-audit.sh
-          python -m unittest discover -s tests -p 'test_*.py'
+          ./tests/test_iarch_common.sh
+          ./tests/test_uninstall.sh
+
+      - name: Run unit tests (includes the payload map and branding checks)
+        run: python -m unittest discover -s tests -p 'test_*.py'
 
       - name: Validate TOML and palette JSON
         run: |
@@ -76,8 +86,19 @@ jobs:
 
       - name: Check keybindings were added without replacing current shortcuts
         run: |
+          set -euo pipefail
           grep -F 'SUPER + I' .config/hypr/keybind.lua
           grep -F 'SUPER + SHIFT + N' .config/hypr/keybind.lua
           grep -F 'SUPER + SHIFT + A' .config/hypr/keybind.lua
           grep -F 'SUPER + SHIFT + W' .config/hypr/keybind.lua
           grep -F 'SUPER + SHIFT + B' .config/hypr/keybind.lua
+
+      - name: Check the legacy v4 payload stayed out of the v5 payload
+        run: |
+          set -euo pipefail
+          # The v4-only files live under legacy/config/ now; nothing there may
+          # leak into the tree the v5 installer deploys.
+          test ! -e .config/hypr/hyprland.conf
+          test ! -e .config/noctalia/settings.json
+          test -f legacy/config/hypr/hyprland.conf
+          test -f legacy/config/noctalia/settings.json

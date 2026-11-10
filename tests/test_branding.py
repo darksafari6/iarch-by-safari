@@ -140,7 +140,7 @@ class CreditsArePreserved(unittest.TestCase):
 
     def test_vendored_plugin_manifest_keeps_author_and_license(self):
         manifest = json.loads(
-            (ROOT / ".config" / "noctalia" / "plugins" / "hyprland-keybinds" / "manifest.json")
+            (ROOT / "legacy" / "config" / "noctalia" / "plugins" / "hyprland-keybinds" / "manifest.json")
             .read_text(encoding="utf-8")
         )
         self.assertEqual(manifest["author"], "tonekneeo")

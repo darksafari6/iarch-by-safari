@@ -18,7 +18,9 @@ class GlassPreset(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.stage = Path(self.tmp.name)
-        shutil.copytree(ROOT / '.config/noctalia', self.stage / 'noctalia')
+        # The v4 preset edits the legacy settings.json, which now lives in legacy/config/.
+        (self.stage / 'noctalia').mkdir()
+        shutil.copy(ROOT / 'legacy/config/noctalia/settings.json', self.stage / 'noctalia/settings.json')
         (self.stage / 'hypr').mkdir()
         (self.stage / 'hypr/windowrules.conf').write_text('# original\n')
         self.file = self.stage / 'noctalia/settings.json'

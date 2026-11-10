@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 export LC_MESSAGES=C
@@ -521,6 +520,7 @@ enable_colors() {
         MAGENTA="${BOLD}\e[35m"
         CYAN="${BOLD}\e[36m"
     fi
+    # shellcheck disable=SC2034  # palette entries are defined together; not all are used
     readonly ALL_OFF BOLD BLUE GREEN RED YELLOW CYAN MAGENTA
 }
 
@@ -583,7 +583,8 @@ reorder_pacman_conf() {
     msg "Ensuring correct repository order in pacman.conf.."
     
     local pacman_conf="/etc/pacman.conf"
-    local pacman_conf_backup="/etc/pacman.conf.bak.$(date +%s)"
+    local pacman_conf_backup
+    pacman_conf_backup="/etc/pacman.conf.bak.$(date +%s)"
     
     info "Backup current config"
     cp "$pacman_conf" "$pacman_conf_backup"
@@ -1186,8 +1187,7 @@ setup_ddcutil() {
         fi
         
         # Make i2c-dev load on boot
-        echo "i2c-dev" > /etc/modules-load.d/i2c-dev.conf
-        if [ $? -ne 0 ]; then
+        if ! echo "i2c-dev" > /etc/modules-load.d/i2c-dev.conf; then
             echo "Warning: Failed to configure i2c-dev autoload."
         fi
 

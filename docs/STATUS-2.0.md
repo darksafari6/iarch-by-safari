@@ -15,7 +15,7 @@ The [audit](AUDIT.md) describes the starting point and the original feature map.
 
 ## Experimental glass increment
 
-The opt-in `install-v4-session.sh --glass` preset adds v4-native translucency, brightness card, network/Bluetooth widgets and a disabled original chime. It is not a complete Glass UI and has not been exercised in a real graphical session. See [GLASS-UI.md](GLASS-UI.md) for the source audit, important native-control limitations and rollback/test instructions.
+The opt-in `legacy/install-v4-session.sh --glass` preset adds v4-native translucency, brightness card, network/Bluetooth widgets and a disabled original chime. It is not a complete Glass UI and has not been exercised in a real graphical session. See [legacy/docs/GLASS-UI.md](../legacy/docs/GLASS-UI.md) for the source audit, important native-control limitations and rollback/test instructions.
 
 ## Remaining work / limitations
 

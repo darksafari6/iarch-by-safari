@@ -1,6 +1,6 @@
 # Install Notes
 
-**Separate workflows:** these notes describe the main v5 installer, which changes packages, repositories, services and the login manager. The independent, experimental v4 session installer is documented in [docs/V4-INSTALL-NOTES.md](docs/V4-INSTALL-NOTES.md). Neither workflow has been live-tested in this environment.
+**Separate workflows:** these notes describe the main v5 installer, which changes packages, repositories, services and the login manager. The independent, deprecated v4 session installer is documented in [legacy/docs/V4-INSTALL-NOTES.md](legacy/docs/V4-INSTALL-NOTES.md). Neither workflow has been live-tested in this environment.
 
 This file is a companion to the main README. It explains the installer flow in simple terms and covers common setup details before and after install.
 

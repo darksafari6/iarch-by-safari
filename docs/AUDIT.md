@@ -13,7 +13,7 @@ The newer working-tree session adds a GTK/Python customization center, GTK setti
 
 ## Existing feature and side-effect map
 
-| Feature | Default-branch implementation (preserved as `legacy/legacy-install.sh`) | Isolated v4 `install-v4-session.sh` |
+| Feature | Default-branch implementation (preserved as `legacy/legacy-install.sh`) | Isolated v4 `legacy/install-v4-session.sh` |
 |---|---|---|
 | User/target | Root via sudo, discovers `SUDO_USER`; deploys to `~/.config` | Normal user with sudo; isolated `~/.config/minimalinux` and system-wide Wayland entry |
 | Core packages | `PACKAGES` array near line 305 of legacy script, includes GTK, Thunar extras, codecs, filesystems, build tools, audio and more | Smaller `core_packages` array; Noctalia v4 source and AUR `noctalia-qs` |

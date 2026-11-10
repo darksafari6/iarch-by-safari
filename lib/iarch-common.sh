@@ -24,6 +24,7 @@
 # through iarch::load_product.
 
 if [[ -n ${IARCH_COMMON_LOADED:-} ]]; then
+    # shellcheck disable=SC2317  # reached only when this file is executed instead of sourced
     return 0 2>/dev/null || exit 0
 fi
 IARCH_COMMON_LOADED=1

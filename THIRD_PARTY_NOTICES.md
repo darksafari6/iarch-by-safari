@@ -39,7 +39,7 @@ Bar widget, panel and settings page that view and edit the Hyprland keybinds fil
 - **Copyright:** Copyright (c) tonekneeo (year not stated in manifest.json)
 - **Version checked:** 1.0.0
 - **Used by:**
-  - `.config/noctalia/plugins/hyprland-keybinds/`
+  - `legacy/config/noctalia/plugins/hyprland-keybinds/`
 - **Notes:** Authored for this repository and declared MIT in its own manifest.json. It follows the Noctalia plugin API conventions but is not a copy of the upstream keybind-cheatsheet plugin, which has a different id, author, version and file set.
 - **Open verification items:** `TP-01`, `TP-02` in `docs/UNVERIFIED.md`
 
@@ -92,7 +92,7 @@ Terminal and shell color scheme values.
 - **Upstream:** https://github.com/folke/tokyonight.nvim
 - **Used by:**
   - `.config/kitty/minima-colors.conf`
-  - `.config/noctalia/settings.json`
+  - `legacy/config/noctalia/settings.json`
 - **Notes:** Color values only. The Apache License 2.0 text is available in the upstream repository; no upstream source code is stored here.
 - **Open verification items:** `TP-08` in `docs/UNVERIFIED.md`
 
@@ -168,8 +168,8 @@ Cross-shell prompt.
 - **Upstream:** https://github.com/starship/starship
 - **Used by:**
   - `.config/starship.toml`
-  - `.config/minimalinux/starship-detailed.toml`
-  - `.config/minimalinux/starship-minimal.toml`
+  - `legacy/config/minimalinux/starship-detailed.toml`
+  - `legacy/config/minimalinux/starship-minimal.toml`
 
 ### Satty
 
@@ -189,7 +189,7 @@ GTK 3 theme used to match the shell look in classic GTK applications.
 - **Copyright:** See upstream source headers
 - **Upstream:** https://github.com/lassekongo83/adw-gtk3
 - **Used by:**
-  - `.config/gtk-3.0/settings.ini`
+  - `legacy/config/gtk-3.0/settings.ini`
   - `install.sh`
   - `fedora_install.sh`
 
@@ -201,7 +201,7 @@ Icon theme selected by the session presets.
 - **Copyright:** Copyright (c) Papirus Development Team
 - **Upstream:** https://github.com/PapirusDevelopmentTeam/papirus-icon-theme
 - **Used by:**
-  - `.config/gtk-3.0/settings.ini`
+  - `legacy/config/gtk-3.0/settings.ini`
   - `install.sh`
 
 ### Session helper utilities
@@ -277,7 +277,7 @@ Remote plugin index the shell can install plugins from.
 - **Copyright:** noctalia-dev and individual plugin authors
 - **Upstream:** https://github.com/noctalia-dev/noctalia-plugins
 - **Used by:**
-  - `.config/noctalia/plugins.json`
+  - `legacy/config/noctalia/plugins.json`
 - **Notes:** Referenced by URL only; no plugin source is downloaded into this repository by the installer. The registry publishes no top-level LICENSE file, and each plugin carries its own manifest license.
 - **Open verification items:** `TP-06` in `docs/UNVERIFIED.md`
 

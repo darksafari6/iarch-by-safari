@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
+# DEPRECATED legacy installer (v4 session). Kept for existing installs; use ./install.sh.
 # Install the iArch by Safari isolated session alongside an existing desktop, not over it.
+#
+# This script lives in legacy/ because it deploys the v4 payload: the Hyprlang
+# .conf files and the v4 Noctalia settings.json under legacy/config/, plus the
+# session launchers under legacy/session/. It still shares the repository-wide
+# helpers in lib/ and tools/, so it resolves those from the parent directory.
 set -Eeuo pipefail
 
 usage() {
     cat <<'HELP'
-Usage: ./install-v4-session.sh [OPTIONS]
+Usage: ./legacy/install-v4-session.sh [OPTIONS]
 
 Install the iArch by Safari isolated Wayland session for the current user.
 
@@ -30,7 +36,7 @@ die() {
     if [[ -n ${log_path:-} ]]; then
         log_line "FAILED $*"
         if ${registration_started:-false}; then
-            printf 'Some managed launchers may already be installed; inspect the log and use uninstall-v4-session.sh if needed.\n' >&2
+            printf 'Some managed launchers may already be installed; inspect the log and use legacy/uninstall-v4-session.sh if needed.\n' >&2
         fi
     fi
     printf '\nError: %s\n' "$*" >&2
@@ -59,7 +65,7 @@ while (($#)); do
     shift
 done
 case "$chosen_theme" in tokyo|catppuccin|nord|dracula|light) ;; *) die "Unknown theme '$chosen_theme'; see --help." ;; esac
-if (( EUID == 0 )); then die 'Run ./install-v4-session.sh as your normal user, not as root or with sudo.'; fi
+if (( EUID == 0 )); then die 'Run ./legacy/install-v4-session.sh as your normal user, not as root or with sudo.'; fi
 
 # Colors are decorative only. Piped output, dumb terminals and NO_COLOR stay plain.
 bold='' dim='' cyan='' purple='' green='' reset=''
@@ -71,6 +77,7 @@ PACKAGE_AUDIT_STARTED=false
 log_line() { if [[ -n $log_path ]]; then printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" >> "$log_path"; fi; }
 heading() { printf '\n%s%s%s\n' "$bold$cyan" "$1" "$reset"; log_line "PHASE $1"; }
 info() { printf '  %s\n' "$*"; log_line "INFO $*"; }
+warn() { printf '  %s%s%s\n' "$bold" "$*" "$reset"; log_line "WARN $*"; }
 detail() { if $verbose; then printf '  %s[verbose]%s %s\n' "$dim" "$reset" "$*"; fi; }
 run() {
     if $verbose; then
@@ -107,23 +114,26 @@ on_error() {
     fi
     printf '\nInstallation stopped (exit %s). Review the error above; rerun after fixing it.\n' "$status" >&2
     if $registration_started; then
-        printf 'Some managed system launchers may already have been installed; rerun or use uninstall-v4-session.sh.\n' >&2
+        printf 'Some managed system launchers may already have been installed; rerun or use legacy/uninstall-v4-session.sh.\n' >&2
     fi
     printf 'Packages already installed are not automatically rolled back.\n' >&2
 }
 trap 'on_error $? "$BASH_COMMAND"' ERR
 trap 'log_line "INTERRUPTED"; if $PACKAGE_AUDIT_STARTED; then package_audit_finish || log_line "WARNING package additions unavailable"; fi; printf "\nInstallation interrupted. Packages and registered files may require manual review.\n" >&2; exit 130' INT
 
-repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+# This script sits in legacy/, but lib/ and tools/ are at the repository root.
+legacy_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+repo=$(dirname -- "$legacy_dir")
 config="$HOME/.config/minimalinux"
 launcher=/usr/local/bin/minimalinux-session
 desktop=/usr/share/wayland-sessions/minimalinux.desktop
 center_launcher=/usr/local/bin/minimalinux-customize
 center_desktop=/usr/share/applications/minimalinux-customize.desktop
 
-printf '\n%s%s  M I N I M A L I N U X%s\n' "$bold" "$purple" "$reset"
+printf '\n%s%s  i A R C H   b y   S A F A R I%s\n' "$bold" "$purple" "$reset"
 printf '  %sA little space of your own.%s\n' "$dim" "$reset"
 printf '  ------------------------------------------------------------\n'
+warn 'Legacy v4 session installer. The supported path is ./install.sh.'
 info 'A separate Hyprland session for your existing Arch desktop.'
 info 'Your current desktop configuration and login session stay in place.'
 
@@ -229,6 +239,7 @@ if ! $skip_packages; then
 fi
 for tool in git sudo; do command -v "$tool" >/dev/null || die "Required command not found: $tool"; done
 [[ -d "$repo/.config" ]] || die 'Repository dotfiles directory is missing.'
+[[ -d "$legacy_dir/config" ]] || die 'Legacy dotfiles directory is missing: legacy/config.'
 if [[ -e "$HOME/.config" || -L "$HOME/.config" ]]; then
     [[ -d "$HOME/.config" && -w "$HOME/.config" ]] || die 'Your ~/.config directory is not writable.'
 else
@@ -240,8 +251,8 @@ fi
 # Preserve modified or unmanaged system files; identical managed entries need no rewrite.
 source "$repo/lib/managed-files.sh"
 system_paths=("$launcher" "$desktop" "$center_launcher" "$center_desktop")
-system_sources=("$repo/session/minimalinux-session" "$repo/session/minimalinux.desktop"
-                "$repo/session/minimalinux-customize" "$repo/session/minimalinux-customize.desktop")
+system_sources=("$legacy_dir/session/minimalinux-session" "$legacy_dir/session/minimalinux.desktop"
+                "$legacy_dir/session/minimalinux-customize" "$legacy_dir/session/minimalinux-customize.desktop")
 system_modes=(755 644 755 644)
 for i in "${!system_paths[@]}"; do
     path=${system_paths[$i]}
@@ -258,6 +269,7 @@ for i in "${!system_paths[@]}"; do
 done
 info 'Checks passed.'
 detail "Repository: $repo"
+detail "Legacy payload: $legacy_dir"
 # Create a private user-readable log only after confirmation and safety checks.
 state_home=${XDG_STATE_HOME:-$HOME/.local/state}
 [[ $state_home == /* ]] || die 'XDG_STATE_HOME must be an absolute path.'
@@ -296,6 +308,7 @@ stage=$(mktemp -d "$HOME/.config/.minimalinux-install.XXXXXX")
 trap 'if [[ -n ${stage:-} && -d $stage ]]; then rm -rf -- "$stage"; fi' EXIT
 detail "Staging directory: $stage"
 run cp -a "$repo/.config/." "$stage/"
+run cp -a "$legacy_dir/config/." "$stage/"
 mkdir -p "$stage/quickshell"
 info 'Downloading the compatible Noctalia v4.4.0 source...'
 clone_args=(clone --depth 1 --branch v4.4.0)
