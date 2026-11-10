@@ -55,8 +55,11 @@ the map. Read it before changing anything.
 │
 ├── tools/                    Python helpers. Stdlib only; no desktop is started by tests.
 │   ├── iarch_brand.py        Reads branding/product.env; validates naming consistency.
-│   ├── notices.py            Renders and checks THIRD_PARTY_NOTICES.md.
+│   ├── notices.py            Renders and checks THIRD_PARTY_NOTICES.md and data/licenses.json.
 │   ├── branding_lint.py      Fails when the everyday UI shows an upstream or previous name.
+│   ├── naming_audit.py       Repo-wide search for previous names, against a reasoned allowlist.
+│   ├── extract_keybinds.py   Renders data/keybinds.default.json out of keybind.lua.
+│   ├── render_shortcuts.py   Renders docs/SHORTCUTS.md out of that data.
 │   ├── profile_preset.py     Applies or reverts an effect preset, backup first.
 │   ├── preflight.py          Read-only host checks before an install.
 │   ├── diagnose.py           Read-only session diagnostics (legacy v4 session).
@@ -265,15 +268,24 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 
 | Command | Proves |
 | --- | --- |
-| `python3 -m unittest discover -s tests -p 'test_*.py'` | All Python-level logic: naming, notices, lint, staging, presets, installer CLI, recovery, diagnostics |
+| `python3 -m unittest discover -s tests -p 'test_*.py'` | All Python-level logic: naming, notices, lint, staging, presets, the config store, keybind and shortcut data, README structure, data schemas, reference integrity, installer CLI, recovery, diagnostics |
 | `./tests/session-install.sh` | The legacy session installer against a mocked filesystem and mocked sudo |
 | `./tests/managed-files.sh` | System-file classification (absent, identical, symlink, unmanaged, modified) |
 | `./tests/package-audit.sh` | Package-addition recording, with no removal path |
-| `python3 tools/notices.py --check` | The notices file matches its source |
+| `python3 tools/notices.py --check` | Both credit files match `branding/notices.json` |
 | `python3 tools/iarch_brand.py --check` | Product naming is consistent and referenced files exist |
 | `python3 tools/branding_lint.py` | Everyday-UI surfaces carry no previous product or upstream shell name |
+| `python3 tools/naming_audit.py --check` | Old names survive only in allowlisted files, each with a recorded reason |
+| `python3 tools/extract_keybinds.py --check` | `data/keybinds.default.json` still matches `keybind.lua` |
+| `python3 tools/render_shortcuts.py --check` | `docs/SHORTCUTS.md` still matches the keybind data |
 | `bash -n <script>` | Shell syntax of every script |
-| `shellcheck <script>` | Shell quality, where shellcheck is installed |
+| `shellcheck --severity=warning <script>` | Shell quality; `.shellcheckrc` states the dialect and lists every exception with its reason |
+
+CI runs all of the above in `.github/workflows/iarch-checks.yml`, as a non-root
+user, plus JSON Schema validation of everything in `data/`, TOML validation of
+`.config/noctalia/*.toml` and `profiles/*.toml`, a check that no gitlink or
+submodule crept in, and a final `git diff --exit-code` proving that running the
+checks does not modify a tracked file.
 
 What no test here proves: a real Arch or Fedora install, a live Hyprland session, GPU behaviour,
 audio hardware, package availability, or how the shell actually renders. Those need a machine and
@@ -289,8 +301,8 @@ never touch `~/.config`, never call a package manager and never start a session.
 | [ROADMAP.md](ROADMAP.md) | Current. The six-part glass plan |
 | [UNVERIFIED.md](UNVERIFIED.md) | Current. Open verification items |
 | [glass-experience.md](glass-experience.md) | Current. Glass profile and recovery |
-| [V4-SESSION.md](V4-SESSION.md), [V4-INSTALL-NOTES.md](V4-INSTALL-NOTES.md) | Historical. Legacy isolated session |
-| [GLASS-UI.md](GLASS-UI.md) | Historical. Legacy v4 glass preset audit |
+| [V4-SESSION.md](../legacy/docs/V4-SESSION.md), [V4-INSTALL-NOTES.md](../legacy/docs/V4-INSTALL-NOTES.md) | Historical. Legacy isolated session |
+| [GLASS-UI.md](../legacy/docs/GLASS-UI.md) | Historical. Legacy v4 glass preset audit |
 | [AUDIT.md](AUDIT.md), [STATUS-2.0.md](STATUS-2.0.md) | Historical. Repository and installer audit |
 | [V5-PORT-STATUS.md](V5-PORT-STATUS.md) | Historical. Port status between the two payloads |
 

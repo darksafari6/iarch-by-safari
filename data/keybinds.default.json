@@ -13,6 +13,7 @@
         "command": "kitty",
         "lua": "hl.dsp.exec_cmd(TERMINAL)"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -23,6 +24,7 @@
         "command": "thunar",
         "lua": "hl.dsp.exec_cmd(EXPLORER)"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -33,6 +35,7 @@
         "command": "code",
         "lua": "hl.dsp.exec_cmd(EDITOR)"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -43,6 +46,7 @@
         "command": "~/.config/hypr/Scripts/browser-launcher.sh",
         "lua": "hl.dsp.exec_cmd(BROWSER)"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -53,16 +57,18 @@
         "command": "noctalia msg panel-toggle launcher",
         "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle launcher\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
       "keys": "SUPER + L",
-      "description": "Lock screen ",
+      "description": "Lock screen",
       "action": {
         "kind": "exec",
         "command": "noctalia msg session lock ",
         "lua": "hl.dsp.exec_cmd( \"noctalia msg session lock \")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -73,6 +79,7 @@
         "command": "noctalia msg settings-toggle",
         "lua": "hl.dsp.exec_cmd(\"noctalia msg settings-toggle\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -83,6 +90,7 @@
         "command": "noctalia msg panel-toggle control-center",
         "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -93,6 +101,7 @@
         "command": "noctalia msg settings-toggle",
         "lua": "hl.dsp.exec_cmd(\"noctalia msg settings-toggle\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -103,6 +112,7 @@
         "command": "noctalia msg panel-toggle control-center notifications",
         "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center notifications\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -113,6 +123,7 @@
         "command": "noctalia msg panel-toggle control-center audio",
         "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center audio\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -123,6 +134,7 @@
         "command": "noctalia msg panel-toggle control-center network",
         "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center network\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -133,6 +145,7 @@
         "command": "noctalia msg panel-toggle control-center bluetooth",
         "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center bluetooth\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -143,6 +156,7 @@
         "command": "noctalia msg panel-toggle control-center power",
         "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center power\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -153,6 +167,7 @@
         "command": "steam",
         "lua": "hl.dsp.exec_cmd(\"steam\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -163,6 +178,7 @@
         "command": "quodlibet",
         "lua": "hl.dsp.exec_cmd(\"quodlibet\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -173,6 +189,7 @@
         "command": "mpv --player-operation-mode=pseudo-gui --force-window=immediate",
         "lua": "hl.dsp.exec_cmd(\"mpv --player-operation-mode=pseudo-gui --force-window=immediate\")"
       },
+      "category": "Applications",
       "status": "bound"
     },
     {
@@ -182,6 +199,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.window.close()"
       },
+      "category": "Window Management",
       "status": "bound"
     },
     {
@@ -191,6 +209,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.window.float({ action = \"toggle\" })"
       },
+      "category": "Window Management",
       "status": "bound"
     },
     {
@@ -200,6 +219,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.window.fullscreen()"
       },
+      "category": "Window Management",
       "status": "bound"
     },
     {
@@ -209,6 +229,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.exec_cmd(scrPath .. \"/workspace.sh\")"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -218,6 +239,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = \"m-1\" })"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -227,6 +249,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ direction = \"left\" })"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -236,6 +259,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ direction = \"right\" })"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -245,6 +269,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ direction = \"up\" })"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -254,6 +279,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ direction = \"down\" })"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -263,6 +289,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.window.cycle_next()"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -272,6 +299,7 @@
         "kind": "lua-function",
         "lua": "function() hl.exec_cmd(\"hyprctl dispatch resizeactive 30 0\") end"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -281,6 +309,7 @@
         "kind": "lua-function",
         "lua": "function() hl.exec_cmd(\"hyprctl dispatch resizeactive -30 0\") end"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -290,6 +319,7 @@
         "kind": "lua-function",
         "lua": "function() hl.exec_cmd(\"hyprctl dispatch resizeactive 0 -30\") end"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -299,6 +329,7 @@
         "kind": "lua-function",
         "lua": "function() hl.exec_cmd(\"hyprctl dispatch resizeactive 0 30\") end"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -308,6 +339,7 @@
         "kind": "lua-function",
         "lua": "function() hl.exec_cmd(\"bash -c 'grep -q true <<< $(hyprctl activewindow -j | jq -r .floating) && hyprctl dispatch moveactive -30 0 || hyprctl dispatch movewindow l'\") end"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -317,6 +349,7 @@
         "kind": "lua-function",
         "lua": "function() hl.exec_cmd(\"bash -c 'grep -q true <<< $(hyprctl activewindow -j | jq -r .floating) && hyprctl dispatch moveactive 30 0 || hyprctl dispatch movewindow r'\") end"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -326,6 +359,7 @@
         "kind": "lua-function",
         "lua": "function() hl.exec_cmd(\"bash -c 'grep -q true <<< $(hyprctl activewindow -j | jq -r .floating) && hyprctl dispatch moveactive 0 -30 || hyprctl dispatch movewindow u'\") end"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -335,6 +369,7 @@
         "kind": "lua-function",
         "lua": "function() hl.exec_cmd(\"bash -c 'grep -q true <<< $(hyprctl activewindow -j | jq -r .floating) && hyprctl dispatch moveactive 0 30 || hyprctl dispatch movewindow d'\") end"
       },
+      "category": "Window Navigation & Layout",
       "status": "bound"
     },
     {
@@ -345,6 +380,7 @@
         "command": "HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m window",
         "lua": "hl.dsp.exec_cmd(\"HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m window\")"
       },
+      "category": "Screenshots",
       "status": "bound"
     },
     {
@@ -355,6 +391,7 @@
         "command": "HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m output",
         "lua": "hl.dsp.exec_cmd(\"HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m output\")"
       },
+      "category": "Screenshots",
       "status": "bound"
     },
     {
@@ -365,6 +402,7 @@
         "command": "HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m region",
         "lua": "hl.dsp.exec_cmd(\"HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m region\")"
       },
+      "category": "Screenshots",
       "status": "bound"
     },
     {
@@ -375,186 +413,205 @@
         "command": "grim -g \"$(slurp)\" - | satty --filename - --output-filename ~/Pictures/Screenshots/Screenshot-$(date '+%Y%m%d-%H:%M:%S').png",
         "lua": "hl.dsp.exec_cmd(\"grim -g \\\"$(slurp)\\\" - | satty --filename - --output-filename ~/Pictures/Screenshots/Screenshot-$(date '+%Y%m%d-%H:%M:%S').png\")"
       },
+      "category": "Screenshots",
       "status": "bound"
     },
     {
       "keys": "SUPER + 1",
-      "description": "Workspace 1",
+      "description": "Workspace1",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = i })",
         "workspace": "1"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + 2",
-      "description": "Workspace 2",
+      "description": "Workspace2",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = i })",
         "workspace": "2"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + 3",
-      "description": "Workspace 3",
+      "description": "Workspace3",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = i })",
         "workspace": "3"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + 4",
-      "description": "Workspace 4",
+      "description": "Workspace4",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = i })",
         "workspace": "4"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + 5",
-      "description": "Workspace 5",
+      "description": "Workspace5",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = i })",
         "workspace": "5"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + 6",
-      "description": "Workspace 6",
+      "description": "Workspace6",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = i })",
         "workspace": "6"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + 7",
-      "description": "Workspace 7",
+      "description": "Workspace7",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = i })",
         "workspace": "7"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + 8",
-      "description": "Workspace 8",
+      "description": "Workspace8",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = i })",
         "workspace": "8"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + 9",
-      "description": "Workspace 9",
+      "description": "Workspace9",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = i })",
         "workspace": "9"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + SHIFT + 1",
-      "description": "Move to workspace 1",
+      "description": "Move to workspace1",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = i })",
         "workspace": "1"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + SHIFT + 2",
-      "description": "Move to workspace 2",
+      "description": "Move to workspace2",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = i })",
         "workspace": "2"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + SHIFT + 3",
-      "description": "Move to workspace 3",
+      "description": "Move to workspace3",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = i })",
         "workspace": "3"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + SHIFT + 4",
-      "description": "Move to workspace 4",
+      "description": "Move to workspace4",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = i })",
         "workspace": "4"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + SHIFT + 5",
-      "description": "Move to workspace 5",
+      "description": "Move to workspace5",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = i })",
         "workspace": "5"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + SHIFT + 6",
-      "description": "Move to workspace 6",
+      "description": "Move to workspace6",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = i })",
         "workspace": "6"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + SHIFT + 7",
-      "description": "Move to workspace 7",
+      "description": "Move to workspace7",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = i })",
         "workspace": "7"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + SHIFT + 8",
-      "description": "Move to workspace 8",
+      "description": "Move to workspace8",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = i })",
         "workspace": "8"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
       "keys": "SUPER + SHIFT + 9",
-      "description": "Move to workspace 9",
+      "description": "Move to workspace9",
       "action": {
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = i })",
         "workspace": "9"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
@@ -564,6 +621,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = 10 })"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
@@ -573,6 +631,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = 10 })"
       },
+      "category": "Workspace Switching",
       "status": "bound"
     },
     {
@@ -582,6 +641,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = \"r+1\" })"
       },
+      "category": "Workspace Navigation",
       "status": "bound"
     },
     {
@@ -591,6 +651,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = \"r-1\" })"
       },
+      "category": "Workspace Navigation",
       "status": "bound"
     },
     {
@@ -600,6 +661,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = \"empty\" })"
       },
+      "category": "Workspace Navigation",
       "status": "bound"
     },
     {
@@ -609,6 +671,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = \"r+1\" })"
       },
+      "category": "Move Window Across Workspaces",
       "status": "bound"
     },
     {
@@ -618,6 +681,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.window.move({ workspace = \"r-1\" })"
       },
+      "category": "Move Window Across Workspaces",
       "status": "bound"
     },
     {
@@ -627,6 +691,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = \"e+1\" })"
       },
+      "category": "Mouse Workspace Navigation",
       "status": "bound"
     },
     {
@@ -636,6 +701,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.focus({ workspace = \"e-1\" })"
       },
+      "category": "Mouse Workspace Navigation",
       "status": "bound"
     },
     {
@@ -648,6 +714,7 @@
       "options": {
         "mouse": true
       },
+      "category": "Mouse Window Management",
       "status": "bound"
     },
     {
@@ -660,6 +727,7 @@
       "options": {
         "mouse": true
       },
+      "category": "Mouse Window Management",
       "status": "bound"
     },
     {
@@ -669,6 +737,7 @@
         "kind": "dispatcher",
         "lua": "hl.dsp.window.resize()"
       },
+      "category": "Mouse Window Management",
       "status": "bound"
     },
     {
@@ -682,6 +751,7 @@
       "options": {
         "locked": true
       },
+      "category": "Media",
       "status": "bound"
     },
     {
@@ -695,6 +765,7 @@
       "options": {
         "locked": true
       },
+      "category": "Media",
       "status": "bound"
     },
     {
@@ -708,6 +779,7 @@
       "options": {
         "locked": true
       },
+      "category": "Media",
       "status": "bound"
     },
     {
@@ -721,6 +793,7 @@
       "options": {
         "locked": true
       },
+      "category": "Media",
       "status": "bound"
     },
     {
@@ -734,6 +807,7 @@
       "options": {
         "locked": true
       },
+      "category": "Media",
       "status": "bound"
     },
     {
@@ -742,6 +816,7 @@
       "action": {
         "kind": "reserved"
       },
+      "category": "Planned",
       "status": "reserved"
     },
     {
@@ -750,6 +825,7 @@
       "action": {
         "kind": "reserved"
       },
+      "category": "Planned",
       "status": "reserved"
     },
     {
@@ -758,6 +834,7 @@
       "action": {
         "kind": "reserved"
       },
+      "category": "Planned",
       "status": "reserved"
     }
   ]

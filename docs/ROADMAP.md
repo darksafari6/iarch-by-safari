@@ -40,7 +40,15 @@ Global rules that apply to every part:
 | One place owns user state: defaults in `data/`, settings in `~/.config/iarch/`, atomic generated writes, five backups | `iarch/lib/configstore.py`, `data/*.default.json` | `tests/test_config_store.py` |
 | Keyboard map is data, not prose | `data/keybinds.default.json`, `tools/extract_keybinds.py` | `tests/test_keybinds_data.py`, `--check` in CI |
 | Glass design tokens recorded with their source | `data/design/glass.tokens.json` | `data/schemas/design-tokens.schema.json` |
-| CI renamed and extended | `.github/workflows/iarch-checks.yml` | workflow run |
+| Credit rendered twice from one source, no license guessed | `branding/notices.json`, `tools/notices.py`, `THIRD_PARTY_NOTICES.md`, `data/licenses.json` | `tests/test_licenses_data.py` |
+| Copyright header defined once and applied to new files | `branding/product.env`, `docs/BRANDING.md` | `tests/test_copyright_headers.py` |
+| Shortcut table generated from the session, never typed | `tools/render_shortcuts.py`, `docs/SHORTCUTS.md` | `tests/test_shortcuts_doc.py` |
+| Previous names survive only where a reason is recorded | `tools/naming_audit.py` | `tests/test_naming_audit.py` |
+| Every data file validated against a schema | `data/schemas/` | `tests/test_data_files.py` |
+| No broken reference in a script or a document | `tests/test_repo_paths.py` | itself |
+| README under 250 lines, in a fixed order, claiming only what exists | `README.md` | `tests/test_readme_structure.py` |
+| Governance written down | `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md` | linked from README |
+| CI renamed and extended: non-root guard, JSON Schema, TOML, gitlink and clean-tree checks | `.github/workflows/iarch-checks.yml` | workflow run |
 
 License data was verified against upstream on 2026-11-09; the verification method is recorded in
 `THIRD_PARTY_NOTICES.md` and the open items in [UNVERIFIED.md](UNVERIFIED.md).

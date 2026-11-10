@@ -51,7 +51,7 @@ exiting 1) are intended: the v4 installer refuses root.
 7. `legacy/config/hypr/themes/theme.conf` and `.config/hypr/themes/theme.lua`
    disagree: gaps 5/10 vs 2/4, rounding 12 vs 8, inactive opacity 1.0 vs 0.90.
    The two sessions do not look alike.
-8. `docs/AUDIT.md` still describes a `.config/kitty/kitty-themes` gitlink, now gone.
+8. `docs/AUDIT.md` describes a `.config/kitty/kitty-themes` gitlink; confirmed absent (`git ls-tree -r HEAD` has no mode 160000 entry, no `.gitmodules`), and `tests/test_repo_paths.py` keeps it that way.
 
 ## Untested — no evidence either way here
 

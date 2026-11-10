@@ -31,13 +31,21 @@ python3 tools/notices.py --check                       # credit files match thei
 python3 tools/iarch_brand.py --check                   # product naming is consistent
 python3 tools/branding_lint.py                         # no upstream name in the everyday UI
 python3 tools/extract_keybinds.py --check              # keybind data matches keybind.lua
+python3 tools/render_shortcuts.py --check              # docs/SHORTCUTS.md matches that data
+python3 tools/naming_audit.py --check                  # old names only where allowlisted
 bash -n install.sh fedora_install.sh uninstall.sh      # shell syntax
 shellcheck --severity=warning -- $(git ls-files '*.sh') # shell quality
 ```
 
-The last two are what CI runs, plus JSON and TOML validation. `shellcheck` is not
-a standard-library tool; the exceptions it is allowed are listed with their
-reasons in [`.shellcheckrc`](.shellcheckrc).
+CI runs all of that in `.github/workflows/iarch-checks.yml`, plus JSON Schema
+validation of everything in `data/`, TOML validation of `.config/noctalia/*.toml`
+and `profiles/*.toml`, a check that no submodule or gitlink crept in, and a final
+`git diff --exit-code`. `shellcheck` and `jsonschema` are not standard-library
+tools; CI installs `shellcheck-py` and `jsonschema`, and the exceptions
+shellcheck is allowed are listed with their reasons in
+[`.shellcheckrc`](.shellcheckrc). Locally the JSON Schema checks skip themselves
+when `jsonschema` is not installed, so the suite still runs on a plain
+`python3`.
 
 **Run the tests as your own user, not as root.** Seven installer-CLI tests and
 `tests/session-install.sh` are designed to fail under root: the legacy session

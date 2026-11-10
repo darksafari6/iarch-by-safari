@@ -38,6 +38,7 @@
           "keys",
           "description",
           "action",
+          "category",
           "status"
         ],
         "additionalProperties": false,
@@ -93,6 +94,10 @@
                 "type": "string"
               }
             }
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1
           }
         }
       }

@@ -160,9 +160,12 @@ class CreditsArePreserved(unittest.TestCase):
         self.assertIn("LICENSE.txt", readme)
 
     def test_notices_file_names_the_product_license(self):
+        """Asserted against the brand definition, so the two cannot drift apart."""
         rendered = notices.render(notices.load(ROOT), ROOT)
-        self.assertIn("GPL-3.0-only", rendered)
-        self.assertIn("LICENSE.txt", rendered)
+        values = brand.product(ROOT)
+        self.assertIn(values["IARCH_LICENSE_ID"], rendered)
+        self.assertIn(values["IARCH_LICENSE_FILE"], rendered)
+        self.assertIn(f"# Third-party notices — {values['IARCH_PRODUCT_NAME']}", rendered)
 
 
 class ReadmeHeader(unittest.TestCase):
@@ -197,8 +200,8 @@ class ReadmeHeader(unittest.TestCase):
         self.assertEqual("", tracked, "no video file may ship in the repository")
 
     def test_lineage_is_stated_once_in_the_credits_section(self):
-        head, _, credits = self.readme.partition("### Credits and licenses")
-        self.assertTrue(credits, "README must keep a Credits and licenses section")
+        head, _, credits = self.readme.partition("## Credits & License")
+        self.assertTrue(credits, "README must keep a Credits & License section")
         self.assertIn("GitLab", credits)
         self.assertNotIn("not as a fork", head + credits)
 

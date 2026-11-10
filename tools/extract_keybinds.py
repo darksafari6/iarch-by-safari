@@ -39,6 +39,7 @@ class Bind(NamedTuple):
     description: str
     action: Dict[str, str]
     options: Dict[str, bool]
+    category: str = "General"
     status: str = "bound"
 
 
@@ -126,13 +127,35 @@ def parse_options(raw: str) -> Dict[str, bool]:
 
 
 def parse_description(raw: str) -> str:
+    """The description text, trimmed: the Lua source has stray padding."""
     match = re.search(r'description\s*=\s*"((?:[^"\\]|\\.)*)"', raw)
-    return match.group(1).replace('\\"', '"') if match else ""
+    return match.group(1).replace('\\"', '"').strip() if match else ""
+
+
+SECTION = re.compile(r"^-- (\d+)\. (.+?)\s*$", re.M)
+
+
+def sections(text: str) -> List[Tuple[int, str]]:
+    """The `-- 1. Applications` headings, as (line number, title) pairs."""
+    return [(text[:m.start()].count("\n") + 1, m.group(2)) for m in SECTION.finditer(text)]
+
+
+def category_for(text: str, offset: int, table: List[Tuple[int, str]]) -> str:
+    line = text[:offset].count("\n") + 1
+    current = "General"
+    for section_line, title in table:
+        if section_line < line:
+            current = title
+        else:
+            break
+    return current
 
 
 def expand(text: str, keys: Dict[str, str]) -> List[Bind]:
     binds: List[Bind] = []
+    table = sections(text)
     for match in re.finditer(r"hl\.bind\(", text):
+        category = category_for(text, match.start(), table)
         args = split_args(text, match.end())
         if len(args) < 3:
             continue
@@ -156,6 +179,7 @@ def expand(text: str, keys: Dict[str, str]) -> List[Bind]:
                     description=f"{description}{digit}",
                     action={**action, "workspace": str(digit)},
                     options=options,
+                    category=category,
                 ))
             continue
         if literal:
@@ -166,7 +190,8 @@ def expand(text: str, keys: Dict[str, str]) -> List[Bind]:
             key = f"SUPER + {formatted.group(1)}"
         else:
             continue
-        binds.append(Bind(keys=key, description=description, action=action, options=options))
+        binds.append(Bind(keys=key, description=description, action=action, options=options,
+                          category=category))
     return binds
 
 
@@ -176,7 +201,7 @@ def build() -> Dict[str, object]:
     binds = expand(text, keys)
     for name, why in RESERVED:
         binds.append(Bind(keys=keys[name], description=why, action={"kind": "reserved"},
-                          options={}, status="reserved"))
+                          options={}, category="Planned", status="reserved"))
     return {
         "_copyright": COPYRIGHT,
         "generated_by": "tools/extract_keybinds.py --write",
@@ -189,6 +214,7 @@ def build() -> Dict[str, object]:
                 "description": b.description,
                 "action": b.action,
                 **({"options": b.options} if b.options else {}),
+                "category": b.category,
                 "status": b.status,
             }
             for b in binds
