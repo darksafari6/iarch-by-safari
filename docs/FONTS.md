@@ -68,9 +68,15 @@ reads a cursor theme from the environment:
 "QT_CURSOR_THEME,Bibata-Modern-Classic",    -- Qt
 ```
 
-`theme.lua` holds these as the fallback; a preset whose cursor differs would be
-applied at runtime by `iarch-theme` (Part 2, T10), which re-renders the generated
-config and re-exports the theme. Bibata **is** installed on Arch
+`theme.lua` holds these as the static export, and every preset in
+`data/design/presets/` ships the same `Bibata-Modern-Classic` at 24, so applying
+a preset leaves the cursor where it is: `iarch-theme apply` re-renders the
+generated config, verifies the chosen preset still names the cursor `theme.lua`
+exports, and a `hyprctl reload` re-runs `theme.lua`, which re-exports it (whether
+a live session re-applies that export is TP-10). `iarch-theme` does not switch a
+*differing* cursor at runtime — there is no verified call for it — so a future
+preset that names another cursor would update the static export in `theme.lua`
+rather than rely on a runtime switch. Bibata **is** installed on Arch
 (`bibata-cursor-theme`, `install.sh:424`); the Fedora package is added but its
 name is unverified (`docs/UNVERIFIED.md`, TP-18). An earlier revision of TP-13
 wrongly said no installer provided Bibata; that is corrected.
@@ -87,8 +93,12 @@ Unlike the cursor theme, the icon theme has no environment variable: GTK reads i
 from the `gtk-icon-theme-name` setting (gsettings or a `settings.ini`) and Qt
 from its own icon-theme setting. The v5 payload deliberately ships no
 `settings.ini` — the legacy v4 one named a v4-only theme, and
-`tests/test_v5_staging.py` asserts it stays out — so the icon theme is applied at
-runtime by `iarch-theme` (T10) rather than by a generated file in the payload.
+`tests/test_v5_staging.py` asserts it stays out — and no other mechanism is
+verified against the toolkit releases in use: the `-gtk-icon-theme` in
+`data/design/gtk.json` is a CSS property, not the `gtk-icon-theme-name` setting,
+and `data/design/kvantum.json` verifies that qt6ct writes the style only. So
+`iarch-theme` reports the preset's icon theme and does not set it; the gap is
+recorded as TP-19 in `docs/UNVERIFIED.md`.
 
 ## Installer packages
 

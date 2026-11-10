@@ -8,5 +8,9 @@
     "animations": true,
     "shadows": true
   },
+  "theme": {
+    "colour_preset": "midnight-glass",
+    "intensity": "frosted"
+  },
   "notes": "Repository defaults. Your own copy lives in ~/.config/iarch/settings.json and wins over these values."
 }

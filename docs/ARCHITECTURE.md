@@ -35,7 +35,7 @@ the map. Read it before changing anything.
 ├── iarch/                    The product's own code, all of it iarch-prefixed.
 │   ├── lib/configstore.py    User state: defaults merge, atomic writes, backups. The rules below.
 │   ├── lib/renderers.py      Generators. Contract shipped; renderers land in Parts 2 and 5.
-│   ├── cli/                  iarch-theme, iarch-keybinds, iarch-anim, iarch-doctor (Parts 2, 5).
+│   ├── cli/                  iarch-theme (Part 2); iarch-keybinds, iarch-anim, iarch-doctor (Part 5).
 │   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
 │   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
 │   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
@@ -43,11 +43,12 @@ the map. Read it before changing anything.
 │   │   ├── render_noctalia.py Shell config.toml and one palette per preset, from the same tokens.
 │   │   ├── render_gtk_css.py  The GTK 4 and GTK 3 glass overlays, from templates in lib/templates.
 │   │   ├── render_kvantum.py  The Qt/Kvantum glass theme, recoloured from the presets.
-│   │   └── gen_fontconfig.py  The fontconfig file that applies the font tokens.
+│   │   ├── gen_fontconfig.py  The fontconfig file that applies the font tokens.
+│   │   └── theme.py           iarch-theme: one preset across every surface above; gates on contrast.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
 ├── data/                     Repository defaults. A user never edits these after install.
-│   ├── settings.default.json Default effects and preset selection.
+│   ├── settings.default.json Default effects, preset and theme selection.
 │   ├── keybinds.default.json Keyboard map, extracted from .config/hypr/keybind.lua.
 │   ├── contacts.default.json Contact page defaults for the Part 4 settings app.
 │   ├── design/               Glass design tokens and the six colour presets.
@@ -181,7 +182,7 @@ every file a program writes is generated.** Nothing in between is allowed.
 | --- | --- | --- | --- |
 | Repository defaults | `data/*.default.json`, `data/design/` | This repository | No, not after install — an edit is lost on the next update |
 | User settings | `~/.config/iarch/` (`settings.json`, `keybinds.json`, `contacts.json`, `presets/`) | The settings app, or the user | Yes — this is the only configuration anyone edits |
-| Generated files | `~/.config/hypr/generated/*.lua`, Noctalia overrides, kitty includes | Generators in `iarch/cli/gen_*.py`, under the contract in `iarch/lib/renderers.py` | No — they carry the GENERATED header and are rewritten wholesale |
+| Generated files | `~/.config/hypr/generated/*.lua`, Noctalia overrides, kitty includes | The generators in `iarch/cli/`, and `iarch-theme` which drives them, under the contract in `iarch/lib/renderers.py` | No — they carry the GENERATED header and are rewritten wholesale |
 | Backups | `~/.local/state/iarch/backups/` | `iarch/lib/configstore.py` | No — read them only to roll back |
 
 Rules every generator obeys, implemented once in `iarch/lib/configstore.py` and proven by

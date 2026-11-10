@@ -107,6 +107,7 @@ jobs:
           python iarch/cli/render_gtk_css.py --check --repo  # shipped GTK sheets match the tokens
           python iarch/cli/render_kvantum.py --check  # shipped Kvantum theme matches the tokens
           python iarch/cli/gen_fontconfig.py --check  # shipped fonts.conf matches the tokens
+          python iarch/cli/theme.py apply midnight-glass --dry-run  # the capstone renders every surface together, gates on contrast, writes nothing
 
       - name: Validate every JSON file in data/ against its schema
         run: |

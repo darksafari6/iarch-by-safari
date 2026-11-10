@@ -50,6 +50,29 @@
         }
       }
     },
+    "theme": {
+      "type": "object",
+      "description": "The design-system selection iarch-theme renders from, added in Part 2. It sits alongside the coarse Part-1 'preset' master switch and the 'effects' toggles rather than replacing them: 'colour_preset' names one of the palettes in data/design/presets/ (validated at runtime against that directory, so the list stays open), and 'intensity' names one of the four the tokens define. configstore.load merges the repository default under a user's file, so a settings.json written before this block existed still resolves a theme. iarch-theme apply writes both keys back here; reconciling them with the coarse 'preset'/'effects' switches is Part 4 settings-app work.",
+      "additionalProperties": false,
+      "required": [
+        "colour_preset",
+        "intensity"
+      ],
+      "properties": {
+        "colour_preset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "intensity": {
+          "enum": [
+            "crystal",
+            "frosted",
+            "soft",
+            "performance"
+          ]
+        }
+      }
+    },
     "notes": {
       "type": "string"
     }

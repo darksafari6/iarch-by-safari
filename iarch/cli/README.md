@@ -13,10 +13,15 @@ a preset, renders a configuration file, and can verify what it previously wrote:
 | `python3 iarch/cli/render_gtk_css.py` | `~/.config/gtk-4.0/gtk.css` and `~/.config/gtk-3.0/gtk.css` | that the committed sheets match a fresh render of the tokens |
 | `python3 iarch/cli/render_kvantum.py` | `~/.config/Kvantum/kvantum.kvconfig` and `~/.config/Kvantum/iarch/iarch.kvconfig` | that the committed theme matches a fresh render of the tokens |
 | `python3 iarch/cli/gen_fontconfig.py` | `~/.config/fontconfig/fonts.conf` | that the committed file matches a fresh render of the tokens |
+| `python3 iarch/cli/theme.py apply [PRESET]` | all of the above at once, under the live `~/.config`, from one preset and intensity | the contrast gate before it writes, then skips any file whose rendered bytes already match |
+| `python3 iarch/cli/theme.py current` | nothing — it reports | which preset and intensity an `apply` would use, and where it would write |
 
-Every generator exits 0 on success, 1 when the repository or the host is out of
-step, and 2 on a usage or data error, and none of them starts a desktop, edits a
-file it did not generate, or shells out.
+Every command exits 0 on success, 1 when the repository or the host is out of
+step — for `iarch-theme`, a preset the contrast gate refuses — and 2 on a usage
+or data error. None of them starts a desktop or edits a file it did not generate.
+The per-surface generators never shell out; `iarch-theme` imports their render
+functions and shells out only to ask the running compositor and shell to reload,
+guarded so a missing binary is a warning rather than a failure.
 
 Six of them also refuse to write what the upstream project would not read.
 `gen_glass_lua.py` checks every key against the Hyprland config leaves, which
@@ -43,12 +48,15 @@ configuration DTD, because fontconfig warns about an element it does not know an
 keeps loading, and a family no installed font provides is silently skipped.
 A render that does not
 validate is refused before anything is written, and a write that fails part way
-through puts every file back byte for byte. See `docs/GTK-NOTES.md`,
-`docs/KVANTUM-NOTES.md` and `docs/FONTS.md`.
+through puts every file back byte for byte. `iarch-theme apply` runs all six
+renderers and the contrast gate before it writes anything, so one command is
+refused if any single surface — or the palette's contrast — would be, and its
+write across the nine files is all-or-nothing the same way. See
+`docs/GTK-NOTES.md`, `docs/KVANTUM-NOTES.md` and `docs/FONTS.md`.
 
-The commands still to come are `iarch-theme`, `iarch-keybinds`, `iarch-anim` and
-`iarch-doctor`. Each one reads user state through `iarch.lib.configstore` and
-writes only generated files, under the contract in `iarch/lib/renderers.py`.
+The commands still to come are `iarch-keybinds`, `iarch-anim` and `iarch-doctor`.
+Each one reads user state through `iarch.lib.configstore` and writes only
+generated files, under the contract in `iarch/lib/renderers.py`.
 
 Nothing here may be renamed to an older product name; the conventions live in
 `branding/product.env`.
