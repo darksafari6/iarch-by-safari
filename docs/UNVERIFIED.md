@@ -22,11 +22,14 @@ installed release does not have. Hyprland **`v0.57.2`**: `src/config/values/Conf
 effects), `LuaBindingsConfigRules.cpp` (layer rule effects, `hl.curve`, `hl.env`),
 `src/config/lua/types/LuaConfigGradient.cpp` (gradient tables take `colors` plus `angle` in degrees),
 `src/config/shared/parserUtils/ParserUtils.cpp` (accepted colour strings), `src/config/lua/ConfigManager.cpp`
-(`luaL_openlibs`, and a missing `require` raises so the caller can `pcall` it). Kvantum **`master`**:
-`Kvantum/doc/Theme-Config` (`translucent_windows`, `reduce_window_opacity`, `reduce_menu_opacity`,
-`blurring`, `composite`, `opaque`, `respect_DE`), `Kvantum/style/kvantum.json` (the style keys are
-`kvantum` and `kvantum-dark`), `Kvantum/style/themeconfig/defaulttheme.qrc` (a compiled-in default
-SVG, so an INI-only theme still resolves element art). Noctalia **`v5.4.1`**:
+(`luaL_openlibs`, and a missing `require` raises so the caller can `pcall` it). Kvantum **`V1.1.9`**:
+`Kvantum/style/themeconfig/ThemeConfig.cpp` (every `getValue(KSL("Group"),KSL("key"))` call site: the
+89 `[%General]`, 28 `[GeneralColors]` and 23 `[Hacks]` keys the engine reads), `Kvantum/doc/Theme-Config`
+(their types and integer bounds, including `translucent_windows`, `reduce_window_opacity`,
+`reduce_menu_opacity`, `blurring`, `composite`, `shadowless_popup`), `Kvantum/style/kvantum.json` (the
+style keys are `kvantum` and `kvantum-dark`), `Kvantum/style/themeconfig/defaulttheme.qrc` (a compiled-in
+default SVG, so an INI-only theme still resolves element art), `Kvantum/style/Kvantum.cpp` (the theme
+pointer reads `theme` as a top-level key). Noctalia **`v5.4.1`**:
 `src/theme/custom_palettes.cpp` (palette files are `{"dark": {...}, "light": {...}}` with `m`-prefixed
 camelCase colour keys, unprefixed accepted as a fallback). Tooling:
 `python3 iarch/cli/contrast_check.py` and `python3 -m unittest discover -s tests`.
@@ -68,6 +71,7 @@ camelCase colour keys, unprefixed accepted as a fallback). Tooling:
 | UI-03 | Whether writing `[wallpaper] directory` in `config.toml` survives a running Noctalia | The keys are verified settings of v5.4.1 (`wallpaperSchema()` in `src/config/schema/config_schema.cpp`: `directory`, `directory_light`, `directory_dark`, `fill_mode` with `center/crop/fit/stretch/repeat/span`, `transition`, `transition_duration` 100-30000 ms, `edge_smoothness`, `per_monitor_directories`, `monitor.<name>`), and upstream says the *selected* wallpapers are app-managed state outside the schema. What was not observed on a live system is precedence: GUI overrides in `~/.local/state/noctalia/settings.toml` win over `config.toml` (UI-01), so a directory written by the generator may be shadowed by a choice the user made in Settings once | Claiming `iarch-theme apply` changes the visible wallpaper |
 | UI-02 | Shortcut overlay surface for the v5 session | The legacy v4 customization center binds `Super+H` to a GTK window; the v5 equivalent is planned for a later part and no supported API has been selected yet | Binding `Super+H` on v5 |
 | TP-16 | The distribution package names for Jinja2 and MarkupSafe | `iarch/cli/render_gtk_css.py` imports Jinja2 to render both GTK sheets, so it has to be installed for `iarch-theme apply` to work. PyPI confirms the project names and versions (Jinja2 3.1.6, BSD-3, requires MarkupSafe>=2.0), but no Arch, AUR or Fedora index was reachable from this sandbox, so the package names `python-jinja` and `python3-jinja2` assumed by the installers were not confirmed | Adding Jinja2 to `install.sh` and `fedora_install.sh` |
+| TP-17 | The distribution package names for Kvantum and qt6ct | `iarch/cli/render_kvantum.py` writes a Kvantum theme and `startup.lua` sets `QT_QPA_PLATFORMTHEME=qt6ct`, so both packages have to be installed for Qt 6 apps to pick the theme up. Upstream is `tsujan/Kvantum` (GPL-3.0) and `trialuser02/qt6ct` (BSD-2-Clause), and the style names `kvantum`/`kvantum-dark` are verified in `Kvantum/style/kvantum.json`, but no Arch, AUR or Fedora index was reachable from this sandbox, so the package names assumed by the installers were not confirmed | Adding Kvantum and qt6ct to `install.sh` and `fedora_install.sh` |
 | UI-04 | Noctalia's own base corner radius, which `shell.corner_radius_scale` multiplies | `kCornerRadiusScaleRange` (0-2, step 0.05) is verified in `src/config/schema/ranges.h` and the key is verified in `shellSchema()`, but neither the code nor `docs.noctalia.dev` states the base radius it scales. `iarch/cli/render_noctalia.py` therefore asks for `radius.panel / radius.md` (24/16 = 1.5) so the shell's corners land on the same 24 px the compositor's floating panels get; the visual result was never measured on a running shell | Claiming the shell's corner radius is exactly 24 px |
 | UI-05 | Whether the shipped `config.toml` passes the real `noctalia config validate` | Validation here runs against the surface extracted from Noctalia v5.4.1 source (`data/design/noctalia.json`), which is what `render_noctalia.py` refuses to write past. The `noctalia` binary is not installed in the development sandbox, so the same document was never checked by the shell's own validator; INS-04 records the separate question of that command's exit codes | Documenting the shipped config as validated by Noctalia |
 | PERF-01 | Measured effect of the Performance overlay | `profiles/performance.toml` only lowers values of keys that already exist in the shipped profile; frame timing, blur cost and input latency were not measured on real hardware | Claiming a performance gain |

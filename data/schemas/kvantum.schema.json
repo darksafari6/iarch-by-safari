@@ -1,0 +1,142 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/kvantum.schema.json",
+  "title": "The Kvantum theme surface this project is allowed to emit",
+  "description": "Schema for data/design/kvantum.json. QSettings reads a Kvantum theme as generic INI, so a key ThemeConfig.cpp never asks for is parsed and silently ignored, and an out-of-range integer is clamped and continues. Neither mistake is visible to the user, so render_kvantum.py refuses to write a theme that uses a key, an integer bound or an enum value that is not recorded here. The vocabulary is the exact set of getValue(KSL(group),KSL(key)) call sites in ThemeConfig.cpp at the pinned tag.",
+  "type": "object",
+  "required": [
+    "_copyright", "_note", "verified_against", "source", "diagnostics",
+    "activation", "compositor", "sections", "counts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string", "minLength": 20 },
+    "verified_against": { "type": "string", "pattern": "^V?\\d+\\.\\d+\\.\\d+$" },
+    "source": { "type": "string", "minLength": 20 },
+
+    "diagnostics": {
+      "type": "object",
+      "required": ["unknown_key", "out_of_range", "consequence"],
+      "additionalProperties": false,
+      "properties": {
+        "unknown_key": { "type": "string", "minLength": 10 },
+        "out_of_range": { "type": "string", "minLength": 10 },
+        "consequence": { "type": "string", "minLength": 10 }
+      }
+    },
+
+    "activation": {
+      "type": "object",
+      "required": ["style_names", "mechanism", "pointer_file", "pointer_key", "theme_dir", "theme_file"],
+      "additionalProperties": false,
+      "properties": {
+        "style_names": {
+          "type": "array", "minItems": 1,
+          "items": { "type": "string", "pattern": "^kvantum(-dark)?$" }
+        },
+        "mechanism": { "type": "string", "minLength": 20 },
+        "pointer_file": { "type": "string", "pattern": "kvantum\\.kvconfig$" },
+        "pointer_key": { "type": "string", "const": "theme" },
+        "theme_dir": { "type": "string", "minLength": 5 },
+        "theme_file": { "type": "string", "pattern": "\\.kvconfig$" }
+      }
+    },
+
+    "compositor": {
+      "type": "object",
+      "required": ["blurring", "shadowless_popup", "translucency_without_svg", "menu_blur_radius"],
+      "additionalProperties": false,
+      "properties": {
+        "blurring": { "type": "string", "minLength": 20 },
+        "shadowless_popup": { "type": "string", "minLength": 20 },
+        "translucency_without_svg": { "type": "string", "minLength": 20 },
+        "menu_blur_radius": { "type": "string", "minLength": 20 }
+      }
+    },
+
+    "sections": {
+      "type": "object",
+      "required": ["%General", "GeneralColors", "Hacks"],
+      "additionalProperties": false,
+      "properties": {
+        "%General": { "$ref": "#/definitions/section" },
+        "GeneralColors": { "$ref": "#/definitions/colorSection" },
+        "Hacks": { "$ref": "#/definitions/section" }
+      }
+    },
+
+    "counts": {
+      "type": "object",
+      "required": ["general", "general_colors", "hacks", "total"],
+      "additionalProperties": false,
+      "properties": {
+        "general": { "type": "integer", "minimum": 1 },
+        "general_colors": { "type": "integer", "const": 28 },
+        "hacks": { "type": "integer", "minimum": 1 },
+        "total": { "type": "integer", "minimum": 3 }
+      }
+    }
+  },
+
+  "definitions": {
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": { "type": "integer" },
+        "max": { "type": "integer" },
+        "default": { "type": "integer" }
+      }
+    },
+    "enum": {
+      "type": "object",
+      "required": ["values"],
+      "additionalProperties": false,
+      "properties": {
+        "values": { "type": "array", "minItems": 2, "items": { "type": "integer" } },
+        "default": { "type": "integer" },
+        "meaning": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "keySpec": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["bool", "int", "int_or_string", "float", "string", "string-list", "color"]
+        },
+        "range": { "$ref": "#/definitions/range" },
+        "enum": { "$ref": "#/definitions/enum" }
+      }
+    },
+    "colorKeySpec": {
+      "type": "object",
+      "required": ["type", "palette_role"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "const": "color" },
+        "palette_role": { "type": "string", "minLength": 3 }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": ["keys"],
+      "additionalProperties": false,
+      "properties": {
+        "keys": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/definitions/keySpec" } }
+      }
+    },
+    "colorSection": {
+      "type": "object",
+      "required": ["keys"],
+      "additionalProperties": false,
+      "properties": {
+        "keys": { "type": "object", "minProperties": 28, "additionalProperties": { "$ref": "#/definitions/colorKeySpec" } }
+      }
+    }
+  }
+}

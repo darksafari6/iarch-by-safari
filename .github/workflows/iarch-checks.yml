@@ -104,6 +104,7 @@ jobs:
           python iarch/cli/gen_glass_lua.py --check    # shipped glass.lua matches the tokens
           python iarch/cli/render_noctalia.py --check  # shipped config.toml + palettes match the presets
           python iarch/cli/render_gtk_css.py --check --repo  # shipped GTK sheets match the tokens
+          python iarch/cli/render_kvantum.py --check  # shipped Kvantum theme matches the tokens
 
       - name: Validate every JSON file in data/ against its schema
         run: |
@@ -122,6 +123,7 @@ jobs:
               "data/design/tokens.json": "data/schemas/tokens.schema.json",
               "data/design/noctalia.json": "data/schemas/noctalia.schema.json",
               "data/design/gtk.json": "data/schemas/gtk.schema.json",
+              "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
               "data/licenses.json": "data/schemas/licenses.schema.json",
               # Colour presets are a family under one schema.
               **{

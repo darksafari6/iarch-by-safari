@@ -12,6 +12,7 @@ Everything this project authors lives under this directory, named with the
 | `cli/gen_glass_lua.py` | Hyprland decoration, layer and window rules from the tokens | shipped, tested |
 | `cli/render_noctalia.py` | Shell `config.toml` and one palette per preset, checked against the upstream schema | shipped, tested |
 | `cli/render_gtk_css.py` | The GTK 4 and GTK 3 glass overlays, from `lib/templates/*.css.j2` | shipped, tested |
+| `cli/render_kvantum.py` | The Qt/Kvantum glass theme, validated against the keys `ThemeConfig.cpp` reads | shipped, tested |
 | `lib/templates/` | Jinja2 templates the renderers fill from the tokens | shipped, tested |
 | `cli/` | `iarch-theme`, `iarch-keybinds`, `iarch-anim`, `iarch-doctor`; the Noctalia, GTK, Qt and terminal renderers | Parts 2 and 5 |
 | `settings-app/` | GTK4 + libadwaita settings application | Part 4 |

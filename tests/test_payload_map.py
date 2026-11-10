@@ -51,6 +51,8 @@ EXPECTED_PAYLOAD = {
     'kitty/minima-profile.conf',
     'gtk-3.0/gtk.css',
     'gtk-4.0/gtk.css',
+    'Kvantum/kvantum.kvconfig',
+    'Kvantum/iarch/iarch.kvconfig',
     'noctalia/config.toml',
     # One palette per colour preset: iarch-theme apply <preset> points
     # theme.custom_palette at that preset's palette, so all of them ship.

@@ -30,6 +30,10 @@ class V5Staging(unittest.TestCase):
             for version in ('3.0', '4.0'):
                 self.assertTrue((dest / f'gtk-{version}' / 'gtk.css').is_file())
                 self.assertFalse((dest / f'gtk-{version}' / 'settings.ini').exists())
+            # The v5 payload also renders its own Qt/Kvantum theme: the pointer
+            # and the theme file it names. Neither existed in the v4 payload.
+            self.assertTrue((dest / 'Kvantum' / 'kvantum.kvconfig').is_file())
+            self.assertTrue((dest / 'Kvantum' / 'iarch' / 'iarch.kvconfig').is_file())
 
     def test_nonempty_or_missing_source_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

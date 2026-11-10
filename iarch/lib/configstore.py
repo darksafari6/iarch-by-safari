@@ -32,7 +32,7 @@ BACKUP_LIMIT = 5
 # generated file type uses. JSON cannot carry comments at all, so generated JSON
 # keeps the sentence as its first key ("_generated"); see header_for().
 _HEADER_SENTENCE = GENERATED_HEADER[len("-- "):]
-_COMMENT_PREFIX = {".lua": "-- ", ".sh": "# ", ".fish": "# ", ".toml": "# ", ".conf": "# "}
+_COMMENT_PREFIX = {".lua": "-- ", ".sh": "# ", ".fish": "# ", ".toml": "# ", ".conf": "# ", ".kvconfig": "; "}
 
 
 class ConfigError(RuntimeError):

@@ -360,7 +360,7 @@
     },
     "intensity": {
       "type": "object",
-      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal", "shell", "gtk"],
+      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal", "shell", "gtk", "qt"],
       "additionalProperties": false,
       "properties": {
         "label": { "type": "string", "minLength": 1 },
@@ -478,6 +478,16 @@
             "input": { "$ref": "#/definitions/alpha" },
             "button": { "$ref": "#/definitions/alpha" },
             "card": { "$ref": "#/definitions/alpha" }
+          }
+        },
+        "qt": {
+          "type": "object",
+          "description": "Fill opacity per Qt surface, driving Kvantum's reduce_window_opacity and reduce_menu_opacity. Kvantum's own blurring needs the KDE blur effect, which Hyprland does not provide, so the frosted look comes from these opacities plus the compositor blur in glass.lua; the Performance intensity sets both to 1.0 (opaque).",
+          "required": ["window", "menu"],
+          "additionalProperties": false,
+          "properties": {
+            "window": { "$ref": "#/definitions/alpha" },
+            "menu": { "$ref": "#/definitions/alpha" }
           }
         }
       }
