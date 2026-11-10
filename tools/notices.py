@@ -33,14 +33,26 @@ GENERATED_BANNER = (
     "     Verify: python3 tools/notices.py --check -->"
 )
 
-KIND_ORDER = ("vendored-code", "derived-config", "runtime-dependency", "asset", "infrastructure")
+KIND_ORDER = (
+    "vendored-code",
+    "derived-config",
+    "runtime-dependency",
+    "asset",
+    "infrastructure",
+    "provenance",
+)
 KIND_HEADINGS = {
     "vendored-code": "Vendored code stored in this repository",
     "derived-config": "Configuration and colors derived from third-party projects",
     "runtime-dependency": "Third-party software this product configures or launches",
     "asset": "Artwork and audio assets stored in this repository",
     "infrastructure": "Third-party services, repositories and registries",
+    "provenance": "Where this repository came from",
 }
+LICENSES_BANNER = (
+    "GENERATED FILE - do not edit by hand. "
+    "Source: branding/notices.json. Regenerate: python3 tools/notices.py --write"
+)
 REQUIRED_FIELDS = ("id", "name", "kind", "purpose", "license", "used_by")
 
 
@@ -50,6 +62,49 @@ def notices_path(root: Path | None = None) -> Path:
 
 def output_path(root: Path | None = None) -> Path:
     return (root or repo_root()) / product()["IARCH_NOTICES_FILE"]
+
+
+def licenses_path(root: Path | None = None) -> Path:
+    """Machine-readable credit data the settings app reads for About -> Licenses."""
+    return (root or repo_root()) / product()["IARCH_LICENSES_FILE"]
+
+
+def render_licenses(data: Dict[str, Any], root: Path | None = None) -> str:
+    values = product(root)
+    payload = {
+        "_generated": LICENSES_BANNER,
+        "_copyright": values["IARCH_COPYRIGHT_HEADER"],
+        "notices_version": data["notices_version"],
+        "updated": data["updated"],
+        "license_information_verified": data["verification"]["date"],
+        "verification_method": data["verification"]["method"],
+        "product": {
+            "name": values["IARCH_PRODUCT_NAME"],
+            "license": values["IARCH_LICENSE_ID"],
+            "license_file": values["IARCH_LICENSE_FILE"],
+            "maintainer": values["IARCH_MAINTAINER"],
+            "repository": values["IARCH_REPO_URL"],
+            "notices_document": values["IARCH_NOTICES_FILE"],
+        },
+        "components": [
+            {
+                "id": c["id"],
+                "name": c["name"],
+                "kind": c["kind"],
+                "license": c["license"],
+                "unverified": "TODO(verify)" in str(c["license"]),
+                "purpose": c["purpose"],
+                **({"copyright": c["copyright"]} if c.get("copyright") else {}),
+                **({"version": c["version"]} if c.get("version") else {}),
+                **({"upstream": c["upstream"]} if c.get("upstream") else {}),
+                "used_by": c.get("used_by", []),
+                **({"notes": c["notes"]} if c.get("notes") else {}),
+                "open_items": c.get("verify_ids", []),
+            }
+            for c in data["components"]
+        ],
+    }
+    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
 
 
 def load(root: Path | None = None) -> Dict[str, Any]:
@@ -230,24 +285,32 @@ def main(argv: List[str] | None = None) -> int:
         return 0
 
     rendered = render(data)
+    licenses_rendered = render_licenses(data)
     target = output_path()
+    licenses_target = licenses_path()
     if args.write:
         target.write_text(rendered, encoding="utf-8")
-        print(f"notices: wrote {target}")
+        licenses_target.parent.mkdir(parents=True, exist_ok=True)
+        licenses_target.write_text(licenses_rendered, encoding="utf-8")
+        print(f"notices: wrote {target} and {licenses_target}")
         return 0
 
-    if not target.is_file():
-        print(f"notices: {target} does not exist; run python3 tools/notices.py --write", file=sys.stderr)
+    stale = 0
+    for path, expected in ((target, rendered), (licenses_target, licenses_rendered)):
+        if not path.is_file():
+            print(f"notices: {path} does not exist; run python3 tools/notices.py --write", file=sys.stderr)
+            stale = 1
+            continue
+        if path.read_text(encoding="utf-8") != expected:
+            print(
+                f"notices: {path} is out of date with {notices_path()}; "
+                "run python3 tools/notices.py --write",
+                file=sys.stderr,
+            )
+            stale = 1
+    if stale:
         return 1
-    current = target.read_text(encoding="utf-8")
-    if current != rendered:
-        print(
-            f"notices: {target} is out of date with {notices_path()}; "
-            "run python3 tools/notices.py --write",
-            file=sys.stderr,
-        )
-        return 1
-    print(f"notices: {target} matches {notices_path()}")
+    print(f"notices: {target} and {licenses_target} match {notices_path()}")
     return 0
 
 

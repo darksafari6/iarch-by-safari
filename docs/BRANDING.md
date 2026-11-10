@@ -117,3 +117,26 @@ are; anything rendered on screen changes.
 3. Describe the action, not the implementation ("Open Control Center", not "Call panel-toggle").
 4. Run `python3 tools/branding_lint.py`.
 5. If the string credits someone, stop — that belongs in `branding/notices.json` instead.
+## Copyright headers
+
+New files in this repository start with the header defined once in
+`branding/product.env` as `IARCH_COPYRIGHT_HEADER`:
+
+```
+Copyright (C) 2026 Safari — GPL-3.0-or-later
+```
+
+- Shell, Python and TOML files carry it as a comment on the first line after any shebang.
+- JSON has no comments, so `data/**/*.json` carries it as the `_copyright` key.
+- Files that already existed keep whatever header they have; vendored upstream code under
+  `legacy/` keeps its own copyright untouched, and `tests/test_copyright_headers.py` fails if
+  this repository's header is ever stamped into `legacy/`.
+- `IARCH_LICENSE_ID` is the SPDX expression `GPL-3.0-or-later`. `LICENSE.txt` carries the GNU
+  GPL version 3 text, whose "any later version" option is what the header relies on. Prose for
+  people ("licensed under GPL-3.0") is fine; machine-readable fields use the SPDX expression.
+
+Third-party credit is generated, not written by hand: edit `branding/notices.json`, then run
+`python3 tools/notices.py --write`. That renders both `THIRD_PARTY_NOTICES.md` for people and
+`data/licenses.json` for the settings app's About page, so the two can never drift. A license
+that could not be read from a reachable upstream is written as `TODO(verify)` and must point at
+an id in [UNVERIFIED.md](UNVERIFIED.md); guessing is refused by `tools/notices.py --check`.

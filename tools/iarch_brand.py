@@ -34,6 +34,8 @@ REQUIRED_KEYS = (
     "IARCH_LICENSE_FILE",
     "IARCH_NOTICES_SOURCE",
     "IARCH_NOTICES_FILE",
+    "IARCH_LICENSES_FILE",
+    "IARCH_COPYRIGHT_HEADER",
     "IARCH_PALETTE_ID",
     "IARCH_PALETTE_NAME",
     "IARCH_PROFILE_DEFAULT",
@@ -109,6 +111,10 @@ def check(root: Path | None = None) -> list[str]:
     license_file = values.get("IARCH_LICENSE_FILE", "")
     if license_file and not (root_path / license_file).is_file():
         problems.append(f"{license_file} referenced by IARCH_LICENSE_FILE does not exist")
+    licenses_file = values.get("IARCH_LICENSES_FILE", "")
+    if licenses_file and not (root_path / licenses_file).is_file():
+        problems.append(f"{licenses_file} referenced by IARCH_LICENSES_FILE does not exist")
+
     notices_source = values.get("IARCH_NOTICES_SOURCE", "")
     if notices_source and not (root_path / notices_source).is_file():
         problems.append(f"{notices_source} referenced by IARCH_NOTICES_SOURCE does not exist")

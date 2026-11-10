@@ -1,0 +1,53 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/licenses.schema.json",
+  "title": "Machine-readable third-party credit, rendered from branding/notices.json",
+  "type": "object",
+  "required": ["_generated", "_copyright", "notices_version", "product", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "_generated": {"type": "string", "minLength": 1},
+    "_copyright": {"type": "string", "minLength": 1},
+    "notices_version": {"type": ["integer", "string"]},
+    "updated": {"type": "string"},
+    "license_information_verified": {"type": "string"},
+    "verification_method": {"type": "string"},
+    "product": {
+      "type": "object",
+      "required": ["name", "license", "license_file", "maintainer", "repository"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "license": {"type": "string"},
+        "license_file": {"type": "string"},
+        "maintainer": {"type": "string"},
+        "repository": {"type": "string"},
+        "notices_document": {"type": "string"}
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind", "license", "unverified", "purpose", "used_by"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "kind": {"type": "string"},
+          "license": {"type": "string", "minLength": 1},
+          "unverified": {"type": "boolean"},
+          "purpose": {"type": "string"},
+          "copyright": {"type": "string"},
+          "version": {"type": "string"},
+          "upstream": {"type": "string"},
+          "notes": {"type": "string"},
+          "used_by": {"type": "array", "items": {"type": "string"}},
+          "open_items": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

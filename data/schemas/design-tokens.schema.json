@@ -1,27 +1,53 @@
 {
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/design-tokens.schema.json",
   "title": "iArch by Safari glass design tokens",
   "type": "object",
-  "required": ["version", "name", "tokens"],
+  "required": [
+    "version",
+    "name",
+    "tokens"
+  ],
   "additionalProperties": false,
   "properties": {
-    "_copyright": {"type": "string"},
-    "_generated": {"type": "string"},
-    "generated_by": {"type": "string"},
-    "version": {"const": 1},
-    "name": {"type": "string"},
-    "description": {"type": "string"},
-    "tokens": {"type": "object"},
+    "_copyright": {
+      "type": "string"
+    },
+    "_generated": {
+      "type": "string"
+    },
+    "generated_by": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "tokens": {
+      "type": "object"
+    },
     "presets": {
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["description", "overrides"],
+        "required": [
+          "description",
+          "overrides"
+        ],
         "additionalProperties": false,
         "properties": {
-          "description": {"type": "string"},
-          "overrides": {"type": "object"}
+          "description": {
+            "type": "string"
+          },
+          "overrides": {
+            "type": "object"
+          }
         }
       }
     }

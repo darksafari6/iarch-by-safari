@@ -37,7 +37,9 @@ class ProductNaming(unittest.TestCase):
         self.assertEqual(values["IARCH_PRODUCT_NAME"], "iArch by Safari")
         self.assertEqual(values["IARCH_PRODUCT_ID"], "iarch")
         self.assertEqual(values["IARCH_MAINTAINER"], "Safari")
-        self.assertEqual(values["IARCH_LICENSE_ID"], "GPL-3.0-only")
+        self.assertEqual(values["IARCH_LICENSE_ID"], "GPL-3.0-or-later")
+        self.assertTrue(values["IARCH_COPYRIGHT_HEADER"].endswith(values["IARCH_LICENSE_ID"]),
+                        "the copyright header and the SPDX expression must not disagree")
 
     def test_parser_rejects_sloppy_edits(self):
         with self.assertRaises(ValueError):

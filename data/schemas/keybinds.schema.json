@@ -1,45 +1,97 @@
 {
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/keybinds.schema.json",
   "title": "iArch by Safari keyboard map defaults",
   "type": "object",
-  "required": ["version", "modifier", "bindings"],
+  "required": [
+    "version",
+    "modifier",
+    "bindings"
+  ],
   "additionalProperties": false,
   "properties": {
-    "_copyright": {"type": "string"},
-    "_generated": {"type": "string"},
-    "generated_by": {"type": "string"},
-    "source_file": {"type": "string"},
-    "version": {"const": 1},
-    "modifier": {"type": "string"},
+    "_copyright": {
+      "type": "string"
+    },
+    "_generated": {
+      "type": "string"
+    },
+    "generated_by": {
+      "type": "string"
+    },
+    "source_file": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "modifier": {
+      "type": "string"
+    },
     "bindings": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["keys", "description", "action", "status"],
+        "required": [
+          "keys",
+          "description",
+          "action",
+          "status"
+        ],
         "additionalProperties": false,
         "properties": {
-          "keys": {"type": "string", "minLength": 1},
-          "description": {"type": "string", "minLength": 1},
-          "status": {"enum": ["bound", "reserved"]},
+          "keys": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "bound",
+              "reserved"
+            ]
+          },
           "options": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "mouse": {"type": "boolean"},
-              "locked": {"type": "boolean"}
+              "mouse": {
+                "type": "boolean"
+              },
+              "locked": {
+                "type": "boolean"
+              }
             }
           },
           "action": {
             "type": "object",
-            "required": ["kind"],
+            "required": [
+              "kind"
+            ],
             "additionalProperties": false,
             "properties": {
-              "kind": {"enum": ["exec", "dispatcher", "lua-function", "reserved"]},
-              "command": {"type": "string"},
-              "lua": {"type": "string"},
-              "workspace": {"type": "string"}
+              "kind": {
+                "enum": [
+                  "exec",
+                  "dispatcher",
+                  "lua-function",
+                  "reserved"
+                ]
+              },
+              "command": {
+                "type": "string"
+              },
+              "lua": {
+                "type": "string"
+              },
+              "workspace": {
+                "type": "string"
+              }
             }
           }
         }

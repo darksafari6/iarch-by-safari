@@ -1,9 +1,9 @@
 {
-  "notices_version": 1,
-  "updated": "2026-11-09",
+  "notices_version": 2,
+  "updated": "2026-11-10",
   "verification": {
-    "date": "2026-11-09",
-    "method": "Upstream project metadata and LICENSE/COPYING files read through the GitHub REST API on the tag or branch named in each entry.",
+    "date": "2026-11-10",
+    "method": "Upstream project metadata and LICENSE/COPYING files read through the GitHub REST API on the tag or branch named in each entry: first pass 2026-11-09 (compositor, shell, terminal, prompt, system information, screenshot annotation, audio, GTK and icon theme projects), extended 2026-11-10 for the typefaces, cursor theme and Papirus Folders. Where an upstream could not be reached, the entry says TODO(verify) and points at docs/UNVERIFIED.md instead of guessing.",
     "unverified_registry": "docs/UNVERIFIED.md"
   },
   "intro": [
@@ -17,7 +17,8 @@
     "derived-config": "Configuration or color values in this repository derived from a third-party project.",
     "runtime-dependency": "Third-party software this configuration targets or launches; not redistributed here.",
     "asset": "Binary or artwork assets stored inside this repository.",
-    "infrastructure": "Third-party network service, repository or registry used by the installer or the shell."
+    "infrastructure": "Third-party network service, repository or registry used by the installer or the shell.",
+    "provenance": "Earlier publications of this same work, credited for history rather than reused as code."
   },
   "components": [
     {
@@ -256,25 +257,6 @@
       ]
     },
     {
-      "id": "appearance-packages",
-      "name": "Fonts, icon and cursor themes installed by the installer",
-      "kind": "runtime-dependency",
-      "purpose": "Bibata cursor theme, Yaru and Humanity icon themes, Papirus folders, Noto emoji, DejaVu and Symbola fonts, and the Microsoft core fonts package offered on Arch.",
-      "upstream": "Each project's own repository",
-      "version": "",
-      "license": "Varies per package",
-      "copyright": "See each package",
-      "license_text": "",
-      "used_by": [
-        "install.sh",
-        "fedora_install.sh"
-      ],
-      "notes": "Installed from the distribution; licenses come from the distribution package metadata. Nothing from these projects is stored in this repository.",
-      "verify_ids": [
-        "TP-12"
-      ]
-    },
-    {
       "id": "hesuvi-hrir-assets",
       "name": "HeSuVi HRIR audio assets",
       "kind": "asset",
@@ -344,6 +326,148 @@
       "notes": "Referenced by URL only; no plugin source is downloaded into this repository by the installer. The registry publishes no top-level LICENSE file, and each plugin carries its own manifest license.",
       "verify_ids": [
         "TP-06"
+      ]
+    },
+    {
+      "id": "jetbrains-mono",
+      "name": "JetBrains Mono",
+      "kind": "runtime-dependency",
+      "purpose": "Terminal typeface requested by the kitty configuration.",
+      "upstream": "https://github.com/JetBrains/JetBrainsMono",
+      "version": "",
+      "license": "OFL-1.1",
+      "copyright": "Copyright 2020 The JetBrains Mono Project Authors",
+      "license_text": "",
+      "used_by": [
+        ".config/kitty/kitty.conf",
+        ".config/kitty/minima-profile.conf"
+      ],
+      "notes": "Both files request \"JetBrainsMono Nerd Font Mono\", the Nerd Fonts patched build of this face. License read from the upstream repository's LICENSE file on 2026-11-10.",
+      "verify_ids": [
+        "TP-13"
+      ]
+    },
+    {
+      "id": "nerd-fonts",
+      "name": "Nerd Fonts",
+      "kind": "runtime-dependency",
+      "purpose": "Patched font build that supplies the powerline and icon glyphs kitty renders.",
+      "upstream": "https://github.com/ryanoasis/nerd-fonts",
+      "version": "",
+      "license": "OFL-1.1 (patched fonts); MIT (patcher tooling)",
+      "copyright": "Copyright (c) 2014 Ryan L McIntyre",
+      "license_text": "",
+      "used_by": [
+        ".config/kitty/kitty.conf"
+      ],
+      "notes": "Upstream LICENSE states the split explicitly: patched fonts in folders carrying an OFL file are SIL Open Font License 1.1, the patcher source is MIT. Read 2026-11-10.",
+      "verify_ids": [
+        "TP-13"
+      ]
+    },
+    {
+      "id": "dejavu-fonts",
+      "name": "DejaVu fonts",
+      "kind": "runtime-dependency",
+      "purpose": "Wide-coverage fallback typeface installed by the Arch installer (ttf-dejavu).",
+      "upstream": "https://github.com/dejavu-fonts/dejavu-fonts",
+      "version": "",
+      "license": "Bitstream Vera license; DejaVu changes are in the public domain",
+      "copyright": "Fonts are (c) Bitstream; glyphs imported from Arev fonts are (c) Tavmjong Bah",
+      "license_text": "",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "License read from the first lines of the upstream LICENSE file on 2026-11-10.",
+      "verify_ids": []
+    },
+    {
+      "id": "noto-emoji",
+      "name": "Noto Color Emoji",
+      "kind": "runtime-dependency",
+      "purpose": "Emoji coverage installed by the Arch installer (noto-fonts-emoji).",
+      "upstream": "https://github.com/googlefonts/noto-emoji",
+      "version": "",
+      "license": "OFL-1.1",
+      "copyright": "Copyright 2013 Google, Inc.",
+      "license_text": "",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "License read from the upstream repository metadata on 2026-11-10.",
+      "verify_ids": []
+    },
+    {
+      "id": "bibata-cursor",
+      "name": "Bibata cursor theme",
+      "kind": "runtime-dependency",
+      "purpose": "Pointer theme the session exports to Hyprland, XWayland and Qt.",
+      "upstream": "https://github.com/ful1e5/Bibata_Cursor",
+      "version": "",
+      "license": "GPL-3.0-only",
+      "copyright": "Copyright (c) 2018 Abdurahman",
+      "license_text": "",
+      "used_by": [
+        ".config/hypr/themes/theme.lua",
+        "legacy/config/gtk-3.0/settings.ini"
+      ],
+      "notes": "Bibata-Modern-Classic at size 24 is set through HYPRCURSOR_THEME, XCURSOR_THEME and QT_CURSOR_THEME. Neither installer installs a package that provides it; see TP-13.",
+      "verify_ids": [
+        "TP-13"
+      ]
+    },
+    {
+      "id": "papirus-folders",
+      "name": "Papirus Folders",
+      "kind": "runtime-dependency",
+      "purpose": "Folder colour script installed alongside the Papirus icon theme.",
+      "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-folders",
+      "version": "",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2018-2024 Papirus Development Team",
+      "license_text": "",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "License read from the upstream repository metadata on 2026-11-10.",
+      "verify_ids": []
+    },
+    {
+      "id": "appearance-packages",
+      "name": "Fonts offered by the installer whose licenses were not verified",
+      "kind": "runtime-dependency",
+      "purpose": "ttf-symbola and ttf-ms-fonts, installed by the printer-support step of the Arch installer.",
+      "upstream": "ttf-ms-fonts is an AUR package of Microsoft's core fonts; ttf-symbola ships the Symbola face by George Douros.",
+      "version": "",
+      "license": "TODO(verify)",
+      "copyright": "TODO(verify)",
+      "license_text": "",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "Neither license could be read from a reachable upstream: ttf-ms-fonts redistributes fonts under Microsoft's own end-user terms and is not open source, and Symbola's terms were not published in a place this repository could verify. Both are installed only when the user opts into printer support, and nothing in the session configuration requires them.",
+      "verify_ids": [
+        "TP-12"
+      ]
+    },
+    {
+      "id": "gitlab-minimadots",
+      "name": "The original dotfiles this repository started from",
+      "kind": "provenance",
+      "purpose": "Safari's personal Arch Linux dotfiles, published on GitLab before this repository, under the names minimaLinux and minimaDots.",
+      "upstream": "https://gitlab.com/minimalinux/minimaDots",
+      "version": "",
+      "license": "GPL-3.0-or-later (this repository's own earlier publication)",
+      "copyright": "Copyright (C) Safari",
+      "license_text": "",
+      "used_by": [
+        "README.md",
+        "docs/BRANDING.md",
+        "THIRD_PARTY_NOTICES.md"
+      ],
+      "notes": "This repository is that same continuing work, not a fork of someone else's project: the configuration, installers and history came from it. The project path was recovered from the GitLab badge links in the first commit of this repository's history (git show b3e20fc:README.md). gitlab.com is not reachable from the environment used to verify these notices, so the license text published there was not re-read; the older names survive in this repository only as frozen runtime identifiers and in historical documents, as docs/BRANDING.md explains.",
+      "verify_ids": [
+        "TP-14"
       ]
     }
   ],

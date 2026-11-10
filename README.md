@@ -237,3 +237,8 @@ This will restore any backed-up config files found in `~/.config` to their previ
 ## Deprecated isolated v4 session
 
 The earlier independent Quickshell v4 session is deprecated and kept only for existing installs: `./legacy/install-v4-session.sh` and `./legacy/uninstall-v4-session.sh`, both marked as such in their headers. See [v4 session documentation](legacy/docs/V4-SESSION.md) and [v4 glass limitations](legacy/docs/GLASS-UI.md). It is separate from the v5 workflow and is not validated on a live system. For an existing v5 shell, the experimental backup-first profile helper is documented in [v5 port status](docs/V5-PORT-STATUS.md).
+
+## Credits & License
+
+iArch by Safari is licensed under GPL-3.0. It builds on open-source projects; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
