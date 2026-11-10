@@ -117,5 +117,5 @@
     "credit": "Shipped with this repository before Part 2 and converted from PNG to WebP in Task 6 of Part 1; the original is kept at assets/wallpapers/originals/desktop-tokyo-night.png. The colour scheme it illustrates is documented in THIRD_PARTY_NOTICES.md (tokyonight.nvim, Apache-2.0); the hex values below were chosen to match the artwork and are not copied from that project's source. Reused here only as this preset's background; not modified."
   },
 
-  "noctalia": { "palette_id": "iarch-tokyo-night", "palette_name": "iArch Tokyo Night" }
+  "noctalia": { "counterpart": { "preset": "frosted-light", "mode": "light" }, "palette_id": "iarch-tokyo-night", "palette_name": "iArch Tokyo Night" }
 }

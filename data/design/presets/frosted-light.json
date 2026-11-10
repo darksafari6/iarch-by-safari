@@ -125,5 +125,5 @@
     }
   },
 
-  "noctalia": { "palette_id": "iarch-frosted-light", "palette_name": "iArch Frosted Light" }
+  "noctalia": { "counterpart": { "preset": "midnight-glass", "mode": "dark" }, "palette_id": "iarch-frosted-light", "palette_name": "iArch Frosted Light" }
 }

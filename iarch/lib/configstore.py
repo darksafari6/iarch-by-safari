@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import tempfile
 import time
 from pathlib import Path
@@ -101,11 +102,24 @@ def header_for(path: Path) -> str:
     return _COMMENT_PREFIX.get(path.suffix, "# ") + _HEADER_SENTENCE
 
 
+def default_mode() -> int:
+    """The mode a newly created configuration file should have: 0666 less umask."""
+    umask = os.umask(0o022)
+    os.umask(umask)
+    return 0o666 & ~umask
+
+
 def atomic_write(path: Path, text: str, validate_json: Optional[bool] = None) -> None:
     """Write ``text`` to ``path`` without ever leaving a half-written file.
 
     The temp file is created in the destination directory so the rename is
     atomic on the same filesystem; JSON payloads are parsed before the rename.
+
+    Permissions are carried over from the file being replaced, and a new file
+    gets the usual 0666-less-umask. ``NamedTemporaryFile`` creates 0600, so
+    without this every regeneration would quietly tighten a configuration file
+    that the rest of ``~/.config`` expects to be readable -- and a generated file
+    is rewritten often.
     """
     path = Path(path)
     if path.is_symlink():
@@ -114,6 +128,7 @@ def atomic_write(path: Path, text: str, validate_json: Optional[bool] = None) ->
         validate_json = path.suffix == ".json"
     if validate_json:
         json.loads(text)
+    mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else default_mode()
     path.parent.mkdir(parents=True, exist_ok=True)
     handle = tempfile.NamedTemporaryFile(
         "w", encoding="utf-8", dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp", delete=False
@@ -124,6 +139,7 @@ def atomic_write(path: Path, text: str, validate_json: Optional[bool] = None) ->
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:
         tmp.unlink(missing_ok=True)

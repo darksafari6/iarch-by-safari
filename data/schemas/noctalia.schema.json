@@ -1,0 +1,147 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/noctalia.schema.json",
+  "title": "The Noctalia settings this project writes, as verified upstream",
+  "description": "A record of which settings exist in the shell this project configures, what type each takes, and which enums and numeric ranges it enforces. render_noctalia.py refuses to emit a key that is not listed here, because Noctalia only warns about an unknown key and silently clamps an out-of-range number: neither would fail loudly enough to catch a mistake before it ships.",
+  "type": "object",
+  "required": [
+    "_copyright",
+    "_note",
+    "verified_against",
+    "source",
+    "diagnostics",
+    "bar_container",
+    "color_roles",
+    "color_roles_note",
+    "palette",
+    "sections"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string", "minLength": 20 },
+    "verified_against": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "source": { "type": "string", "pattern": "config_schema\\.cpp" },
+
+    "diagnostics": {
+      "type": "object",
+      "required": ["unknown_key", "out_of_range", "bad_type_or_color", "consequence"],
+      "additionalProperties": false,
+      "properties": {
+        "unknown_key": { "type": "string" },
+        "out_of_range": { "type": "string" },
+        "bad_type_or_color": { "type": "string" },
+        "consequence": { "type": "string" }
+      }
+    },
+
+    "bar_container": {
+      "type": "object",
+      "required": ["_note", "order_key", "keyed_outside_fields", "monitor_override_schema"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string" },
+        "order_key": { "type": "string" },
+        "keyed_outside_fields": { "$ref": "#/definitions/string_list" },
+        "monitor_override_schema": { "type": "string" }
+      }
+    },
+
+    "color_roles": {
+      "allOf": [{ "$ref": "#/definitions/string_list" }],
+      "minItems": 28,
+      "maxItems": 28,
+      "description": "The 28 user-facing colour roles from docs/user/theming/palette.mdx."
+    },
+    "color_roles_note": { "type": "string" },
+
+    "palette": {
+      "type": "object",
+      "required": [
+        "_note", "directory", "selected_by", "modes", "light_optional", "fields",
+        "field_forms", "terminal_optional", "terminal_fields", "terminal_ansi",
+        "terminal_groups", "name_sanitization"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string" },
+        "directory": { "type": "string" },
+        "selected_by": { "type": "string" },
+        "modes": { "$ref": "#/definitions/string_list" },
+        "light_optional": { "type": "string" },
+        "fields": {
+          "allOf": [{ "$ref": "#/definitions/string_list" }],
+          "minItems": 16,
+          "maxItems": 16,
+          "description": "The m-prefixed colours a palette file defines; every other role is derived from these."
+        },
+        "field_forms": { "type": "string" },
+        "terminal_optional": { "type": "boolean" },
+        "terminal_fields": { "$ref": "#/definitions/string_list" },
+        "terminal_ansi": { "$ref": "#/definitions/string_list" },
+        "terminal_groups": { "$ref": "#/definitions/string_list" },
+        "name_sanitization": { "type": "string" }
+      }
+    },
+
+    "sections": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/definitions/section" }
+    }
+  },
+
+  "definitions": {
+    "string_list": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+
+    "section": {
+      "type": "object",
+      "required": ["schema", "keys"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "type": "string", "pattern": "^[a-zA-Z]+Schema$" },
+        "keys": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/definitions/setting" }
+        }
+      }
+    },
+
+    "setting": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["bool", "integer", "float", "string", "array"] },
+        "enum": { "$ref": "#/definitions/string_list" },
+        "enum_constant": { "type": "string" },
+        "enum_note": { "type": "string" },
+        "range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": { "type": "number" }
+        },
+        "range_constant": { "type": "string" },
+        "color": { "type": "boolean" },
+        "color_note": { "type": "string" },
+        "parser": { "type": "string" },
+        "container_level": { "type": "boolean" },
+        "note": { "type": "string" },
+        "not_in_upstream_schema": { "type": "boolean" },
+        "table": { "type": "string", "pattern": "^[a-zA-Z]+Schema$" },
+        "keys": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/definitions/setting" }
+        }
+      }
+    }
+  }
+}

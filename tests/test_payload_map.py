@@ -50,7 +50,14 @@ EXPECTED_PAYLOAD = {
     'kitty/minima-colors.conf',
     'kitty/minima-profile.conf',
     'noctalia/config.toml',
+    # One palette per colour preset: iarch-theme apply <preset> points
+    # theme.custom_palette at that preset's palette, so all of them ship.
+    'noctalia/palettes/iarch-aurora.json',
+    'noctalia/palettes/iarch-crimson-plasma.json',
+    'noctalia/palettes/iarch-frosted-light.json',
     'noctalia/palettes/iarch-midnight.json',
+    'noctalia/palettes/iarch-mono-ice.json',
+    'noctalia/palettes/iarch-tokyo-night.json',
     'starship.toml',
 }
 

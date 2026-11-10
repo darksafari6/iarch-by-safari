@@ -37,7 +37,8 @@ the map. Read it before changing anything.
 │   ├── cli/                  iarch-theme, iarch-keybinds, iarch-anim, iarch-doctor (Parts 2, 5).
 │   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
 │   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
-│   │   └── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
+│   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
+│   │   └── render_noctalia.py Shell config.toml and one palette per preset, from the same tokens.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
 ├── data/                     Repository defaults. A user never edits these after install.
@@ -46,6 +47,7 @@ the map. Read it before changing anything.
 │   ├── contacts.default.json Contact page defaults for the Part 4 settings app.
 │   ├── design/               Glass design tokens and the six colour presets.
 │   │   ├── tokens.json     Radii, spacing, motion, blur per intensity, class groups.
+│   │   ├── noctalia.json   The shell settings that exist upstream, with their types and bounds.
 │   │   └── presets/        Six palettes; each must clear the WCAG gate to apply.
 │   ├── schemas/              JSON Schema for every file above; CI validates defaults against them.
 │   └── licenses.json         Generated third-party credit, read by Settings → About.
@@ -287,6 +289,7 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `python3 iarch/cli/contrast_check.py --quiet` | Every preset clears 4.5:1 for text and 3:1 for non-text UI |
 | `python3 iarch/cli/gen_wallpapers.py --check` | Generated wallpapers exist, are 4K WebP and inside 600 KB; nothing orphaned |
 | `python3 iarch/cli/gen_glass_lua.py --check` | The committed `glass.lua` still matches a fresh render of the tokens |
+| `python3 iarch/cli/render_noctalia.py --check` | The committed `config.toml` and all six palettes still match a fresh render |
 | `bash -n <script>` | Shell syntax of every script |
 | `shellcheck --severity=warning <script>` | Shell quality; `.shellcheckrc` states the dialect and lists every exception with its reason |
 

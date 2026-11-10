@@ -124,5 +124,5 @@
     }
   },
 
-  "noctalia": { "palette_id": "iarch-mono-ice", "palette_name": "iArch Mono Ice" }
+  "noctalia": { "counterpart": { "preset": "frosted-light", "mode": "light" }, "palette_id": "iarch-mono-ice", "palette_name": "iArch Mono Ice" }
 }

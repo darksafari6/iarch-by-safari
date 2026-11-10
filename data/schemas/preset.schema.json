@@ -183,9 +183,19 @@
 
     "noctalia": {
       "type": "object",
-      "required": ["palette_id", "palette_name"],
+      "required": ["palette_id", "palette_name", "counterpart"],
       "additionalProperties": false,
       "properties": {
+        "counterpart": {
+          "type": "object",
+          "required": ["preset", "mode"],
+          "additionalProperties": false,
+          "properties": {
+            "preset": { "$ref": "#/definitions/id" },
+            "mode": { "enum": ["dark", "light"] }
+          },
+          "description": "Which preset supplies the palette variant for the mode this preset does not declare. A Noctalia palette file may carry dark and light variants and uses the dark one for both when light is omitted, so every palette this project ships carries both, taken from designed presets rather than invented."
+        },
         "palette_id": {
           "type": "string",
           "pattern": "^iarch-[a-z0-9-]+$",

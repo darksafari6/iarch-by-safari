@@ -354,7 +354,7 @@
     },
     "intensity": {
       "type": "object",
-      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal"],
+      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal", "shell"],
       "additionalProperties": false,
       "properties": {
         "label": { "type": "string", "minLength": 1 },
@@ -433,6 +433,20 @@
           "additionalProperties": false,
           "properties": {
             "background_opacity": { "$ref": "#/definitions/alpha" }
+          }
+        },
+        "shell": {
+          "type": "object",
+          "required": ["bar_opacity", "capsule_opacity", "dock_opacity", "notification_opacity", "panel_transparency", "settings_translucent"],
+          "additionalProperties": false,
+          "properties": {
+            "_note": { "type": "string" },
+            "bar_opacity": { "$ref": "#/definitions/alpha" },
+            "capsule_opacity": { "$ref": "#/definitions/alpha" },
+            "dock_opacity": { "$ref": "#/definitions/alpha" },
+            "notification_opacity": { "$ref": "#/definitions/alpha" },
+            "panel_transparency": { "enum": ["solid", "soft", "glass"] },
+            "settings_translucent": { "type": "boolean" }
           }
         }
       }

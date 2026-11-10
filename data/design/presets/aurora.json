@@ -124,5 +124,5 @@
     }
   },
 
-  "noctalia": { "palette_id": "iarch-aurora", "palette_name": "iArch Aurora" }
+  "noctalia": { "counterpart": { "preset": "frosted-light", "mode": "light" }, "palette_id": "iarch-aurora", "palette_name": "iArch Aurora" }
 }

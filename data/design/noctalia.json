@@ -1,0 +1,849 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "_note": "The Noctalia settings this project writes, with the type, range and enum upstream declares for each. Derived from the sources named below at the tag in verified_against, by reading the Schema<> declarations in config_schema.cpp (field/enumField/colorField/subTable/custom and their optional* variants), the Range<> constants in ranges.h and config_schema.cpp, and the enum tables in config_types.h. render_noctalia.py refuses to emit a key that is not listed here.",
+  "verified_against": "v5.4.1",
+  "source": "src/config/schema/config_schema.cpp, src/config/schema/ranges.h, src/config/config_types.h, src/config/config_validate.cpp, src/theme/custom_palettes.cpp, docs/user/theming/palette.mdx",
+  "diagnostics": {
+    "unknown_key": "warning: config_validate.cpp reports diag.warn(path, \"unknown setting\") and the parser ignores the key",
+    "out_of_range": "warning: the parser clamps and continues, so a bad number is silently changed",
+    "bad_type_or_color": "error",
+    "consequence": "Neither a warning nor a clamp is acceptable in a shipped payload: this project treats both as failures at render time."
+  },
+  "bar_container": {
+    "_note": "Bars live at the config root, not in a section: {\"bar\"} and {\"bar\",name} are container levels, and \"position\" and \"name\" are keyed outside barFieldsSchema (isKnownConfigPath in config_schema.cpp).",
+    "order_key": "order",
+    "keyed_outside_fields": [
+      "position",
+      "name"
+    ],
+    "monitor_override_schema": "barMonitorOverrideSchema"
+  },
+  "color_roles": [
+    "primary",
+    "on_primary",
+    "primary_container",
+    "on_primary_container",
+    "secondary",
+    "on_secondary",
+    "secondary_container",
+    "on_secondary_container",
+    "tertiary",
+    "on_tertiary",
+    "tertiary_container",
+    "on_tertiary_container",
+    "error",
+    "on_error",
+    "error_container",
+    "on_error_container",
+    "surface",
+    "on_surface",
+    "on_surface_variant",
+    "surface_container_low",
+    "surface_container",
+    "surface_container_high",
+    "surface_container_highest",
+    "outline_variant",
+    "shadow",
+    "scrim",
+    "hover",
+    "on_hover"
+  ],
+  "color_roles_note": "The 28 user-facing roles from docs/user/theming/palette.mdx. A colorField accepts one of these names or a fixed hex colour (#RGB, #RGBA, #RRGGBB, #RRGGBBAA); role names are preferred so colours follow the palette. surface_variant and outline were renamed to surface_container and outline_variant, and Noctalia rewrites the old names on load with a warning.",
+  "palette": {
+    "_note": "Contract from docs/user/theming/palette.mdx and src/theme/custom_palettes.cpp.",
+    "directory": "palettes/",
+    "selected_by": "theme.custom_palette",
+    "modes": [
+      "dark",
+      "light"
+    ],
+    "light_optional": "If light is omitted, Noctalia uses the dark variant for both modes.",
+    "fields": [
+      "mPrimary",
+      "mOnPrimary",
+      "mSecondary",
+      "mOnSecondary",
+      "mTertiary",
+      "mOnTertiary",
+      "mError",
+      "mOnError",
+      "mSurface",
+      "mOnSurface",
+      "mSurfaceVariant",
+      "mOnSurfaceVariant",
+      "mOutline",
+      "mShadow",
+      "mHover",
+      "mOnHover"
+    ],
+    "field_forms": "writeFixedColor emits \"m\" + UpperCamel; the reader tries the prefixed key first and falls back to the unprefixed camelCase name.",
+    "terminal_optional": true,
+    "terminal_fields": [
+      "background",
+      "foreground",
+      "cursor",
+      "cursorText",
+      "selectionBg",
+      "selectionFg"
+    ],
+    "terminal_ansi": [
+      "black",
+      "red",
+      "green",
+      "yellow",
+      "blue",
+      "magenta",
+      "cyan",
+      "white"
+    ],
+    "terminal_groups": [
+      "normal",
+      "bright"
+    ],
+    "name_sanitization": "sanitizePaletteNameComponent keeps alphanumerics and folds separators to single dashes, lowercased."
+  },
+  "sections": {
+    "theme": {
+      "schema": "themeSchema",
+      "keys": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "dark",
+            "light",
+            "auto"
+          ],
+          "enum_constant": "kThemeModes"
+        },
+        "shell_mode": {
+          "type": "string",
+          "enum": [
+            "follow",
+            "dark",
+            "light",
+            "auto"
+          ],
+          "enum_constant": "kShellThemeModes"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "builtin",
+            "wallpaper",
+            "community",
+            "custom"
+          ],
+          "enum_constant": "kPaletteSources"
+        },
+        "custom_palette": {
+          "type": "string"
+        },
+        "sync_color_scheme": {
+          "type": "bool"
+        },
+        "pure_black_dark": {
+          "type": "bool"
+        }
+      }
+    },
+    "shell": {
+      "schema": "shellSchema",
+      "keys": {
+        "corner_radius_scale": {
+          "type": "float",
+          "range": [
+            0.0,
+            2.0,
+            0.05
+          ],
+          "range_constant": "kCornerRadiusScaleRange"
+        },
+        "button_borders": {
+          "type": "bool"
+        },
+        "input_borders": {
+          "type": "bool"
+        },
+        "popup_borders": {
+          "type": "bool"
+        },
+        "card_borders": {
+          "type": "bool"
+        },
+        "show_close_buttons": {
+          "type": "bool"
+        },
+        "popup_shadows": {
+          "type": "bool"
+        },
+        "font_family": {
+          "type": "string",
+          "parser": "custom"
+        },
+        "time_format": {
+          "type": "string"
+        },
+        "date_format": {
+          "type": "string"
+        },
+        "telemetry_enabled": {
+          "type": "bool"
+        },
+        "settings_window_translucent": {
+          "type": "bool"
+        },
+        "settings_show_advanced": {
+          "type": "bool"
+        },
+        "settings_expand_all_groups": {
+          "type": "bool"
+        },
+        "app_icon_colorize": {
+          "type": "bool"
+        },
+        "clipboard_enabled": {
+          "type": "bool"
+        },
+        "clipboard_confirm_clear_history": {
+          "type": "bool"
+        },
+        "animation": {
+          "table": "shellAnimationSchema",
+          "keys": {
+            "enabled": {
+              "type": "bool"
+            },
+            "speed": {
+              "type": "float",
+              "range": [
+                0.1,
+                4.0,
+                0.05
+              ],
+              "range_constant": "kAnimationSpeedRange"
+            }
+          }
+        },
+        "shadow": {
+          "table": "shellShadowSchema",
+          "keys": {
+            "direction": {
+              "type": "string",
+              "enum": [
+                "center",
+                "down",
+                "up",
+                "left",
+                "right",
+                "down_left",
+                "down_right",
+                "up_left",
+                "up_right"
+              ],
+              "enum_constant": "kShadowDirections"
+            },
+            "alpha": {
+              "type": "float",
+              "range": [
+                0.0,
+                1.0,
+                0.01
+              ],
+              "range_constant": "kUnitRange"
+            }
+          }
+        },
+        "panel": {
+          "table": "shellPanelSchema",
+          "keys": {
+            "transparency_mode": {
+              "type": "string",
+              "enum": [
+                "solid",
+                "soft",
+                "glass"
+              ],
+              "enum_constant": "kPanelTransparencyModes"
+            },
+            "borders": {
+              "type": "bool"
+            },
+            "border_color": {
+              "type": "string",
+              "color": true,
+              "color_note": "a colour role name or a fixed hex colour"
+            },
+            "border_width": {
+              "type": "float",
+              "range": [
+                0.0,
+                20.0,
+                0.5
+              ],
+              "range_constant": "kPanelBorderWidthRange"
+            },
+            "shadow": {
+              "type": "bool"
+            },
+            "list_item_background": {
+              "type": "bool"
+            },
+            "floating_layer": {
+              "type": "string",
+              "enum": [
+                "top",
+                "overlay"
+              ],
+              "enum_note": "custom parser: any other value warns and leaves the setting unset",
+              "parser": "custom"
+            },
+            "floating_offset": {
+              "type": "integer"
+            },
+            "open_near_click_control_center": {
+              "type": "bool"
+            },
+            "launcher_placement": {
+              "type": "string"
+            },
+            "clipboard_placement": {
+              "type": "string"
+            },
+            "control_center_placement": {
+              "type": "string"
+            },
+            "wallpaper_placement": {
+              "type": "string"
+            },
+            "session_placement": {
+              "type": "string"
+            },
+            "polkit_placement": {
+              "type": "string"
+            },
+            "launcher_position": {
+              "type": "string"
+            },
+            "clipboard_position": {
+              "type": "string"
+            },
+            "control_center_position": {
+              "type": "string"
+            },
+            "wallpaper_position": {
+              "type": "string"
+            },
+            "session_position": {
+              "type": "string"
+            },
+            "polkit_position": {
+              "type": "string"
+            }
+          }
+        },
+        "launcher": {
+          "table": "shellLauncherSchema",
+          "keys": {
+            "layout": {
+              "type": "string"
+            },
+            "width": {
+              "type": "integer"
+            },
+            "search_position": {
+              "type": "string"
+            },
+            "default_view": {
+              "type": "string"
+            },
+            "categories": {
+              "type": "bool"
+            },
+            "show_navigation_labels": {
+              "type": "bool"
+            },
+            "show_settings_button": {
+              "type": "bool"
+            },
+            "show_session_button": {
+              "type": "bool"
+            },
+            "show_icons": {
+              "type": "bool"
+            },
+            "track_usage": {
+              "type": "bool"
+            },
+            "sort_by_usage": {
+              "type": "bool"
+            }
+          }
+        }
+      }
+    },
+    "bar.default": {
+      "schema": "barFieldsSchema",
+      "keys": {
+        "position": {
+          "type": "string",
+          "container_level": true,
+          "note": "Keyed outside barFieldsSchema: isKnownConfigPath in config_schema.cpp accepts {\"bar\",name,\"position\"} and {\"bar\",name,\"name\"} as container levels, so this is a real setting even though the field schema does not declare it."
+        },
+        "enabled": {
+          "type": "bool"
+        },
+        "auto_hide": {
+          "type": "bool"
+        },
+        "reserve_space": {
+          "type": "bool"
+        },
+        "thickness": {
+          "type": "integer",
+          "range": [
+            10.0,
+            300.0
+          ],
+          "range_constant": "kBarThicknessRange"
+        },
+        "background_opacity": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "range_constant": "kBarOpacityRange"
+        },
+        "compositor_blur": {
+          "type": "bool"
+        },
+        "border": {
+          "type": "string",
+          "color": true,
+          "color_note": "a colour role name or a fixed hex colour"
+        },
+        "border_width": {
+          "type": "float",
+          "range": [
+            0.0,
+            20.0
+          ],
+          "range_constant": "kBarBorderWidthRange"
+        },
+        "shadow": {
+          "type": "bool"
+        },
+        "contact_shadow": {
+          "type": "bool"
+        },
+        "radius_top_left": {
+          "type": "integer",
+          "range": [
+            0.0,
+            500.0
+          ],
+          "range_constant": "kBarRadiusRange"
+        },
+        "radius_top_right": {
+          "type": "integer",
+          "range": [
+            0.0,
+            500.0
+          ],
+          "range_constant": "kBarRadiusRange"
+        },
+        "radius_bottom_left": {
+          "type": "integer",
+          "range": [
+            0.0,
+            500.0
+          ],
+          "range_constant": "kBarRadiusRange"
+        },
+        "radius_bottom_right": {
+          "type": "integer",
+          "range": [
+            0.0,
+            500.0
+          ],
+          "range_constant": "kBarRadiusRange"
+        },
+        "margin_ends": {
+          "type": "integer"
+        },
+        "margin_edge": {
+          "type": "integer"
+        },
+        "padding": {
+          "type": "integer"
+        },
+        "widget_spacing": {
+          "type": "integer"
+        },
+        "scale": {
+          "type": "float",
+          "range": [
+            0.5,
+            4.0
+          ],
+          "range_constant": "kBarScaleRange"
+        },
+        "font_scale": {
+          "type": "float",
+          "range": [
+            0.2,
+            2.5,
+            0.01
+          ],
+          "range_constant": "kBarFontScaleRange"
+        },
+        "capsule": {
+          "type": "bool"
+        },
+        "capsule_fill": {
+          "type": "string",
+          "color": true,
+          "color_note": "a colour role name or a fixed hex colour"
+        },
+        "capsule_opacity": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "range_constant": "kBarOpacityRange"
+        },
+        "capsule_border": {
+          "type": "string",
+          "color": true,
+          "color_note": "a colour role name or a fixed hex colour"
+        },
+        "capsule_border_width": {
+          "type": "integer",
+          "range": [
+            0.0,
+            8.0,
+            0.5
+          ],
+          "range_constant": "kBarCapsuleBorderWidthRange"
+        },
+        "capsule_radius": {
+          "type": "float",
+          "range": [
+            0.0,
+            80.0
+          ],
+          "range_constant": "kBarCapsuleRadiusRangeD"
+        },
+        "start": {
+          "type": "array"
+        },
+        "center": {
+          "type": "array"
+        },
+        "end": {
+          "type": "array"
+        }
+      }
+    },
+    "dock": {
+      "schema": "dockSchema",
+      "keys": {
+        "enabled": {
+          "type": "bool"
+        },
+        "position": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ],
+          "enum_constant": "kDockEdges"
+        },
+        "active_monitor_only": {
+          "type": "bool"
+        },
+        "icon_size": {
+          "type": "integer",
+          "range": [
+            16.0,
+            128.0,
+            1.0
+          ],
+          "range_constant": "kDockIconSizeRange"
+        },
+        "main_axis_padding": {
+          "type": "integer",
+          "range": [
+            0.0,
+            100.0,
+            1.0
+          ],
+          "range_constant": "kDockPaddingRange"
+        },
+        "cross_axis_padding": {
+          "type": "integer",
+          "range": [
+            0.0,
+            100.0,
+            1.0
+          ],
+          "range_constant": "kDockPaddingRange"
+        },
+        "item_spacing": {
+          "type": "integer",
+          "range": [
+            0.0,
+            100.0,
+            1.0
+          ],
+          "range_constant": "kDockItemSpacingRange"
+        },
+        "background_opacity": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0,
+            0.01
+          ],
+          "range_constant": "kUnitRange"
+        },
+        "compositor_blur": {
+          "type": "bool"
+        },
+        "border": {
+          "type": "string",
+          "color": true,
+          "color_note": "a colour role name or a fixed hex colour"
+        },
+        "border_width": {
+          "type": "float",
+          "range": [
+            0.0,
+            20.0,
+            0.5
+          ],
+          "range_constant": "kDockBorderWidthRange"
+        },
+        "shadow": {
+          "type": "bool"
+        },
+        "radius": {
+          "type": "integer",
+          "range": [
+            0.0,
+            80.0,
+            1.0
+          ],
+          "range_constant": "kDockRadiusRange",
+          "parser": "custom"
+        },
+        "margin_ends": {
+          "type": "integer",
+          "range": [
+            0.0,
+            500.0,
+            1.0
+          ],
+          "range_constant": "kDockMarginEndsRange"
+        },
+        "margin_edge": {
+          "type": "integer",
+          "range": [
+            0.0,
+            100.0,
+            1.0
+          ],
+          "range_constant": "kDockMarginEdgeRange"
+        },
+        "show_running": {
+          "type": "bool"
+        },
+        "auto_hide": {
+          "type": "bool"
+        },
+        "reserve_space": {
+          "type": "bool"
+        },
+        "layer": {
+          "type": "string",
+          "enum": [
+            "top",
+            "overlay"
+          ],
+          "enum_note": "custom parser: any other value warns and leaves the setting unset",
+          "parser": "custom"
+        },
+        "active_scale": {
+          "type": "float",
+          "range": [
+            0.1,
+            1.75,
+            0.05
+          ],
+          "range_constant": "kDockActiveScaleRange"
+        },
+        "inactive_scale": {
+          "type": "float",
+          "range": [
+            0.1,
+            1.0,
+            0.05
+          ],
+          "range_constant": "kDockInactiveScaleRange"
+        },
+        "magnification": {
+          "type": "bool"
+        },
+        "magnification_scale": {
+          "type": "float",
+          "range": [
+            1.0,
+            2.0,
+            0.05
+          ],
+          "range_constant": "kDockMagnificationScaleRange"
+        }
+      }
+    },
+    "control_center": {
+      "schema": "controlCenterSchema",
+      "keys": {
+        "sidebar": {
+          "type": "string",
+          "enum": [
+            "full",
+            "compact",
+            "none"
+          ],
+          "enum_constant": "kControlCenterSidebarModes"
+        },
+        "width": {
+          "type": "integer",
+          "range": [
+            600.0,
+            1200.0,
+            10.0
+          ],
+          "range_constant": "kControlCenterWidthRange"
+        }
+      }
+    },
+    "notification": {
+      "schema": "notificationSchema",
+      "keys": {
+        "enable_daemon": {
+          "type": "bool"
+        },
+        "show_app_name": {
+          "type": "bool"
+        },
+        "show_actions": {
+          "type": "bool"
+        },
+        "position": {
+          "type": "string"
+        },
+        "layer": {
+          "type": "string"
+        },
+        "scale": {
+          "type": "float",
+          "range": [
+            0.5,
+            2.5,
+            0.05
+          ],
+          "range_constant": "kScaleRange"
+        },
+        "width": {
+          "type": "integer",
+          "range": [
+            240.0,
+            500.0,
+            10.0
+          ],
+          "range_constant": "kNotificationWidthRange"
+        },
+        "offset_x": {
+          "type": "integer"
+        },
+        "offset_y": {
+          "type": "integer"
+        },
+        "collapse_on_dismiss": {
+          "type": "bool"
+        },
+        "keep_dismissed_in_history": {
+          "type": "bool"
+        },
+        "max_visible": {
+          "type": "integer"
+        },
+        "history_retention_hours": {
+          "type": "integer"
+        },
+        "background_opacity": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0,
+            0.01
+          ],
+          "range_constant": "kUnitRange"
+        },
+        "border": {
+          "type": "bool"
+        },
+        "border_color": {
+          "type": "string",
+          "color": true,
+          "color_note": "a colour role name or a fixed hex colour"
+        },
+        "border_width": {
+          "type": "float",
+          "range": [
+            0.0,
+            6.0,
+            0.5
+          ],
+          "range_constant": "kNotificationToastBorderWidthRange"
+        }
+      }
+    },
+    "audio": {
+      "schema": "audioSchema",
+      "keys": {
+        "enable_sounds": {
+          "type": "bool"
+        },
+        "enable_notification_sounds": {
+          "type": "bool"
+        },
+        "enable_volume_sounds": {
+          "type": "bool"
+        },
+        "enable_power_sounds": {
+          "type": "bool"
+        },
+        "enable_screenshot_sounds": {
+          "type": "bool"
+        },
+        "sound_volume": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0,
+            0.01
+          ],
+          "range_constant": "kUnitRange"
+        },
+        "sound_theme": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

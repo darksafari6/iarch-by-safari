@@ -117,5 +117,5 @@
     "credit": "Shipped with this repository before Part 2 and converted from PNG to WebP in Task 6 of Part 1; the original is kept at assets/wallpapers/originals/desktop-red.png. Provenance of the artwork itself is recorded in THIRD_PARTY_NOTICES.md (fastfetch-logo-assets / TP-03). Reused here only as this preset's background; not modified."
   },
 
-  "noctalia": { "palette_id": "iarch-crimson-plasma", "palette_name": "iArch Crimson Plasma" }
+  "noctalia": { "counterpart": { "preset": "frosted-light", "mode": "light" }, "palette_id": "iarch-crimson-plasma", "palette_name": "iArch Crimson Plasma" }
 }

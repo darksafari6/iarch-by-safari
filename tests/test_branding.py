@@ -66,7 +66,10 @@ class ProductNaming(unittest.TestCase):
         self.assertEqual(config["theme"]["source"], "custom")
         self.assertEqual(config["theme"]["custom_palette"], values["IARCH_PALETTE_ID"])
         colors = json.loads(palette.read_text(encoding="utf-8"))
-        self.assertEqual(sorted(colors), ["dark", "light"])
+        # The palette is rendered by iarch/cli/render_noctalia.py, so it carries
+        # the GENERATED marker as its first key; what Noctalia reads is still
+        # exactly the two mode variants.
+        self.assertEqual(["dark", "light"], sorted(k for k in colors if k != "_generated"))
 
     def test_staging_payload_ships_the_renamed_palette(self):
         staged = subprocess.run(
