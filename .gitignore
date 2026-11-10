@@ -15,6 +15,13 @@ venv/
 # kept out of the repository if someone runs a script from inside a checkout.
 *.log
 
+# Build output of the settings app and of any packaging attempt.
+# Nothing in this repository is built today; the pattern exists so a first
+# `meson dist`, `python -m build` or GTK build tree cannot be committed.
+dist/
+build/
+*.egg-info/
+
 # Editor and OS noise
 .DS_Store
 *~

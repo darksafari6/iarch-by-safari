@@ -12,14 +12,14 @@ minimaLinux is a set of Hyprland dotfiles with the [Noctalia shell](https://gith
 
 ## Desktop preview
 
-![Example of the minimaLinux Hyprland desktop with a Tokyo Night-style theme and Noctalia bar](../../assets/screenshots/desktop-tokyo-night.png)
+![Example of the minimaLinux Hyprland desktop with a Tokyo Night-style theme and Noctalia bar](../../assets/wallpapers/originals/desktop-tokyo-night.png)
 
 *An example of a customized minimaLinux desktop. The current installation uses a solid dark wallpaper by default; wallpaper, bar layout and colors can be changed in Noctalia settings.*
 
 <details>
 <summary>See another desktop example</summary>
 
-![Example of the minimaLinux desktop with a red wallpaper and top bar](../../assets/screenshots/desktop-red.png)
+![Example of the minimaLinux desktop with a red wallpaper and top bar](../../assets/wallpapers/originals/desktop-red.png)
 
 </details>
 

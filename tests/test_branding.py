@@ -182,9 +182,19 @@ class ReadmeHeader(unittest.TestCase):
                 f"README must carry the GitHub {badge} badge",
             )
 
-    def test_no_video_trailer_and_no_gitlab_badges(self):
-        self.assertNotIn("youtube.com", self.readme)
+    def test_no_embedded_video_and_no_gitlab_urls(self):
+        """The trailer is linked, never embedded; no video file ships in the repo."""
+        self.assertNotIn("img.youtube.com", self.readme, "no YouTube thumbnail embed")
+        self.assertNotIn("<video", self.readme, "no embedded video player")
+        self.assertNotIn(".mp4", self.readme, "no video file is shipped or linked as a file")
         self.assertNotIn("gitlab.com", self.readme)
+        self.assertNotIn("trailer/", self.readme, "the trailer directory was removed")
+
+    def test_the_trailer_link_points_at_the_video(self):
+        self.assertIn("https://www.youtube.com/watch?v=HJhm0aT3lNw", self.readme)
+        tracked = subprocess.run(["git", "ls-files", "trailer/"], cwd=ROOT,
+                                 capture_output=True, text=True, check=True).stdout.strip()
+        self.assertEqual("", tracked, "no video file may ship in the repository")
 
     def test_lineage_is_stated_once_in_the_credits_section(self):
         head, _, credits = self.readme.partition("### Credits and licenses")

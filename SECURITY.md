@@ -1,0 +1,90 @@
+# Security policy
+
+## Reporting a problem
+
+Report anything that could be exploited — a command that runs with privileges it
+does not need, a path that lets an installer overwrite a file it should refuse, a
+package fetched without verification — through GitHub's **private vulnerability
+reporting** on this repository (`Security` → `Report a vulnerability`). If that
+button is not available, open a normal issue and say only enough to be contacted;
+do not post a working exploit in public.
+
+There is no `security@` address and no bug bounty. The maintainer listed in
+[`README.md`](README.md) reads every report. Expect an acknowledgement rather
+than a fix deadline: this is one person's desktop configuration, published as
+free software, with no support contract behind it.
+
+Everything else — a package that is missing on your distribution, a keybind that
+does nothing on your hardware, a document that contradicts the code — belongs in
+a regular issue, or in [`docs/UNVERIFIED.md`](docs/UNVERIFIED.md) if it is a
+claim nobody has proven yet.
+
+## What the installers do with root
+
+`install.sh` and `fedora_install.sh` are meant to be run with `sudo` on a fresh
+machine you are prepared to reinstall. They are not sandboxed and they change
+system state. As of this revision the privileged operations are:
+
+| Operation | Where | Why it matters |
+| :--- | :--- | :--- |
+| `pacman -S --noconfirm`, `pacman -Syu --noconfirm` | `install.sh` | Installs and upgrades without a per-package prompt (`INS-01`) |
+| `yay -S --noconfirm` for the AUR greeter package | `install.sh` | Builds third-party code from the AUR without review (`INS-02`) |
+| Edits `/etc/pacman.conf`: uncomments `[multilib]`, appends and reorders `[chaotic-aur]` | `install.sh`, `ensure_multilib_repo_enabled` and `reorder_pacman_conf` | Backs the file up to `/etc/pacman.conf.bak.<epoch>` first |
+| `pacman-key --recv-key 3056513887B78AEB` from `keyserver.ubuntu.com`, then `pacman -U --noconfirm` of `chaotic-keyring` and `chaotic-mirrorlist` from `cdn-mirror.chaotic.cx` | `install.sh`, `install_chaotic_aur` | Trusts a third-party packager and fetches packages over the network (`TP-05`) |
+| `dnf -y copr enable` for three COPRs | `fedora_install.sh:92-104` | Adds third-party build repositories system-wide |
+| `sudo systemctl disable sddm` then `sudo systemctl enable greetd` | `install.sh:1530-1533` | Replaces the display manager; this is the change most likely to leave a machine unbootable into a graphical session (`INS-03`) |
+| `systemctl enable --now cups`, `systemctl enable bluetooth`, `accounts-daemon` | `install.sh:778`, `install.sh:798`, `fedora_install.sh:510-529` | Changes which services start at boot |
+| `chown -R` on `/var/lib/noctalia-greeter` | `fedora_install.sh:554` | Ownership change, scoped to one directory the installer created |
+| `rm -rf` on the staging directory it created | both installers | Scoped to a temporary directory the script owns |
+| Offers `ttf-ms-fonts` and other AUR packages whose redistribution terms were not verified | `install.sh` printer-support step | See `TP-12` in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
+
+The ids in that table are rows in [`docs/UNVERIFIED.md`](docs/UNVERIFIED.md). They
+are known, documented deviations from the safety contract, scheduled for the
+installer hardening pass — not accepted behaviour.
+
+## What they deliberately do not do
+
+- **No `curl | bash`.** Every script runs from a checkout you can read first.
+- **No silent package removal.** Removals are listed, explained and need an
+  explicit answer; additions are recorded by `lib/package-audit.sh` so a later
+  run can tell you what it added.
+- **No blanket `chown -R` of a config tree.** Ownership changes are limited to
+  paths the installer created.
+- **Backups before overwriting.** `lib/iarch-common.sh` writes a timestamped
+  `.bak.<timestamp>` copy and `uninstall.sh` restores from those; generated files
+  additionally keep the last five generations under
+  `~/.local/state/iarch/backups/`.
+- **Refusal of ambiguous targets.** Symlinks, files whose content differs from the
+  shipped source, and paths this repository does not manage are reported and left
+  alone (`lib/managed-files.sh`).
+- **No telemetry and no runtime fetching from this repository.** Nothing under
+  `.config/`, `scripts/` or `lib/` calls `curl` or `wget`. The only URLs in the
+  session payload are the two `$schema` hints at the top of
+  `.config/fastfetch/config.jsonc` and `.config/starship.toml`, which editors
+  read and the programs themselves ignore. Network access during installation is
+  the package manager, the keyring fetch and the greeter package. The shell and
+  compositor are upstream software with their own behaviour, credited in
+  [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+## Scope
+
+Only the current session payload is in scope: `.config/`, `lib/`, `tools/`,
+`iarch/`, `scripts/` and the two root installers. `legacy/` is a frozen
+configuration for an older session, kept so existing installs can still roll
+back; it is maintained for correctness but not hardened further, and running
+`legacy/install-v4-session.sh` today is discouraged.
+
+Runtime helper scripts under `scripts/` are read-only or allowlisted:
+`iarch-healthcheck.sh` changes nothing, and `iarch-control-center.sh` only sends
+shell IPC commands from a fixed list.
+
+## If something already went wrong
+
+1. Do not run the installer again.
+2. `bash scripts/iarch-healthcheck.sh` reports what it can see without changing anything.
+3. `./uninstall.sh` restores the timestamped backups it finds and tells you which
+   files it restored and which it left alone.
+4. System-level changes the uninstaller does not touch — enabled services, added
+   repositories, installed packages — are listed in the installer output and in
+   [`InstallNotes.md`](InstallNotes.md). Reverting those is manual, by design:
+   this repository will not remove packages on your behalf.

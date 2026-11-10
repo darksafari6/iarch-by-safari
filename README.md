@@ -16,9 +16,12 @@
 ## Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/desktop-tokyo-night.png" alt="iArch by Safari desktop with a Tokyo Night-style theme and the Noctalia bar" width="49%">
-  <img src="assets/screenshots/desktop-red.png" alt="iArch by Safari desktop with a red wallpaper and top bar" width="49%">
+  <img src="assets/wallpapers/desktop-tokyo-night.webp" alt="iArch by Safari desktop with a Tokyo Night-style theme and the Noctalia bar" width="49%">
+  <img src="assets/wallpapers/desktop-red.webp" alt="iArch by Safari desktop with a red wallpaper and top bar" width="49%">
 </p>
+
+A short video tour of the session is on YouTube: <https://www.youtube.com/watch?v=HJhm0aT3lNw>.
+The video file itself is not in this repository.
 
 More screenshots of the glass session will be added here as each part of the plan lands; see [docs/ROADMAP.md](docs/ROADMAP.md) for what is next.
 

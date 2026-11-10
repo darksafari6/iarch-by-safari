@@ -71,8 +71,9 @@ the map. Read it before changing anything.
 ├── pipewire/                 Optional virtual-surround convolver profile and HRIR assets.
 ├── assets/
 │   ├── branding/             The original logo artwork, colour and mono.
-│   ├── screenshots/          Images used by README and docs.
-│   └── wallpapers/           Compressed WebP wallpapers; originals/ keeps the lossless sources.
+│   ├── screenshots/          Small UI captures used by README and docs.
+│   └── wallpapers/           WebP renditions of the desktop showcase art (quality 85, 3840 px
+│                             ceiling); originals/ keeps the lossless PNG sources and the note.
 ├── docs/                     This directory.
 ├── tests/                    Shell and Python tests. See "Testing map".
 ├── CONTRIBUTING.md           How to work on this repository.
