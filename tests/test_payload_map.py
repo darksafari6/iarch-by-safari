@@ -34,6 +34,7 @@ EXPECTED_PAYLOAD = {
     'fastfetch/logo/pochita.icon',
     'fastfetch/logo/ryuzaki.icon',
     'fish/config.fish',
+    'fontconfig/fonts.conf',
     'hypr/Scripts/browser-launcher.sh',
     'hypr/Scripts/workspace.sh',
     'hypr/animations.lua',

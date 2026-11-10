@@ -104,6 +104,13 @@ def header_for(path: Path) -> str:
         # comment. Emitting it with the "#" default would put a parse error on
         # line 1 of every stylesheet this project writes.
         return f"/* {_HEADER_SENTENCE} */"
+    if path.name == "fonts.conf":
+        # A fontconfig file is XML, where "#" is not a comment. It carries no XML
+        # declaration (a leading comment would stop it being one), so the sentence
+        # goes first as an XML comment and the <fontconfig> root follows it. Keyed
+        # on the standard fontconfig filename, not the directory, so an --output-dir
+        # render gets the same header as the shipped one.
+        return f"<!-- {_HEADER_SENTENCE} -->"
     return _COMMENT_PREFIX.get(path.suffix, "# ") + _HEADER_SENTENCE
 
 
@@ -112,6 +119,10 @@ def is_header_line(line: str) -> bool:
     stripped = line.strip()
     if stripped.startswith(GENERATED_HEADER) or stripped == _HEADER_SENTENCE:
         return True
+    if stripped.startswith("<!--") and stripped.endswith("-->"):
+        # The XML comment form a fontconfig file uses.
+        if stripped[4:-3].strip() == _HEADER_SENTENCE:
+            return True
     for prefix in ("-- ", "# ", "/* ", "; ", "// "):
         if not stripped.startswith(prefix):
             continue

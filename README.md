@@ -173,7 +173,7 @@ manager back. Those are listed in the installer output and in
 | Nothing to check against | `bash scripts/iarch-healthcheck.sh` reports the shell, compositor and audio without changing anything |
 | Black screen or no login prompt after install | Switch to a TTY, then `sudo systemctl disable greetd && sudo systemctl enable sddm` |
 | Shell looks wrong or refuses a setting | Run `noctalia config validate`; GUI overrides in `~/.local/state/noctalia/settings.toml` win over the shipped profile |
-| Terminal font or cursor theme is not what the config says | Neither installer installs `JetBrainsMono Nerd Font Mono` or Bibata yet (`TP-13`); install a Nerd Font package and a Bibata cursor package, or let the defaults stand |
+| Terminal font or cursor theme is not what the config says | Neither installer provides `JetBrainsMono Nerd Font Mono` yet (`TP-13`), so the terminal falls back to a system monospace. Bibata is installed on Arch (`install.sh:424`) and added on Fedora, its name unverified (`TP-18`). Install a Nerd Font package, or let the defaults stand |
 | Screen does not lock by itself | `hypridle` is installed but not started by `startup.lua`; `SUPER + L` locks immediately |
 | A shortcut does nothing | Check it in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md) — reserved keys are listed as not bound yet |
 | Something else | [`InstallNotes.md`](InstallNotes.md) has the long-form notes, including Arch ISO Wi-Fi before `archinstall` |

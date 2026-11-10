@@ -395,6 +395,15 @@ PACKAGES=(
     humanity-icon-theme       # Humanity Icons
     google-noto-emoji-fonts   # Emoji font
     dejavu-sans-fonts         # Fonts
+    kvantum                   # Qt6 Kvantum glass style (TP-18)
+    bibata-cursor-theme       # Bibata cursor theme (TP-18)
+    papirus-icon-theme        # Papirus icons (TP-18)
+    rsms-inter-fonts          # Fonts: Inter, the UI face (TP-18)
+    jetbrains-mono-fonts      # Fonts: JetBrains Mono, the terminal face (TP-18)
+    google-noto-sans-fonts    # Fonts: Noto Sans fallback (TP-18)
+    google-noto-sans-cjk-fonts # Fonts: Noto Sans CJK fallback (TP-18)
+    google-noto-naskh-arabic-fonts # Fonts: Noto Naskh Arabic fallback (TP-18)
+    google-noto-nastaliq-urdu-fonts # Fonts: Noto Nastaliq Urdu fallback (TP-18)
     gst-plugins-good          # Gstreamer Plugins 
     gst-plugins-ugly          # Gstreamer Plugins
     gst-libav                 # Gstreamer Plugins

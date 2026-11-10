@@ -1,0 +1,76 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/fontconfig.schema.json",
+  "title": "The fontconfig XML surface this project is allowed to emit",
+  "description": "Schema for data/design/fontconfig.json. fontconfig warns about an element or attribute it does not know and keeps loading, and a family that is not installed simply never matches, so neither mistake is visible to the user. gen_fontconfig.py refuses to write a fonts.conf that uses an element, attribute or enumerated value not recorded here, or a family the tokens do not name. The vocabulary is the configuration DTD at the pinned mirror commit.",
+  "type": "object",
+  "required": [
+    "_copyright", "_note", "verified_against", "source", "stability",
+    "diagnostics", "root_children", "elements", "emitted_elements", "mapping"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string", "minLength": 20 },
+    "verified_against": {
+      "type": "object",
+      "required": ["project", "version", "commit"],
+      "additionalProperties": false,
+      "properties": {
+        "project": { "type": "string", "minLength": 5 },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "source": { "type": "string", "minLength": 20 },
+    "stability": { "type": "string", "minLength": 20 },
+    "diagnostics": {
+      "type": "object",
+      "required": ["unknown_element", "unknown_attribute", "uninstalled_family", "consequence"],
+      "additionalProperties": false,
+      "properties": {
+        "unknown_element": { "type": "string", "minLength": 10 },
+        "unknown_attribute": { "type": "string", "minLength": 10 },
+        "uninstalled_family": { "type": "string", "minLength": 10 },
+        "consequence": { "type": "string", "minLength": 10 }
+      }
+    },
+    "root_children": { "type": "string", "minLength": 5 },
+    "elements": {
+      "type": "object",
+      "minProperties": 40,
+      "additionalProperties": { "$ref": "#/definitions/element" }
+    },
+    "emitted_elements": {
+      "type": "array", "minItems": 5,
+      "items": { "type": "string" }
+    },
+    "mapping": {
+      "type": "object",
+      "required": ["sans-serif", "monospace"],
+      "additionalProperties": { "type": "string", "minLength": 5 }
+    }
+  },
+  "definitions": {
+    "attribute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "values": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "type": { "type": "string" },
+        "default": { "type": "string" },
+        "required": { "type": "boolean" }
+      }
+    },
+    "element": {
+      "type": "object",
+      "required": ["content"],
+      "additionalProperties": false,
+      "properties": {
+        "content": { "type": "string" },
+        "attributes": { "type": "object", "additionalProperties": { "$ref": "#/definitions/attribute" } }
+      }
+    }
+  }
+}

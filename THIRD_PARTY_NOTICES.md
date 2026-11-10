@@ -133,8 +133,8 @@ Pointer theme the session exports to Hyprland, XWayland and Qt.
 - **Used by:**
   - `.config/hypr/themes/theme.lua`
   - `legacy/config/gtk-3.0/settings.ini`
-- **Notes:** Bibata-Modern-Classic at size 24 is set through HYPRCURSOR_THEME, XCURSOR_THEME and QT_CURSOR_THEME. Neither installer installs a package that provides it; see TP-13.
-- **Open verification items:** `TP-13` in `docs/UNVERIFIED.md`
+- **Notes:** Bibata-Modern-Classic at size 24 is set through HYPRCURSOR_THEME, XCURSOR_THEME and QT_CURSOR_THEME. Arch's install.sh installs bibata-cursor-theme (line 424); Fedora's package is added but its name is unverified (TP-18).
+- **Open verification items:** `TP-18` in `docs/UNVERIFIED.md`
 
 ### DejaVu fonts
 

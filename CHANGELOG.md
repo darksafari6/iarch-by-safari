@@ -119,8 +119,9 @@ change to how the repository is organised, named, credited and checked.
 - A stale comment in `lib/stage-v5-config.sh` that still pointed at the v4
   payload's old location.
 - Registered, rather than papered over: `install.sh` and `fedora_install.sh`
-  request `JetBrainsMono Nerd Font Mono` and `Bibata-Modern-Classic` but install
-  no package that provides them (`TP-13`); `hypridle` is installed but never
+  request `JetBrainsMono Nerd Font Mono` and `Bibata-Modern-Classic`; no package
+  provides the Nerd Font (`TP-13`), though Bibata is installed on Arch and its
+  Fedora name is unverified (`TP-18`); `hypridle` is installed but never
   started by `startup.lua`; the DDC brightness branch edits a `settings.json`
   that the v5 session never deploys (`INS-06`); and `themes/theme.conf` and
   `themes/theme.lua` disagree on gaps, rounding and inactive opacity.
