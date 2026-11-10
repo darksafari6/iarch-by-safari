@@ -34,13 +34,17 @@ the map. Read it before changing anything.
 │   ├── lib/configstore.py    User state: defaults merge, atomic writes, backups. The rules below.
 │   ├── lib/renderers.py      Generators. Contract shipped; renderers land in Parts 2 and 5.
 │   ├── cli/                  iarch-theme, iarch-keybinds, iarch-anim, iarch-doctor (Parts 2, 5).
+│   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
+│   │   └── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
 ├── data/                     Repository defaults. A user never edits these after install.
 │   ├── settings.default.json Default effects and preset selection.
 │   ├── keybinds.default.json Keyboard map, extracted from .config/hypr/keybind.lua.
 │   ├── contacts.default.json Contact page defaults for the Part 4 settings app.
-│   ├── design/               Glass design tokens: radii, gaps, opacity, blur.
+│   ├── design/               Glass design tokens and the six colour presets.
+│   │   ├── tokens.json     Radii, spacing, motion, blur per intensity, class groups.
+│   │   └── presets/        Six palettes; each must clear the WCAG gate to apply.
 │   ├── schemas/              JSON Schema for every file above; CI validates defaults against them.
 │   └── licenses.json         Generated third-party credit, read by Settings → About.
 │
@@ -278,6 +282,8 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `python3 tools/naming_audit.py --check` | Old names survive only in allowlisted files, each with a recorded reason |
 | `python3 tools/extract_keybinds.py --check` | `data/keybinds.default.json` still matches `keybind.lua` |
 | `python3 tools/render_shortcuts.py --check` | `docs/SHORTCUTS.md` still matches the keybind data |
+| `python3 iarch/cli/contrast_check.py --quiet` | Every preset clears 4.5:1 for text and 3:1 for non-text UI |
+| `python3 iarch/cli/gen_wallpapers.py --check` | Generated wallpapers exist, are 4K WebP and inside 600 KB; nothing orphaned |
 | `bash -n <script>` | Shell syntax of every script |
 | `shellcheck --severity=warning <script>` | Shell quality; `.shellcheckrc` states the dialect and lists every exception with its reason |
 

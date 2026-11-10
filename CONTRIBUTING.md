@@ -33,6 +33,8 @@ python3 tools/branding_lint.py                         # no upstream name in the
 python3 tools/extract_keybinds.py --check              # keybind data matches keybind.lua
 python3 tools/render_shortcuts.py --check              # docs/SHORTCUTS.md matches that data
 python3 tools/naming_audit.py --check                  # old names only where allowlisted
+python3 iarch/cli/contrast_check.py --quiet             # every preset clears the WCAG gate
+/tmp/imgvenv/bin/python iarch/cli/gen_wallpapers.py --check   # shipped 4K art (needs Pillow)
 bash -n install.sh fedora_install.sh uninstall.sh      # shell syntax
 shellcheck --severity=warning -- $(git ls-files '*.sh') # shell quality
 ```

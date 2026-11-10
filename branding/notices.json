@@ -469,6 +469,24 @@
       "verify_ids": [
         "TP-14"
       ]
+    },
+    {
+      "id": "pillow",
+      "name": "Pillow (the PIL fork)",
+      "kind": "infrastructure",
+      "purpose": "Imaging library imported by iarch/cli/gen_wallpapers.py to render the generated preset wallpapers at 3840x2160 and encode them as WebP.",
+      "upstream": "https://github.com/python-pillow/Pillow",
+      "version": "13.0.0",
+      "license": "MIT-CMU",
+      "copyright": "Copyright (c) 1997-2011 Secret Labs AB; Copyright (c) 1995-2011 Fredrik Lundh and contributors; Copyright (c) 2010 Jeffrey 'Alex' Clark and contributors",
+      "license_text": "",
+      "used_by": [
+        "iarch/cli/gen_wallpapers.py"
+      ],
+      "notes": "Its LICENSE states Pillow is licensed under the open source MIT-CMU License; the GitHub license API reports NOASSERTION for that wording, so the licence was read from the LICENSE file directly. Not a runtime dependency of an installed session: the generated WebP files ship in the repository, and Pillow is only needed to regenerate them.",
+      "verify_ids": [
+        "TP-15"
+      ]
     }
   ],
   "license_texts": {

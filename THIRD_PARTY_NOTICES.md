@@ -352,6 +352,19 @@ Remote plugin index the shell can install plugins from.
 - **Notes:** Referenced by URL only; no plugin source is downloaded into this repository by the installer. The registry publishes no top-level LICENSE file, and each plugin carries its own manifest license.
 - **Open verification items:** `TP-06` in `docs/UNVERIFIED.md`
 
+### Pillow (the PIL fork)
+
+Imaging library imported by iarch/cli/gen_wallpapers.py to render the generated preset wallpapers at 3840x2160 and encode them as WebP.
+
+- **License:** MIT-CMU
+- **Copyright:** Copyright (c) 1997-2011 Secret Labs AB; Copyright (c) 1995-2011 Fredrik Lundh and contributors; Copyright (c) 2010 Jeffrey 'Alex' Clark and contributors
+- **Version checked:** 13.0.0
+- **Upstream:** https://github.com/python-pillow/Pillow
+- **Used by:**
+  - `iarch/cli/gen_wallpapers.py`
+- **Notes:** Its LICENSE states Pillow is licensed under the open source MIT-CMU License; the GitHub license API reports NOASSERTION for that wording, so the licence was read from the LICENSE file directly. Not a runtime dependency of an installed session: the generated WebP files ship in the repository, and Pillow is only needed to regenerate them.
+- **Open verification items:** `TP-15` in `docs/UNVERIFIED.md`
+
 ## Where this repository came from
 
 ### The original dotfiles this repository started from
