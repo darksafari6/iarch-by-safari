@@ -1,4 +1,4 @@
-# minimaLinux
+# Historical: the minimaLinux v4 session (now iArch by Safari)
 
 > **Historical document.** Kept because it records why the current rules exist.
 > For today's session see [ARCHITECTURE.md](../../docs/ARCHITECTURE.md) and [ROADMAP.md](../../docs/ROADMAP.md).

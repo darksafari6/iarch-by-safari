@@ -86,6 +86,22 @@ repository targets. If something cannot be verified, the code carries `TODO(veri
 is recorded in [UNVERIFIED.md](UNVERIFIED.md). A feature that the platform does not support is not
 faked, not stubbed with a dead control, and not described as working.
 
+## Identifiers for new components
+
+Everything this project authors from here on uses the `iarch` prefix, and the
+values live in `branding/product.env` so tools and docs cannot drift apart:
+
+| Kind | Convention | Example |
+| :--- | :--- | :--- |
+| Binary or service | `iarch-<purpose>` | `iarch-settings`, `iarch-theme`, `iarch-keybinds`, `iarch-doctor` |
+| User configuration | `~/.config/iarch/` | never inside another program's directory |
+| Desktop application id | reverse-DNS of the owner domain | `dev.safari.iarch` |
+| Shell functions and env switches | `iarch::` / `IARCH_` | `iarch::backup`, `IARCH_DRY_RUN` |
+| Palette and profile ids | `iarch-<name>` | `iarch-midnight`, `profiles/performance.toml` |
+
+A convention becomes a path only when the component ships; until then it is a
+name reserved in `branding/product.env`, and no code may hardcode it twice.
+
 ## Frozen identifiers
 
 Some identifiers keep a previous name because programs match on them. Renaming them would orphan

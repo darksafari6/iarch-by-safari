@@ -5,6 +5,23 @@ export LANG=C
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
+# Product identity: single source of truth (see docs/BRANDING.md, Rule 1).
+# Sourcing keeps installers and branding/product.env from drifting apart; the
+# fallback only fires when a checkout is missing its branding file.
+if [ -f "$SCRIPT_DIR/branding/product.env" ]; then
+    # shellcheck source=branding/product.env
+    . "$SCRIPT_DIR/branding/product.env"
+fi
+IARCH_PRODUCT_NAME=${IARCH_PRODUCT_NAME:-iArch by Safari}
+IARCH_PRODUCT_TAGLINE=${IARCH_PRODUCT_TAGLINE:-Glass Hyprland desktop session for Arch Linux and Fedora}
+
+print_product_banner() {
+    echo ""
+    echo "  ${IARCH_PRODUCT_NAME}"
+    echo "  ${IARCH_PRODUCT_TAGLINE}"
+    echo "  ------------------------------------------------------------"
+}
+
 append_unique_package() {
     local -n package_list="$1"
     local package="$2"
@@ -31,7 +48,8 @@ if ! command -v dnf >/dev/null 2>&1; then
 fi
 
 # --- Pre-flight confirmation ---
-echo "This script will install custom dot-files for Hyprland. Use at your own risk."
+print_product_banner
+echo "This script installs the ${IARCH_PRODUCT_NAME} dotfiles for Hyprland on Fedora. Use at your own risk."
 while true; do
     read -r -p "Would you like to proceed? (y/n): " proceed
     case "$proceed" in

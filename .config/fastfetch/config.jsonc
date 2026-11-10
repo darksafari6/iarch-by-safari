@@ -14,6 +14,14 @@
     },
     "modules": [
         "break",
+        // Product title. The `custom` module prints its `format` string verbatim;
+        // verified against upstream presets/examples/2.jsonc and 19.jsonc.
+        // {#1} = bold on, {#} = reset, so the title stays readable in both themes.
+        {
+            "type": "custom",
+            "format": "{#1}iArch by Safari{#}",
+            "key": " "
+        },
         "break",
         "break",
          {

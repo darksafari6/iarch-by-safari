@@ -7,6 +7,7 @@ silently dropped.
 """
 import importlib.util
 import json
+import xml.etree.ElementTree as ET
 import subprocess
 import sys
 import tomllib
@@ -160,6 +161,58 @@ class CreditsArePreserved(unittest.TestCase):
         rendered = notices.render(notices.load(ROOT), ROOT)
         self.assertIn("GPL-3.0-only", rendered)
         self.assertIn("LICENSE.txt", rendered)
+
+
+class ReadmeHeader(unittest.TestCase):
+    """The top of the README is a product surface: title, badges, screenshots."""
+
+    def setUp(self):
+        self.readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    def test_title_logo_badges_and_screenshots(self):
+        self.assertIn("# iArch by Safari", self.readme)
+        self.assertIn("assets/branding/iarch-logo.svg", self.readme)
+        self.assertIn("## Screenshots", self.readme)
+        for badge in ("license", "last-commit", "stars"):
+            self.assertIn(
+                f"img.shields.io/github/{badge}/darksafari6/iarch-by-safari",
+                self.readme,
+                f"README must carry the GitHub {badge} badge",
+            )
+
+    def test_no_video_trailer_and_no_gitlab_badges(self):
+        self.assertNotIn("youtube.com", self.readme)
+        self.assertNotIn("gitlab.com", self.readme)
+
+    def test_lineage_is_stated_once_in_the_credits_section(self):
+        head, _, credits = self.readme.partition("### Credits and licenses")
+        self.assertTrue(credits, "README must keep a Credits and licenses section")
+        self.assertIn("GitLab", credits)
+        self.assertNotIn("not as a fork", head + credits)
+
+
+class BrandingAssets(unittest.TestCase):
+    """The logo artwork ships in the repository and is original SVG."""
+
+    def test_both_logos_are_wellformed_svg_with_the_same_geometry(self):
+        for name in ("iarch-logo.svg", "iarch-logo-mono.svg"):
+            with self.subTest(logo=name):
+                root = ET.parse(ROOT / "assets" / "branding" / name).getroot()
+                self.assertEqual(root.tag.split("}")[-1], "svg")
+                self.assertEqual(root.get("viewBox"), "0 0 128 128")
+                self.assertTrue((root.find("title") is not None) or any(
+                    e.get("id", "").endswith("title") for e in root.iter()),
+                    "the logo must carry an accessible title")
+
+    def test_logos_are_original_and_unreferenced_by_other_marks(self):
+        # Originality cannot be proven by a test; what can be pinned is that the
+        # artwork is hand-written vector geometry in this repository and not a
+        # downloaded raster or a traced third-party mark.
+        for name in ("iarch-logo.svg", "iarch-logo-mono.svg"):
+            text = (ROOT / "assets" / "branding" / name).read_text(encoding="utf-8")
+            self.assertNotIn("base64", text)
+            self.assertNotIn("<image", text)
+            self.assertIn("Original artwork drawn for this repository", text)
 
 
 if __name__ == "__main__":

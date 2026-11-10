@@ -1,4 +1,4 @@
-# minimaLinux 2.0 — work in progress
+# Historical status of the minimaLinux 2.0 work (now iArch by Safari)
 
 > **Historical document.** Kept because it records why the current rules exist.
 > For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).

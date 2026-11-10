@@ -35,6 +35,19 @@ jobs:
             bash -n "$script"
           done
 
+      - name: Run shellcheck (errors and warnings must be zero)
+        run: |
+          set -euo pipefail
+          # Fail loudly if the tool is absent: a missing binary would otherwise
+          # make this step report a clean result it never checked.
+          command -v shellcheck >/dev/null || { echo 'shellcheck is not installed' >&2; exit 1; }
+          shellcheck --version | head -n 2
+          mapfile -t scripts < <(git ls-files '*.sh' | sort)
+          shellcheck --severity=warning -- "${scripts[@]}"
+          # The session launchers carry no shebang, so the shell is stated here.
+          shellcheck --severity=warning --shell=bash \
+            legacy/session/minimalinux-session legacy/session/minimalinux-customize
+
       - name: Run isolated installer and profile tests
         run: |
           set -euo pipefail

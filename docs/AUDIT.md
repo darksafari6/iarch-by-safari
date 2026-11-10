@@ -1,4 +1,4 @@
-# minimaLinux 2.0 — repository audit
+# Historical audit of the minimaLinux 2.0 tree (now iArch by Safari)
 
 > **Historical document.** Kept because it records why the current rules exist.
 > For today's session see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).

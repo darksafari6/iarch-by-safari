@@ -1,21 +1,26 @@
 <p align="center">
-  <img src="https://img.shields.io/github/contributors/darksafari6/iarch-by-safari" alt="Contributors">
-  <img src="https://img.shields.io/github/last-commit/darksafari6/iarch-by-safari" alt="Last Commit">
-  <img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License">
+  <img src="assets/branding/iarch-logo.svg" alt="iArch by Safari logo" width="128" height="128">
 </p>
 
-<p align="center"><strong>iArch by Safari</strong> is maintained as a standalone GitHub repository, not as a fork of another GitHub repository.</p>
+# iArch by Safari
 
-<div align="center">
-<details>
-  <summary><b>▶️ Click to view Video Trailer</b></summary>
-  <br>
-  <a href="https://www.youtube.com/watch?v=HJhm0aT3lNw">
-    <img src="https://img.youtube.com/vi/HJhm0aT3lNw/hqdefault.jpg" alt="Watch Trailer" height="250">
-  </a>
-</details>
-</div>
+<p align="center">A premium glass Hyprland desktop for Arch and Fedora, built on Noctalia v5.</p>
 
+<p align="center">
+  <img src="https://img.shields.io/github/license/darksafari6/iarch-by-safari" alt="License">
+  <img src="https://img.shields.io/github/last-commit/darksafari6/iarch-by-safari" alt="Last commit">
+  <img src="https://img.shields.io/github/stars/darksafari6/iarch-by-safari" alt="Stars">
+  <img src="https://img.shields.io/github/actions/workflow/status/darksafari6/iarch-by-safari/static-checks.yml" alt="Static checks">
+</p>
+
+## Screenshots
+
+<p align="center">
+  <img src="assets/screenshots/desktop-tokyo-night.png" alt="iArch by Safari desktop with a Tokyo Night-style theme and the Noctalia bar" width="49%">
+  <img src="assets/screenshots/desktop-red.png" alt="iArch by Safari desktop with a red wallpaper and top bar" width="49%">
+</p>
+
+More screenshots of the glass session will be added here as each part of the plan lands; see [docs/ROADMAP.md](docs/ROADMAP.md) for what is next.
 
 
 > **Safety and version note:** The original v5 Arch and Fedora installers make system-wide package, repository, service and login-manager changes. They are not the isolated v4 installer and have not been validated by this PR in a real session. Review [the v5 port status](docs/V5-PORT-STATUS.md) and the scripts before use. The isolated legacy-v4 session is available separately via [`legacy/install-v4-session.sh`](legacy/docs/V4-SESSION.md); it does not install Noctalia v5.
@@ -126,6 +131,8 @@ NVIDIA Users: On line 32 of the startup.lua change local enable_nvidia_optional 
 The script will prompt the user and update the startup.lua as needed.
 
 ### Credits and licenses
+
+iArch by Safari began as Safari's personal Arch dotfiles, published earlier under the names minimaLinux / minimaDots on GitLab; this repository is that same continuing work under its current name, and the older names survive only in the historical documents listed below.
 
 iArch by Safari is free software under the GPL-3.0 license; the complete text is in [LICENSE.txt](LICENSE.txt).
 

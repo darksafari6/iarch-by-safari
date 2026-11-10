@@ -201,6 +201,7 @@ SURFACES: List[Surface] = (lambda: [
 # Surfaces that must not only avoid old names but must carry the product name.
 REQUIRED: List[tuple] = [
     ("terminal-greeting", ".config/fish/config.fish", "IARCH_PRODUCT_NAME"),
+    ("system-information", ".config/fastfetch/config.jsonc", "IARCH_PRODUCT_NAME"),
     ("session-menu-entries", "legacy/session/minimalinux.desktop", "IARCH_PRODUCT_NAME"),
     ("runtime-script-output", "scripts/iarch-healthcheck.sh", "IARCH_PRODUCT_NAME"),
 ]
