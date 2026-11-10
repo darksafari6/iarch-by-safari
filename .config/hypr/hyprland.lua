@@ -6,7 +6,7 @@ package.path = table.concat({
 }, ";")
 
 -- Clear cached modules so they re-execute on reload (ensures binds/rules re-register)
-for _, mod in ipairs({"monitors", "inputs", "keybind", "windowrules", "animations", "themes.theme"}) do
+for _, mod in ipairs({"monitors", "inputs", "keybind", "windowrules", "animations", "themes.theme", "generated.glass"}) do
     package.loaded[mod] = nil
 end
 

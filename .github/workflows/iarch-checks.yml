@@ -25,12 +25,16 @@ jobs:
         run: |
           set -euo pipefail
           # shellcheck-py provides the same binary CI would otherwise need from
-          # apt; jsonschema validates data/ against data/schemas/.
+          # apt; jsonschema validates data/ against data/schemas/; Pillow renders
+          # the preset wallpapers; luaparser is a pure-Python Lua parser, so the
+          # generated Hyprland config can be syntax-checked without a Lua
+          # toolchain in the image.
           python -m pip install --quiet --upgrade pip
-          python -m pip install --quiet shellcheck-py jsonschema Pillow
+          python -m pip install --quiet shellcheck-py jsonschema Pillow luaparser
           shellcheck --version | head -n 2
           python -c 'import jsonschema; print("jsonschema", jsonschema.__version__)'
           python -c 'import PIL; print("Pillow", PIL.__version__)'
+          python -c 'import luaparser; print("luaparser", luaparser.__version__)'
 
       - name: Confirm the checks run as a non-root user
         run: |
@@ -95,6 +99,7 @@ jobs:
           python tools/naming_audit.py --check      # old names only where allowlisted, with a reason
           python iarch/cli/contrast_check.py --quiet  # every preset clears the WCAG gate
           python iarch/cli/gen_wallpapers.py --check  # shipped 4K WebP art matches its presets
+          python iarch/cli/gen_glass_lua.py --check    # shipped glass.lua matches the tokens
 
       - name: Validate every JSON file in data/ against its schema
         run: |

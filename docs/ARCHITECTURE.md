@@ -20,6 +20,7 @@ the map. Read it before changing anything.
 │
 ├── .config/                  The v5 session payload only (see "Two payloads" below).
 │   ├── hypr/                 Compositor configuration, Lua API only.
+│   │   └── generated/glass.lua  Rendered from the design tokens; never edited.
 │   ├── noctalia/             Shell configuration: config.toml + palettes/.
 │   ├── fastfetch/            System information layout and artwork.
 │   ├── kitty/                Terminal configuration and generated color/profile includes.
@@ -35,7 +36,8 @@ the map. Read it before changing anything.
 │   ├── lib/renderers.py      Generators. Contract shipped; renderers land in Parts 2 and 5.
 │   ├── cli/                  iarch-theme, iarch-keybinds, iarch-anim, iarch-doctor (Parts 2, 5).
 │   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
-│   │   └── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
+│   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
+│   │   └── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
 ├── data/                     Repository defaults. A user never edits these after install.
@@ -168,7 +170,7 @@ every file a program writes is generated.** Nothing in between is allowed.
 | --- | --- | --- | --- |
 | Repository defaults | `data/*.default.json`, `data/design/` | This repository | No, not after install — an edit is lost on the next update |
 | User settings | `~/.config/iarch/` (`settings.json`, `keybinds.json`, `contacts.json`, `presets/`) | The settings app, or the user | Yes — this is the only configuration anyone edits |
-| Generated files | `~/.config/hypr/generated/*.lua`, Noctalia overrides, kitty includes | Generators in `iarch/lib/renderers.py` | No — they carry the GENERATED header and are rewritten wholesale |
+| Generated files | `~/.config/hypr/generated/*.lua`, Noctalia overrides, kitty includes | Generators in `iarch/cli/gen_*.py`, under the contract in `iarch/lib/renderers.py` | No — they carry the GENERATED header and are rewritten wholesale |
 | Backups | `~/.local/state/iarch/backups/` | `iarch/lib/configstore.py` | No — read them only to roll back |
 
 Rules every generator obeys, implemented once in `iarch/lib/configstore.py` and proven by
@@ -284,6 +286,7 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `python3 tools/render_shortcuts.py --check` | `docs/SHORTCUTS.md` still matches the keybind data |
 | `python3 iarch/cli/contrast_check.py --quiet` | Every preset clears 4.5:1 for text and 3:1 for non-text UI |
 | `python3 iarch/cli/gen_wallpapers.py --check` | Generated wallpapers exist, are 4K WebP and inside 600 KB; nothing orphaned |
+| `python3 iarch/cli/gen_glass_lua.py --check` | The committed `glass.lua` still matches a fresh render of the tokens |
 | `bash -n <script>` | Shell syntax of every script |
 | `shellcheck --severity=warning <script>` | Shell quality; `.shellcheckrc` states the dialect and lists every exception with its reason |
 

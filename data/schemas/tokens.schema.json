@@ -277,13 +277,15 @@
 
     "hyprland": {
       "type": "object",
-      "required": ["verified_against", "source", "leaves", "ranges", "blur_variants", "animated_blur_variants", "window_rule_effects", "layer_rule_effects", "rule_match_properties"],
+      "required": ["verified_against", "source", "leaves", "integer_leaves", "ranges", "blur_variants", "animated_blur_variants", "window_rule_effects", "layer_rule_effects", "rule_match_properties"],
       "additionalProperties": false,
       "properties": {
         "_note": { "type": "string" },
         "verified_against": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$" },
         "source": { "type": "string" },
         "leaves": { "$ref": "#/definitions/string_list" },
+        "integer_leaves": { "$ref": "#/definitions/string_list" },
+        "integer_leaves_note": { "type": "string" },
         "ranges": {
           "type": "object",
           "additionalProperties": {

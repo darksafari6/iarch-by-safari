@@ -6,8 +6,11 @@ Everything this project authors lives under this directory, named with the
 | Path | Purpose | Status |
 | :--- | :--- | :--- |
 | `lib/configstore.py` | The single source of truth for user state: defaults merge, atomic writes, GENERATED headers, five-backup rotation | shipped, tested |
-| `lib/renderers.py` | Home of the generators (Hyprland Lua, Noctalia overrides, shortcut overlay) | contract shipped, renderers land in Parts 2 and 5 |
-| `cli/` | `iarch-theme`, `iarch-keybinds`, `iarch-anim`, `iarch-doctor` | Parts 2 and 5 |
+| `lib/renderers.py` | The generator contract, plus `is_generated` | shipped, tested |
+| `cli/contrast_check.py` | WCAG gate over every preset's palette | shipped, tested |
+| `cli/gen_wallpapers.py` | Seeded 4K WebP renders of the generated presets | shipped, tested |
+| `cli/gen_glass_lua.py` | Hyprland decoration, layer and window rules from the tokens | shipped, tested |
+| `cli/` | `iarch-theme`, `iarch-keybinds`, `iarch-anim`, `iarch-doctor`; the Noctalia, GTK, Qt and terminal renderers | Parts 2 and 5 |
 | `settings-app/` | GTK4 + libadwaita settings application | Part 4 |
 
 User state lives in `~/.config/iarch/`; the repository ships defaults in

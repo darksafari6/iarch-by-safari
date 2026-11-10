@@ -1,9 +1,12 @@
 # Copyright (C) 2026 Safari — GPL-3.0-or-later
-"""Generators that turn user settings into compositor and shell configuration.
+"""The contract every generator obeys, and helpers for checking it.
 
-Parts 2 and 5 land the real renderers here (Hyprland Lua, Noctalia overrides,
-the shortcut overlay). Every renderer must obey the contract in
-docs/ARCHITECTURE.md:
+The generators themselves are the ``iarch/cli/gen_*.py`` commands -- wallpapers,
+Hyprland glass rules, and the shell, terminal and toolkit renderers that follow.
+They live as commands so each one can be run, diffed and ``--check``ed on its
+own, and ``iarch-theme`` imports their render functions rather than shelling out.
+Parts 2 and 5 add the remaining renderers (Noctalia overrides, the shortcut
+overlay). Every renderer must obey the contract in docs/ARCHITECTURE.md:
 
 * read user state only through :mod:`iarch.lib.configstore`;
 * emit through :func:`iarch.lib.configstore.write_generated`, which stamps the
