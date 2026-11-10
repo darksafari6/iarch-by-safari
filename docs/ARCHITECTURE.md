@@ -20,7 +20,8 @@ the map. Read it before changing anything.
 │
 ├── .config/                  The v5 session payload only (see "Two payloads" below).
 │   ├── hypr/                 Compositor configuration, Lua API only.
-│   │   └── generated/glass.lua  Rendered from the design tokens; never edited.
+│   │   ├── generated/glass.lua       Rendered from the design tokens; never edited.
+│   │   └── generated/animations.lua  Rendered from the motion tokens; never edited.
 │   ├── noctalia/             Shell configuration: config.toml + palettes/.
 │   ├── fastfetch/            System information layout and artwork.
 │   ├── kitty/                Terminal configuration and generated color/profile includes.
@@ -38,6 +39,7 @@ the map. Read it before changing anything.
 │   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
 │   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
 │   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
+│   │   ├── gen_animations_lua.py  Hyprland curves and animation leaves from the motion tokens.
 │   │   ├── render_noctalia.py Shell config.toml and one palette per preset, from the same tokens.
 │   │   ├── render_gtk_css.py  The GTK 4 and GTK 3 glass overlays, from templates in lib/templates.
 │   │   ├── render_kvantum.py  The Qt/Kvantum glass theme, recoloured from the presets.
@@ -54,6 +56,7 @@ the map. Read it before changing anything.
 │   │   ├── gtk.json        The GTK 4 and GTK 3 CSS each version really parses, kept apart.
 │   │   ├── kvantum.json    The Kvantum theme keys, types and integer bounds, from the parser.
 │   │   ├── fontconfig.json The fontconfig XML elements and attributes the DTD declares.
+│   │   ├── animations.json The Hyprland animation leaves, per-leaf styles and curve shapes.
 │   │   └── presets/        Six palettes; each must clear the WCAG gate to apply.
 │   ├── schemas/              JSON Schema for every file above; CI validates defaults against them.
 │   └── licenses.json         Generated third-party credit, read by Settings → About.
@@ -153,7 +156,7 @@ display manager (greetd) ──> Hyprland ──> .config/hypr/hyprland.lua
                                               ├── inputs.lua     keyboard and pointer
                                               ├── keybind.lua    every shortcut, each with a description
                                               ├── windowrules.lua  per-application rules
-                                              ├── animations.lua  animation and bezier curves
+                                              ├── animations.lua  static curves, then generated/animations.lua
                                               └── themes/theme.lua  accent colors
                                                         │
                                                         └──> shell process (bar, dock, launcher,
@@ -295,6 +298,7 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `python3 iarch/cli/contrast_check.py --quiet` | Every preset clears 4.5:1 for text and 3:1 for non-text UI |
 | `python3 iarch/cli/gen_wallpapers.py --check` | Generated wallpapers exist, are 4K WebP and inside 600 KB; nothing orphaned |
 | `python3 iarch/cli/gen_glass_lua.py --check` | The committed `glass.lua` still matches a fresh render of the tokens |
+| `python3 iarch/cli/gen_animations_lua.py --check` | The committed `animations.lua` still matches a fresh render of the motion tokens |
 | `python3 iarch/cli/render_noctalia.py --check` | The committed `config.toml` and all six palettes still match a fresh render |
 | `python3 iarch/cli/render_gtk_css.py --check --repo` | The committed GTK 4 and GTK 3 sheets still match a fresh render |
 | `python3 iarch/cli/render_kvantum.py --check` | The committed Kvantum pointer and theme still match a fresh render |

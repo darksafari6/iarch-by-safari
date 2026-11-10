@@ -8,6 +8,7 @@ a preset, renders a configuration file, and can verify what it previously wrote:
 | `python3 iarch/cli/contrast_check.py` | nothing — it gates | that every preset clears 4.5:1 for text and 3:1 for non-text UI |
 | `python3 iarch/cli/gen_wallpapers.py` | `assets/wallpapers/generated/*.webp` | that the shipped art is 4K, WebP, inside 600 KB and rendered by some preset |
 | `python3 iarch/cli/gen_glass_lua.py` | `~/.config/hypr/generated/glass.lua` | that the committed default matches a fresh render of the tokens |
+| `python3 iarch/cli/gen_animations_lua.py` | `~/.config/hypr/generated/animations.lua` | that the committed default matches a fresh render of the motion tokens |
 | `python3 iarch/cli/render_noctalia.py` | `~/.config/noctalia/config.toml` and its palette | that the committed shell config and all six palettes match a fresh render |
 | `python3 iarch/cli/render_gtk_css.py` | `~/.config/gtk-4.0/gtk.css` and `~/.config/gtk-3.0/gtk.css` | that the committed sheets match a fresh render of the tokens |
 | `python3 iarch/cli/render_kvantum.py` | `~/.config/Kvantum/kvantum.kvconfig` and `~/.config/Kvantum/iarch/iarch.kvconfig` | that the committed theme matches a fresh render of the tokens |
@@ -17,9 +18,14 @@ Every generator exits 0 on success, 1 when the repository or the host is out of
 step, and 2 on a usage or data error, and none of them starts a desktop, edits a
 file it did not generate, or shells out.
 
-Five of them also refuse to write what the upstream project would not read.
+Six of them also refuse to write what the upstream project would not read.
 `gen_glass_lua.py` checks every key against the Hyprland config leaves, which
-error out on an unknown key. `render_noctalia.py` checks against
+error out on an unknown key. `gen_animations_lua.py` checks every leaf, curve and
+style against `data/design/animations.json`, the animation tree read out of the
+same release, because Hyprland refuses the whole config on an unknown leaf, an
+unregistered curve or a style that leaf does not accept — and it derives every
+`speed` as `duration_ms / 100` rather than picking a number by hand.
+`render_noctalia.py` checks against
 `data/design/noctalia.json`, extracted from the shell's own schema at a recorded
 release, because that side is forgiving in the wrong direction: an unknown
 setting only warns and is ignored, and an out-of-range number is clamped with a

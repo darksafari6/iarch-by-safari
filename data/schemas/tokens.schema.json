@@ -360,7 +360,7 @@
     },
     "intensity": {
       "type": "object",
-      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal", "shell", "gtk", "qt"],
+      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal", "shell", "gtk", "qt", "motion"],
       "additionalProperties": false,
       "properties": {
         "label": { "type": "string", "minLength": 1 },
@@ -488,6 +488,15 @@
           "properties": {
             "window": { "$ref": "#/definitions/alpha" },
             "menu": { "$ref": "#/definitions/alpha" }
+          }
+        },
+        "motion": {
+          "type": "object",
+          "description": "The compositor animation switch for this intensity. enabled=false makes gen_animations_lua.py emit hl.config({ animations = { enabled = false } }), which Hyprland's AnimationManager turns into a warp: every animated variable jumps straight to its final value with no per-frame bezier or spring work (AnimationManager.cpp:279, warp = !*PANIMENABLED || !PAV->enabled()). That is how the Performance intensity measurably lowers compositor work; docs/UNVERIFIED.md PERF-01 records that the frame-time saving was not measured on real hardware. When enabled=true the curves and durations come from the global motion block, never from this switch.",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" }
           }
         }
       }

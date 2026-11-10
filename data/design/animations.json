@@ -1,0 +1,300 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "_note": "The Hyprland animation API this project is allowed to drive, with the leaf tree, the styles each leaf accepts and the curve shapes hl.curve() builds. Hyprland rejects an unknown leaf, an unregistered curve or a style that is not valid for that leaf with a config error, so a mistake is loud rather than silent -- but a leaf or style that is merely wrong for the effect intended still ships a desktop that animates the wrong way. gen_animations_lua.py refuses to emit a leaf, curve or style that is not recorded here.",
+  "verified_against": "v0.57.2",
+  "source": "src/config/shared/animation/AnimationTree.cpp (the leaf tree: every createNode name and its parent, and the built-in curve names the root nodes use), src/config/lua/bindings/LuaBindingsConfigRules.cpp (hl.curve and hl.animation: the bezier and spring shapes, the speed>0 and per-spring-value>0.5 bounds, and that a leaf must exist and a style must be valid for it), src/animation/AnimationManager.cpp (styleValidInConfigVar: which styles each leaf accepts)",
+  "diagnostics": {
+    "unknown_leaf": "hl.animation errors: \"no such animation leaf\" (nodeExists is false).",
+    "unknown_curve": "hl.animation errors: \"no such bezier\" or \"no such spring\" if the name was never registered with hl.curve and is not a built-in.",
+    "bad_style": "hl.animation errors with styleValidInConfigVar's reason, e.g. \"unknown style\" or \"animation has no styles\".",
+    "bad_speed": "hl.animation errors: \"speed must be greater than 0\".",
+    "bad_spring": "hl.curve errors if stiffness, damping or mass is <= 0.5.",
+    "consequence": "Hyprland refuses the whole config on any of these, so unlike the forgiving engines a mistake is loud -- but this project still gates the render, because a leaf or style that is valid yet wrong for the effect ships a desktop that animates wrongly."
+  },
+  "curve_types": {
+    "bezier": {
+      "shape": "{ type = \"bezier\", points = { {x1,y1}, {x2,y2} } }",
+      "constraints": "exactly 2 points, each a table of 2 numbers"
+    },
+    "spring": {
+      "shape": "{ type = \"spring\", stiffness = s, damping = d, mass = m }",
+      "constraints": "stiffness, damping and mass each strictly greater than 0.5"
+    }
+  },
+  "speed_formula": {
+    "equation": "duration_ms = 100 * speed",
+    "speed_min_exclusive": 0.0,
+    "speed_max": 100.0,
+    "source": "hyprutils src/animation/AnimatedVariable.cpp CBaseAnimatedVariable::getPercent(): percent = clamp((elapsed_ms / 100) / internalSpeed, 0, 1); the animation finishes when percent reaches 1, i.e. after 100*speed milliseconds. hl.animation additionally rejects speed <= 0 (LuaBindingsConfigRules.cpp) and CLuaConfigFloat clamps it to [0, 100], so a usable speed is in (0, 100] and a usable duration in (0, 10000] ms.",
+    "consequence": "'speed' is a duration in centiseconds despite the name: a larger value is a SLOWER, longer animation. The shipped static default.lua confirms it -- border speed=1 is a 100ms colour snap, borderangle speed=30 a 3000ms gradient sweep, fade speed=10 a 1s fade. gen_animations_lua.py derives every speed as duration_ms/100 from the motion tokens rather than picking a number by hand."
+  },
+  "builtin_curves": [
+    "default",
+    "linear"
+  ],
+  "animation_params": {
+    "leaf": "string, required; must be a node in the tree",
+    "enabled": "bool; false (or absent) disables the leaf",
+    "speed": "number > 0; a multiplier, not a duration -- higher is faster (Hyprland's global default is 8)",
+    "bezier": "string; the name of a registered or built-in bezier curve (mutually required with spring)",
+    "spring": "string; the name of a registered spring curve (mutually required with bezier)",
+    "style": "string, optional; must be valid for the leaf, and a leaf with no styles must omit it"
+  },
+  "master_switch": {
+    "leaf": "animations:enabled",
+    "type": "bool",
+    "default": true,
+    "set_via": "hl.config({ animations = { enabled = <bool> } })",
+    "source": "src/config/values/ConfigValues.cpp:348 MS<Bool>(\"animations:enabled\", \"enable animations\", true)",
+    "note": "The master kill-switch: false disables every animation regardless of per-leaf enabled flags. The Performance intensity sets it false, which is how it measurably lowers compositor work (docs/UNVERIFIED.md PERF-01 records that the frame-time saving was not measured on hardware)."
+  },
+  "style_rules": [
+    {
+      "match": "leaf starts with 'window'",
+      "styles": [
+        "slide",
+        "gnome",
+        "gnomed",
+        "popin"
+      ],
+      "note": "'slide' and 'popin' also accept a ' NN%' suffix"
+    },
+    {
+      "match": "leaf starts with 'workspaces' or 'specialWorkspace'",
+      "styles": [
+        "slide",
+        "slidevert",
+        "fade"
+      ],
+      "note": "'slide' also accepts a ' NN%' suffix"
+    },
+    {
+      "match": "leaf ends with 'angle'",
+      "styles": [
+        "loop",
+        "once"
+      ]
+    },
+    {
+      "match": "leaf starts with 'layers'",
+      "styles": [
+        "fade",
+        "slide",
+        "popin"
+      ],
+      "note": "the empty style (omitting style) is also valid here"
+    },
+    {
+      "match": "any other leaf",
+      "styles": [],
+      "note": "styleValidInConfigVar returns 'animation has no styles'"
+    }
+  ],
+  "leaves": {
+    "border": {
+      "parent": "global",
+      "styles": []
+    },
+    "borderangle": {
+      "parent": "global",
+      "styles": [
+        "loop",
+        "once"
+      ]
+    },
+    "fade": {
+      "parent": "global",
+      "styles": []
+    },
+    "fadeDim": {
+      "parent": "fade",
+      "styles": []
+    },
+    "fadeDpms": {
+      "parent": "fade",
+      "styles": []
+    },
+    "fadeGlow": {
+      "parent": "fade",
+      "styles": []
+    },
+    "fadeIn": {
+      "parent": "fade",
+      "styles": []
+    },
+    "fadeLayers": {
+      "parent": "fade",
+      "styles": []
+    },
+    "fadeLayersIn": {
+      "parent": "fadeLayers",
+      "styles": []
+    },
+    "fadeLayersOut": {
+      "parent": "fadeLayers",
+      "styles": []
+    },
+    "fadeOut": {
+      "parent": "fade",
+      "styles": []
+    },
+    "fadePopups": {
+      "parent": "fade",
+      "styles": []
+    },
+    "fadePopupsIn": {
+      "parent": "fadePopups",
+      "styles": []
+    },
+    "fadePopupsOut": {
+      "parent": "fadePopups",
+      "styles": []
+    },
+    "fadeShadow": {
+      "parent": "fade",
+      "styles": []
+    },
+    "fadeSwitch": {
+      "parent": "fade",
+      "styles": []
+    },
+    "global": {
+      "parent": null,
+      "styles": []
+    },
+    "glowangle": {
+      "parent": "global",
+      "styles": [
+        "loop",
+        "once"
+      ]
+    },
+    "layers": {
+      "parent": "global",
+      "styles": [
+        "fade",
+        "slide",
+        "popin"
+      ]
+    },
+    "layersIn": {
+      "parent": "layers",
+      "styles": [
+        "fade",
+        "slide",
+        "popin"
+      ]
+    },
+    "layersOut": {
+      "parent": "layers",
+      "styles": [
+        "fade",
+        "slide",
+        "popin"
+      ]
+    },
+    "monitorAdded": {
+      "parent": "global",
+      "styles": []
+    },
+    "shadowangle": {
+      "parent": "global",
+      "styles": [
+        "loop",
+        "once"
+      ]
+    },
+    "specialWorkspace": {
+      "parent": "workspaces",
+      "styles": [
+        "slide",
+        "slidevert",
+        "fade"
+      ]
+    },
+    "specialWorkspaceIn": {
+      "parent": "specialWorkspace",
+      "styles": [
+        "slide",
+        "slidevert",
+        "fade"
+      ]
+    },
+    "specialWorkspaceOut": {
+      "parent": "specialWorkspace",
+      "styles": [
+        "slide",
+        "slidevert",
+        "fade"
+      ]
+    },
+    "windows": {
+      "parent": "global",
+      "styles": [
+        "slide",
+        "gnome",
+        "gnomed",
+        "popin"
+      ]
+    },
+    "windowsIn": {
+      "parent": "windows",
+      "styles": [
+        "slide",
+        "gnome",
+        "gnomed",
+        "popin"
+      ]
+    },
+    "windowsMove": {
+      "parent": "windows",
+      "styles": [
+        "slide",
+        "gnome",
+        "gnomed",
+        "popin"
+      ]
+    },
+    "windowsOut": {
+      "parent": "windows",
+      "styles": [
+        "slide",
+        "gnome",
+        "gnomed",
+        "popin"
+      ]
+    },
+    "workspaces": {
+      "parent": "global",
+      "styles": [
+        "slide",
+        "slidevert",
+        "fade"
+      ]
+    },
+    "workspacesIn": {
+      "parent": "workspaces",
+      "styles": [
+        "slide",
+        "slidevert",
+        "fade"
+      ]
+    },
+    "workspacesOut": {
+      "parent": "workspaces",
+      "styles": [
+        "slide",
+        "slidevert",
+        "fade"
+      ]
+    },
+    "zoomFactor": {
+      "parent": "global",
+      "styles": []
+    }
+  },
+  "counts": {
+    "leaves": 34,
+    "builtin_curves": 2
+  }
+}

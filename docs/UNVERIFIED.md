@@ -22,7 +22,15 @@ installed release does not have. Hyprland **`v0.57.2`**: `src/config/values/Conf
 effects), `LuaBindingsConfigRules.cpp` (layer rule effects, `hl.curve`, `hl.env`),
 `src/config/lua/types/LuaConfigGradient.cpp` (gradient tables take `colors` plus `angle` in degrees),
 `src/config/shared/parserUtils/ParserUtils.cpp` (accepted colour strings), `src/config/lua/ConfigManager.cpp`
-(`luaL_openlibs`, and a missing `require` raises so the caller can `pcall` it). Kvantum **`V1.1.9`**:
+(`luaL_openlibs`, and a missing `require` raises so the caller can `pcall` it). The animation set
+(`gen_animations_lua.py`) adds `src/config/shared/animation/AnimationTree.cpp` (the leaf tree and each
+leaf's parent), `src/animation/AnimationManager.cpp` (`styleValidInConfigVar`, which styles each leaf
+accepts, and `warp = !*PANIMENABLED || !PAV->enabled()`, so `animations:enabled = false` skips every
+per-frame curve), `LuaBindingsConfigRules.cpp` again for `hl.curve` and `hl.animation` (a leaf must
+exist, `speed` must be in `(0, 100]`, and a spring's stiffness, damping and mass must each exceed
+`0.5`), and hyprutils `src/animation/AnimatedVariable.cpp` (`getPercent`: the animation finishes when
+`(elapsed_ms / 100) / speed` reaches 1, i.e. `duration_ms = 100 * speed`, which is how every emitted
+speed is derived). Kvantum **`V1.1.9`**:
 `Kvantum/style/themeconfig/ThemeConfig.cpp` (every `getValue(KSL("Group"),KSL("key"))` call site: the
 89 `[%General]`, 28 `[GeneralColors]` and 23 `[Hacks]` keys the engine reads), `Kvantum/doc/Theme-Config`
 (their types and integer bounds, including `translucent_windows`, `reduce_window_opacity`,

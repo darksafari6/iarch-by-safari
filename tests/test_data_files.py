@@ -27,6 +27,7 @@ PAIRS = {
     "data/design/gtk.json": "data/schemas/gtk.schema.json",
     "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
     "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",
+    "data/design/animations.json": "data/schemas/animations.schema.json",
     "data/licenses.json": "data/schemas/licenses.schema.json",
     # Colour presets are a family under one schema; expanding the directory keeps
     # a newly added preset mapped automatically, while a JSON file anywhere else

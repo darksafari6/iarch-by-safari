@@ -39,6 +39,7 @@ EXPECTED_PAYLOAD = {
     'hypr/Scripts/workspace.sh',
     'hypr/animations.lua',
     'hypr/animations/default.lua',
+    'hypr/generated/animations.lua',
     'hypr/generated/glass.lua',
     'hypr/hyprland.lua',
     'hypr/inputs.lua',
