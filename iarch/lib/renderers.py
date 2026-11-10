@@ -26,4 +26,4 @@ def is_generated(path: Path) -> bool:
         first = Path(path).read_text(encoding="utf-8", errors="replace").splitlines()[0]
     except (OSError, IndexError):
         return False
-    return first.startswith(configstore.GENERATED_HEADER) or first.startswith('{"_generated": ')
+    return (configstore.is_header_line(first) or first.startswith('{"_generated": '))

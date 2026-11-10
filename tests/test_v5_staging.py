@@ -24,7 +24,12 @@ class V5Staging(unittest.TestCase):
             self.assertFalse((dest / 'noctalia/settings.json').exists())
             self.assertFalse((dest / 'noctalia/plugins.json').exists())
             self.assertFalse((dest / 'minimalinux').exists())
-            self.assertFalse((dest / 'gtk-3.0').exists())
+            # The v5 payload renders its own GTK overlay, so gtk-*.0 exists --
+            # but only with the generated sheet. The legacy v4 payload's
+            # settings.ini, which named a v4-only theme, must not come along.
+            for version in ('3.0', '4.0'):
+                self.assertTrue((dest / f'gtk-{version}' / 'gtk.css').is_file())
+                self.assertFalse((dest / f'gtk-{version}' / 'settings.ini').exists())
 
     def test_nonempty_or_missing_source_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

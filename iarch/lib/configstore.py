@@ -99,7 +99,28 @@ def header_for(path: Path) -> str:
     """The header line as it must appear at the top of ``path`` for its file type."""
     if path.suffix == ".json":
         return GENERATED_HEADER  # stored as the value of the "_generated" key
+    if path.suffix == ".css":
+        # CSS has no line comment at all, so the sentence is wrapped in a block
+        # comment. Emitting it with the "#" default would put a parse error on
+        # line 1 of every stylesheet this project writes.
+        return f"/* {_HEADER_SENTENCE} */"
     return _COMMENT_PREFIX.get(path.suffix, "# ") + _HEADER_SENTENCE
+
+
+def is_header_line(line: str) -> bool:
+    """True when ``line`` is the GENERATED sentence in any form this emits."""
+    stripped = line.strip()
+    if stripped.startswith(GENERATED_HEADER) or stripped == _HEADER_SENTENCE:
+        return True
+    for prefix in ("-- ", "# ", "/* ", "; ", "// "):
+        if not stripped.startswith(prefix):
+            continue
+        body = stripped[len(prefix):].strip()
+        if body.endswith("*/"):
+            body = body[:-2].strip()
+        if body == _HEADER_SENTENCE:
+            return True
+    return False
 
 
 def default_mode() -> int:

@@ -99,6 +99,150 @@ Terminal and shell color scheme values.
 
 ## Third-party software this product configures or launches
 
+### adw-gtk3
+
+GTK 3 theme used to match the shell look in classic GTK applications.
+
+- **License:** LGPL-2.1-only
+- **Copyright:** See upstream source headers
+- **Upstream:** https://github.com/lassekongo83/adw-gtk3
+- **Used by:**
+  - `legacy/config/gtk-3.0/settings.ini`
+  - `install.sh`
+  - `fedora_install.sh`
+
+### Fonts offered by the installer whose licenses were not verified
+
+ttf-symbola and ttf-ms-fonts, installed by the printer-support step of the Arch installer.
+
+- **License:** TODO(verify)
+- **Copyright:** TODO(verify)
+- **Upstream:** ttf-ms-fonts is an AUR package of Microsoft's core fonts; ttf-symbola ships the Symbola face by George Douros.
+- **Used by:**
+  - `install.sh`
+- **Notes:** Neither license could be read from a reachable upstream: ttf-ms-fonts redistributes fonts under Microsoft's own end-user terms and is not open source, and Symbola's terms were not published in a place this repository could verify. Both are installed only when the user opts into printer support, and nothing in the session configuration requires them.
+- **Open verification items:** `TP-12` in `docs/UNVERIFIED.md`
+
+### Bibata cursor theme
+
+Pointer theme the session exports to Hyprland, XWayland and Qt.
+
+- **License:** GPL-3.0-only
+- **Copyright:** Copyright (c) 2018 Abdurahman
+- **Upstream:** https://github.com/ful1e5/Bibata_Cursor
+- **Used by:**
+  - `.config/hypr/themes/theme.lua`
+  - `legacy/config/gtk-3.0/settings.ini`
+- **Notes:** Bibata-Modern-Classic at size 24 is set through HYPRCURSOR_THEME, XCURSOR_THEME and QT_CURSOR_THEME. Neither installer installs a package that provides it; see TP-13.
+- **Open verification items:** `TP-13` in `docs/UNVERIFIED.md`
+
+### DejaVu fonts
+
+Wide-coverage fallback typeface installed by the Arch installer (ttf-dejavu).
+
+- **License:** Bitstream Vera license; DejaVu changes are in the public domain
+- **Copyright:** Fonts are (c) Bitstream; glyphs imported from Arev fonts are (c) Tavmjong Bah
+- **Upstream:** https://github.com/dejavu-fonts/dejavu-fonts
+- **Used by:**
+  - `install.sh`
+- **Notes:** License read from the first lines of the upstream LICENSE file on 2026-11-10.
+
+### fastfetch
+
+System information display used in the terminal.
+
+- **License:** MIT
+- **Copyright:** Copyright (c) 2021-2023 Linus Dierheimer; Copyright (c) 2022-2026 Carter Li
+- **Upstream:** https://github.com/fastfetch-cli/fastfetch
+- **Used by:**
+  - `.config/fastfetch/config.jsonc`
+
+### fish shell
+
+Interactive shell used by the terminal profile.
+
+- **License:** GPL-2.0-only
+- **Copyright:** Copyright (C) 2005-2009 Axel Liljencrantz and fish-shell contributors
+- **Upstream:** https://github.com/fish-shell/fish-shell
+- **Used by:**
+  - `.config/fish/config.fish`
+- **Notes:** Upstream COPYING also covers components under other licenses; see that file for the authoritative list.
+
+### Hyprland
+
+Wayland compositor. The session configuration is written in its Lua configuration API.
+
+- **License:** BSD-3-Clause
+- **Copyright:** Copyright (c) 2022-2026, vaxerski
+- **Upstream:** https://github.com/hyprwm/Hyprland
+- **Used by:**
+  - `.config/hypr/`
+- **Open verification items:** `TP-10` in `docs/UNVERIFIED.md`
+
+### JetBrains Mono
+
+Terminal typeface requested by the kitty configuration.
+
+- **License:** OFL-1.1
+- **Copyright:** Copyright 2020 The JetBrains Mono Project Authors
+- **Upstream:** https://github.com/JetBrains/JetBrainsMono
+- **Used by:**
+  - `.config/kitty/kitty.conf`
+  - `.config/kitty/minima-profile.conf`
+- **Notes:** Both files request "JetBrainsMono Nerd Font Mono", the Nerd Fonts patched build of this face. License read from the upstream repository's LICENSE file on 2026-11-10.
+- **Open verification items:** `TP-13` in `docs/UNVERIFIED.md`
+
+### Jinja2
+
+Template engine that renders iarch/lib/templates/gtk4.css.j2 and gtk3.css.j2 into the GTK 4 and GTK 3 glass overlays, both for the sheets committed in .config/ and whenever iarch-theme apply re-renders them on the user's machine.
+
+- **License:** BSD-3-Clause
+- **Copyright:** Copyright 2007 Pallets
+- **Version checked:** 3.1.6
+- **Upstream:** https://github.com/pallets/jinja
+- **Used by:**
+  - `iarch/cli/render_gtk_css.py`
+  - `iarch/lib/templates/gtk4.css.j2`
+  - `iarch/lib/templates/gtk3.css.j2`
+  - `.config/gtk-4.0/gtk.css`
+  - `.config/gtk-3.0/gtk.css`
+- **Notes:** Verified on PyPI: version 3.1.6, classifier 'License :: OSI Approved :: BSD License', requires MarkupSafe>=2.0. The distribution package names were not verified against a package index this sandbox can reach (docs/UNVERIFIED.md TP-16).
+- **Open verification items:** `TP-16` in `docs/UNVERIFIED.md`
+
+### kitty
+
+GPU accelerated terminal emulator.
+
+- **License:** GPL-3.0-only
+- **Copyright:** Copyright (c) Kovid Goyal
+- **Upstream:** https://github.com/kovidgoyal/kitty
+- **Used by:**
+  - `.config/kitty/`
+
+### MarkupSafe
+
+Required dependency of Jinja2; imported whenever a GTK sheet is rendered.
+
+- **License:** BSD-3-Clause
+- **Copyright:** Copyright 2010 Pallets
+- **Upstream:** https://github.com/pallets/markupsafe
+- **Used by:**
+  - `iarch/cli/render_gtk_css.py`
+- **Notes:** Credited because Jinja2 declares MarkupSafe>=2.0 as a hard requirement, so it is present wherever this project renders a sheet. The installed version was not pinned here.
+- **Open verification items:** `TP-16` in `docs/UNVERIFIED.md`
+
+### Nerd Fonts
+
+Patched font build that supplies the powerline and icon glyphs kitty renders.
+
+- **License:** OFL-1.1 (patched fonts); MIT (patcher tooling)
+- **Copyright:** Copyright (c) 2014 Ryan L McIntyre
+- **Upstream:** https://github.com/ryanoasis/nerd-fonts
+- **Used by:**
+  - `.config/kitty/kitty.conf`
+- **Notes:** Upstream LICENSE states the split explicitly: patched fonts in folders carrying an OFL file are SIL Open Font License 1.1, the patcher source is MIT. Read 2026-11-10.
+- **Open verification items:** `TP-13` in `docs/UNVERIFIED.md`
+
 ### Noctalia
 
 Wayland desktop shell: bar, dock, launcher, Control Center, notifications, lock screen, greeter and Settings. Launched by the session and driven with the noctalia command.
@@ -118,81 +262,27 @@ Wayland desktop shell: bar, dock, launcher, Control Center, notifications, lock 
 - **Notes:** Configuration keys in this repository were checked against the upstream v5.4.1 schema; see docs/UNVERIFIED.md for what still needs a live-session check.
 - **Open verification items:** `TP-09` in `docs/UNVERIFIED.md`
 
-### Hyprland
+### Noto Color Emoji
 
-Wayland compositor. The session configuration is written in its Lua configuration API.
+Emoji coverage installed by the Arch installer (noto-fonts-emoji).
 
-- **License:** BSD-3-Clause
-- **Copyright:** Copyright (c) 2022-2026, vaxerski
-- **Upstream:** https://github.com/hyprwm/Hyprland
+- **License:** OFL-1.1
+- **Copyright:** Copyright 2013 Google, Inc.
+- **Upstream:** https://github.com/googlefonts/noto-emoji
 - **Used by:**
-  - `.config/hypr/`
-- **Open verification items:** `TP-10` in `docs/UNVERIFIED.md`
+  - `install.sh`
+- **Notes:** License read from the upstream repository metadata on 2026-11-10.
 
-### fastfetch
+### Papirus Folders
 
-System information display used in the terminal.
+Folder colour script installed alongside the Papirus icon theme.
 
 - **License:** MIT
-- **Copyright:** Copyright (c) 2021-2023 Linus Dierheimer; Copyright (c) 2022-2026 Carter Li
-- **Upstream:** https://github.com/fastfetch-cli/fastfetch
+- **Copyright:** Copyright (c) 2018-2024 Papirus Development Team
+- **Upstream:** https://github.com/PapirusDevelopmentTeam/papirus-folders
 - **Used by:**
-  - `.config/fastfetch/config.jsonc`
-
-### kitty
-
-GPU accelerated terminal emulator.
-
-- **License:** GPL-3.0-only
-- **Copyright:** Copyright (c) Kovid Goyal
-- **Upstream:** https://github.com/kovidgoyal/kitty
-- **Used by:**
-  - `.config/kitty/`
-
-### fish shell
-
-Interactive shell used by the terminal profile.
-
-- **License:** GPL-2.0-only
-- **Copyright:** Copyright (C) 2005-2009 Axel Liljencrantz and fish-shell contributors
-- **Upstream:** https://github.com/fish-shell/fish-shell
-- **Used by:**
-  - `.config/fish/config.fish`
-- **Notes:** Upstream COPYING also covers components under other licenses; see that file for the authoritative list.
-
-### Starship
-
-Cross-shell prompt.
-
-- **License:** ISC
-- **Copyright:** Copyright (c) 2019-2022, Starship Contributors
-- **Upstream:** https://github.com/starship/starship
-- **Used by:**
-  - `.config/starship.toml`
-  - `legacy/config/minimalinux/starship-detailed.toml`
-  - `legacy/config/minimalinux/starship-minimal.toml`
-
-### Satty
-
-Screenshot annotation tool bound to a keybind.
-
-- **License:** MPL-2.0
-- **Copyright:** See upstream source headers
-- **Upstream:** https://github.com/gabm/Satty
-- **Used by:**
-  - `.config/hypr/keybind.lua`
-
-### adw-gtk3
-
-GTK 3 theme used to match the shell look in classic GTK applications.
-
-- **License:** LGPL-2.1-only
-- **Copyright:** See upstream source headers
-- **Upstream:** https://github.com/lassekongo83/adw-gtk3
-- **Used by:**
-  - `legacy/config/gtk-3.0/settings.ini`
   - `install.sh`
-  - `fedora_install.sh`
+- **Notes:** License read from the upstream repository metadata on 2026-11-10.
 
 ### Papirus icon theme
 
@@ -204,6 +294,16 @@ Icon theme selected by the session presets.
 - **Used by:**
   - `legacy/config/gtk-3.0/settings.ini`
   - `install.sh`
+
+### Satty
+
+Screenshot annotation tool bound to a keybind.
+
+- **License:** MPL-2.0
+- **Copyright:** See upstream source headers
+- **Upstream:** https://github.com/gabm/Satty
+- **Used by:**
+  - `.config/hypr/keybind.lua`
 
 ### Session helper utilities
 
@@ -219,101 +319,19 @@ Small tools the session calls for screenshots, clipboard, media keys, volume and
 - **Notes:** Installed from the distribution or AUR; each package ships its own license. Nothing from these projects is stored in this repository.
 - **Open verification items:** `TP-11` in `docs/UNVERIFIED.md`
 
-### JetBrains Mono
+### Starship
 
-Terminal typeface requested by the kitty configuration.
+Cross-shell prompt.
 
-- **License:** OFL-1.1
-- **Copyright:** Copyright 2020 The JetBrains Mono Project Authors
-- **Upstream:** https://github.com/JetBrains/JetBrainsMono
+- **License:** ISC
+- **Copyright:** Copyright (c) 2019-2022, Starship Contributors
+- **Upstream:** https://github.com/starship/starship
 - **Used by:**
-  - `.config/kitty/kitty.conf`
-  - `.config/kitty/minima-profile.conf`
-- **Notes:** Both files request "JetBrainsMono Nerd Font Mono", the Nerd Fonts patched build of this face. License read from the upstream repository's LICENSE file on 2026-11-10.
-- **Open verification items:** `TP-13` in `docs/UNVERIFIED.md`
-
-### Nerd Fonts
-
-Patched font build that supplies the powerline and icon glyphs kitty renders.
-
-- **License:** OFL-1.1 (patched fonts); MIT (patcher tooling)
-- **Copyright:** Copyright (c) 2014 Ryan L McIntyre
-- **Upstream:** https://github.com/ryanoasis/nerd-fonts
-- **Used by:**
-  - `.config/kitty/kitty.conf`
-- **Notes:** Upstream LICENSE states the split explicitly: patched fonts in folders carrying an OFL file are SIL Open Font License 1.1, the patcher source is MIT. Read 2026-11-10.
-- **Open verification items:** `TP-13` in `docs/UNVERIFIED.md`
-
-### DejaVu fonts
-
-Wide-coverage fallback typeface installed by the Arch installer (ttf-dejavu).
-
-- **License:** Bitstream Vera license; DejaVu changes are in the public domain
-- **Copyright:** Fonts are (c) Bitstream; glyphs imported from Arev fonts are (c) Tavmjong Bah
-- **Upstream:** https://github.com/dejavu-fonts/dejavu-fonts
-- **Used by:**
-  - `install.sh`
-- **Notes:** License read from the first lines of the upstream LICENSE file on 2026-11-10.
-
-### Noto Color Emoji
-
-Emoji coverage installed by the Arch installer (noto-fonts-emoji).
-
-- **License:** OFL-1.1
-- **Copyright:** Copyright 2013 Google, Inc.
-- **Upstream:** https://github.com/googlefonts/noto-emoji
-- **Used by:**
-  - `install.sh`
-- **Notes:** License read from the upstream repository metadata on 2026-11-10.
-
-### Bibata cursor theme
-
-Pointer theme the session exports to Hyprland, XWayland and Qt.
-
-- **License:** GPL-3.0-only
-- **Copyright:** Copyright (c) 2018 Abdurahman
-- **Upstream:** https://github.com/ful1e5/Bibata_Cursor
-- **Used by:**
-  - `.config/hypr/themes/theme.lua`
-  - `legacy/config/gtk-3.0/settings.ini`
-- **Notes:** Bibata-Modern-Classic at size 24 is set through HYPRCURSOR_THEME, XCURSOR_THEME and QT_CURSOR_THEME. Neither installer installs a package that provides it; see TP-13.
-- **Open verification items:** `TP-13` in `docs/UNVERIFIED.md`
-
-### Papirus Folders
-
-Folder colour script installed alongside the Papirus icon theme.
-
-- **License:** MIT
-- **Copyright:** Copyright (c) 2018-2024 Papirus Development Team
-- **Upstream:** https://github.com/PapirusDevelopmentTeam/papirus-folders
-- **Used by:**
-  - `install.sh`
-- **Notes:** License read from the upstream repository metadata on 2026-11-10.
-
-### Fonts offered by the installer whose licenses were not verified
-
-ttf-symbola and ttf-ms-fonts, installed by the printer-support step of the Arch installer.
-
-- **License:** TODO(verify)
-- **Copyright:** TODO(verify)
-- **Upstream:** ttf-ms-fonts is an AUR package of Microsoft's core fonts; ttf-symbola ships the Symbola face by George Douros.
-- **Used by:**
-  - `install.sh`
-- **Notes:** Neither license could be read from a reachable upstream: ttf-ms-fonts redistributes fonts under Microsoft's own end-user terms and is not open source, and Symbola's terms were not published in a place this repository could verify. Both are installed only when the user opts into printer support, and nothing in the session configuration requires them.
-- **Open verification items:** `TP-12` in `docs/UNVERIFIED.md`
+  - `.config/starship.toml`
+  - `legacy/config/minimalinux/starship-detailed.toml`
+  - `legacy/config/minimalinux/starship-minimal.toml`
 
 ## Artwork and audio assets stored in this repository
-
-### HeSuVi HRIR audio assets
-
-Impulse response WAV files selectable by the virtual surround convolver profile.
-
-- **License:** TODO(verify)
-- **Copyright:** TODO(verify)
-- **Used by:**
-  - `pipewire/hrir/`
-- **Notes:** 624 WAV files, about 32 MB. Several names refer to commercial vendor surround products, so the redistribution rights are not established. Review before publishing a release or mirroring this repository.
-- **Open verification items:** `TP-03` in `docs/UNVERIFIED.md`
 
 ### fastfetch ASCII logo files
 
@@ -325,6 +343,17 @@ Selectable artwork for the system information display.
   - `.config/fastfetch/logo/`
 - **Notes:** Seven .icon files of artwork derived from anime franchises. Authorship and redistribution rights are not established.
 - **Open verification items:** `TP-04` in `docs/UNVERIFIED.md`
+
+### HeSuVi HRIR audio assets
+
+Impulse response WAV files selectable by the virtual surround convolver profile.
+
+- **License:** TODO(verify)
+- **Copyright:** TODO(verify)
+- **Used by:**
+  - `pipewire/hrir/`
+- **Notes:** 624 WAV files, about 32 MB. Several names refer to commercial vendor surround products, so the redistribution rights are not established. Review before publishing a release or mirroring this repository.
+- **Open verification items:** `TP-03` in `docs/UNVERIFIED.md`
 
 ## Third-party services, repositories and registries
 

@@ -28,13 +28,15 @@ jobs:
           # apt; jsonschema validates data/ against data/schemas/; Pillow renders
           # the preset wallpapers; luaparser is a pure-Python Lua parser, so the
           # generated Hyprland config can be syntax-checked without a Lua
-          # toolchain in the image.
+          # toolchain in the image; Jinja2 renders the GTK sheets from
+          # iarch/lib/templates/.
           python -m pip install --quiet --upgrade pip
-          python -m pip install --quiet shellcheck-py jsonschema Pillow luaparser
+          python -m pip install --quiet shellcheck-py jsonschema Pillow luaparser Jinja2
           shellcheck --version | head -n 2
           python -c 'import jsonschema; print("jsonschema", jsonschema.__version__)'
           python -c 'import PIL; print("Pillow", PIL.__version__)'
           python -c 'import luaparser; print("luaparser", luaparser.__version__)'
+          python -c 'import jinja2; print("Jinja2", jinja2.__version__)'
 
       - name: Confirm the checks run as a non-root user
         run: |
@@ -101,6 +103,7 @@ jobs:
           python iarch/cli/gen_wallpapers.py --check  # shipped 4K WebP art matches its presets
           python iarch/cli/gen_glass_lua.py --check    # shipped glass.lua matches the tokens
           python iarch/cli/render_noctalia.py --check  # shipped config.toml + palettes match the presets
+          python iarch/cli/render_gtk_css.py --check --repo  # shipped GTK sheets match the tokens
 
       - name: Validate every JSON file in data/ against its schema
         run: |
@@ -118,6 +121,7 @@ jobs:
               "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
               "data/design/tokens.json": "data/schemas/tokens.schema.json",
               "data/design/noctalia.json": "data/schemas/noctalia.schema.json",
+              "data/design/gtk.json": "data/schemas/gtk.schema.json",
               "data/licenses.json": "data/schemas/licenses.schema.json",
               # Colour presets are a family under one schema.
               **{

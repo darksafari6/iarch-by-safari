@@ -413,10 +413,13 @@ class RefusesToWriteUnlessEverythingIsValid(unittest.TestCase):
         self.env = {**os.environ,
                     "IARCH_CONFIG_DIR": str(self.root / "config"),
                     "IARCH_STATE_DIR": str(self.state)}
-        self._environ = dict(os.environ)
-        os.environ.update(self.env)
-        self.addCleanup(os.environ.clear)
-        self.addCleanup(os.environ.update, self._environ)
+        # patch.dict restores the environment exactly on stop. Clearing and
+        # re-updating by hand is wrong here: cleanups run last-in-first-out, so
+        # a clear() registered before the restore runs after it and leaves
+        # later tests with no PATH at all.
+        patcher = unittest.mock.patch.dict(os.environ, self.env)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def targets(self, root: Optional[Path] = None) -> List[Tuple[Path, str]]:
         return noctalia.user_targets(TOKENS, SURFACE, noctalia.load_preset("midnight-glass"),

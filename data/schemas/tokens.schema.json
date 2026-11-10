@@ -32,7 +32,7 @@
 
     "radius": {
       "type": "object",
-      "required": ["xs", "sm", "md", "lg", "pill", "power", "window", "panel", "card", "button", "input", "tooltip"],
+      "required": ["xs", "sm", "md", "lg", "pill", "check", "power", "window", "panel", "card", "button", "input", "tooltip"],
       "additionalProperties": false,
       "properties": {
         "xs": { "type": "integer", "minimum": 0, "maximum": 100 },
@@ -40,6 +40,12 @@
         "md": { "type": "integer", "minimum": 0, "maximum": 100 },
         "lg": { "type": "integer", "minimum": 0, "maximum": 100 },
         "pill": { "type": "integer", "minimum": 100 },
+        "check": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12,
+          "description": "A check box corner. Kept small on purpose: radius.pill would make a 16px indicator fully round, and GTK draws a check mark inside it that needs straight sides to read."
+        },
         "power": { "type": "number", "minimum": 1, "maximum": 10 },
         "window": { "$ref": "#/definitions/radius_role" },
         "panel": { "$ref": "#/definitions/radius_role" },
@@ -354,7 +360,7 @@
     },
     "intensity": {
       "type": "object",
-      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal", "shell"],
+      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal", "shell", "gtk"],
       "additionalProperties": false,
       "properties": {
         "label": { "type": "string", "minLength": 1 },
@@ -447,6 +453,31 @@
             "notification_opacity": { "$ref": "#/definitions/alpha" },
             "panel_transparency": { "enum": ["solid", "soft", "glass"] },
             "settings_translucent": { "type": "boolean" }
+          }
+        },
+        "gtk": {
+          "type": "object",
+          "description": "Fill opacity per GTK surface. A sidebar is always at least as opaque as the window it sits in, so navigation stays readable over a translucent client area; the Performance intensity sets every one of these to 1.0.",
+          "required": [
+            "window", "headerbar", "sidebar", "popover", "tooltip", "toast",
+            "dialog", "input", "button", "card"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "_note": { "type": "string" },
+            "window": { "$ref": "#/definitions/alpha" },
+            "headerbar": { "$ref": "#/definitions/alpha" },
+            "sidebar": {
+              "allOf": [{ "$ref": "#/definitions/alpha" }],
+              "minimum": 0.5
+            },
+            "popover": { "$ref": "#/definitions/alpha" },
+            "tooltip": { "$ref": "#/definitions/alpha" },
+            "toast": { "$ref": "#/definitions/alpha" },
+            "dialog": { "$ref": "#/definitions/alpha" },
+            "input": { "$ref": "#/definitions/alpha" },
+            "button": { "$ref": "#/definitions/alpha" },
+            "card": { "$ref": "#/definitions/alpha" }
           }
         }
       }

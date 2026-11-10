@@ -1,0 +1,165 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/gtk.schema.json",
+  "title": "The GTK CSS surface this project is allowed to emit",
+  "description": "Schema for data/design/gtk.json. GTK warns about a property it does not know and keeps loading, and a selector that matches no node is silently kept, so neither mistake is visible to the user. render_gtk_css.py refuses to write a stylesheet that uses a property, shorthand, pseudo-class, colour function, filter function or node name that is not recorded here, and the two GTK major versions are recorded separately because they do not support the same set.",
+  "type": "object",
+  "required": ["_copyright", "_note", "verified_against", "source", "diagnostics", "gtk4", "gtk3", "differences"],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string", "minLength": 20 },
+
+    "verified_against": {
+      "type": "object",
+      "required": ["gtk4", "gtk3", "libadwaita", "adw_gtk3"],
+      "additionalProperties": false,
+      "properties": {
+        "gtk4": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "gtk3": { "type": "string", "pattern": "^3\\.\\d+\\.\\d+$" },
+        "libadwaita": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "adw_gtk3": { "type": "string", "pattern": "^v\\d+\\.\\d+$" }
+      }
+    },
+
+    "source": {
+      "type": "object",
+      "required": [
+        "gtk4_properties", "gtk4_shorthands", "gtk3_properties", "gtk3_shorthands",
+        "pseudo_classes", "color_functions", "filter_functions", "at_rules",
+        "gtk4_node_names", "gtk3_node_names", "libadwaita_node_names",
+        "transform_functions",
+        "gtk4_style_classes", "gtk3_style_classes", "libadwaita_style_classes"
+      ],
+      "additionalProperties": false,
+      "patternProperties": { ".*": { "type": "string", "minLength": 5 } }
+    },
+
+    "diagnostics": {
+      "type": "object",
+      "required": [
+        "unknown_property", "unknown_node_name", "unknown_style_class",
+        "gtk4_style_classes", "gtk3_dir", "important", "consequence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "unknown_property": { "type": "string" },
+        "unknown_node_name": { "type": "string" },
+        "unknown_style_class": { "type": "string" },
+        "gtk4_style_classes": { "type": "string" },
+        "gtk3_dir": { "type": "string" },
+        "important": { "type": "string" },
+        "consequence": { "type": "string" }
+      }
+    },
+
+    "gtk4": { "$ref": "#/definitions/version" },
+    "gtk3": { "$ref": "#/definitions/version" },
+
+    "differences": {
+      "type": "object",
+      "required": [
+        "properties_only_in_gtk4", "properties_only_in_gtk3",
+        "shorthands_only_in_gtk4", "shorthands_only_in_gtk3",
+        "node_names_only_in_gtk4", "node_names_only_in_gtk3",
+        "at_rules_only_in_gtk4", "at_rules_only_in_gtk3", "note"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "properties_only_in_gtk4": { "$ref": "#/definitions/name_list" },
+        "properties_only_in_gtk3": { "$ref": "#/definitions/name_list" },
+        "shorthands_only_in_gtk4": { "$ref": "#/definitions/name_list" },
+        "shorthands_only_in_gtk3": { "$ref": "#/definitions/name_list" },
+        "node_names_only_in_gtk4": { "$ref": "#/definitions/name_list" },
+        "node_names_only_in_gtk3": { "$ref": "#/definitions/name_list" },
+        "at_rules_only_in_gtk4": { "$ref": "#/definitions/name_list" },
+        "at_rules_only_in_gtk3": { "$ref": "#/definitions/name_list" },
+        "note": { "type": "string", "minLength": 20 }
+      }
+    }
+  },
+
+  "definitions": {
+    "class_list": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$" },
+      "uniqueItems": true
+    },
+
+    "name_list": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^-?[a-z][a-z0-9-]*$" },
+      "uniqueItems": true
+    },
+
+    "version": {
+      "type": "object",
+      "required": [
+        "properties", "animated_properties", "shorthands", "at_rules", "pseudo_classes",
+        "color_functions", "filter_functions", "transform_functions",
+        "node_names", "style_classes",
+        "extra_node_names"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "properties": {
+          "allOf": [{ "$ref": "#/definitions/name_list" }],
+          "minItems": 50,
+          "description": "Every property gtk_css_style_property_register declares at this version."
+        },
+        "shorthands": {
+          "allOf": [{ "$ref": "#/definitions/name_list" }],
+          "minItems": 15,
+          "description": "Shorthands expand to registered properties, so they parse even though no property of that name exists."
+        },
+        "at_rules": {
+          "allOf": [{ "$ref": "#/definitions/name_list" }],
+          "minItems": 3,
+          "description": "The @-rules the provider parses. GTK CSS has no !important at either version, so cascade order and specificity are the only way an overlay wins."
+        },
+        "pseudo_classes": {
+          "allOf": [{ "$ref": "#/definitions/name_list" }],
+          "minItems": 15,
+          "description": "State and structural selectors the selector engine accepts."
+        },
+        "color_functions": {
+          "type": "array",
+          "minItems": 5,
+          "items": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9-]*$" },
+          "uniqueItems": true,
+          "description": "CSS colour keywords keep their spelling, so currentColor is camelCase."
+        },
+        "animated_properties": {
+          "allOf": [{ "$ref": "#/definitions/name_list" }],
+          "minItems": 20,
+          "description": "Declared with GTK_STYLE_PROPERTY_ANIMATED, so these are the only properties a transition can interpolate."
+        },
+        "filter_functions": {
+          "allOf": [{ "$ref": "#/definitions/name_list" }],
+          "description": "Empty for GTK 3, which has no filter property at all."
+        },
+        "transform_functions": {
+          "allOf": [{ "$ref": "#/definitions/name_list" }],
+          "description": "Empty for GTK 3, which has no transform property at all."
+        },
+        "node_names": {
+          "allOf": [{ "$ref": "#/definitions/name_list" }],
+          "minItems": 60,
+          "description": "Node names the upstream theme itself styles, so each one is known to match a widget."
+        },
+        "style_classes": {
+          "allOf": [{ "$ref": "#/definitions/class_list" }],
+          "minItems": 50,
+          "description": "Classes the upstream theme styles at this version, so each is known to be carried by some widget."
+        },
+        "libadwaita_style_classes": { "$ref": "#/definitions/class_list" },
+        "extra_node_names": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 5 },
+          "description": "Nodes from libadwaita rather than GTK, each mapped to the source file that proves it."
+        }
+      }
+    }
+  }
+}
