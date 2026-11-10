@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/settings.schema.json",
+  "title": "iArch by Safari user settings",
+  "type": "object",
+  "required": ["version", "preset", "effects"],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {"type": "string"},
+    "_generated": {"type": "string"},
+    "version": {"const": 1},
+    "preset": {"enum": ["glass", "performance"]},
+    "effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blur", "transparency", "animations", "shadows"],
+      "properties": {
+        "blur": {"type": "boolean"},
+        "transparency": {"type": "boolean"},
+        "animations": {"type": "boolean"},
+        "shadows": {"type": "boolean"}
+      }
+    },
+    "notes": {"type": "string"}
+  }
+}

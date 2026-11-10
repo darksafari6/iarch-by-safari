@@ -32,11 +32,14 @@ Global rules that apply to every part:
 | Naming policy enforced mechanically | `tools/branding_lint.py` | `tests/test_branding_lint.py` |
 | Everyday UI rebranded | shell profile, palette `iarch-midnight`, keybind descriptions, terminal greeting, session menu entries, window titles, `scripts/iarch-*.sh` | `python3 tools/branding_lint.py` → 0 findings |
 | Unverified claims registered | `docs/UNVERIFIED.md` | referenced by `notices.json` and validated |
-| Repository map, payload separation, safety and performance contracts | `docs/ARCHITECTURE.md` | `tests/test_repo_structure.py` |
+| Repository map, payload separation, safety and performance contracts | `docs/ARCHITECTURE.md` | `tests/test_payload_map.py`, `tests/test_architecture_docs.py` |
 | Naming and credit policy written down | `docs/BRANDING.md` | linked from README |
 | Shared safe shell helpers | `lib/iarch-common.sh` | `tests/test_iarch_common.sh` |
 | Performance preset that cannot invent keys | `profiles/performance.toml`, `tools/profile_preset.py` | `tests/test_profile_preset.py` |
-| Root cleaned, historical docs marked | `legacy/`, `assets/screenshots/`, banners | `tests/test_repo_structure.py` |
+| Root cleaned, historical docs marked | `legacy/`, `assets/screenshots/`, banners | `tests/test_payload_map.py` |
+| One place owns user state: defaults in `data/`, settings in `~/.config/iarch/`, atomic generated writes, five backups | `iarch/lib/configstore.py`, `data/*.default.json` | `tests/test_config_store.py` |
+| Keyboard map is data, not prose | `data/keybinds.default.json`, `tools/extract_keybinds.py` | `tests/test_keybinds_data.py`, `--check` in CI |
+| Glass design tokens recorded with their source | `data/design/glass.tokens.json` | `data/schemas/design-tokens.schema.json` |
 | CI renamed and extended | `.github/workflows/iarch-checks.yml` | workflow run |
 
 License data was verified against upstream on 2026-11-09; the verification method is recorded in

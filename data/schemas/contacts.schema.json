@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/contacts.schema.json",
+  "title": "iArch by Safari contact page defaults",
+  "type": "object",
+  "required": ["version", "display_name", "role", "links"],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {"type": "string"},
+    "_generated": {"type": "string"},
+    "version": {"const": 1},
+    "display_name": {"type": "string"},
+    "role": {"type": "string"},
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "url"],
+        "additionalProperties": false,
+        "properties": {
+          "label": {"type": "string", "minLength": 1},
+          "url": {"type": "string", "pattern": "^(https?|mailto):"},
+          "kind": {"enum": ["portfolio", "social", "email", "other"]}
+        }
+      }
+    },
+    "notes": {"type": "string"}
+  }
+}

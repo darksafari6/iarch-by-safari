@@ -1,0 +1,12 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "preset": "glass",
+  "effects": {
+    "blur": true,
+    "transparency": true,
+    "animations": true,
+    "shadows": true
+  },
+  "notes": "Repository defaults. Your own copy lives in ~/.config/iarch/settings.json and wins over these values."
+}
