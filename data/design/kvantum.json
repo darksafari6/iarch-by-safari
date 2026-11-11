@@ -1,0 +1,577 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "_note": "The Kvantum theme keys this project writes, with the type, integer bound and enum upstream declares for each. Derived from the sources named below at the tag in verified_against, by reading every getValue(KSL(\"Group\"),KSL(\"key\")) call in ThemeConfig.cpp (the exhaustive vocabulary the style engine actually reads) and the type and range column of doc/Theme-Config. render_kvantum.py refuses to emit a key that is not listed here, an integer outside its bound, or an enum value outside its set.",
+  "verified_against": "V1.1.9",
+  "source": "Kvantum/style/themeconfig/ThemeConfig.cpp (the getValue call sites: 89 [%General] keys, 28 [GeneralColors] keys, 23 [Hacks] keys), Kvantum/doc/Theme-Config (types, integer bounds, enum meanings), Kvantum/style/themeconfig/default.kvconfig (the shipped default theme), Kvantum/style/kvantum.json (the Qt style names are \"kvantum\" and \"kvantum-dark\"), Kvantum/style/themeconfig/defaulttheme.qrc (a compiled-in default SVG, so an INI-only theme still resolves element art)",
+  "diagnostics": {
+    "unknown_key": "QSettings reads the file as generic INI: a key ThemeConfig.cpp never asks for is parsed and then ignored, with no warning. A misspelled key silently does nothing.",
+    "out_of_range": "ThemeConfig.cpp clamps most integers to their documented bound and continues, so an out-of-range number is silently changed rather than rejected.",
+    "consequence": "Neither a silent ignore nor a silent clamp is acceptable in a shipped payload, so this project treats both as render-time failures."
+  },
+  "activation": {
+    "style_names": [
+      "kvantum",
+      "kvantum-dark"
+    ],
+    "mechanism": "Kvantum is a Qt style, chosen in qt6ct (or Kvantum Manager), which writes the style into ~/.config/qt6ct/qt6ct.conf. It is NOT chosen with QT_STYLE_OVERRIDE: qt6ct explicitly asks the user to remove that variable if it is set.",
+    "pointer_file": "~/.config/Kvantum/kvantum.kvconfig",
+    "pointer_key": "theme",
+    "theme_dir": "~/.config/Kvantum/<theme>/",
+    "theme_file": "<theme>.kvconfig"
+  },
+  "compositor": {
+    "blurring": "Kvantum blurring and popup_blurring need the KDE blur effect and a supporting GPU; they have no effect when composite or translucent_windows is false. Under Hyprland there is no KDE blur, so both are written false and the frosted look comes from a translucent interior plus the compositor blur in .config/hypr/generated/glass.lua.",
+    "shadowless_popup": "Hyprland already shadows popup windows through decoration:shadow in glass.lua, so shadowless_popup is true and menu/tooltip shadow depths are 0: a second Kvantum shadow would double the one the compositor draws.",
+    "translucency_without_svg": "This project ships an INI-only theme (no custom SVG; the compiled-in default SVG resolves element art). The doc states window translucency needs either a translucent SVG element or a nonzero reduce_window_opacity, so translucency is driven entirely by reduce_window_opacity / reduce_menu_opacity, derived from the intensity.",
+    "menu_blur_radius": "menu_blur_radius / tooltip_blur_radius are NOT screen blur: they are the corner radius used when blurring the corners of a rounded translucent popup to avoid artifacts. The doc recommends 2, which is what is written."
+  },
+  "sections": {
+    "%General": {
+      "keys": {
+        "active_tab_overlap": {
+          "type": "int"
+        },
+        "alt_mnemonic": {
+          "type": "bool"
+        },
+        "animate_states": {
+          "type": "bool"
+        },
+        "attach_active_tab": {
+          "type": "bool"
+        },
+        "author": {
+          "type": "string"
+        },
+        "blurring": {
+          "type": "bool"
+        },
+        "bold_active_tab": {
+          "type": "bool"
+        },
+        "button_contents_shift": {
+          "type": "bool"
+        },
+        "button_icon_size": {
+          "type": "int"
+        },
+        "center_doc_tabs": {
+          "type": "bool"
+        },
+        "center_normal_tabs": {
+          "type": "bool"
+        },
+        "center_scrollbar_indicator": {
+          "type": "bool"
+        },
+        "center_toolbar_handle": {
+          "type": "bool"
+        },
+        "check_size": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "default": 13
+          }
+        },
+        "click_behavior": {
+          "type": "int"
+        },
+        "combo_as_lineedit": {
+          "type": "bool"
+        },
+        "combo_focus_rect": {
+          "type": "bool"
+        },
+        "combo_menu": {
+          "type": "bool"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "composite": {
+          "type": "bool"
+        },
+        "contrast": {
+          "type": "float"
+        },
+        "dialog_button_layout": {
+          "type": "int",
+          "enum": {
+            "values": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "default": 0,
+            "meaning": {
+              "0": "follow the platform",
+              "1": "KDE",
+              "2": "GNOME",
+              "3": "Mac",
+              "4": "Windows",
+              "5": "Android"
+            }
+          }
+        },
+        "drag_from_buttons": {
+          "type": "bool"
+        },
+        "embedded_tabs": {
+          "type": "bool"
+        },
+        "fill_rubberband": {
+          "type": "bool"
+        },
+        "group_toolbar_buttons": {
+          "type": "bool"
+        },
+        "groupbox_top_label": {
+          "type": "bool"
+        },
+        "hide_combo_checkboxes": {
+          "type": "bool"
+        },
+        "inline_spin_indicators": {
+          "type": "bool"
+        },
+        "inline_spin_separator": {
+          "type": "bool"
+        },
+        "intensity": {
+          "type": "float"
+        },
+        "joined_inactive_tabs": {
+          "type": "bool"
+        },
+        "large_icon_size": {
+          "type": "int"
+        },
+        "layout_margin": {
+          "type": "int",
+          "range": {
+            "min": 2,
+            "max": 16,
+            "default": 4
+          }
+        },
+        "layout_spacing": {
+          "type": "int",
+          "range": {
+            "min": 2,
+            "max": 16,
+            "default": 2
+          }
+        },
+        "left_tabs": {
+          "type": "bool"
+        },
+        "menu_blur_radius": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "max": 10,
+            "default": 0
+          }
+        },
+        "menu_separator_height": {
+          "type": "int",
+          "range": {
+            "min": 1,
+            "max": 16,
+            "default": 10
+          }
+        },
+        "menu_shadow_depth": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "default": 0
+          }
+        },
+        "menubar_mouse_tracking": {
+          "type": "bool"
+        },
+        "merge_menubar_with_toolbar": {
+          "type": "bool"
+        },
+        "mirror_doc_tabs": {
+          "type": "bool"
+        },
+        "no_active_tab_separator": {
+          "type": "bool"
+        },
+        "no_inactive_tab_expansion": {
+          "type": "bool"
+        },
+        "no_inactiveness": {
+          "type": "bool"
+        },
+        "no_window_pattern": {
+          "type": "bool"
+        },
+        "opaque": {
+          "type": "string-list"
+        },
+        "popup_blurring": {
+          "type": "bool"
+        },
+        "progressbar_thickness": {
+          "type": "int"
+        },
+        "reduce_menu_opacity": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "max": 90,
+            "default": 0
+          }
+        },
+        "reduce_window_opacity": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "max": 90,
+            "default": 0
+          }
+        },
+        "remove_extra_frames": {
+          "type": "bool"
+        },
+        "respect_DE": {
+          "type": "bool"
+        },
+        "saturation": {
+          "type": "float"
+        },
+        "scroll_arrows": {
+          "type": "bool"
+        },
+        "scroll_min_extent": {
+          "type": "int"
+        },
+        "scroll_width": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "max": 32,
+            "default": 12
+          }
+        },
+        "scrollable_menu": {
+          "type": "bool"
+        },
+        "scrollbar_in_view": {
+          "type": "bool"
+        },
+        "shadowless_popup": {
+          "type": "bool"
+        },
+        "slider_handle_length": {
+          "type": "int"
+        },
+        "slider_handle_width": {
+          "type": "int"
+        },
+        "slider_width": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "max": 48,
+            "default": 8
+          }
+        },
+        "slim_toolbars": {
+          "type": "bool"
+        },
+        "small_icon_size": {
+          "type": "int"
+        },
+        "spin_button_width": {
+          "type": "int"
+        },
+        "splitter_width": {
+          "type": "int"
+        },
+        "spread_header": {
+          "type": "bool"
+        },
+        "spread_menuitems": {
+          "type": "bool"
+        },
+        "spread_progressbar": {
+          "type": "bool"
+        },
+        "square_combo_button": {
+          "type": "bool"
+        },
+        "submenu_delay": {
+          "type": "int"
+        },
+        "submenu_overlap": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "max": 16,
+            "default": 0
+          }
+        },
+        "tab_button_extra_margin": {
+          "type": "int"
+        },
+        "tickless_slider_handle_size": {
+          "type": "int"
+        },
+        "toolbar_icon_size": {
+          "type": "int_or_string"
+        },
+        "toolbar_interior_spacing": {
+          "type": "int"
+        },
+        "toolbar_item_spacing": {
+          "type": "int"
+        },
+        "toolbar_separator_thickness": {
+          "type": "int"
+        },
+        "toolbutton_style": {
+          "type": "int"
+        },
+        "tooltip_blur_radius": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "max": 10,
+            "default": 0
+          }
+        },
+        "tooltip_delay": {
+          "type": "int"
+        },
+        "tooltip_shadow_depth": {
+          "type": "int",
+          "range": {
+            "min": 0,
+            "default": 0
+          }
+        },
+        "transient_groove": {
+          "type": "bool"
+        },
+        "transient_scrollbar": {
+          "type": "bool"
+        },
+        "translucent_windows": {
+          "type": "bool"
+        },
+        "tree_branch_line": {
+          "type": "bool"
+        },
+        "vertical_spin_indicators": {
+          "type": "bool"
+        },
+        "x11drag": {
+          "type": "string"
+        }
+      }
+    },
+    "GeneralColors": {
+      "keys": {
+        "alt.base.color": {
+          "type": "color",
+          "palette_role": "surface_variant"
+        },
+        "base.color": {
+          "type": "color",
+          "palette_role": "surface"
+        },
+        "button.color": {
+          "type": "color",
+          "palette_role": "surface_variant"
+        },
+        "button.text.color": {
+          "type": "color",
+          "palette_role": "on_surface"
+        },
+        "dark.color": {
+          "type": "color",
+          "palette_role": "outline_variant"
+        },
+        "disabled.text.color": {
+          "type": "color",
+          "palette_role": "text_disabled"
+        },
+        "highlight.color": {
+          "type": "color",
+          "palette_role": "accent.primary"
+        },
+        "highlight.text.color": {
+          "type": "color",
+          "palette_role": "on_accent.primary"
+        },
+        "inactive.alt.base.color": {
+          "type": "color",
+          "palette_role": "surface_variant"
+        },
+        "inactive.base.color": {
+          "type": "color",
+          "palette_role": "surface_variant"
+        },
+        "inactive.highlight.color": {
+          "type": "color",
+          "palette_role": "accent.primary"
+        },
+        "inactive.highlight.text.color": {
+          "type": "color",
+          "palette_role": "on_accent.primary"
+        },
+        "inactive.text.color": {
+          "type": "color",
+          "palette_role": "on_surface_variant"
+        },
+        "inactive.window.color": {
+          "type": "color",
+          "palette_role": "background"
+        },
+        "inactive.window.text.color": {
+          "type": "color",
+          "palette_role": "text_disabled"
+        },
+        "light.color": {
+          "type": "color",
+          "palette_role": "outline_variant"
+        },
+        "link.color": {
+          "type": "color",
+          "palette_role": "accent.secondary"
+        },
+        "link.visited.color": {
+          "type": "color",
+          "palette_role": "accent.primary"
+        },
+        "mid.color": {
+          "type": "color",
+          "palette_role": "outline"
+        },
+        "mid.light.color": {
+          "type": "color",
+          "palette_role": "outline_variant"
+        },
+        "progress.inactive.indicator.text.color": {
+          "type": "color",
+          "palette_role": "on_accent.primary"
+        },
+        "progress.indicator.text.color": {
+          "type": "color",
+          "palette_role": "on_accent.primary"
+        },
+        "shadow.color": {
+          "type": "color",
+          "palette_role": "shadow"
+        },
+        "text.color": {
+          "type": "color",
+          "palette_role": "on_surface"
+        },
+        "tooltip.base.color": {
+          "type": "color",
+          "palette_role": "surface_variant"
+        },
+        "tooltip.text.color": {
+          "type": "color",
+          "palette_role": "on_surface"
+        },
+        "window.color": {
+          "type": "color",
+          "palette_role": "background"
+        },
+        "window.text.color": {
+          "type": "color",
+          "palette_role": "on_background"
+        }
+      }
+    },
+    "Hacks": {
+      "keys": {
+        "blur_only_active_window": {
+          "type": "bool"
+        },
+        "blur_translucent": {
+          "type": "bool"
+        },
+        "centered_forms": {
+          "type": "bool"
+        },
+        "disabled_icon_opacity": {
+          "type": "int"
+        },
+        "force_size_grip": {
+          "type": "bool"
+        },
+        "iconless_menu": {
+          "type": "bool"
+        },
+        "iconless_pushbutton": {
+          "type": "bool"
+        },
+        "kinetic_scrolling": {
+          "type": "bool"
+        },
+        "lxqtmainmenu_iconsize": {
+          "type": "int"
+        },
+        "middle_click_scroll": {
+          "type": "bool"
+        },
+        "no_selection_tint": {
+          "type": "bool"
+        },
+        "noninteger_translucency": {
+          "type": "bool"
+        },
+        "normal_default_pushbutton": {
+          "type": "bool"
+        },
+        "respect_darkness": {
+          "type": "bool"
+        },
+        "single_top_toolbar": {
+          "type": "bool"
+        },
+        "style_vertical_toolbars": {
+          "type": "bool"
+        },
+        "tint_on_mouseover": {
+          "type": "int"
+        },
+        "transparent_arrow_button": {
+          "type": "bool"
+        },
+        "transparent_dolphin_view": {
+          "type": "bool"
+        },
+        "transparent_ktitle_label": {
+          "type": "bool"
+        },
+        "transparent_menutitle": {
+          "type": "bool"
+        },
+        "transparent_pcmanfm_sidepane": {
+          "type": "bool"
+        },
+        "transparent_pcmanfm_view": {
+          "type": "bool"
+        }
+      }
+    }
+  },
+  "counts": {
+    "general": 89,
+    "general_colors": 28,
+    "hacks": 23,
+    "total": 140
+  }
+}

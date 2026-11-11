@@ -1,0 +1,12 @@
+# Copyright (C) 2026 Safari — GPL-3.0-or-later
+# Performance overlay for the shipped Noctalia v5 profile.
+#
+# Contract (docs/ARCHITECTURE.md, "Performance contract"): an overlay may only
+# change the VALUE of a key that already exists in .config/noctalia/config.toml.
+# tools/profile_preset.py rejects anything else, so this file can never invent
+# a setting the shell does not have.
+[bar.default]
+compositor_blur = false
+
+[shell]
+settings_window_translucent = false

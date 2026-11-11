@@ -32,7 +32,7 @@ class V5Profile(unittest.TestCase):
         self.assertEqual((backup / 'config.toml').read_text(), 'original')
         self.assertEqual((self.active / 'personal').read_text(), 'keep')
         self.assertIn('enable_notification_sounds = false', (self.active / 'config.toml').read_text())
-        self.assertTrue((self.active / 'palettes/minimaOS.json').is_file())
+        self.assertTrue((self.active / 'palettes/iarch-midnight.json').is_file())
         previous = profile.restore(self.config, backup)
         self.assertEqual((self.active / 'config.toml').read_text(), 'original')
         self.assertEqual((backup / 'config.toml').read_text(), 'original')

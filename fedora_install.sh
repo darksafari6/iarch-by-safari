@@ -1,10 +1,26 @@
-
 #!/bin/bash
 
 export LC_MESSAGES=C
 export LANG=C
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+
+# Product identity: single source of truth (see docs/BRANDING.md, Rule 1).
+# Sourcing keeps installers and branding/product.env from drifting apart; the
+# fallback only fires when a checkout is missing its branding file.
+if [ -f "$SCRIPT_DIR/branding/product.env" ]; then
+    # shellcheck source=branding/product.env
+    . "$SCRIPT_DIR/branding/product.env"
+fi
+IARCH_PRODUCT_NAME=${IARCH_PRODUCT_NAME:-iArch by Safari}
+IARCH_PRODUCT_TAGLINE=${IARCH_PRODUCT_TAGLINE:-Glass Hyprland desktop session for Arch Linux and Fedora}
+
+print_product_banner() {
+    echo ""
+    echo "  ${IARCH_PRODUCT_NAME}"
+    echo "  ${IARCH_PRODUCT_TAGLINE}"
+    echo "  ------------------------------------------------------------"
+}
 
 append_unique_package() {
     local -n package_list="$1"
@@ -32,7 +48,8 @@ if ! command -v dnf >/dev/null 2>&1; then
 fi
 
 # --- Pre-flight confirmation ---
-echo "This script will install custom dot-files for Hyprland. Use at your own risk."
+print_product_banner
+echo "This script installs the ${IARCH_PRODUCT_NAME} dotfiles for Hyprland on Fedora. Use at your own risk."
 while true; do
     read -r -p "Would you like to proceed? (y/n): " proceed
     case "$proceed" in
@@ -378,6 +395,15 @@ PACKAGES=(
     humanity-icon-theme       # Humanity Icons
     google-noto-emoji-fonts   # Emoji font
     dejavu-sans-fonts         # Fonts
+    kvantum                   # Qt6 Kvantum glass style (TP-18)
+    bibata-cursor-theme       # Bibata cursor theme (TP-18)
+    papirus-icon-theme        # Papirus icons (TP-18)
+    rsms-inter-fonts          # Fonts: Inter, the UI face (TP-18)
+    jetbrains-mono-fonts      # Fonts: JetBrains Mono, the terminal face (TP-18)
+    google-noto-sans-fonts    # Fonts: Noto Sans fallback (TP-18)
+    google-noto-sans-cjk-fonts # Fonts: Noto Sans CJK fallback (TP-18)
+    google-noto-naskh-arabic-fonts # Fonts: Noto Naskh Arabic fallback (TP-18)
+    google-noto-nastaliq-urdu-fonts # Fonts: Noto Nastaliq Urdu fallback (TP-18)
     gst-plugins-good          # Gstreamer Plugins 
     gst-plugins-ugly          # Gstreamer Plugins
     gst-libav                 # Gstreamer Plugins
@@ -429,6 +455,7 @@ enable_colors() {
         MAGENTA="${BOLD}\e[35m"
         CYAN="${BOLD}\e[36m"
     fi
+    # shellcheck disable=SC2034  # palette entries are defined together; not all are used
     readonly ALL_OFF BOLD BLUE GREEN RED YELLOW CYAN MAGENTA
 }
 

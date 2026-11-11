@@ -1,10 +1,26 @@
-
 #!/bin/bash
 
 export LC_MESSAGES=C
 export LANG=C
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+
+# Product identity: single source of truth (see docs/BRANDING.md, Rule 1).
+# Sourcing keeps installers and branding/product.env from drifting apart; the
+# fallback only fires when a checkout is missing its branding file.
+if [ -f "$SCRIPT_DIR/branding/product.env" ]; then
+    # shellcheck source=branding/product.env
+    . "$SCRIPT_DIR/branding/product.env"
+fi
+IARCH_PRODUCT_NAME=${IARCH_PRODUCT_NAME:-iArch by Safari}
+IARCH_PRODUCT_TAGLINE=${IARCH_PRODUCT_TAGLINE:-Glass Hyprland desktop session for Arch Linux and Fedora}
+
+print_product_banner() {
+    echo ""
+    echo "  ${IARCH_PRODUCT_NAME}"
+    echo "  ${IARCH_PRODUCT_TAGLINE}"
+    echo "  ------------------------------------------------------------"
+}
 
 append_unique_package() {
     local -n package_list="$1"
@@ -67,12 +83,13 @@ if [ ! -d "$REPO_DIR/.config/hypr" ]; then
 fi
 
 # --- Pre-flight confirmation ---
-echo "This script will install custom dot-files for Hyprland and the Chaotic AUR. Use only with fresh install of Hyprland (Vanilla Arch Linux only). Use at your own risk."
+print_product_banner
+echo "This script installs the ${IARCH_PRODUCT_NAME} dotfiles for Hyprland and enables the Chaotic AUR repository. Use only with a fresh install of Hyprland (vanilla Arch Linux). Use at your own risk."
 while true; do
-    read -r -p "Would you like to proceed? (y/n): " proceed
+    read -r -p "Install ${IARCH_PRODUCT_NAME} now? (y/n): " proceed
     case "$proceed" in
         y|Y|yes|YES)
-            echo "Great! Proceeding with installation..."
+            echo "Great! Proceeding with the ${IARCH_PRODUCT_NAME} installation..."
             break
             ;;
         n|N|no|NO)
@@ -521,6 +538,7 @@ enable_colors() {
         MAGENTA="${BOLD}\e[35m"
         CYAN="${BOLD}\e[36m"
     fi
+    # shellcheck disable=SC2034  # palette entries are defined together; not all are used
     readonly ALL_OFF BOLD BLUE GREEN RED YELLOW CYAN MAGENTA
 }
 
@@ -583,7 +601,8 @@ reorder_pacman_conf() {
     msg "Ensuring correct repository order in pacman.conf.."
     
     local pacman_conf="/etc/pacman.conf"
-    local pacman_conf_backup="/etc/pacman.conf.bak.$(date +%s)"
+    local pacman_conf_backup
+    pacman_conf_backup="/etc/pacman.conf.bak.$(date +%s)"
     
     info "Backup current config"
     cp "$pacman_conf" "$pacman_conf_backup"
@@ -1186,8 +1205,7 @@ setup_ddcutil() {
         fi
         
         # Make i2c-dev load on boot
-        echo "i2c-dev" > /etc/modules-load.d/i2c-dev.conf
-        if [ $? -ne 0 ]; then
+        if ! echo "i2c-dev" > /etc/modules-load.d/i2c-dev.conf; then
             echo "Warning: Failed to configure i2c-dev autoload."
         fi
 

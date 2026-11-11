@@ -13,6 +13,7 @@ MOCK
 chmod +x "$tmp/bin/pacman"
 export PATH="$tmp/bin:$PATH" MOCK_PACKAGES="$tmp/packages"
 # shellcheck source=../lib/package-audit.sh
+# shellcheck source=lib/package-audit.sh
 source "$repo/lib/package-audit.sh"
 printf 'fish\nkitty\n' > "$MOCK_PACKAGES"
 package_audit_begin "$tmp/log"

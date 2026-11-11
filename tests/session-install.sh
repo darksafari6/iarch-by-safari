@@ -36,12 +36,12 @@ MOCK
 chmod +x "$tmp/bin/"*
 export PATH="$tmp/bin:$PATH"
 
-bash -n "$repo/install-v4-session.sh" "$repo/uninstall-v4-session.sh" "$repo/session/minimalinux-session"
-"$repo/install-v4-session.sh" --help >/dev/null
-if "$repo/install-v4-session.sh" --unknown >/dev/null 2>&1; then echo 'Unknown argument accepted' >&2; exit 1; fi
-printf 'n\n' | "$repo/install-v4-session.sh" --skip-packages >/dev/null
+bash -n "$repo/legacy/install-v4-session.sh" "$repo/legacy/uninstall-v4-session.sh" "$repo/legacy/session/minimalinux-session"
+"$repo/legacy/install-v4-session.sh" --help >/dev/null
+if "$repo/legacy/install-v4-session.sh" --unknown >/dev/null 2>&1; then echo 'Unknown argument accepted' >&2; exit 1; fi
+printf 'n\n' | "$repo/legacy/install-v4-session.sh" --skip-packages >/dev/null
 [[ ! -e "$HOME/.config/minimalinux" ]]
-printf 'y\n' | (cd / && "$repo/install-v4-session.sh" --skip-packages) >/dev/null
+printf 'y\n' | (cd / && "$repo/legacy/install-v4-session.sh" --skip-packages) >/dev/null
 [[ $(cat "$HOME/.config/hypr/hyprland.conf") == 'original hypr' ]]
 [[ $(cat "$HOME/.config/noctalia/settings.json") == 'original noctalia' ]]
 [[ $(cat "$HOME/.config/gtk-3.0/settings.ini") == 'original gtk' ]]
@@ -68,22 +68,24 @@ if command -v fish >/dev/null; then
 fi
 [[ -f "$HOME/.config/minimalinux/quickshell/noctalia-shell/shell.qml" ]]
 [[ ! -e "$HOME/.config/minimalinux/quickshell/noctalia-shell/.git" ]]
+# shellcheck disable=SC2016  # the literal $HOME path is what must appear in the file
 grep -Fq '$HOME/.config/minimalinux/hypr/monitors.conf' "$HOME/.config/minimalinux/hypr/hyprland.conf"
+# shellcheck disable=SC2088  # the literal tilde path is what must appear in the file
 grep -Fq '~/.config/minimalinux/hypr/keybinds.conf' "$HOME/.config/minimalinux/noctalia/plugins/hyprland-keybinds/manifest.json"
-grep -Fq 'Name=minimaLinux' "$MOCK_ROOT/usr/share/wayland-sessions/minimalinux.desktop"
-grep -Fq 'Name=minimaLinux Customize' "$MOCK_ROOT/usr/share/applications/minimalinux-customize.desktop"
+grep -Fq 'Name=iArch by Safari (isolated session)' "$MOCK_ROOT/usr/share/wayland-sessions/minimalinux.desktop"
+grep -Fq 'Name=iArch by Safari Customize' "$MOCK_ROOT/usr/share/applications/minimalinux-customize.desktop"
 [[ -f "$HOME/.config/minimalinux/minimalinux/center.py" ]]
 grep -Fq -- '--welcome-once' "$HOME/.config/minimalinux/hypr/startup.conf"
 bash "$MOCK_ROOT/usr/local/bin/minimalinux-session"
 grep -Fxq "$HOME/.config/minimalinux" "$MOCK_ROOT/launched"
 grep -Fxq "$HOME/.config/minimalinux/hypr/hyprland.conf" "$MOCK_ROOT/launched"
 printf 'custom config\n' > "$HOME/.config/minimalinux/custom"
-printf 'y\n' | "$repo/install-v4-session.sh" --skip-packages >/dev/null
+printf 'y\n' | "$repo/legacy/install-v4-session.sh" --skip-packages >/dev/null
 backups=("$HOME"/.config/minimalinux.backup.*)
 [[ ${#backups[@]} == 1 && $(cat "${backups[0]}/custom") == 'custom config' ]]
-printf 'n\n' | "$repo/uninstall-v4-session.sh" >/dev/null
+printf 'n\n' | "$repo/legacy/uninstall-v4-session.sh" >/dev/null
 [[ -f "$HOME/.config/minimalinux/hypr/hyprland.conf" ]]
-printf 'y\n' | "$repo/uninstall-v4-session.sh" >/dev/null
+printf 'y\n' | "$repo/legacy/uninstall-v4-session.sh" >/dev/null
 [[ -f "$HOME/.config/minimalinux/hypr/hyprland.conf" ]]
 [[ -f "$HOME/.config/hypr/hyprland.conf" ]]
 rm -rf "$HOME/.config/minimalinux"

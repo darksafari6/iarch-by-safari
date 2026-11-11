@@ -1,3 +1,28 @@
 # Python bytecode and runtime caches
 __pycache__/
 *.py[cod]
+
+# Virtual environments used only for local tooling (shellcheck, svg preview)
+.venv/
+venv/
+
+# Timestamped backups created by the installers and runtime helpers.
+# They are recovery data on the machine that made them, never repository content.
+*.bak.*
+*.backup.*
+
+# Session and installer logs written under $XDG_STATE_HOME on target machines,
+# kept out of the repository if someone runs a script from inside a checkout.
+*.log
+
+# Build output of the settings app and of any packaging attempt.
+# Nothing in this repository is built today; the pattern exists so a first
+# `meson dist`, `python -m build` or GTK build tree cannot be committed.
+dist/
+build/
+*.egg-info/
+
+# Editor and OS noise
+.DS_Store
+*~
+*.swp

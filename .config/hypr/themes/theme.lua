@@ -14,6 +14,11 @@ for _, item in ipairs(env) do
     end
 end
 
+-- The values below are the fallback: they hold when no design system has been
+-- applied yet. generated/glass.lua, required at the end of this file, sets the
+-- same leaves from data/design/tokens.json, and because Hyprland applies window
+-- and config values in registration order, whatever is required last wins.
+-- It is wrapped in pcall so a session with no generated file still starts.
 hl.config({
     general = {
         gaps_in = 2,
@@ -43,3 +48,11 @@ hl.config({
         },
     },
 })
+
+-- Design system: rendered by iarch/cli/gen_glass_lua.py, never edited by hand.
+local ok, err = pcall(function()
+    require("generated.glass")
+end)
+if not ok then
+    print("[iarch] generated/glass.lua is missing or broken, keeping the static theme: " .. tostring(err))
+end

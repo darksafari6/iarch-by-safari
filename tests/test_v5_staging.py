@@ -17,14 +17,23 @@ class V5Staging(unittest.TestCase):
             self.assertTrue((dest / 'hypr/hyprland.lua').is_file())
             self.assertTrue((dest / 'hypr/keybind.lua').is_file())
             self.assertTrue((dest / 'noctalia/config.toml').is_file())
-            self.assertTrue((dest / 'noctalia/palettes/minimaOS.json').is_file())
+            self.assertTrue((dest / 'noctalia/palettes/iarch-midnight.json').is_file())
             self.assertTrue((dest / 'kitty/minima-colors.conf').is_file())
             self.assertFalse((dest / 'hypr/hyprland.conf').exists())
             self.assertFalse((dest / 'hypr/startup.conf').exists())
             self.assertFalse((dest / 'noctalia/settings.json').exists())
             self.assertFalse((dest / 'noctalia/plugins.json').exists())
             self.assertFalse((dest / 'minimalinux').exists())
-            self.assertFalse((dest / 'gtk-3.0').exists())
+            # The v5 payload renders its own GTK overlay, so gtk-*.0 exists --
+            # but only with the generated sheet. The legacy v4 payload's
+            # settings.ini, which named a v4-only theme, must not come along.
+            for version in ('3.0', '4.0'):
+                self.assertTrue((dest / f'gtk-{version}' / 'gtk.css').is_file())
+                self.assertFalse((dest / f'gtk-{version}' / 'settings.ini').exists())
+            # The v5 payload also renders its own Qt/Kvantum theme: the pointer
+            # and the theme file it names. Neither existed in the v4 payload.
+            self.assertTrue((dest / 'Kvantum' / 'kvantum.kvconfig').is_file())
+            self.assertTrue((dest / 'Kvantum' / 'iarch' / 'iarch.kvconfig').is_file())
 
     def test_nonempty_or_missing_source_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

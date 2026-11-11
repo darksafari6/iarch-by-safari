@@ -1,0 +1,8 @@
+[Desktop Entry]
+# Managed by minimaLinux session installer
+Name=iArch by Safari (isolated session)
+Comment=Hyprland desktop running the iArch by Safari dotfiles in an isolated configuration
+Exec=/usr/local/bin/minimalinux-session
+TryExec=/usr/local/bin/minimalinux-session
+Type=Application
+DesktopNames=Hyprland

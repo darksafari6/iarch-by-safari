@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location('minimalinux_backend', REPO / '.config/minimalinux/backend.py')
+spec = importlib.util.spec_from_file_location('minimalinux_backend', REPO / 'legacy/config/minimalinux/backend.py')
 backend = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(backend)
 

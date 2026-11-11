@@ -1,0 +1,60 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "generated_by": "hand-maintained; values mirrored from the shipped session, see source fields",
+  "version": 1,
+  "name": "glass",
+  "description": "Design tokens of the iArch by Safari glass profile. Part 2 generators read these; they mirror the values the session ships today.",
+  "tokens": {
+    "corner_radius_px": {
+      "value": 8,
+      "source": ".config/hypr/themes/theme.lua decoration.rounding"
+    },
+    "gap_inner_px": {
+      "value": 2,
+      "source": ".config/hypr/themes/theme.lua general.gaps_in"
+    },
+    "gap_outer_px": {
+      "value": 4,
+      "source": ".config/hypr/themes/theme.lua general.gaps_out"
+    },
+    "border_px": {
+      "value": 2,
+      "source": ".config/hypr/themes/theme.lua general.border_size"
+    },
+    "window_opacity": {
+      "active": 1.0,
+      "inactive": 0.9,
+      "fullscreen": 1.0,
+      "source": ".config/hypr/themes/theme.lua decoration.*_opacity"
+    },
+    "blur": {
+      "enabled": true,
+      "size": 1,
+      "passes": 3,
+      "new_optimizations": true,
+      "ignore_opacity": true,
+      "xray": false,
+      "special": true,
+      "source": ".config/hypr/themes/theme.lua decoration.blur"
+    },
+    "shell": {
+      "panel_transparency_mode": "glass",
+      "settings_window_translucent": true,
+      "compositor_blur": true,
+      "source": ".config/noctalia/config.toml shell.* and bar.default.compositor_blur"
+    }
+  },
+  "presets": {
+    "glass": {
+      "description": "The shipped default profile.",
+      "overrides": {}
+    },
+    "performance": {
+      "description": "Same keys, lower cost; see profiles/performance.toml and tools/profile_preset.py.",
+      "overrides": {
+        "blur.passes": 1,
+        "blur.new_optimizations": true
+      }
+    }
+  }
+}

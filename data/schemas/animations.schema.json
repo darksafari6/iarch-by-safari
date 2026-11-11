@@ -1,0 +1,120 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/animations.schema.json",
+  "title": "The Hyprland animation API surface this project is allowed to drive",
+  "description": "Schema for data/design/animations.json. Hyprland refuses a config that names an unknown animation leaf, an unregistered curve or a style that is not valid for that leaf, so gen_animations_lua.py will not emit a leaf, curve or style that is not recorded here. The leaf tree, per-leaf styles and curve shapes are read from Hyprland at the pinned release.",
+  "type": "object",
+  "required": [
+    "_copyright", "_note", "verified_against", "source", "diagnostics",
+    "curve_types", "speed_formula", "builtin_curves", "animation_params",
+    "master_switch", "style_rules", "leaves", "counts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string", "minLength": 20 },
+    "verified_against": { "type": "string", "pattern": "^v\\d+\\.\\d+\\.\\d+$" },
+    "source": { "type": "string", "minLength": 20 },
+    "diagnostics": {
+      "type": "object",
+      "required": ["unknown_leaf", "unknown_curve", "bad_style", "bad_speed", "bad_spring", "consequence"],
+      "additionalProperties": false,
+      "properties": {
+        "unknown_leaf": { "type": "string", "minLength": 10 },
+        "unknown_curve": { "type": "string", "minLength": 10 },
+        "bad_style": { "type": "string", "minLength": 10 },
+        "bad_speed": { "type": "string", "minLength": 10 },
+        "bad_spring": { "type": "string", "minLength": 10 },
+        "consequence": { "type": "string", "minLength": 10 }
+      }
+    },
+    "curve_types": {
+      "type": "object",
+      "required": ["bezier", "spring"],
+      "additionalProperties": false,
+      "properties": {
+        "bezier": { "$ref": "#/definitions/curveType" },
+        "spring": { "$ref": "#/definitions/curveType" }
+      }
+    },
+    "builtin_curves": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "speed_formula": {
+      "type": "object",
+      "required": ["equation", "speed_min_exclusive", "speed_max", "source", "consequence"],
+      "additionalProperties": false,
+      "properties": {
+        "equation": { "type": "string", "pattern": "duration_ms = 100 \\* speed" },
+        "speed_min_exclusive": { "type": "number", "const": 0 },
+        "speed_max": { "type": "number", "const": 100 },
+        "source": { "type": "string", "minLength": 20 },
+        "consequence": { "type": "string", "minLength": 20 }
+      }
+    },
+    "master_switch": {
+      "type": "object",
+      "required": ["leaf", "type", "default", "set_via", "source", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "leaf": { "type": "string", "const": "animations:enabled" },
+        "type": { "type": "string", "const": "bool" },
+        "default": { "type": "boolean" },
+        "set_via": { "type": "string", "minLength": 10 },
+        "source": { "type": "string", "minLength": 20 },
+        "note": { "type": "string", "minLength": 20 }
+      }
+    },
+    "animation_params": {
+      "type": "object",
+      "required": ["leaf", "enabled", "speed", "bezier", "spring", "style"],
+      "additionalProperties": { "type": "string", "minLength": 5 }
+    },
+    "style_rules": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["match", "styles"],
+        "additionalProperties": false,
+        "properties": {
+          "match": { "type": "string", "minLength": 3 },
+          "styles": { "type": "array", "items": { "type": "string" } },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "leaves": {
+      "type": "object",
+      "minProperties": 30,
+      "additionalProperties": { "$ref": "#/definitions/leaf" }
+    },
+    "counts": {
+      "type": "object",
+      "required": ["leaves", "builtin_curves"],
+      "additionalProperties": false,
+      "properties": {
+        "leaves": { "type": "integer", "minimum": 30 },
+        "builtin_curves": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "definitions": {
+    "curveType": {
+      "type": "object",
+      "required": ["shape", "constraints"],
+      "additionalProperties": false,
+      "properties": {
+        "shape": { "type": "string", "minLength": 5 },
+        "constraints": { "type": "string", "minLength": 5 }
+      }
+    },
+    "leaf": {
+      "type": "object",
+      "required": ["parent", "styles"],
+      "additionalProperties": false,
+      "properties": {
+        "parent": { "type": ["string", "null"] },
+        "styles": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

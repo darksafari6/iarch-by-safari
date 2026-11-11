@@ -1,6 +1,6 @@
 # Install Notes
 
-**Separate workflows:** these notes describe the main v5 installer, which changes packages, repositories, services and the login manager. The independent, experimental v4 session installer is documented in [docs/V4-INSTALL-NOTES.md](docs/V4-INSTALL-NOTES.md). Neither workflow has been live-tested in this environment.
+**Separate workflows:** these notes describe the main v5 installer, which changes packages, repositories, services and the login manager. The independent, deprecated v4 session installer is documented in [legacy/docs/V4-INSTALL-NOTES.md](legacy/docs/V4-INSTALL-NOTES.md). Neither workflow has been live-tested in this environment.
 
 This file is a companion to the main README. It explains the installer flow in simple terms and covers common setup details before and after install.
 
@@ -177,15 +177,15 @@ Notes:
 The reboot question loops intentionally. Reboot is strongly recommended so group, module, and config changes fully apply before normal use.
 
 
-## minimaOS Glass Profile
+## iArch by Safari Glass Profile
 
-The repository now ships an optional Noctalia v5+ glass-first profile in `.config/noctalia/`. The current installer already deploys repository `.config` entries and backs up an existing `~/.config/noctalia` before copying. Do not apply this TOML profile to Noctalia v4.
+The repository now ships an optional Noctalia v5+ glass-first profile in `.config/noctalia/`. The current installer already deploys repository `.config` entries and backs up an existing `~/.config/noctalia` before copying. Do not apply this TOML profile to the legacy v4 shell.
 
 Before a live-session test:
 
 ~~~bash
 noctalia config validate
-bash scripts/minimaos-healthcheck.sh
+bash scripts/iarch-healthcheck.sh
 ~~~
 
 Shortcuts: `SUPER + I` opens Control Center; `SUPER + SHIFT + N` opens notification history; `SUPER + SHIFT + A` audio controls; `SUPER + SHIFT + W` network; `SUPER + SHIFT + B` Bluetooth. `SUPER + T` continues to open Settings.

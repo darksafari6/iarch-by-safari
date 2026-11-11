@@ -1,0 +1,301 @@
+name: iArch checks
+
+on:
+  push:
+    branches: [main, "feature/**", "arena/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the checking tools
+        run: |
+          set -euo pipefail
+          # shellcheck-py provides the same binary CI would otherwise need from
+          # apt; jsonschema validates data/ against data/schemas/; Pillow renders
+          # the preset wallpapers; luaparser is a pure-Python Lua parser, so the
+          # generated Hyprland config can be syntax-checked without a Lua
+          # toolchain in the image; Jinja2 renders the GTK sheets from
+          # iarch/lib/templates/.
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet shellcheck-py jsonschema Pillow luaparser Jinja2
+          shellcheck --version | head -n 2
+          python -c 'import jsonschema; print("jsonschema", jsonschema.__version__)'
+          python -c 'import PIL; print("Pillow", PIL.__version__)'
+          python -c 'import luaparser; print("luaparser", luaparser.__version__)'
+          python -c 'import jinja2; print("Jinja2", jinja2.__version__)'
+
+      - name: Confirm the checks run as a non-root user
+        run: |
+          set -euo pipefail
+          id
+          uid=$(id -u)
+          if [ "$uid" -eq 0 ]; then
+            echo "Refusing to run as root." >&2
+            echo "Seven installer-CLI tests and tests/session-install.sh exist to prove the" >&2
+            echo "legacy session installer refuses to run as root; as root they fail, and a" >&2
+            echo "run that expects those failures cannot tell a refusal from a real break." >&2
+            exit 1
+          fi
+          echo "Running as uid $uid ($(id -un)) - not root."
+
+      - name: Check Bash syntax
+        run: |
+          set -euo pipefail
+          # Every tracked shell script, plus the two session launchers that
+          # live without a .sh suffix.
+          mapfile -t scripts < <(git ls-files '*.sh' | sort)
+          scripts+=(legacy/session/minimalinux-session legacy/session/minimalinux-customize)
+          printf 'bash -n on %s files\n' "${#scripts[@]}"
+          for script in "${scripts[@]}"; do
+            [[ -f "$script" ]] || { echo "missing script: $script" >&2; exit 1; }
+            bash -n "$script"
+          done
+
+      - name: Run shellcheck (errors and warnings must be zero)
+        run: |
+          set -euo pipefail
+          # Fail loudly if the tool is absent: a missing binary would otherwise
+          # make this step report a clean result it never checked.
+          command -v shellcheck >/dev/null || { echo 'shellcheck is not installed' >&2; exit 1; }
+          # .shellcheckrc states the dialect and lists every exception with its
+          # reason; exceptions are inline in the files, none are global.
+          mapfile -t scripts < <(git ls-files '*.sh' | sort)
+          shellcheck --severity=warning -- "${scripts[@]}"
+          shellcheck --severity=warning -- \
+            legacy/session/minimalinux-session legacy/session/minimalinux-customize
+
+      - name: Run the shell test suites
+        run: |
+          set -euo pipefail
+          ./tests/session-install.sh
+          ./tests/managed-files.sh
+          ./tests/package-audit.sh
+          ./tests/test_iarch_common.sh
+          ./tests/test_uninstall.sh
+
+      - name: Run the Python unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Check every generated file is up to date with its source
+        run: |
+          set -euo pipefail
+          python tools/notices.py --check           # THIRD_PARTY_NOTICES.md + data/licenses.json
+          python tools/iarch_brand.py --check       # product.env is self-consistent
+          python tools/branding_lint.py             # no old name on an everyday-UI surface
+          python tools/extract_keybinds.py --check  # data/keybinds.default.json vs keybind.lua
+          python tools/render_shortcuts.py --check  # docs/SHORTCUTS.md vs the keybind data
+          python tools/naming_audit.py --check      # old names only where allowlisted, with a reason
+          python iarch/cli/contrast_check.py --quiet  # every preset clears the WCAG gate
+          python iarch/cli/gen_wallpapers.py --check  # shipped 4K WebP art matches its presets
+          python iarch/cli/gen_glass_lua.py --check    # shipped glass.lua matches the tokens
+          python iarch/cli/gen_animations_lua.py --check  # shipped animations.lua matches the motion tokens
+          python iarch/cli/render_noctalia.py --check  # shipped config.toml + palettes match the presets
+          python iarch/cli/render_gtk_css.py --check --repo  # shipped GTK sheets match the tokens
+          python iarch/cli/render_kvantum.py --check  # shipped Kvantum theme matches the tokens
+          python iarch/cli/gen_fontconfig.py --check  # shipped fonts.conf matches the tokens
+          python iarch/cli/theme.py apply midnight-glass --dry-run  # the capstone renders every surface together, gates on contrast, writes nothing
+
+      - name: Validate every JSON file in data/ against its schema
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          import jsonschema
+
+          PAIRS = {
+              "data/settings.default.json": "data/schemas/settings.schema.json",
+              "data/contacts.default.json": "data/schemas/contacts.schema.json",
+              "data/keybinds.default.json": "data/schemas/keybinds.schema.json",
+              "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
+              "data/design/tokens.json": "data/schemas/tokens.schema.json",
+              "data/design/noctalia.json": "data/schemas/noctalia.schema.json",
+              "data/design/gtk.json": "data/schemas/gtk.schema.json",
+              "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
+              "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",
+              "data/design/animations.json": "data/schemas/animations.schema.json",
+              "data/licenses.json": "data/schemas/licenses.schema.json",
+              # Colour presets are a family under one schema.
+              **{
+                  p.as_posix(): "data/schemas/preset.schema.json"
+                  for p in sorted(Path("data/design/presets").glob("*.json"))
+              },
+          }
+
+          documents = {p.as_posix() for p in Path("data").rglob("*.json")}
+          schemas = {p.as_posix() for p in Path("data/schemas").glob("*.json")}
+
+          # 1. every schema is itself a valid draft-07 schema
+          for schema_path in sorted(schemas):
+              schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
+              jsonschema.Draft7Validator.check_schema(schema)
+
+          # 2. every document in data/ validates against its schema
+          for document_path, schema_path in sorted(PAIRS.items()):
+              document = json.loads(Path(document_path).read_text(encoding="utf-8"))
+              schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
+              jsonschema.validate(document, schema)
+              print(f"valid: {document_path} against {schema_path}")
+
+          # 3. nothing in data/ is left unvalidated
+          unmapped = documents - schemas - set(PAIRS)
+          assert not unmapped, f"data/ files with no schema: {sorted(unmapped)}"
+
+          # 4. no schema without a document, and no stale mapping
+          for schema_path in sorted(schemas):
+              assert schema_path in PAIRS.values(), f"schema is not used: {schema_path}"
+          for document_path in PAIRS:
+              assert Path(document_path).is_file(), f"missing document: {document_path}"
+
+          print(f"{len(PAIRS)} documents validated, {len(schemas)} schemas checked, "
+                f"{len(documents)} JSON files in data/")
+          PY
+
+      - name: Check every colour preset clears the WCAG contrast gate
+        run: |
+          set -euo pipefail
+          # The same gate iarch-theme runs before it will apply a preset: text
+          # roles at 4.5:1, non-text UI at 3:1. Exit 1 lists the offending pair.
+          python iarch/cli/contrast_check.py --quiet
+          python iarch/cli/contrast_check.py --json > /tmp/contrast.json
+          python - <<'PY'
+          import json
+
+          payload = json.loads(open("/tmp/contrast.json", encoding="utf-8").read())
+          assert payload["ok"], "a preset is below the contrast floor"
+          presets = payload["presets"]
+          expected = {
+              "midnight-glass", "frosted-light", "aurora",
+              "crimson-plasma", "tokyo-night-glass", "mono-ice",
+          }
+          assert set(presets) == expected, f"presets changed: {sorted(set(presets) ^ expected)}"
+          for name, entry in sorted(presets.items()):
+              assert entry["gated"] >= 30, f"{name}: only {entry['gated']} gated pairs"
+              assert not entry["failures"], f"{name}: {entry['failures']}"
+              print(f"{name}: {entry['gated']} gated pairs, "
+                    f"lowest {entry['lowest_gated']}:1")
+          PY
+
+      - name: Validate TOML and palette JSON
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import tomllib
+          from pathlib import Path
+
+          # Every TOML file this repository ships must parse.
+          toml_files = sorted(Path(".config/noctalia").glob("*.toml")) + sorted(Path("profiles").glob("*.toml"))
+          assert toml_files, "no TOML files found where they were expected"
+          parsed = {}
+          for path in toml_files:
+              parsed[path.as_posix()] = tomllib.loads(path.read_text(encoding="utf-8"))
+              print(f"parses: {path}")
+
+          config = parsed[".config/noctalia/config.toml"]
+          palettes = sorted(Path(".config/noctalia/palettes").glob("*.json"))
+          assert len(palettes) == 6, f"one palette per preset, got {[p.name for p in palettes]}"
+          palette = json.loads(Path(".config/noctalia/palettes/iarch-midnight.json").read_text(encoding="utf-8"))
+
+          # The glass profile is the product; these are the keys that make it glass.
+          assert config["theme"]["custom_palette"] == "iarch-midnight"
+          assert config["shell"]["settings_window_translucent"] is True
+          assert config["shell"]["panel"]["transparency_mode"] == "glass"
+          assert config["bar"]["default"]["compositor_blur"] is True
+          assert config["dock"]["enabled"] is True
+          assert config["notification"]["enable_daemon"] is True
+          assert config["audio"]["enable_notification_sounds"] is False
+
+          # The Performance overlay may only touch keys the base profile has.
+          overlay = parsed["profiles/performance.toml"]
+          def flatten(model, prefix=()):
+              flat = {}
+              for key, value in model.items():
+                  path = prefix + (key,)
+                  if isinstance(value, dict):
+                      flat.update(flatten(value, path))
+                  else:
+                      flat[path] = value
+              return flat
+          base, over = flatten(config), flatten(overlay)
+          invented = sorted(".".join(k) for k in over if k not in base)
+          assert not invented, f"overlay invents keys: {invented}"
+          retyped = sorted(".".join(k) for k in over if type(over[k]) is not type(base[k]))
+          assert not retyped, f"overlay changes types: {retyped}"
+
+          fields = {
+              "mPrimary", "mOnPrimary", "mSecondary", "mOnSecondary",
+              "mTertiary", "mOnTertiary", "mError", "mOnError",
+              "mSurface", "mOnSurface", "mSurfaceVariant",
+              "mOnSurfaceVariant", "mOutline", "mShadow", "mHover", "mOnHover"
+          }
+          assert set(palette["dark"]) >= fields
+          assert set(palette["light"]) >= fields
+          # Every shipped palette, not just the default one: iarch-theme apply
+          # <preset> points theme.custom_palette at that preset's own file.
+          for path in palettes:
+              document = json.loads(path.read_text(encoding="utf-8"))
+              assert set(document) >= {"dark", "light"}, path.name
+              for variant in ("dark", "light"):
+                  assert set(document[variant]) >= fields, (path.name, variant)
+                  for key in fields:
+                      value = document[variant][key]
+                      assert isinstance(value, str) and value.startswith("#") and len(value) == 7, \
+                          (path.name, variant, key, value)
+
+          print("TOML parsed; glass profile, performance overlay and all six palettes passed.")
+          PY
+
+      - name: Check keybindings were added without replacing current shortcuts
+        run: |
+          set -euo pipefail
+          grep -F 'SUPER + I' .config/hypr/keybind.lua
+          grep -F 'SUPER + SHIFT + N' .config/hypr/keybind.lua
+          grep -F 'SUPER + SHIFT + A' .config/hypr/keybind.lua
+          grep -F 'SUPER + SHIFT + W' .config/hypr/keybind.lua
+          grep -F 'SUPER + SHIFT + B' .config/hypr/keybind.lua
+
+      - name: Check the legacy v4 payload stayed out of the v5 payload
+        run: |
+          set -euo pipefail
+          # The v4-only files live under legacy/config/ now; nothing there may
+          # leak into the tree the v5 installer deploys.
+          test ! -e .config/hypr/hyprland.conf
+          test ! -e .config/noctalia/settings.json
+          test -f legacy/config/hypr/hyprland.conf
+          test -f legacy/config/noctalia/settings.json
+
+      - name: Check no submodule or gitlink crept in
+        run: |
+          set -euo pipefail
+          # A .config/kitty/kitty-themes submodule used to be missing rather than
+          # present; either way a gitlink makes a fresh checkout incomplete for
+          # anyone who clones without --recurse-submodules.
+          gitlinks=$(git ls-tree -r HEAD | awk '$1 == "160000" { print $4 }')
+          test -z "$gitlinks" || { echo "gitlinks found:"; echo "$gitlinks"; exit 1; }
+          test ! -e .gitmodules
+          echo "no submodules, no gitlinks"
+
+      - name: Check the checkout is still clean after all of that
+        run: |
+          set -euo pipefail
+          # Nothing a check does may modify a tracked file: the generated files
+          # are committed, and a dirty tree here means someone edited an output
+          # instead of its source.
+          git diff --exit-code
+          git status --porcelain

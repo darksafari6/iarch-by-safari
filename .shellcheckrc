@@ -1,0 +1,28 @@
+# ShellCheck configuration for iArch by Safari.
+#
+# The CI gate is:
+#     shellcheck --severity=warning -- $(git ls-files '*.sh')
+# Errors and warnings must be zero. Info and style findings are visible when you
+# run shellcheck locally but are deliberately not gating: several of them ask for
+# quoting styles this repository's generated-configuration code cannot use.
+#
+# Exceptions are listed inline, next to the line they apply to, each with its
+# reason in the same comment. Nothing is disabled repository-wide, because a
+# global disable hides the finding in files that have not been written yet.
+# The exceptions in use today:
+#
+#   SC2034  install.sh:541, fedora_install.sh:449, legacy/legacy-install.sh:444
+#           Palette entries are defined as one table and only some are read by
+#           the branch that follows; splitting the table would hide the pairing.
+#   SC2317  lib/iarch-common.sh:27
+#           The usage function is reached only when the library is executed
+#           instead of sourced, which shellcheck cannot see from a sourced file.
+#   SC2016  tests/session-install.sh:71
+#   SC2088  tests/session-install.sh:73
+#           The test asserts that a literal "$HOME" and a literal "~/..." string
+#           appear in a generated file. Expanding them would test nothing.
+#
+# `shell` is stated here so files that are sourced rather than executed are still
+# analysed as bash, and so a missing or unusual shebang cannot silently switch
+# the dialect (POSIX sh would flag every bash array in this repository).
+shell=bash

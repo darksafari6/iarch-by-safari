@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage the minimaOS Noctalia v5 profile or restore an explicit backup.
+"""Stage the iArch by Safari Noctalia v5 profile or restore an explicit backup.
 
 This changes Noctalia configuration only. Run outside the active shell session.
 """
@@ -78,7 +78,7 @@ def apply(config_dir, binary):
         if palette_dir.is_symlink() or (palette_dir.exists() and not palette_dir.is_dir()):
             raise ValueError('Refusing a symlink or non-directory palettes path')
         palette_dir.mkdir(exist_ok=True)
-        for relative in ('config.toml', 'palettes/minimaOS.json'):
+        for relative in ('config.toml', 'palettes/iarch-midnight.json'):
             dest = stage / relative
             if dest.is_symlink() or (dest.exists() and not dest.is_file()):
                 raise ValueError(f'Refusing unsafe destination: {relative}')
@@ -125,7 +125,7 @@ def main():
         config_dir = config_home()
         print('Config home:', config_dir)
         print('The existing Noctalia directory will be backed up; other directories and GUI state are not changed.')
-        print('Run from outside the active Noctalia session. The profile replaces config.toml and minimaOS.json.')
+        print('Run from outside the active shell session. The profile replaces config.toml and palettes/iarch-midnight.json.')
         if input('Continue? [y/N] ').lower() not in ('y', 'yes'):
             print('Cancelled; nothing changed.')
             return 0

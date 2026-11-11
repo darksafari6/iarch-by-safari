@@ -1,0 +1,787 @@
+{#-
+  iArch by Safari — GTK 3 glass overlay.
+  Copyright (C) 2026 Safari — GPL-3.0-or-later
+
+  Rendered by iarch/cli/render_gtk_css.py into ~/.config/gtk-3.0/gtk.css.
+
+  GTK 3 is not GTK 4 with the serial number filed off, and this sheet is written
+  against what {{ verified.gtk3 }} actually parses, per data/design/gtk.json:
+
+  * no backdrop-filter and no filter at all, so the frosted look here is a
+    translucent background-color and the blur the compositor applies through the
+    window rules in .config/hypr/generated/glass.lua, not a filter in this file;
+  * no transform, so a pressed button gets a darker fill instead of a scale;
+  * no @media, so there is no prefers-reduced-motion query to answer; durations
+    come from the intensity, and the Performance intensity sets them low;
+  * :focus-visible does not exist, so the focus ring hangs off :focus;
+  * :hover and :disabled exist as aliases, but :prelight and :insensitive are
+    the spellings older themes use, so both are listed;
+  * menu and menuitem are the real nodes here, where GTK 4 uses popover and
+    modelbutton.
+
+  GTK CSS has no !important at either version, so this file wins on cascade
+  order: it is parsed after the theme.
+-#}
+{%- macro alpha(color, value) -%}alpha({{ color }}, {{ value }}){%- endmacro -%}
+{%- macro ring(width) -%}
+  outline-color: {{ alpha(c.accent, 0.55) }};
+  outline-style: solid;
+  outline-width: {{ width }}px;
+  outline-offset: -{{ width }}px;
+{%- endmacro -%}
+{%- macro transition(props, duration, easing) -%}
+  transition-property: {{ props }};
+  transition-duration: {{ duration }}ms;
+  transition-timing-function: {{ easing }}
+{%- endmacro -%}
+{%- macro shadow(y, blur, alpha_value) -%}0 {{ y }}px {{ blur }}px {{ alpha(c.shadow, alpha_value) }}{%- endmacro -%}
+
+/* ---- the roles this sheet uses, defined once ---------------------------- */
+@define-color iarch_accent {{ c.accent }};
+@define-color iarch_on_accent {{ c.on_accent }};
+@define-color iarch_surface {{ c.surface }};
+@define-color iarch_border {{ alpha(c.outline_variant, g.border_alpha) }};
+@define-color iarch_highlight {{ alpha('#ffffff', g.highlight_alpha) }};
+
+/* ---- windows, header bars and the client-side decoration --------------- */
+
+.background {
+  color: {{ c.on_surface }};
+}
+
+window.background,
+.background.csd {
+  background-color: {{ alpha(c.background, o.window) }};
+  {{ transition(t.fill, m.normal, m.standard) }};
+}
+
+window.background.solid-csd {
+  background-color: {{ c.background }};
+}
+
+decoration {
+  border-radius: {{ r.window }}px {{ r.window }}px 0 0;
+  box-shadow: {{ shadow(sh.y, sh.blur, sh.alpha) }},
+              0 0 0 {{ border }}px {{ alpha(c.outline_variant, g.border_alpha) }};
+  margin: {{ sh.margin }}px;
+}
+
+decoration:backdrop {
+  box-shadow: {{ shadow(sh.y, sh.blur, sh.backdrop_alpha) }},
+              0 0 0 {{ border }}px {{ alpha(c.outline_variant, g.backdrop_border_alpha) }};
+}
+
+.maximized decoration,
+.fullscreen decoration,
+.tiled decoration {
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+}
+
+headerbar,
+.titlebar {
+  background-color: {{ alpha(c.surface, o.headerbar) }};
+  background-image: linear-gradient(to bottom,
+                      {{ alpha('#ffffff', g.highlight_alpha) }},
+                      {{ alpha('#ffffff', 0) }} {{ sh.headerbar_highlight_stop }}px);
+  border-bottom: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.window }}px {{ r.window }}px 0 0;
+  box-shadow: none;
+  min-height: {{ sh.headerbar_min_height }}px;
+  {{ transition(t.fill_border, m.normal, m.standard) }};
+}
+
+headerbar:backdrop,
+.titlebar:backdrop {
+  background-color: {{ alpha(c.surface, o.window) }};
+  color: {{ c.text_disabled }};
+}
+
+headerbar .title {
+  color: {{ c.on_surface }};
+  font-weight: {{ sh.title_weight }};
+}
+
+headerbar .subtitle {
+  color: {{ c.on_surface_variant }};
+  font-size: {{ sh.subtitle_size }}px;
+}
+
+/* ---- sidebars: more opaque than the window they sit in ----------------- */
+
+.sidebar,
+placessidebar,
+stacksidebar {
+  background-color: {{ alpha(c.surface, o.sidebar) }};
+  border-right: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+.sidebar:dir(rtl),
+placessidebar:dir(rtl) {
+  border-right: none;
+  border-left: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+}
+
+.sidebar:backdrop {
+  background-color: {{ alpha(c.surface, o.window) }};
+}
+
+.sidebar row,
+placessidebar row {
+  border-radius: {{ r.button }}px;
+  padding: {{ sp.row_y }}px {{ sp.row_x }}px;
+}
+
+.sidebar row:hover,
+placessidebar row:hover {
+  background-color: {{ alpha(c.surface_variant, g.tint_alpha) }};
+}
+
+.sidebar row:selected,
+placessidebar row:selected {
+  background-color: {{ alpha(c.accent, sh.tab_selected_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+/* ---- buttons ----------------------------------------------------------- */
+
+button {
+  background-color: {{ alpha(c.surface_variant, o.button) }};
+  background-image: linear-gradient(to bottom,
+                      {{ alpha('#ffffff', g.highlight_alpha) }},
+                      {{ alpha('#ffffff', 0) }} {{ sh.button_highlight_stop }}px);
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.button }}px;
+  color: {{ c.on_surface }};
+  padding: {{ sp.button_y }}px {{ sp.button_x }}px;
+  box-shadow: {{ shadow(1, 2, sh.low_alpha) }};
+  {{ transition(t.press, m.fast, m.standard) }};
+}
+
+button:hover,
+button:prelight {
+  background-color: {{ alpha(c.surface_variant, o.card) }};
+  border-color: {{ alpha(c.outline_variant, g.strong_border_alpha) }};
+}
+
+button:active,
+button:checked {
+  background-color: {{ alpha(c.surface_variant, o.sidebar) }};
+  box-shadow: none;
+}
+
+button:focus {
+  {{ ring(border) }}
+}
+
+button:disabled,
+button:insensitive {
+  background-color: {{ alpha(c.surface_variant, o.window) }};
+  background-image: none;
+  border-color: {{ alpha(c.outline_variant, g.backdrop_border_alpha) }};
+  box-shadow: none;
+  color: {{ c.text_disabled }};
+  opacity: {{ sh.disabled_opacity }};
+}
+
+button.flat {
+  background-color: {{ alpha(c.surface, 0) }};
+  background-image: none;
+  border-color: {{ alpha(c.outline_variant, 0) }};
+  box-shadow: none;
+}
+
+button.flat:hover {
+  background-color: {{ alpha(c.surface_variant, g.tint_alpha) }};
+}
+
+button.flat:active,
+button.flat:checked {
+  background-color: {{ alpha(c.surface_variant, g.tint_alpha_strong) }};
+}
+
+button.flat:disabled {
+  background-color: {{ alpha(c.surface, 0) }};
+  color: {{ c.text_disabled }};
+  opacity: {{ sh.disabled_opacity }};
+}
+
+button.circular {
+  border-radius: {{ r.pill_clamped }}px;
+  padding: {{ sp.circular }}px;
+  min-width: {{ sh.circular_min }}px;
+  min-height: {{ sh.circular_min }}px;
+}
+
+.linked > button {
+  border-radius: 0;
+  border-right-width: 0;
+}
+
+.linked > button:first-child {
+  border-radius: {{ r.button }}px 0 0 {{ r.button }}px;
+}
+
+.linked > button:last-child {
+  border-radius: 0 {{ r.button }}px {{ r.button }}px 0;
+  border-right-width: {{ border }}px;
+}
+
+.linked > button:only-child {
+  border-radius: {{ r.button }}px;
+  border-right-width: {{ border }}px;
+}
+
+button.suggested-action {
+  background-color: {{ alpha(c.accent, o.button) }};
+  background-image: linear-gradient(to bottom,
+                      {{ alpha('#ffffff', g.highlight_alpha) }},
+                      {{ alpha('#ffffff', 0) }} {{ sh.button_highlight_stop }}px);
+  border-color: {{ alpha(c.accent, g.strong_border_alpha) }};
+  color: {{ c.on_accent }};
+  box-shadow: 0 0 {{ sh.glow_px }}px {{ alpha(c.accent, sh.glow_alpha) }},
+              {{ shadow(1, 2, sh.low_alpha) }};
+}
+
+button.suggested-action:hover {
+  background-color: {{ alpha(c.accent, o.card) }};
+  box-shadow: 0 0 {{ sh.glow_hover_px }}px {{ alpha(c.accent, sh.glow_hover_alpha) }};
+}
+
+button.suggested-action:active {
+  background-color: {{ alpha(c.accent, o.sidebar) }};
+}
+
+button.suggested-action:disabled {
+  background-color: {{ alpha(c.accent, sh.disabled_accent_alpha) }};
+  background-image: none;
+  box-shadow: none;
+  color: {{ c.text_disabled }};
+}
+
+button.destructive-action {
+  background-color: {{ alpha(c.danger, o.button) }};
+  border-color: {{ alpha(c.danger, g.strong_border_alpha) }};
+  color: {{ c.on_accent }};
+}
+
+button.destructive-action:hover {
+  background-color: {{ alpha(c.danger, o.card) }};
+}
+
+button.destructive-action:active {
+  background-color: {{ alpha(c.danger, o.sidebar) }};
+}
+
+button.destructive-action:disabled {
+  background-color: {{ alpha(c.danger, sh.disabled_accent_alpha) }};
+  box-shadow: none;
+  color: {{ c.text_disabled }};
+}
+
+toolbar button,
+.toolbar button,
+toolbutton > button {
+  background-color: {{ alpha(c.surface, 0) }};
+  background-image: none;
+  border-color: {{ alpha(c.outline_variant, 0) }};
+  box-shadow: none;
+}
+
+toolbar button:hover,
+.toolbar button:hover,
+toolbutton > button:hover {
+  background-color: {{ alpha(c.surface_variant, g.tint_alpha) }};
+}
+
+toolbar,
+.toolbar {
+  background-color: {{ alpha(c.surface, o.headerbar) }};
+  border-bottom: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  box-shadow: none;
+}
+
+/* ---- text entry and search --------------------------------------------- */
+
+entry,
+spinbutton {
+  background-color: {{ alpha(c.surface_variant, o.input) }};
+  background-image: none;
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.input }}px;
+  color: {{ c.on_surface }};
+  caret-color: {{ c.accent }};
+  padding: {{ sp.entry_y }}px {{ sp.entry_x }}px;
+  {{ transition(t.entry, m.fast, m.standard) }};
+}
+
+entry:hover,
+spinbutton:hover {
+  background-color: {{ alpha(c.surface_variant, o.button) }};
+  border-color: {{ alpha(c.outline_variant, g.strong_border_alpha) }};
+}
+
+entry:focus,
+spinbutton:focus {
+  border-color: {{ alpha(c.accent, g.strong_border_alpha) }};
+  {{ ring(border) }}
+}
+
+entry:disabled,
+spinbutton:disabled,
+entry:insensitive {
+  background-color: {{ alpha(c.surface_variant, o.window) }};
+  color: {{ c.text_disabled }};
+  opacity: {{ sh.disabled_opacity }};
+}
+
+entry text selection,
+textview text selection,
+text selection,
+.view text selection {
+  background-color: {{ alpha(c.accent, sh.selection_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+searchbar > revealer > box {
+  background-color: {{ alpha(c.surface, o.headerbar) }};
+  border-bottom: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  box-shadow: none;
+}
+
+/* ---- switch, check box and radio button -------------------------------- */
+
+switch {
+  background-color: {{ alpha(c.surface_variant, o.button) }};
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.pill_clamped }}px;
+  color: {{ c.on_surface_variant }};
+  {{ transition(t.indicator, m.fast, m.standard) }};
+}
+
+switch:checked {
+  background-color: {{ alpha(c.accent, sh.switch_checked_alpha) }};
+  border-color: {{ alpha(c.accent, g.strong_border_alpha) }};
+  color: {{ c.on_accent }};
+}
+
+switch:disabled {
+  opacity: {{ sh.disabled_opacity }};
+}
+
+switch slider {
+  background-color: {{ c.surface }};
+  border-radius: {{ r.pill_clamped }}px;
+  box-shadow: {{ shadow(1, 3, sh.low_alpha) }};
+}
+
+switch:checked slider {
+  background-color: {{ c.on_accent }};
+}
+
+check,
+radio {
+  background-color: {{ alpha(c.surface_variant, o.input) }};
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.strong_border_alpha) }};
+  color: {{ c.on_surface_variant }};
+  min-width: {{ sh.indicator_min }}px;
+  min-height: {{ sh.indicator_min }}px;
+  {{ transition(t.indicator, m.fast, m.standard) }};
+}
+
+check {
+  border-radius: {{ r.check }}px;
+}
+
+radio {
+  border-radius: {{ r.pill_clamped }}px;
+}
+
+check:hover,
+radio:hover {
+  border-color: {{ alpha(c.accent, g.strong_border_alpha) }};
+}
+
+check:checked,
+check:inconsistent,
+check:indeterminate,
+radio:checked {
+  background-color: {{ alpha(c.accent, sh.indicator_checked_alpha) }};
+  border-color: {{ alpha(c.accent, g.strong_border_alpha) }};
+  color: {{ c.on_accent }};
+}
+
+check:focus,
+radio:focus,
+switch:focus {
+  {{ ring(border) }}
+}
+
+check:disabled,
+radio:disabled {
+  opacity: {{ sh.disabled_opacity }};
+}
+
+/* ---- scales, progress bars and level bars ------------------------------ */
+
+scale trough {
+  background-color: {{ alpha(c.surface_variant, o.button) }};
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.pill_clamped }}px;
+  min-height: {{ sh.scale_trough }}px;
+  min-width: {{ sh.scale_trough }}px;
+}
+
+scale highlight {
+  background-color: {{ alpha(c.accent, sh.fill_alpha) }};
+  border-radius: {{ r.pill_clamped }}px;
+}
+
+scale slider {
+  background-color: {{ c.surface }};
+  border: {{ border }}px solid {{ alpha(c.accent, g.strong_border_alpha) }};
+  border-radius: {{ r.pill_clamped }}px;
+  box-shadow: {{ shadow(1, 3, sh.low_alpha) }};
+  min-width: {{ sh.scale_slider }}px;
+  min-height: {{ sh.scale_slider }}px;
+  {{ transition(t.press, m.fast, m.standard) }};
+}
+
+scale slider:hover {
+  background-color: {{ alpha(c.accent, sh.slider_hover_alpha) }};
+}
+
+scale:disabled trough,
+scale:disabled highlight,
+scale:disabled slider {
+  opacity: {{ sh.disabled_opacity }};
+}
+
+progressbar trough {
+  background-color: {{ alpha(c.surface_variant, o.button) }};
+  border-radius: {{ r.pill_clamped }}px;
+  min-height: {{ sh.progress_min }}px;
+}
+
+progressbar progress {
+  background-color: {{ alpha(c.accent, sh.fill_alpha) }};
+  border-radius: {{ r.pill_clamped }}px;
+}
+
+levelbar block {
+  background-color: {{ alpha(c.accent, sh.fill_alpha) }};
+  border-radius: {{ r.check }}px;
+}
+
+levelbar block.empty {
+  background-color: {{ alpha(c.surface_variant, o.button) }};
+}
+
+/* ---- scroll bars ------------------------------------------------------- */
+
+scrollbar {
+  background-color: {{ alpha(c.surface, 0) }};
+  border: none;
+  padding: {{ sp.scrollbar }}px;
+}
+
+scrollbar slider {
+  background-color: {{ alpha(c.on_surface_variant, sh.scrollbar_alpha) }};
+  border: none;
+  border-radius: {{ r.pill_clamped }}px;
+  min-width: {{ sh.scrollbar_min }}px;
+  min-height: {{ sh.scrollbar_min }}px;
+  {{ transition('background-color', m.fast, m.standard) }};
+}
+
+scrollbar slider:hover {
+  background-color: {{ alpha(c.on_surface_variant, sh.scrollbar_hover_alpha) }};
+}
+
+scrollbar slider:active {
+  background-color: {{ alpha(c.accent, sh.fill_alpha) }};
+}
+
+junction,
+scrolledwindow overshoot.top,
+scrolledwindow overshoot.bottom,
+scrolledwindow overshoot.left,
+scrolledwindow overshoot.right {
+  background-color: {{ alpha(c.surface, 0) }};
+  background-image: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* ---- notebooks --------------------------------------------------------- */
+
+notebook > header {
+  background-color: {{ alpha(c.surface, o.headerbar) }};
+  border: none;
+  box-shadow: inset 0 -{{ border }}px 0 {{ alpha(c.outline_variant, g.border_alpha) }};
+}
+
+notebook > header > tabs > tab {
+  background-color: {{ alpha(c.surface, 0) }};
+  border: {{ border }}px solid {{ alpha(c.outline_variant, 0) }};
+  border-radius: {{ r.button }}px;
+  color: {{ c.on_surface_variant }};
+  margin: {{ sp.tab }}px;
+  padding: {{ sp.tab_y }}px {{ sp.tab_x }}px;
+  {{ transition(t.tab, m.fast, m.standard) }};
+}
+
+notebook > header > tabs > tab:hover {
+  background-color: {{ alpha(c.surface_variant, g.tint_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+notebook > header > tabs > tab:checked {
+  background-color: {{ alpha(c.accent, sh.tab_selected_alpha) }};
+  border-color: {{ alpha(c.accent, g.border_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+notebook > header > tabs > tab:focus {
+  {{ ring(border) }}
+}
+
+notebook > stack {
+  background-color: {{ alpha(c.background, 0) }};
+}
+
+/* ---- lists, rows and trees --------------------------------------------- */
+
+list {
+  background-color: {{ alpha(c.surface, 0) }};
+  border-color: {{ alpha(c.outline_variant, g.border_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+row {
+  border-radius: {{ r.button }}px;
+  padding: {{ sp.row_y }}px {{ sp.row_x }}px;
+  {{ transition(t.press, m.fast, m.standard) }};
+}
+
+row:hover {
+  background-color: {{ alpha(c.surface_variant, g.tint_alpha) }};
+}
+
+row:selected,
+row:selected:hover {
+  background-color: {{ alpha(c.accent, sh.tab_selected_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+row:disabled {
+  color: {{ c.text_disabled }};
+  opacity: {{ sh.disabled_opacity }};
+}
+
+row:focus {
+  {{ ring(border) }}
+}
+
+list > row,
+.frame {
+  background-color: {{ alpha(c.surface, o.card) }};
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.card }}px;
+  box-shadow: {{ shadow(1, 3, sh.low_alpha) }};
+}
+
+treeview.view,
+iconview,
+.view {
+  background-color: {{ alpha(c.surface, o.card) }};
+  color: {{ c.on_surface }};
+}
+
+treeview.view:selected,
+iconview:selected,
+.view:selected {
+  background-color: {{ alpha(c.accent, sh.tab_selected_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+separator {
+  background-color: {{ alpha(c.outline_variant, g.border_alpha) }};
+  min-width: {{ border }}px;
+  min-height: {{ border }}px;
+}
+
+/* ---- popovers, menus and combo boxes ----------------------------------- */
+
+popover.background,
+.menu {
+  background-color: {{ alpha(c.surface, o.popover) }};
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.card }}px;
+  box-shadow: {{ shadow(sh.y, sh.popover_blur, sh.popover_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+popover > arrow {
+  background-color: {{ alpha(c.surface, o.popover) }};
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+}
+
+menubar {
+  background-color: {{ alpha(c.surface, o.headerbar) }};
+  border-bottom: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  box-shadow: none;
+}
+
+menubar > menuitem,
+menu menuitem,
+.menu menuitem,
+popover menuitem {
+  border-radius: {{ r.button }}px;
+  color: {{ c.on_surface }};
+  padding: {{ sp.menu_y }}px {{ sp.menu_x }}px;
+  {{ transition(t.tab, m.fast, m.standard) }};
+}
+
+menubar > menuitem:hover,
+menu menuitem:hover,
+.menu menuitem:hover,
+popover menuitem:hover {
+  background-color: {{ alpha(c.surface_variant, g.tint_alpha_strong) }};
+  color: {{ c.on_surface }};
+}
+
+menu menuitem:disabled,
+.menu menuitem:disabled,
+menubar > menuitem:disabled {
+  color: {{ c.text_disabled }};
+  opacity: {{ sh.disabled_opacity }};
+}
+
+menu separator,
+.menu separator {
+  background-color: {{ alpha(c.outline_variant, g.border_alpha) }};
+  min-height: {{ border }}px;
+}
+
+combobox > box > button {
+  border-radius: {{ r.input }}px;
+}
+
+/* ---- tooltips, notifications and dialogs ------------------------------- */
+
+tooltip.background {
+  background-color: {{ alpha(c.surface_variant, o.tooltip) }};
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.button }}px;
+  box-shadow: {{ shadow(1, 4, sh.low_alpha) }};
+  color: {{ c.on_surface }};
+  padding: {{ sp.tooltip_y }}px {{ sp.tooltip_x }}px;
+}
+
+.app-notification,
+.app-notification.frame {
+  background-color: {{ alpha(c.surface, o.toast) }};
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.card }}px;
+  box-shadow: {{ shadow(sh.y, sh.popover_blur, sh.popover_alpha) }};
+  color: {{ c.on_surface }};
+  padding: {{ sp.toast_y }}px {{ sp.toast_x }}px;
+}
+
+infobar {
+  background-color: {{ alpha(c.surface, o.toast) }};
+  border: none;
+  border-bottom: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  color: {{ c.on_surface }};
+}
+
+infobar.error {
+  background-color: {{ alpha(c.danger, sh.banner_alpha) }};
+}
+
+infobar.warning {
+  background-color: {{ alpha(c.warning, sh.banner_alpha) }};
+}
+
+infobar.question {
+  background-color: {{ alpha(c.accent, sh.banner_alpha) }};
+}
+
+messagedialog.background,
+window.background.message-dialog {
+  background-color: {{ alpha(c.background, o.dialog) }};
+  border-radius: {{ r.window }}px;
+  box-shadow: {{ shadow(sh.y, sh.dialog_blur, sh.dialog_alpha) }};
+}
+
+messagedialog .titlebar {
+  background-color: {{ alpha(c.surface, o.dialog) }};
+  border-radius: {{ r.window }}px {{ r.window }}px 0 0;
+}
+
+/* ---- text views, frames and the remaining surfaces --------------------- */
+
+textview,
+textview > text {
+  background-color: {{ alpha(c.surface, o.card) }};
+  caret-color: {{ c.accent }};
+  color: {{ c.on_surface }};
+}
+
+frame,
+frame > border {
+  border: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  border-radius: {{ r.card }}px;
+}
+
+expander title {
+  border-radius: {{ r.button }}px;
+  color: {{ c.on_surface }};
+}
+
+expander title:hover {
+  background-color: {{ alpha(c.surface_variant, g.tint_alpha) }};
+}
+
+spinner {
+  color: {{ c.accent }};
+}
+
+label.dim-label,
+.dim-label {
+  color: {{ c.on_surface_variant }};
+  opacity: {{ sh.dim_opacity }};
+}
+
+*:link {
+  color: {{ c.accent }};
+}
+
+*:link:visited {
+  color: {{ c.secondary }};
+}
+
+image,
+label {
+  color: inherit;
+}
+
+actionbar > revealer > box {
+  background-color: {{ alpha(c.surface, o.headerbar) }};
+  border-top: {{ border }}px solid {{ alpha(c.outline_variant, g.border_alpha) }};
+  box-shadow: none;
+}
+
+paned > separator {
+  background-color: {{ alpha(c.outline_variant, g.border_alpha) }};
+  min-width: {{ border }}px;
+  min-height: {{ border }}px;
+}
+
+assistant .sidebar {
+  background-color: {{ alpha(c.surface, o.sidebar) }};
+  border-top: none;
+}

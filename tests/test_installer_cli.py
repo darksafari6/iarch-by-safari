@@ -46,7 +46,7 @@ target=${@: -1}; mkdir -p "$target/.git"; touch "$target/shell.qml"
         path.chmod(0o755)
 
     def run_installer(self, *args, input=''):
-        return subprocess.run([str(REPO / 'install-v4-session.sh'), *args], input=input, text=True,
+        return subprocess.run([str(REPO / 'legacy/install-v4-session.sh'), *args], input=input, text=True,
                               capture_output=True, env=self.env, timeout=20)
 
     def test_automation_flags_verbose_theme_and_welcome(self):
@@ -131,7 +131,7 @@ target=${@: -1}; mkdir -p "$target/.git"; touch "$target/shell.qml"
         env.pop('NO_COLOR', None)
         master, slave = pty.openpty()
         try:
-            process = subprocess.Popen([str(REPO / 'install-v4-session.sh'), '--skip-packages', '--theme', 'tokyo', '--no-welcome'],
+            process = subprocess.Popen([str(REPO / 'legacy/install-v4-session.sh'), '--skip-packages', '--theme', 'tokyo', '--no-welcome'],
                                        stdin=slave, stdout=slave, stderr=slave, env=env, close_fds=True)
             os.close(slave)
             slave = -1
@@ -169,7 +169,7 @@ target=${@: -1}; mkdir -p "$target/.git"; touch "$target/shell.qml"
     def test_interactive_menu_reprompts_and_applies_choices(self):
         master, slave = pty.openpty()
         try:
-            process = subprocess.Popen([str(REPO / 'install-v4-session.sh')], stdin=slave, stdout=slave,
+            process = subprocess.Popen([str(REPO / 'legacy/install-v4-session.sh')], stdin=slave, stdout=slave,
                                        stderr=slave, env=self.env, close_fds=True)
             os.close(slave)
             slave = -1

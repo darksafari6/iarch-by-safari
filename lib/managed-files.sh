@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Classify an installed system file without changing it.
 # Usage: managed_file_state SOURCE TARGET -> absent|identical|symlink|unmanaged|modified|missing-source
 managed_file_state() {

@@ -1,0 +1,491 @@
+{
+  "_generated": "GENERATED FILE - do not edit by hand. Source: branding/notices.json. Regenerate: python3 tools/notices.py --write",
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "notices_version": 2,
+  "updated": "2026-11-10",
+  "license_information_verified": "2026-11-10",
+  "verification_method": "Upstream project metadata and LICENSE/COPYING files read through the GitHub REST API on the tag or branch named in each entry: first pass 2026-11-09 (compositor, shell, terminal, prompt, system information, screenshot annotation, audio, GTK and icon theme projects), extended 2026-11-10 for the typefaces, cursor theme and Papirus Folders. Where an upstream could not be reached, the entry says TODO(verify) and points at docs/UNVERIFIED.md instead of guessing.",
+  "product": {
+    "name": "iArch by Safari",
+    "license": "GPL-3.0-or-later",
+    "license_file": "LICENSE.txt",
+    "maintainer": "Safari",
+    "repository": "https://github.com/darksafari6/iarch-by-safari",
+    "notices_document": "THIRD_PARTY_NOTICES.md"
+  },
+  "components": [
+    {
+      "id": "adw-gtk3",
+      "name": "adw-gtk3",
+      "kind": "runtime-dependency",
+      "license": "LGPL-2.1-only",
+      "unverified": false,
+      "purpose": "GTK 3 theme used to match the shell look in classic GTK applications.",
+      "copyright": "See upstream source headers",
+      "upstream": "https://github.com/lassekongo83/adw-gtk3",
+      "used_by": [
+        "legacy/config/gtk-3.0/settings.ini",
+        "install.sh",
+        "fedora_install.sh"
+      ],
+      "open_items": []
+    },
+    {
+      "id": "appearance-packages",
+      "name": "Fonts offered by the installer whose licenses were not verified",
+      "kind": "runtime-dependency",
+      "license": "TODO(verify)",
+      "unverified": true,
+      "purpose": "ttf-symbola and ttf-ms-fonts, installed by the printer-support step of the Arch installer.",
+      "copyright": "TODO(verify)",
+      "upstream": "ttf-ms-fonts is an AUR package of Microsoft's core fonts; ttf-symbola ships the Symbola face by George Douros.",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "Neither license could be read from a reachable upstream: ttf-ms-fonts redistributes fonts under Microsoft's own end-user terms and is not open source, and Symbola's terms were not published in a place this repository could verify. Both are installed only when the user opts into printer support, and nothing in the session configuration requires them.",
+      "open_items": [
+        "TP-12"
+      ]
+    },
+    {
+      "id": "bibata-cursor",
+      "name": "Bibata cursor theme",
+      "kind": "runtime-dependency",
+      "license": "GPL-3.0-only",
+      "unverified": false,
+      "purpose": "Pointer theme the session exports to Hyprland, XWayland and Qt.",
+      "copyright": "Copyright (c) 2018 Abdurahman",
+      "upstream": "https://github.com/ful1e5/Bibata_Cursor",
+      "used_by": [
+        ".config/hypr/themes/theme.lua",
+        "legacy/config/gtk-3.0/settings.ini"
+      ],
+      "notes": "Bibata-Modern-Classic at size 24 is set through HYPRCURSOR_THEME, XCURSOR_THEME and QT_CURSOR_THEME. Arch's install.sh installs bibata-cursor-theme (line 424); Fedora's package is added but its name is unverified (TP-18).",
+      "open_items": [
+        "TP-18"
+      ]
+    },
+    {
+      "id": "chaotic-aur",
+      "name": "Chaotic-AUR",
+      "kind": "infrastructure",
+      "license": "Service terms of the operator",
+      "unverified": false,
+      "purpose": "Third-party Arch repository and keyring enabled by the Arch installer for prebuilt AUR packages.",
+      "copyright": "Chaotic-AUR maintainers",
+      "upstream": "https://aur.chaotic.cx/",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "The installer edits /etc/pacman.conf and imports the signing key. Review before running; the package builds come from third parties.",
+      "open_items": [
+        "TP-05"
+      ]
+    },
+    {
+      "id": "dejavu-fonts",
+      "name": "DejaVu fonts",
+      "kind": "runtime-dependency",
+      "license": "Bitstream Vera license; DejaVu changes are in the public domain",
+      "unverified": false,
+      "purpose": "Wide-coverage fallback typeface installed by the Arch installer (ttf-dejavu).",
+      "copyright": "Fonts are (c) Bitstream; glyphs imported from Arev fonts are (c) Tavmjong Bah",
+      "upstream": "https://github.com/dejavu-fonts/dejavu-fonts",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "License read from the first lines of the upstream LICENSE file on 2026-11-10.",
+      "open_items": []
+    },
+    {
+      "id": "fastfetch",
+      "name": "fastfetch",
+      "kind": "runtime-dependency",
+      "license": "MIT",
+      "unverified": false,
+      "purpose": "System information display used in the terminal.",
+      "copyright": "Copyright (c) 2021-2023 Linus Dierheimer; Copyright (c) 2022-2026 Carter Li",
+      "upstream": "https://github.com/fastfetch-cli/fastfetch",
+      "used_by": [
+        ".config/fastfetch/config.jsonc"
+      ],
+      "open_items": []
+    },
+    {
+      "id": "fastfetch-logo-assets",
+      "name": "fastfetch ASCII logo files",
+      "kind": "asset",
+      "license": "TODO(verify)",
+      "unverified": true,
+      "purpose": "Selectable artwork for the system information display.",
+      "copyright": "TODO(verify)",
+      "used_by": [
+        ".config/fastfetch/logo/"
+      ],
+      "notes": "Seven .icon files of artwork derived from anime franchises. Authorship and redistribution rights are not established.",
+      "open_items": [
+        "TP-04"
+      ]
+    },
+    {
+      "id": "fish",
+      "name": "fish shell",
+      "kind": "runtime-dependency",
+      "license": "GPL-2.0-only",
+      "unverified": false,
+      "purpose": "Interactive shell used by the terminal profile.",
+      "copyright": "Copyright (C) 2005-2009 Axel Liljencrantz and fish-shell contributors",
+      "upstream": "https://github.com/fish-shell/fish-shell",
+      "used_by": [
+        ".config/fish/config.fish"
+      ],
+      "notes": "Upstream COPYING also covers components under other licenses; see that file for the authoritative list.",
+      "open_items": []
+    },
+    {
+      "id": "gitlab-minimadots",
+      "name": "The original dotfiles this repository started from",
+      "kind": "provenance",
+      "license": "GPL-3.0-or-later (this repository's own earlier publication)",
+      "unverified": false,
+      "purpose": "Safari's personal Arch Linux dotfiles, published on GitLab before this repository, under the names minimaLinux and minimaDots.",
+      "copyright": "Copyright (C) Safari",
+      "upstream": "https://gitlab.com/minimalinux/minimaDots",
+      "used_by": [
+        "README.md",
+        "docs/BRANDING.md",
+        "THIRD_PARTY_NOTICES.md"
+      ],
+      "notes": "This repository is that same continuing work, not a fork of someone else's project: the configuration, installers and history came from it. The project path was recovered from the GitLab badge links in the first commit of this repository's history (git show b3e20fc:README.md). gitlab.com is not reachable from the environment used to verify these notices, so the license text published there was not re-read; the older names survive in this repository only as frozen runtime identifiers and in historical documents, as docs/BRANDING.md explains.",
+      "open_items": [
+        "TP-14"
+      ]
+    },
+    {
+      "id": "hesuvi-hrir-assets",
+      "name": "HeSuVi HRIR audio assets",
+      "kind": "asset",
+      "license": "TODO(verify)",
+      "unverified": true,
+      "purpose": "Impulse response WAV files selectable by the virtual surround convolver profile.",
+      "copyright": "TODO(verify)",
+      "used_by": [
+        "pipewire/hrir/"
+      ],
+      "notes": "624 WAV files, about 32 MB. Several names refer to commercial vendor surround products, so the redistribution rights are not established. Review before publishing a release or mirroring this repository.",
+      "open_items": [
+        "TP-03"
+      ]
+    },
+    {
+      "id": "hyprland",
+      "name": "Hyprland",
+      "kind": "runtime-dependency",
+      "license": "BSD-3-Clause",
+      "unverified": false,
+      "purpose": "Wayland compositor. The session configuration is written in its Lua configuration API.",
+      "copyright": "Copyright (c) 2022-2026, vaxerski",
+      "upstream": "https://github.com/hyprwm/Hyprland",
+      "used_by": [
+        ".config/hypr/"
+      ],
+      "open_items": [
+        "TP-10"
+      ]
+    },
+    {
+      "id": "hyprland-keybinds-plugin",
+      "name": "Hyprland Keybinds (Noctalia plugin)",
+      "kind": "vendored-code",
+      "license": "MIT",
+      "unverified": false,
+      "purpose": "Bar widget, panel and settings page that view and edit the Hyprland keybinds file.",
+      "copyright": "Copyright (c) tonekneeo (year not stated in manifest.json)",
+      "version": "1.0.0",
+      "used_by": [
+        "legacy/config/noctalia/plugins/hyprland-keybinds/"
+      ],
+      "notes": "Authored for this repository and declared MIT in its own manifest.json. It follows the Noctalia plugin API conventions but is not a copy of the upstream keybind-cheatsheet plugin, which has a different id, author, version and file set.",
+      "open_items": [
+        "TP-01",
+        "TP-02"
+      ]
+    },
+    {
+      "id": "jetbrains-mono",
+      "name": "JetBrains Mono",
+      "kind": "runtime-dependency",
+      "license": "OFL-1.1",
+      "unverified": false,
+      "purpose": "Terminal typeface requested by the kitty configuration.",
+      "copyright": "Copyright 2020 The JetBrains Mono Project Authors",
+      "upstream": "https://github.com/JetBrains/JetBrainsMono",
+      "used_by": [
+        ".config/kitty/kitty.conf",
+        ".config/kitty/minima-profile.conf"
+      ],
+      "notes": "Both files request \"JetBrainsMono Nerd Font Mono\", the Nerd Fonts patched build of this face. License read from the upstream repository's LICENSE file on 2026-11-10.",
+      "open_items": [
+        "TP-13"
+      ]
+    },
+    {
+      "id": "jinja2",
+      "name": "Jinja2",
+      "kind": "runtime-dependency",
+      "license": "BSD-3-Clause",
+      "unverified": false,
+      "purpose": "Template engine that renders iarch/lib/templates/gtk4.css.j2 and gtk3.css.j2 into the GTK 4 and GTK 3 glass overlays, both for the sheets committed in .config/ and whenever iarch-theme apply re-renders them on the user's machine.",
+      "copyright": "Copyright 2007 Pallets",
+      "version": "3.1.6",
+      "upstream": "https://github.com/pallets/jinja",
+      "used_by": [
+        "iarch/cli/render_gtk_css.py",
+        "iarch/lib/templates/gtk4.css.j2",
+        "iarch/lib/templates/gtk3.css.j2",
+        ".config/gtk-4.0/gtk.css",
+        ".config/gtk-3.0/gtk.css"
+      ],
+      "notes": "Verified on PyPI: version 3.1.6, classifier 'License :: OSI Approved :: BSD License', requires MarkupSafe>=2.0. The distribution package names were not verified against a package index this sandbox can reach (docs/UNVERIFIED.md TP-16).",
+      "open_items": [
+        "TP-16"
+      ]
+    },
+    {
+      "id": "kitty",
+      "name": "kitty",
+      "kind": "runtime-dependency",
+      "license": "GPL-3.0-only",
+      "unverified": false,
+      "purpose": "GPU accelerated terminal emulator.",
+      "copyright": "Copyright (c) Kovid Goyal",
+      "upstream": "https://github.com/kovidgoyal/kitty",
+      "used_by": [
+        ".config/kitty/"
+      ],
+      "open_items": []
+    },
+    {
+      "id": "markupsafe",
+      "name": "MarkupSafe",
+      "kind": "runtime-dependency",
+      "license": "BSD-3-Clause",
+      "unverified": false,
+      "purpose": "Required dependency of Jinja2; imported whenever a GTK sheet is rendered.",
+      "copyright": "Copyright 2010 Pallets",
+      "upstream": "https://github.com/pallets/markupsafe",
+      "used_by": [
+        "iarch/cli/render_gtk_css.py"
+      ],
+      "notes": "Credited because Jinja2 declares MarkupSafe>=2.0 as a hard requirement, so it is present wherever this project renders a sheet. The installed version was not pinned here.",
+      "open_items": [
+        "TP-16"
+      ]
+    },
+    {
+      "id": "nerd-fonts",
+      "name": "Nerd Fonts",
+      "kind": "runtime-dependency",
+      "license": "OFL-1.1 (patched fonts); MIT (patcher tooling)",
+      "unverified": false,
+      "purpose": "Patched font build that supplies the powerline and icon glyphs kitty renders.",
+      "copyright": "Copyright (c) 2014 Ryan L McIntyre",
+      "upstream": "https://github.com/ryanoasis/nerd-fonts",
+      "used_by": [
+        ".config/kitty/kitty.conf"
+      ],
+      "notes": "Upstream LICENSE states the split explicitly: patched fonts in folders carrying an OFL file are SIL Open Font License 1.1, the patcher source is MIT. Read 2026-11-10.",
+      "open_items": [
+        "TP-13"
+      ]
+    },
+    {
+      "id": "noctalia",
+      "name": "Noctalia",
+      "kind": "runtime-dependency",
+      "license": "MIT",
+      "unverified": false,
+      "purpose": "Wayland desktop shell: bar, dock, launcher, Control Center, notifications, lock screen, greeter and Settings. Launched by the session and driven with the noctalia command.",
+      "copyright": "Copyright (c) 2026 noctalia-dev",
+      "version": "v5.4.1",
+      "upstream": "https://github.com/noctalia-dev/noctalia",
+      "used_by": [
+        ".config/noctalia/config.toml",
+        ".config/noctalia/palettes/",
+        ".config/hypr/keybind.lua",
+        ".config/hypr/startup.lua",
+        "scripts/iarch-control-center.sh",
+        "scripts/iarch-healthcheck.sh",
+        "install.sh"
+      ],
+      "notes": "Configuration keys in this repository were checked against the upstream v5.4.1 schema; see docs/UNVERIFIED.md for what still needs a live-session check.",
+      "open_items": [
+        "TP-09"
+      ]
+    },
+    {
+      "id": "noctalia-plugin-registry",
+      "name": "Noctalia plugin registry",
+      "kind": "infrastructure",
+      "license": "No license file published upstream at verification time",
+      "unverified": false,
+      "purpose": "Remote plugin index the shell can install plugins from.",
+      "copyright": "noctalia-dev and individual plugin authors",
+      "upstream": "https://github.com/noctalia-dev/noctalia-plugins",
+      "used_by": [
+        "legacy/config/noctalia/plugins.json"
+      ],
+      "notes": "Referenced by URL only; no plugin source is downloaded into this repository by the installer. The registry publishes no top-level LICENSE file, and each plugin carries its own manifest license.",
+      "open_items": [
+        "TP-06"
+      ]
+    },
+    {
+      "id": "noto-emoji",
+      "name": "Noto Color Emoji",
+      "kind": "runtime-dependency",
+      "license": "OFL-1.1",
+      "unverified": false,
+      "purpose": "Emoji coverage installed by the Arch installer (noto-fonts-emoji).",
+      "copyright": "Copyright 2013 Google, Inc.",
+      "upstream": "https://github.com/googlefonts/noto-emoji",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "License read from the upstream repository metadata on 2026-11-10.",
+      "open_items": []
+    },
+    {
+      "id": "papirus-folders",
+      "name": "Papirus Folders",
+      "kind": "runtime-dependency",
+      "license": "MIT",
+      "unverified": false,
+      "purpose": "Folder colour script installed alongside the Papirus icon theme.",
+      "copyright": "Copyright (c) 2018-2024 Papirus Development Team",
+      "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-folders",
+      "used_by": [
+        "install.sh"
+      ],
+      "notes": "License read from the upstream repository metadata on 2026-11-10.",
+      "open_items": []
+    },
+    {
+      "id": "papirus-icon-theme",
+      "name": "Papirus icon theme",
+      "kind": "runtime-dependency",
+      "license": "GPL-3.0-only",
+      "unverified": false,
+      "purpose": "Icon theme selected by the session presets.",
+      "copyright": "Copyright (c) Papirus Development Team",
+      "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
+      "used_by": [
+        "legacy/config/gtk-3.0/settings.ini",
+        "install.sh"
+      ],
+      "open_items": []
+    },
+    {
+      "id": "pillow",
+      "name": "Pillow (the PIL fork)",
+      "kind": "infrastructure",
+      "license": "MIT-CMU",
+      "unverified": false,
+      "purpose": "Imaging library imported by iarch/cli/gen_wallpapers.py to render the generated preset wallpapers at 3840x2160 and encode them as WebP.",
+      "copyright": "Copyright (c) 1997-2011 Secret Labs AB; Copyright (c) 1995-2011 Fredrik Lundh and contributors; Copyright (c) 2010 Jeffrey 'Alex' Clark and contributors",
+      "version": "13.0.0",
+      "upstream": "https://github.com/python-pillow/Pillow",
+      "used_by": [
+        "iarch/cli/gen_wallpapers.py"
+      ],
+      "notes": "Its LICENSE states Pillow is licensed under the open source MIT-CMU License; the GitHub license API reports NOASSERTION for that wording, so the licence was read from the LICENSE file directly. Not a runtime dependency of an installed session: the generated WebP files ship in the repository, and Pillow is only needed to regenerate them.",
+      "open_items": [
+        "TP-15"
+      ]
+    },
+    {
+      "id": "pipewire-virtual-surround",
+      "name": "PipeWire filter-chain virtual surround configuration",
+      "kind": "derived-config",
+      "license": "MIT",
+      "unverified": false,
+      "purpose": "Convolver sink that plays 7.1 virtual surround through stereo headphones using HRIR files.",
+      "copyright": "Copyright (c) PipeWire contributors",
+      "upstream": "https://gitlab.freedesktop.org/pipewire/pipewire",
+      "used_by": [
+        "pipewire/pipewire.conf.d/sink-virtual-surround-7.1-hesuvi.conf"
+      ],
+      "notes": "The convolver graph follows the upstream filter-chain virtual surround example. Paths and the HeSuVi 14-channel WAV layout were adapted for this repository.",
+      "open_items": [
+        "TP-07"
+      ]
+    },
+    {
+      "id": "satty",
+      "name": "Satty",
+      "kind": "runtime-dependency",
+      "license": "MPL-2.0",
+      "unverified": false,
+      "purpose": "Screenshot annotation tool bound to a keybind.",
+      "copyright": "See upstream source headers",
+      "upstream": "https://github.com/gabm/Satty",
+      "used_by": [
+        ".config/hypr/keybind.lua"
+      ],
+      "open_items": []
+    },
+    {
+      "id": "session-helpers",
+      "name": "Session helper utilities",
+      "kind": "runtime-dependency",
+      "license": "Varies per package",
+      "unverified": false,
+      "purpose": "Small tools the session calls for screenshots, clipboard, media keys, volume and policy authentication: hyprshot, grim, slurp, wl-clip-persist, pamixer, playerctl, polkit-gnome-authentication-agent-1, gnome-keyring-daemon, EasyEffects, ddcutil.",
+      "copyright": "See each package",
+      "upstream": "Each project's own repository",
+      "used_by": [
+        ".config/hypr/keybind.lua",
+        ".config/hypr/startup.lua",
+        "install.sh"
+      ],
+      "notes": "Installed from the distribution or AUR; each package ships its own license. Nothing from these projects is stored in this repository.",
+      "open_items": [
+        "TP-11"
+      ]
+    },
+    {
+      "id": "starship",
+      "name": "Starship",
+      "kind": "runtime-dependency",
+      "license": "ISC",
+      "unverified": false,
+      "purpose": "Cross-shell prompt.",
+      "copyright": "Copyright (c) 2019-2022, Starship Contributors",
+      "upstream": "https://github.com/starship/starship",
+      "used_by": [
+        ".config/starship.toml",
+        "legacy/config/minimalinux/starship-detailed.toml",
+        "legacy/config/minimalinux/starship-minimal.toml"
+      ],
+      "open_items": []
+    },
+    {
+      "id": "tokyo-night-colors",
+      "name": "Tokyo Night color values",
+      "kind": "derived-config",
+      "license": "Apache-2.0",
+      "unverified": false,
+      "purpose": "Terminal and shell color scheme values.",
+      "copyright": "Copyright (c) Folke Lemaitre",
+      "upstream": "https://github.com/folke/tokyonight.nvim",
+      "used_by": [
+        ".config/kitty/minima-colors.conf",
+        "legacy/config/noctalia/settings.json"
+      ],
+      "notes": "Color values only. The Apache License 2.0 text is available in the upstream repository; no upstream source code is stored here.",
+      "open_items": [
+        "TP-08"
+      ]
+    }
+  ]
+}

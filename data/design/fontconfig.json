@@ -1,0 +1,427 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "_note": "The fontconfig XML this project is allowed to emit, with the element vocabulary and attribute enumerations from the configuration DTD. fontconfig warns about an element or attribute it does not know and keeps loading, and a family that is not installed simply never matches, so neither mistake is visible to the user. gen_fontconfig.py refuses to write a fonts.conf that uses an element, an attribute or an enumerated value that is not recorded here, or a family the design tokens do not name.",
+  "verified_against": {
+    "project": "behdad/fontconfig (the upstream maintainer mirror of gitlab.freedesktop.org/fontconfig/fontconfig)",
+    "version": "2.13.1",
+    "commit": "5b41ded2b0ddb98a07ac86264b94403cb7a0fd82"
+  },
+  "source": "fonts.dtd (the configuration DTD: every element, its content model and its attribute enumerations), src/fcxml.c (the parser that reads a config against that DTD)",
+  "stability": "The configuration DTD is a long-stable interface: every element and attribute this project emits has been in fontconfig since well before the pinned 2.13.1 and is unchanged in current releases. The mirror carries no release tags, so the surface pins the mirror commit rather than a tag.",
+  "diagnostics": {
+    "unknown_element": "fcxml.c reports \"unknown element\" to stderr and skips it; the rest of the file still loads, so a typo silently drops one rule.",
+    "unknown_attribute": "an attribute the DTD does not declare for an element is ignored, again with only a stderr warning.",
+    "uninstalled_family": "a family name that matches no installed font is simply never selected; fontconfig falls through to the next preference, so a misspelled family degrades to a system default with no error.",
+    "consequence": "A dropped rule and a silent fall-through are both acceptable to fontconfig but not in a shipped payload, so this project treats both as render-time failures."
+  },
+  "root_children": "(dir | cache | cachedir | include | config | selectfont | match | alias)*",
+  "elements": {
+    "accept": {
+      "content": "(family)*"
+    },
+    "acceptfont": {
+      "content": "(glob | pattern)*"
+    },
+    "alias": {
+      "content": "(test?, family*, prefer?, accept?, default?)",
+      "attributes": {
+        "binding": {
+          "values": [
+            "weak",
+            "strong",
+            "same"
+          ],
+          "default": "weak"
+        }
+      }
+    },
+    "and": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)*"
+    },
+    "blank": {
+      "content": "(int|range)*"
+    },
+    "bool": {
+      "content": "(#PCDATA)"
+    },
+    "cache": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        }
+      }
+    },
+    "cachedir": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "prefix": {
+          "type": "string",
+          "default": "default"
+        },
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        }
+      }
+    },
+    "ceil": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)"
+    },
+    "charset": {
+      "content": "(int|range)*"
+    },
+    "config": {
+      "content": "(blank|rescan)*"
+    },
+    "const": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        }
+      }
+    },
+    "contains": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "default": {
+      "content": "(family)*"
+    },
+    "dir": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "prefix": {
+          "values": [
+            "default",
+            "xdg",
+            "relative",
+            "cwd"
+          ],
+          "default": "default"
+        },
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        }
+      }
+    },
+    "divide": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)*"
+    },
+    "double": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        }
+      }
+    },
+    "edit": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)*",
+      "attributes": {
+        "name": {
+          "type": "string",
+          "default": "#REQUIRED",
+          "required": true
+        },
+        "mode": {
+          "values": [
+            "assign",
+            "assign_replace",
+            "prepend",
+            "append",
+            "prepend_first",
+            "append_last",
+            "delete",
+            "delete_all"
+          ],
+          "default": "assign"
+        },
+        "binding": {
+          "values": [
+            "weak",
+            "strong",
+            "same"
+          ],
+          "default": "weak"
+        }
+      }
+    },
+    "eq": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "family": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        }
+      }
+    },
+    "floor": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)"
+    },
+    "fontconfig": {
+      "content": "(dir | cache | cachedir | include | config | selectfont | match | alias)*"
+    },
+    "glob": {
+      "content": "(#PCDATA)"
+    },
+    "if": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "include": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "ignore_missing": {
+          "values": [
+            "no",
+            "yes"
+          ],
+          "default": "no"
+        },
+        "prefix": {
+          "type": "string",
+          "default": "default"
+        },
+        "deprecated": {
+          "values": [
+            "yes",
+            "no"
+          ],
+          "default": "no"
+        },
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        }
+      }
+    },
+    "int": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        }
+      }
+    },
+    "langset": {
+      "content": "(string)*"
+    },
+    "less": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "less_eq": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "match": {
+      "content": "(test|edit)+",
+      "attributes": {
+        "target": {
+          "values": [
+            "pattern",
+            "font",
+            "scan"
+          ],
+          "default": "pattern"
+        }
+      }
+    },
+    "matrix": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "minus": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)*"
+    },
+    "more": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "more_eq": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "name": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        },
+        "target": {
+          "values": [
+            "default",
+            "font",
+            "pattern"
+          ],
+          "default": "default"
+        }
+      }
+    },
+    "not": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)"
+    },
+    "not_contains": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "not_eq": {
+      "content": "((int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc), (int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc))"
+    },
+    "or": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)*"
+    },
+    "patelt": {
+      "content": "(int|double|string|matrix|bool|charset|langset|const)*",
+      "attributes": {
+        "name": {
+          "type": "string",
+          "default": "#REQUIRED",
+          "required": true
+        }
+      }
+    },
+    "pattern": {
+      "content": "(patelt)*"
+    },
+    "plus": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)*"
+    },
+    "prefer": {
+      "content": "(family)*"
+    },
+    "range": {
+      "content": "(int,int)"
+    },
+    "rejectfont": {
+      "content": "(glob | pattern)*"
+    },
+    "rescan": {
+      "content": "(int)"
+    },
+    "round": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)"
+    },
+    "selectfont": {
+      "content": "(rejectfont | acceptfont)*"
+    },
+    "string": {
+      "content": "(#PCDATA)",
+      "attributes": {
+        "xml:space": {
+          "values": [
+            "default",
+            "preserve"
+          ],
+          "default": "preserve"
+        }
+      }
+    },
+    "test": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)*",
+      "attributes": {
+        "qual": {
+          "values": [
+            "any",
+            "all",
+            "first",
+            "not_first"
+          ],
+          "default": "any"
+        },
+        "name": {
+          "type": "string",
+          "default": "#REQUIRED",
+          "required": true
+        },
+        "target": {
+          "values": [
+            "pattern",
+            "font",
+            "default"
+          ],
+          "default": "default"
+        },
+        "ignore-blanks": {
+          "values": [
+            "true",
+            "false"
+          ],
+          "default": "false"
+        },
+        "compare": {
+          "values": [
+            "eq",
+            "not_eq",
+            "less",
+            "less_eq",
+            "more",
+            "more_eq",
+            "contains",
+            "not_contains"
+          ],
+          "default": "eq"
+        }
+      }
+    },
+    "times": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)*"
+    },
+    "trunc": {
+      "content": "(int|double|string|matrix|bool|charset|langset |name|const |or|and|eq|not_eq|less|less_eq|more|more_eq|contains|not_contains |plus|minus|times|divide|not|if|floor|ceil|round|trunc)"
+    }
+  },
+  "emitted_elements": [
+    "fontconfig",
+    "alias",
+    "family",
+    "prefer",
+    "accept",
+    "default",
+    "match",
+    "test",
+    "edit",
+    "string",
+    "const",
+    "int",
+    "double",
+    "bool",
+    "name"
+  ],
+  "mapping": {
+    "sans-serif": "font.ui, then every font.fallback family in order",
+    "monospace": "font.mono, then every font.fallback family in order",
+    "serif": "left to the system default: the tokens name no serif face, and inventing one would ship a family the design system never chose",
+    "font.ui_display": "requested by name by the shell and GTK for headings; it needs no generic alias, so it is not written here"
+  }
+}
