@@ -229,6 +229,17 @@ not a bug here, and it is why the wallpaper duration is its own setting:
 `diamond`, `golden`, `melt`) and a separate `transition_on_startup`.
 [Wallpaper](https://docs.noctalia.dev/noctalia/desktop/wallpaper/).
 
+The window switcher is the exception to "the shell's motion reads as fades". Its
+cards animate **position, scale, opacity and pointer-hover lift** using the global
+animation settings, and the selected card's shadow follows `[shell.shadow]` — so
+`[shell.animation] enabled = false` freezes the carousel and `speed` scales it,
+exactly as it does for a panel
+([Shell → Window switcher](https://docs.noctalia.dev/noctalia/ipc/shell/)). This
+project binds `Alt + Tab` to `noctalia msg window-switcher hold` and sets
+`style = "carousel"` with `mru = true`; the movement is upstream's, and the
+durations are its own 100/200/400 ms constants, not something a config file can
+set.
+
 One control-centre key is a motion key, and this project writes it from the same
 switch: `[control_center.media] show_visualizer` is the only element in the panel
 that moves continuously rather than in answer to something, so it follows

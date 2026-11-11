@@ -134,6 +134,7 @@
         "color_note": { "type": "string" },
         "parser": { "type": "string" },
         "container_level": { "type": "boolean" },
+        "named_map": { "type": "boolean" },
         "note": { "type": "string" },
         "not_in_upstream_schema": { "type": "boolean" },
         "table": { "type": "string", "pattern": "^[a-zA-Z]+Schema$" },

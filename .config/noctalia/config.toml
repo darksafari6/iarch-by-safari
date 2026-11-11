@@ -66,19 +66,39 @@ wallpaper_position = "center"
 session_position = "center"
 polkit_position = "center"
 
-# Launcher layout and content.
+# Launcher layout and content. Its seven providers keep their built-in prefixes, so none is restated here.
 [shell.launcher]
 layout = "full"
 width = 760
 search_position = "bottom"
 default_view = "recent"
 categories = true
+category_icons_only = false
 show_navigation_labels = true
 show_settings_button = true
 show_session_button = true
 show_icons = true
+show_app_origin_indicator = true
+compact = false
+app_grid = false
+show_app_actions = false
 track_usage = true
 sort_by_usage = true
+ignore_mouse = false
+pinned = []
+fetch_exchange_rates = false
+provider_prefix = "/"
+auto_paste = "auto"
+
+# The Alt+Tab overlay, opened by `noctalia msg window-switcher hold`.
+[shell.window_switcher]
+style = "carousel"
+mru = true
+show_caption = true
+show_count = true
+show_app_icon = true
+show_all_outputs = true
+current_workspace_only = false
 
 # Bars live at the config root: order names them, [bar.<name>] configures each.
 [bar]

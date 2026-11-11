@@ -107,8 +107,27 @@ PROFILE: Dict[str, Any] = OrderedDict(
     open_near_click_control_center=True,
     launcher=OrderedDict(
         layout="full", width=760, search_position="bottom", default_view="recent",
-        categories=True, show_navigation_labels=True, show_settings_button=True,
-        show_session_button=True, show_icons=True, track_usage=True, sort_by_usage=True,
+        categories=True, category_icons_only=False,
+        show_navigation_labels=True, show_settings_button=True, show_session_button=True,
+        show_icons=True, show_app_origin_indicator=True, compact=False, app_grid=False,
+        show_app_actions=False, track_usage=True, sort_by_usage=True, ignore_mouse=False,
+        # Nobody's launchers are pinned for them; the Recent view is the landing one.
+        pinned=[],
+        # The calculator can refresh currency rates from libqalculate's online
+        # sources. That is a network call to a third party nobody asked for, so it
+        # stays off: arithmetic, functions, units and number bases all work offline,
+        # and a currency conversion uses whatever rates are already cached.
+        fetch_exchange_rates=False,
+        provider_prefix="/", auto_paste="auto",
+    ),
+    # The Alt+Tab overlay. It is opened over IPC, so there is nothing to bind here --
+    # .config/hypr/keybind.lua binds `noctalia msg window-switcher hold`, the form
+    # docs/user/ipc/shell.mdx gives for a held-modifier keybind. mru is the one value
+    # that differs from upstream's default: Alt+Tab means most-recently-used to most
+    # people, and workspace order is what the workspace switcher is for.
+    window_switcher=OrderedDict(
+        style="carousel", mru=True, show_caption=True, show_count=True,
+        show_app_icon=True, show_all_outputs=True, current_workspace_only=False,
     ),
     bar_order=["default"],
     bar_position="top",
@@ -193,7 +212,9 @@ SECTION_COMMENTS: Dict[str, str] = {
     "shell.animation": "Speed is motion.normal_ms measured against a 220 ms baseline.",
     "shell.shadow": "Panel shadow: the intensity's shadow alpha, or nothing when shadows are off.",
     "shell.panel": "Floating panels: launcher, control centre, session, polkit, wallpaper picker.",
-    "shell.launcher": "Launcher layout and content.",
+    "shell.launcher": "Launcher layout and content. Its seven providers keep their built-in "
+                      "prefixes, so none is restated here.",
+    "shell.window_switcher": "The Alt+Tab overlay, opened by `noctalia msg window-switcher hold`.",
     "bar": "Bars live at the config root: order names them, [bar.<name>] configures each.",
     "dock": "Dock geometry and magnification.",
     "control_center": "Control centre layout, its tabs and the Home shortcut row.",
@@ -331,6 +352,7 @@ def shell_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> Dict[str
         panel[f"{name}_position"] = value
     section["panel"] = panel
     section["launcher"] = OrderedDict(PROFILE["launcher"])
+    section["window_switcher"] = OrderedDict(PROFILE["window_switcher"])
     return section
 
 
@@ -499,6 +521,15 @@ def validate(doc: Dict[str, Any], surface: Dict[str, Any]) -> List[str]:
             if isinstance(value, dict):
                 if "keys" not in entry:
                     problems.append(f"{here}: is a table but the setting is not")
+                elif entry.get("named_map"):
+                    # A named map: the table's own keys are instance names the user
+                    # chose ([shell.launcher.providers.<name>]), so each *value* is
+                    # what has to match the sub-schema.
+                    for name, item in value.items():
+                        if isinstance(item, dict):
+                            walk(item, entry, f"{here}.{name}")
+                        else:
+                            problems.append(f"{here}.{name}: is not a table")
                 else:
                     walk(value, entry, here)
                 continue

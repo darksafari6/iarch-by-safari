@@ -284,10 +284,11 @@
     },
     {
       "keys": "ALT + tab",
-      "description": "Cycle windows",
+      "description": "Window switcher overlay",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.cycle_next()"
+        "kind": "exec",
+        "command": "noctalia msg window-switcher hold",
+        "lua": "hl.dsp.exec_cmd(\"noctalia msg window-switcher hold\")"
       },
       "category": "Window Navigation & Layout",
       "status": "bound"

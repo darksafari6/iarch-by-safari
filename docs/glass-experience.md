@@ -103,6 +103,37 @@ There is no custom slider either. Volume is the Audio tab and brightness the Mon
 
 The one place v5.4.1 lets a config file add a button that runs a command of ours is `[[shell.session.actions]]`: `action = "command"` with a `command`, `label`, `glyph`, `variant`, `shortcut` (any XKB key name such as `F1`, or a combo such as `Ctrl+1`, live while the session panel is open) and `countdown_seconds`. It is recorded in `data/design/noctalia.json` and deliberately not emitted yet, for two reasons: the commands it would run do not exist until later in Part 3, and Noctalia runs that string with `/bin/sh -c` as the session user, so nothing goes in it until there is something real to run. The same restraint applies to `[shell.session.power]`, whose suspend, reboot and shutdown overrides are left unset so the shell keeps using its own prioritized backend list rather than a `sudo` line invented here.
 
+## Launcher and window switcher
+
+`Super + D` opens the launcher: a floating glass panel, centred, 760 px wide inside the 560–1100 range `kLauncherWidthRange` allows, with the search field at the bottom and the Recent view on arrival. It needs no plugin and no second application — every provider below is built into Noctalia v5.4.1.
+
+| Provider | Prefix | What it gives you |
+| --- | --- | --- |
+| Applications | *none* | Fuzzy search over `.desktop` entries, weighted, boosted by how often you launch something. Flatpak, Snap, Nix and AppImage results are marked |
+| Calculator | `/calc`, and globally on any query containing a digit | `libqalculate`: arithmetic, `sin`/`sqrt`/`pi`, unit conversion (`10 cm to in`), number bases (`0xff`). Enter copies the result |
+| Emoji | `/emo` | Search by name, category or keyword; activating copies the character |
+| Panels | `/pan` | Every panel the shell knows, plus one row per visible control-centre tab — this is how the clipboard history is reached from the launcher |
+| Wallpaper | `/wall` | The directories in `[wallpaper]`; activating applies one to every monitor |
+| Session | `/session` | The configured session actions, including lock, suspend, reboot and shutdown — the launcher's power commands |
+| Windows | `/win` | Every open window across monitors and workspaces; activating focuses it and switches workspace if needed |
+
+Two things the design brief asks for do not exist upstream, and neither is faked. There is **no clipboard provider**: clipboard history is its own panel, reachable through `/pan` or `scripts/iarch-control-center.sh`'s siblings in `noctalia msg panel-toggle clipboard`. There is **no web-search provider** either. A dmenu entry could imitate one — `[shell.launcher.dmenu.entry.<id>]` runs a `command` through `/bin/sh -lc` and can substitute the activated line into an `exec` string — but that substitutes text a person typed into a shell command line, and this project will not ship that. Both are recorded in `data/design/noctalia.json` with the reason, and neither is emitted.
+
+Currency conversion is the one launcher feature that reaches the network: `fetch_exchange_rates` refreshes rates from libqalculate's online sources. It is off in the shipped payload, alongside `telemetry_enabled`, so nothing in the launcher calls a third party. Arithmetic, functions, units and number bases all work without it, and a currency query uses whatever rates are already cached.
+
+`Alt + Tab` opens the shell's window switcher instead of moving focus invisibly. `.config/hypr/keybind.lua` binds it to `noctalia msg window-switcher hold`, which is the exact form `docs/user/ipc/shell.mdx` gives for a held-modifier keybind: a quick tap activates the previous window, `Tab`, the arrow keys and the mouse wheel cycle the cards while the overlay has focus, releasing `Alt` confirms the selected one, `Enter` confirms and closes, `Escape` cancels. `[shell.window_switcher]` chooses the look: `carousel`, the freestanding depth layout, with captions, a position counter and application icons over each preview, drawn from every monitor and every workspace, and `mru = true` so the order is most-recently-used — which is what Alt+Tab means — rather than workspace layout. Window previews need the compositor's foreign-toplevel image-capture protocol; without it the cards show application icons and everything else works the same.
+
+The trade-off is worth stating plainly: with no shell running, that bind does nothing at all, where the compositor's own `hl.dsp.window.cycle_next()` always worked. To get the old behaviour back, replace the bind's second argument with `hl.dsp.window.cycle_next()` and re-run `python3 tools/extract_keybinds.py --write` and `python3 tools/render_shortcuts.py --write` so the keyboard map and `docs/SHORTCUTS.md` stay true.
+
+**Overview is not enabled.** The brief's `Super + Tab` overview needs the `overview` plugin from `hyprland-plugins`, installed and enabled through `hyprpm` — a third-party component compiled against the compositor, which is exactly the kind of thing this project does not turn on for somebody. `Super + Tab` is also already taken: it is "next workspace on the focused monitor" in `.config/hypr/keybind.lua`. To try the overview anyway, in a session:
+
+```sh
+hyprpm update && hyprpm add https://github.com/hyprwm/hyprland-plugins
+hyprpm enable overview && hyprpm reload
+```
+
+then bind `hyprctl dispatch overview` to a key that is not in use, and add the plugin package to your own update routine — `hyprpm` rebuilds plugins against the installed Hyprland, so a compositor upgrade without a `hyprpm update` can leave the session refusing to start.
+
 ## Notification sound
 
 The profile selects Noctalia's built-in Freedesktop sound theme at a reduced volume, but notification sounds are disabled by default. GUI-managed overrides may take precedence. The currently documented v5 configuration does not establish an arbitrary custom audio-file path for notifications, so this profile does not create a second notification daemon or falsely claim that a custom iPhone-style sound is connected. A custom twinkle asset should only be integrated through a supported Noctalia sound API or a tested extension that will not duplicate notifications.

@@ -345,19 +345,50 @@
           "table": "shellLauncherSchema",
           "keys": {
             "layout": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "full",
+                "simple"
+              ],
+              "enum_constant": "kLauncherLayouts",
+              "note": "simple is search, optional category chips and results at 560x500."
             },
             "width": {
-              "type": "integer"
+              "type": "integer",
+              "range": [
+                560,
+                1100,
+                10
+              ],
+              "range_constant": "kLauncherWidthRange",
+              "note": "Full layout only. example.toml's comment says 560-1200; the constant in src/config/schema/ranges.h:24 says 560-1100 and is what the shell clamps to, so the constant is what is recorded."
             },
             "search_position": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom"
+              ],
+              "enum_constant": "kLauncherSearchPositions",
+              "note": "Full layout: the position of the whole launcher toolbar."
             },
             "default_view": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "recent",
+                "pinned",
+                "all",
+                "categories"
+              ],
+              "enum_constant": "kLauncherDefaultViews"
             },
             "categories": {
-              "type": "bool"
+              "type": "bool",
+              "note": "Simple layout only: the category chip row under the search field."
+            },
+            "category_icons_only": {
+              "type": "bool",
+              "note": "Hide app category labels; the names stay in the hover tooltips."
             },
             "show_navigation_labels": {
               "type": "bool"
@@ -371,11 +402,122 @@
             "show_icons": {
               "type": "bool"
             },
+            "show_app_origin_indicator": {
+              "type": "bool",
+              "note": "Marks Flatpak, Snap, Nix and AppImage results."
+            },
+            "compact": {
+              "type": "bool",
+              "note": "Smaller icons and tighter result rows."
+            },
+            "app_grid": {
+              "type": "bool",
+              "note": "Icon grids for the grid-capable providers and the provider overview."
+            },
+            "show_app_actions": {
+              "type": "bool",
+              "note": "Search and launch .desktop actions alongside applications. Off by default upstream; they stay on an app's right-click menu."
+            },
             "track_usage": {
-              "type": "bool"
+              "type": "bool",
+              "note": "Records launcher history for the Recent view and for usage-based sorting."
             },
             "sort_by_usage": {
               "type": "bool"
+            },
+            "ignore_mouse": {
+              "type": "bool",
+              "note": "Ignore hover and clicks inside the launcher."
+            },
+            "pinned": {
+              "type": "array",
+              "note": "Desktop entry ids, in the manual order the Pinned view shows them."
+            },
+            "fetch_exchange_rates": {
+              "type": "bool",
+              "note": "Refreshes currency rates from libqalculate's online sources. This is a network call to a third party, which is why the shipped payload turns it off."
+            },
+            "provider_prefix": {
+              "type": "string",
+              "note": "The trigger character every provider prefix is combined with."
+            },
+            "auto_paste": {
+              "type": "string",
+              "enum": [
+                "off",
+                "auto",
+                "ctrl_v",
+                "ctrl_shift_v",
+                "shift_insert"
+              ],
+              "enum_constant": "kClipboardAutoPasteModes",
+              "note": "The paste shortcut sent after a copy-style activation (calculator, emoji)."
+            },
+            "dmenu": {
+              "table": "shellLauncherDmenuSchema",
+              "keys": {
+                "entry": {
+                  "type": "array",
+                  "table": "dmenuEntrySchema",
+                  "named_map": true,
+                  "note": "A named map, written [shell.launcher.dmenu.entry.<id>]; the id becomes the provider suffix dmenu.<id> and the usage-tracking key.",
+                  "keys": {
+                    "command": {
+                      "type": "string",
+                      "note": "Run with /bin/sh -lc; each stdout line becomes a candidate, and a tab in a line splits it into title and description."
+                    },
+                    "exec": {
+                      "type": "string",
+                      "note": "When set, the activated line is substituted into {selection} and run detached. When unset the selection is copied to the clipboard instead. Substituting typed text into a shell string is why this project ships no entry of its own."
+                    },
+                    "prefix": {
+                      "type": "string",
+                      "note": "Trigger word, combined with provider_prefix. Empty leaves the entry reachable only through global = true, and upstream warns that it is otherwise unreachable."
+                    },
+                    "label": {
+                      "type": "string",
+                      "note": "Provider overview title; defaults to the entry's id."
+                    },
+                    "glyph": {
+                      "type": "string",
+                      "note": "A Tabler glyph name; defaults to terminal."
+                    },
+                    "global": {
+                      "type": "bool",
+                      "note": "Include the entry's results in unprefixed search."
+                    },
+                    "freeform": {
+                      "type": "bool",
+                      "note": "Let the typed query itself become an activatable result."
+                    }
+                  }
+                }
+              }
+            },
+            "panels": {
+              "table": "shellLauncherPanelsSchema",
+              "keys": {
+                "ignored": {
+                  "type": "array",
+                  "note": "Panel ids excluded from the /pan provider. Upstream defaults to polkit, setup-wizard, test and launcher."
+                }
+              }
+            },
+            "providers": {
+              "type": "array",
+              "table": "launcherProviderSchema",
+              "named_map": true,
+              "note": "A named map, written [shell.launcher.providers.<name>]. The provider names are fixed by the shell, not by this file: apps, calculator, emoji, panels, wallpaper, session, windows (docs/user/launcher/index.mdx). There is no clipboard provider and no web-search provider in v5.4.1.",
+              "keys": {
+                "prefix": {
+                  "type": "string",
+                  "note": "Trigger word; empty falls back to the provider's built-in default."
+                },
+                "global": {
+                  "type": "bool",
+                  "note": "Optional: also surface this provider in unprefixed search."
+                }
+              }
             }
           }
         },
@@ -466,6 +608,45 @@
                   "type": "string"
                 }
               }
+            }
+          }
+        },
+        "window_switcher": {
+          "table": "shellWindowSwitcherSchema",
+          "note": "The Alt+Tab overlay. It is opened over IPC -- `noctalia msg window-switcher hold` is the form docs/user/ipc/shell.mdx gives for a held-modifier keybind -- so there is no key to bind here, only keys that say what the overlay looks like.",
+          "keys": {
+            "style": {
+              "type": "string",
+              "enum": [
+                "carousel",
+                "compact"
+              ],
+              "enum_constant": "kWindowSwitcherStyles",
+              "note": "carousel is the freestanding depth layout; compact is a boxed strip of equal-sized cards."
+            },
+            "mru": {
+              "type": "bool",
+              "note": "Order windows by most recent use instead of workspace layout, which is what Alt+Tab means to most people."
+            },
+            "show_caption": {
+              "type": "bool",
+              "note": "Window titles and application names below the previews."
+            },
+            "show_count": {
+              "type": "bool",
+              "note": "The current and total window count above the previews."
+            },
+            "show_app_icon": {
+              "type": "bool",
+              "note": "Application icons over the previews, and the whole card on a compositor without foreign-toplevel image capture."
+            },
+            "show_all_outputs": {
+              "type": "bool",
+              "note": "Every monitor, or only the one showing the switcher."
+            },
+            "current_workspace_only": {
+              "type": "bool",
+              "note": "Keep the list to the workspace shown on each monitor. An open Hyprland special workspace takes over from the regular one it covers."
             }
           }
         }
@@ -1086,7 +1267,8 @@
               "type": "bool",
               "note": "Accepted and ignored: empty read callback, superseded by allowed_urgencies."
             }
-          }
+          },
+          "named_map": true
         },
         "allowed_urgencies": {
           "type": "array",

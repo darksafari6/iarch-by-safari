@@ -333,6 +333,10 @@ class ValuesAreDerivedFromTokens(unittest.TestCase):
                 doc = render(preset, intensity)
                 self.assertFalse(doc["shell"]["telemetry_enabled"])
                 self.assertFalse(doc["audio"]["enable_notification_sounds"])
+                # The launcher's calculator can refresh currency rates from
+                # libqalculate's online sources. That is a network call to a third
+                # party nobody asked for, so it stays off everywhere.
+                self.assertFalse(doc["shell"]["launcher"]["fetch_exchange_rates"])
 
     def test_theme_selects_the_presets_own_palette(self):
         for preset_id in PRESET_IDS:
@@ -929,6 +933,123 @@ class ControlCenterPanel(unittest.TestCase):
         self.assertFalse(noctalia.is_table_array([]))
         self.assertFalse(noctalia.is_table_array(["monitor"]))
         self.assertFalse(noctalia.is_table_array([{"a": 1}, "b"]))
+
+
+class LauncherAndSwitcher(unittest.TestCase):
+    """Super+D and Alt+Tab: what the shell already provides, and what it does not.
+
+    Both surfaces turned out to exist upstream, so neither needs a plugin, a second
+    application or a compositor-side substitute. The launcher has seven built-in
+    providers (apps, calculator, emoji, panels, wallpaper, session, windows) and no
+    clipboard or web-search provider at all; the window switcher is an Alt+Tab
+    overlay opened over IPC and configured by ``[shell.window_switcher]``.
+    """
+
+    # config_schema.cpp:1541-1582 shellLauncherSchema(), in declaration order.
+    LAUNCHER_KEYS = [
+        "layout", "width", "search_position", "default_view", "categories",
+        "category_icons_only", "show_navigation_labels", "show_settings_button",
+        "show_session_button", "show_icons", "show_app_origin_indicator", "compact",
+        "app_grid", "show_app_actions", "track_usage", "sort_by_usage",
+        "ignore_mouse", "pinned", "fetch_exchange_rates", "provider_prefix",
+        "auto_paste", "dmenu", "panels", "providers",
+    ]
+
+    # config_schema.cpp:1584-1594 shellWindowSwitcherSchema().
+    SWITCHER_KEYS = ["style", "mru", "show_caption", "show_count", "show_app_icon",
+                     "show_all_outputs", "current_workspace_only"]
+
+    # docs/user/launcher/index.mdx, "Providers": the closed set the shell knows.
+    PROVIDERS = ["apps", "calculator", "emoji", "panels", "wallpaper", "session",
+                 "windows"]
+
+    def setUp(self):
+        self.launcher_spec = SURFACE["sections"]["shell"]["keys"]["launcher"]
+        self.switcher_spec = SURFACE["sections"]["shell"]["keys"]["window_switcher"]
+        self.doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.launcher = self.doc["shell"]["launcher"]
+        self.switcher = self.doc["shell"]["window_switcher"]
+
+    def test_the_record_covers_every_launcher_and_switcher_setting(self):
+        self.assertEqual(sorted(self.LAUNCHER_KEYS), sorted(self.launcher_spec["keys"]))
+        self.assertEqual(sorted(self.SWITCHER_KEYS), sorted(self.switcher_spec["keys"]))
+        self.assertEqual("shellLauncherSchema", self.launcher_spec["table"])
+        self.assertEqual("shellWindowSwitcherSchema", self.switcher_spec["table"])
+
+    def test_the_width_range_is_the_constant_and_not_the_comment(self):
+        width = self.launcher_spec["keys"]["width"]
+        self.assertEqual([560, 1100, 10], width["range"])
+        self.assertEqual("kLauncherWidthRange", width["range_constant"])
+        # example.toml says 560-1200 in a comment; ranges.h:24 says 560-1100 and is
+        # what the shell clamps to. The record has to say which one it believed.
+        self.assertIn("1200", width["note"])
+        low, high, step = width["range"]
+        self.assertLessEqual(low, self.launcher["width"])
+        self.assertLessEqual(self.launcher["width"], high)
+        self.assertEqual(0, (self.launcher["width"] - low) % step)
+
+    def test_the_switcher_is_ordered_by_recency_because_that_is_what_alt_tab_means(self):
+        self.assertIs(True, self.switcher["mru"])
+        self.assertEqual("carousel", self.switcher["style"])
+        self.assertEqual(sorted(self.SWITCHER_KEYS), sorted(self.switcher))
+
+    def test_no_provider_is_emitted_because_every_one_would_restate_a_default(self):
+        self.assertNotIn("providers", self.launcher)
+        self.assertNotIn("dmenu", self.launcher)
+        self.assertNotIn("panels", self.launcher)
+        note = self.launcher_spec["keys"]["providers"]["note"]
+        for provider in self.PROVIDERS:
+            with self.subTest(provider=provider):
+                self.assertIn(provider, note)
+
+    def test_the_record_says_which_providers_do_not_exist(self):
+        note = self.launcher_spec["keys"]["providers"]["note"]
+        self.assertIn("no clipboard provider", note)
+        self.assertIn("no web-search provider", note)
+
+    def test_a_dmenu_entry_records_why_this_project_ships_none(self):
+        entry = self.launcher_spec["keys"]["dmenu"]["keys"]["entry"]
+        self.assertTrue(entry["named_map"])
+        self.assertEqual("dmenuEntrySchema", entry["table"])
+        self.assertIn("/bin/sh -lc", entry["keys"]["command"]["note"])
+        self.assertIn("{selection}", entry["keys"]["exec"]["note"])
+
+    def test_a_named_map_is_walked_by_its_values_and_not_by_its_names(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["shell"]["launcher"]["providers"] = {"calculator": {"prefix": "calc",
+                                                                "global": True}}
+        self.assertEqual([], noctalia.validate(doc, SURFACE))
+
+        doc["shell"]["launcher"]["providers"] = {"calculator": {"prefix": "calc",
+                                                                "bogus": 1}}
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("providers.calculator.bogus", problems[0])
+
+        doc["shell"]["launcher"]["providers"] = {"calculator": "calc"}
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("is not a table", problems[0])
+
+    def test_an_invented_provider_prefix_value_is_refused(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["shell"]["launcher"]["providers"] = {"calculator": {"prefix": 7}}
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("is not a string", problems[0])
+
+    def test_the_auto_paste_vocabulary_is_recorded(self):
+        spec = self.launcher_spec["keys"]["auto_paste"]
+        self.assertEqual(["off", "auto", "ctrl_v", "ctrl_shift_v", "shift_insert"],
+                         spec["enum"])
+        self.assertEqual("kClipboardAutoPasteModes", spec["enum_constant"])
+        self.assertIn(spec["enum"].index(self.launcher["auto_paste"]),
+                      range(len(spec["enum"])))
+
+    def test_every_emitted_launcher_key_is_one_upstream_declares(self):
+        for key in self.launcher:
+            with self.subTest(setting=key):
+                self.assertIn(key, self.launcher_spec["keys"])
 
 
 if __name__ == "__main__":
