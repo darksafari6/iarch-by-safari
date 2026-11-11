@@ -327,6 +327,7 @@ never touch `~/.config`, never call a package manager and never start a session.
 | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Current. This file |
 | [BRANDING.md](BRANDING.md) | Current. Naming and credit policy |
+| [MOTION.md](MOTION.md) | Current. Animation presets, hover/press/focus, reduce motion, and the QA walk-through |
 | [ROADMAP.md](ROADMAP.md) | Current. The six-part glass plan |
 | [UNVERIFIED.md](UNVERIFIED.md) | Current. Open verification items |
 | [glass-experience.md](glass-experience.md) | Current. Glass profile and recovery |

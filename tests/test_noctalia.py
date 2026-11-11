@@ -236,6 +236,29 @@ class ValuesAreDerivedFromTokens(unittest.TestCase):
         expected = round(noctalia.MOTION_BASELINE_MS / TOKENS["motion"]["normal_ms"], 2)
         self.assertEqual(expected, self.doc["shell"]["animation"]["speed"])
 
+    def test_the_shell_animation_switch_follows_the_intensity(self):
+        # The intensity is the coarse motion switch and it is repository state, so
+        # the committed payload stays reproducible from a clean clone while still
+        # meaning something: Performance stops the shell's own panels animating for
+        # the same reason it stops the compositor's windows.
+        for name in INTENSITIES:
+            with self.subTest(intensity=name):
+                self.assertEqual(TOKENS["intensities"][name]["motion"]["enabled"],
+                                 render("midnight-glass", name)["shell"]["animation"]["enabled"])
+
+    def test_performance_turns_the_shell_animations_off(self):
+        self.assertTrue(self.doc["shell"]["animation"]["enabled"],
+                        "the default intensity animates")
+        self.assertFalse(render("midnight-glass", "performance")["shell"]["animation"]["enabled"])
+
+    def test_the_switch_actually_varies_rather_than_being_a_constant(self):
+        # It used to be `motion.normal_ms > 0`, which is true for every intensity
+        # the tokens ship: the key existed and never did anything. If a future edit
+        # makes it constant again, this is what catches it.
+        rendered = {render("midnight-glass", name)["shell"]["animation"]["enabled"]
+                    for name in INTENSITIES}
+        self.assertEqual({True, False}, rendered)
+
     def test_opacities_come_from_the_intensity(self):
         self.assertEqual(self.shell["bar_opacity"], self.doc["bar"]["default"]["background_opacity"])
         self.assertEqual(self.shell["capsule_opacity"],

@@ -263,7 +263,14 @@ def shell_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> Dict[str
         clipboard_confirm_clear_history=PROFILE["clipboard_confirm_clear_history"],
     )
     section["animation"] = OrderedDict(
-        enabled=tokens["motion"]["normal_ms"] > 0,
+        # The intensity is the coarse motion switch, and it is repository state
+        # rather than user state, so the committed payload stays reproducible from
+        # a clean clone: Performance turns the shell's own animations off the same
+        # way it turns the compositor's off, through intensity.motion. Comparing
+        # motion.normal_ms against zero instead -- which is what this said before
+        # -- was a constant true for every intensity the tokens ship, so the key
+        # existed and never did anything.
+        enabled=bool(intensity["motion"]["enabled"]),
         speed=animation_speed(tokens),
     )
     section["shadow"] = OrderedDict(
