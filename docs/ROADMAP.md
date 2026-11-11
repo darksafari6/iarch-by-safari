@@ -58,16 +58,45 @@ License data was verified against upstream on 2026-11-09; the verification metho
 package, and still switches the display manager. Those are `INS-01` to `INS-03` and belong to
 Part 6, where they can be changed with tests around them.
 
-## Part 2 — Glass surfaces and motion
+## Part 2 — Glass surfaces and motion ✅ landed
 
 **Goal:** the compositor-side glass: blur, borders, rounding, shadows and the open/close/hover
 animation set, all switchable.
 
-Planned scope: Hyprland window and layer rules for shell surfaces, animation curves and durations
-in `.config/hypr/animations.lua`, per-surface opacity, and a Performance preset that reduces or
-disables each effect. Acceptance: every effect has a named switch; the Performance preset measurably
-lowers work (record the measurement or leave `PERF-01` open); no effect is applied to a surface
-whose rule could not be verified against the compositor release in use.
+| Deliverable | Where | Proof |
+| --- | --- | --- |
+| Design tokens bounded by the compositor's own limits, and colour presets that cannot ship below WCAG | `data/design/tokens.json`, `data/design/presets/*.json` | `data/schemas/tokens.schema.json`, `tests/test_design_tokens.py`, `iarch/cli/contrast_check.py` |
+| Seeded 4K WebP wallpapers the generated presets own, inside a 600 KB budget; two presets keep bundled art | `assets/wallpapers/generated/*.webp`, `iarch/cli/gen_wallpapers.py` | `tests/test_wallpapers.py`, `--check` in CI |
+| Hyprland decoration, layer and window rules for the shell surfaces — blur, borders, rounding, shadows, per-surface opacity — from the tokens | `.config/hypr/generated/glass.lua`, `iarch/cli/gen_glass_lua.py` | `tests/test_glass_lua.py`, `tests/test_payload_map.py`, `--check` in CI |
+| The shell `config.toml` and one palette per preset, refused past the upstream schema | `.config/noctalia/config.toml`, `.config/noctalia/palettes/*.json`, `iarch/cli/render_noctalia.py` | `tests/test_noctalia.py`, `--check` in CI |
+| The GTK 4 and GTK 3 glass overlays, refused past what each version parses | `.config/gtk-4.0/gtk.css`, `.config/gtk-3.0/gtk.css`, `iarch/cli/render_gtk_css.py` | `tests/test_gtk_css.py`, `--check --repo` in CI |
+| The Qt/Kvantum glass theme, refused past the keys `ThemeConfig.cpp` reads | `.config/Kvantum/`, `iarch/cli/render_kvantum.py` | `tests/test_kvantum.py`, `--check` in CI |
+| The fontconfig that applies the font tokens, refused past the config DTD | `.config/fontconfig/fonts.conf`, `iarch/cli/gen_fontconfig.py` | `tests/test_fontconfig.py`, `--check` in CI |
+| The animation set from the motion tokens, with a real Performance off switch | `.config/hypr/generated/animations.lua`, `iarch/cli/gen_animations_lua.py` | `tests/test_animations_lua.py`, `--check` in CI |
+| One command applies a preset across every surface: contrast gate first, all-or-nothing write, verified reload | `iarch/cli/theme.py` (`iarch-theme`) | `tests/test_theme.py`, dry-run smoke in CI |
+
+**Acceptance**, proven mechanically by `tests/test_part2_acceptance.py`:
+
+- *Every effect has a named switch.* Blur, transparency, animations and shadows are the four
+  `settings.effects` booleans; `settings.preset` is the coarse glass/performance master; and
+  `settings.theme.intensity` selects crystal, frosted, soft or performance, the step every renderer
+  consumes. The settings enum and the tokens' intensities are asserted to be the same set, so a
+  switch can never name something the renderers lack.
+- *The Performance preset lowers work.* The `performance` intensity sets `motion.enabled = false`, so
+  the rendered `animations.lua` emits only Hyprland's master `animations:enabled = false` — zero
+  animation leaves and zero curves, against frosted's eleven and five. The reduction is provable by
+  inspection and asserted; the frame-timing, blur-cost and input-latency *measurement* on real
+  hardware is still `PERF-01`, left open.
+- *No effect on an unverifiable surface.* Every renderer validates its output against a
+  `data/design/*.json` surface read out of the pinned upstream release (`verified_against`, `source`)
+  and refuses a key, leaf, curve or property that release does not have. What no sandbox could
+  observe — a live Hyprland or Noctalia session — is `TP-10`, `SES-02` and `UI-05`, and the
+  icon-theme runtime gap is `TP-19`, all in [UNVERIFIED.md](UNVERIFIED.md).
+
+**Explicitly not done in Part 2:** the settings application that reconciles the coarse
+`preset`/`effects` switches with `theme.intensity` is Part 5; the cursor is applied statically by
+`themes/theme.lua` (a verified no-op, every preset shipping the same one) and the icon theme is
+reported, not applied (`TP-19`); and no installer behaviour changed (`INS-01` to `INS-06`, Part 6).
 
 ## Part 3 — Shortcut system
 
