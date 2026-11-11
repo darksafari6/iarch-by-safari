@@ -650,6 +650,20 @@
             }
           }
         }
+      },
+      "withheld": {
+        "polkit_agent": {
+          "reason": "the session already starts an authentication agent of its own in .config/hypr/startup.lua:19 -- polkit-gnome-authentication-agent-1 on Arch, rewritten to xfce-polkit on Fedora -- and two agents on one seat compete for the same request; the key is also at its upstream default of false, so emitting it would restate a default and buy nothing",
+          "recorded_in": "data/design/greeter.json",
+          "where": "not_shipped.shell_polkit_agent",
+          "source": "src/config/config_types.h:1364 and src/config/schema/config_schema.cpp:1824 in Noctalia v5.4.1"
+        },
+        "greeter_sync": {
+          "reason": "auto_sync would raise an administrator authentication dialog on every wallpaper, palette, theme mode or font change, because the packaged polkit action org.noctalia.greeter.sync-appearance is auth_admin in all three states and passwordless sync is a per-account opt-in this repository never performs; privilege_command is worse than a setting, being a privilege escalator prefix the shell appends --sync to and runs as root",
+          "recorded_in": "data/design/greeter.json",
+          "where": "not_shipped.shell_greeter_sync",
+          "source": "src/config/schema/config_schema.cpp:1750-1770 and src/config/config_types.h:276-285 in Noctalia v5.4.1"
+        }
       }
     },
     "bar.default": {

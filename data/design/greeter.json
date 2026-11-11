@@ -1,0 +1,746 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "tool": "noctalia-greeter",
+  "verified_against": "noctalia-greeter v1.7.0, fetched 2026-11-09",
+  "shell_verified_against": "Noctalia v5.4.1, fetched 2026-11-09",
+  "source": "noctalia-dev/noctalia-greeter at v1.7.0: src/greeter/greeter_config_store.h, src/greeter/greeter_config_io.cpp, src/greeter/greeter_preferences.h, src/greeter/greeter_preferences.cpp, src/greeter/appearance_sync.h, src/greeter/appearance_sync.cpp, src/greeter/appearance_config.cpp, src/greeter/session_config.cpp, src/compositor/noctalia_compositor.c, src/compositor/system_keyboard_config.c, src/config/config_types.h, src/render/animation/animation.h, src/main.cpp, examples/greeter.toml, docs/user/configuration.md, docs/user/sync.md, docs/user/input.md, data/org.noctalia.greeter.apply-appearance.policy.in, scripts/greetd_setup_lib.sh, scripts/setup_greetd_pam.sh. noctalia-dev/noctalia at v5.4.1: src/shell/greeter/greeter_appearance_sync.cpp, src/shell/greeter/greeter_appearance_sync.h, src/config/schema/config_schema.cpp, src/config/config_types.h, src/cli/schema_msg.h, src/ui/palette.h, docs/user/theming/palette.mdx.",
+  "_note": "The login screen, recorded so that nothing has to be guessed about it. This project generates no file from this record: the greeter's declarative config is a root-owned system file that wins over Sync key by key, and Sync is the only supported way appearance reaches the login screen. What this record is for is the opposite of a generator — it is the evidence for the three keys this project deliberately does not emit (not_shipped), the palette contract that makes Sync work at all (palette_contract), and the four places where the greeter's own documentation disagrees with its code (doc_disagreements). Every default, enumeration and range below was read out of the v1.7.0 source, not out of the manual, because the manual is wrong in four places.",
+  "release_note": "install.sh:1526 installs the AUR package noctalia-greeter-git, which builds the main branch rather than a tag. At the fetch date main's meson.build still says version 1.7.0, so this record and the package an installer gets describe the same release, but that is a fact about today and not a guarantee. main carries two keys v1.7.0 does not; they are listed under main_only_keys and no test depends on either.",
+  "main_only_keys": {
+    "note": "Present in examples/greeter.toml and docs/user/configuration.md at main on 2026-11-09, absent from the same two files at v1.7.0, and absent from the v1.7.0 parser's isKnownClockKey (src/greeter/greeter_config_io.cpp:93-95), which would warn 'unrecognized key clock.time_font_size (ignored)' if it saw one.",
+    "keys": {
+      "clock.time_font_size": {
+        "type": "float",
+        "default": 48,
+        "note": "Time line font size in logical pixels before UI scaling."
+      },
+      "clock.date_font_size": {
+        "type": "float",
+        "default": 14,
+        "note": "Date line font size in logical pixels before UI scaling."
+      }
+    }
+  },
+  "greetd_config": {
+    "path": "/etc/greetd/config.toml",
+    "note": "greetd is a separate project and has a configuration surface of its own; only the two tables the greeter's own helper writes are recorded here, because those are the only two this repository's installers write. Upstream generates exactly this block in scripts/greetd_setup_lib.sh:100-108, and install.sh:1399-1406 and fedora_install.sh:577-584 write the same three keys.",
+    "source": "scripts/greetd_setup_lib.sh:93-120 (print_greetd_config_commands)",
+    "upstream_template": [
+      "[terminal]",
+      "vt = 1",
+      "",
+      "[default_session]",
+      "command = \"${session_bin}\"",
+      "user = \"${greeter_user}\""
+    ],
+    "upstream_template_source": "scripts/greetd_setup_lib.sh:107-112",
+    "template_difference_note": "Upstream braces its two variables and this repository's installers do not, which is the same string to a shell and a different one to a byte comparison. tests/test_greeter.py normalizes ${name} to $name before comparing, so the assertion is about the configuration and not about brace style. Everything else — the table names, the key names, the order and the value of vt — is identical, which is the point of recording the template at all.",
+    "tables": {
+      "terminal": {
+        "keys": {
+          "vt": {
+            "type": "int",
+            "default": null,
+            "note": "The virtual terminal greetd runs the greeter on. Upstream's generated block writes 1 and so do both installers; nothing in the greeter reads it back."
+          }
+        }
+      },
+      "default_session": {
+        "keys": {
+          "command": {
+            "type": "string",
+            "default": "/usr/bin/noctalia-greeter-session",
+            "note": "The greeter session wrapper. Upstream resolves it through a candidate list (NOCTALIA_GREETER_SESSION_BIN, /usr/bin, /usr/local/bin, the script directory, a build directory) at scripts/greetd_setup_lib.sh:7-24 and falls back to /usr/bin/noctalia-greeter-session; install.sh:1374-1376 resolves it with command -v instead and falls back to the same path.",
+            "pinned_session_note": "Upstream documents an optional pinned desktop session as command = \"<session_bin> -- --session niri\" (scripts/greetd_setup_lib.sh:118-119). Neither installer pins one, so the greeter shows its session picker and remembers the last choice in sync.toml."
+          },
+          "user": {
+            "type": "string",
+            "default": "greeter",
+            "note": "The unprivileged account greetd runs the greeter as. Upstream asks the packaged apply helper for the real name (--print-greeter-user) and only then falls back to 'greeter', warning on stderr (scripts/greetd_setup_lib.sh:45-62). Both installers hardcode 'greeter' and create the account themselves when it is missing (install.sh:1378-1381), which is upstream's fallback value, so the two agree on every distribution whose package uses that name and disagree on any that does not."
+          }
+        }
+      }
+    }
+  },
+  "state_directory": {
+    "path": "/var/lib/noctalia-greeter",
+    "constant": "greeter::appearance::kDefaultSyncedDataDir",
+    "source": "src/greeter/appearance_sync.h:23",
+    "env_override": {
+      "name": "NOCTALIA_GREETER_STATE_DIR",
+      "source": "src/greeter/appearance_sync.h:31, read at src/greeter/greeter_config_io.cpp:1150-1153 and src/compositor/noctalia_compositor.c:708-710",
+      "note": "The compositor bridge and the C++ preferences read the same variable, so one export moves both."
+    },
+    "mode": "0750",
+    "mode_constant": "kSyncedDirMode = S_IRWXU | S_IRGRP | S_IXGRP",
+    "mode_source": "src/greeter/greeter_preferences.cpp:29 and src/greeter/appearance_sync.cpp:30, applied at src/greeter/greeter_preferences.cpp:481",
+    "file_mode": "0644",
+    "file_mode_constant": "kGreeterConfMode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH",
+    "file_mode_source": "src/greeter/greeter_preferences.cpp:30, applied to greeter.toml at :500 and to sync.toml at :518",
+    "owner": "the greetd session user, set by installGreeterSystemLayout (src/greeter/greeter_preferences.cpp:463-487) and by ensure_greeter_paths in scripts/greetd_setup_lib.sh:67-79",
+    "tmpfiles_dropin": {
+      "path": "<prefix>/lib/tmpfiles.d/noctalia-greeter.conf",
+      "source": "data/tmpfiles.d/noctalia-greeter.conf, installed at meson.build:289-293",
+      "line": "d /var/lib/noctalia-greeter 0750 greeter greeter -",
+      "note": "An optional convenience drop-in for systemd and opentmpfiles, and a second agreement that the directory is 0750 and belongs to the greeter account. The file's own comment says packaging should still run setup_greeter_system.sh or ensure_greeter_paths in postinst, because that path is portable across init systems and uses the real greetd session user, while this drop-in hardcodes greeter:greeter and has to be overridden under /etc/tmpfiles.d/ when the account is named something else. It also says not to put a log file here: under greetd the greeter logs to syslog."
+    },
+    "files": {
+      "greeter.toml": "Full declarative configuration, administrator-controlled. Sync and the login UI never write it (src/greeter/greeter_config_store.h:41).",
+      "sync.toml": "Mutable state written by Sync and by the login UI: appearance, last session, last scheme, session power and menu entries, and the synced output layout, transforms and scales.",
+      "appearance.json": "Legacy live manifest, read only to migrate into sync.toml once (src/greeter/appearance_sync.h:19, src/greeter/appearance_config.cpp:161).",
+      "state.toml": "Legacy runtime keys, migrated into sync.toml and stripped from greeter.toml (src/greeter/greeter_config_io.cpp:1077-1132).",
+      "wallpaper*": "Wallpaper images installed by Sync under the state directory, named from kWallpaperBaseName (src/greeter/appearance_sync.h:30)."
+    },
+    "staging_directory": {
+      "path": "$XDG_RUNTIME_DIR/noctalia-greeter-sync",
+      "fallback": "/run/user/<uid>/noctalia-greeter-sync",
+      "source": "src/shell/greeter/greeter_appearance_sync.cpp:348-380 in Noctalia v5.4.1",
+      "note": "The shell clears and recreates it, secures it, and writes sync.toml plus optional output_layout, output_transforms and output_scales text files into it. The privileged helper then merges that staging directory into the live state directory. A missing runtime directory aborts the sync rather than falling back to a world-writable path."
+    }
+  },
+  "greeter_toml": {
+    "path": "/var/lib/noctalia-greeter/greeter.toml",
+    "parser_note": "The parser warns and continues: an unrecognized top-level key logs 'unrecognized top-level key <name> (ignored)', an unrecognized key inside a known table logs 'unrecognized key <section>.<key> (ignored)', and a value of the wrong type logs 'invalid <section>.<key> value' and leaves the key unset (src/greeter/greeter_config_io.cpp:178-182 and the per-key branches at :186-418). Nothing in this file can fail the login screen, which is why a typo in it is worse than no file at all: the greeter comes up looking default and the only evidence is a syslog line. Diagnostics are retained for an on-screen message (src/greeter/greeter_config_store.h:118-123).",
+    "empty_string_note": "An empty string is not a value: stringValue() maps \"\" to no value at all (src/greeter/greeter_config_io.cpp:107-114), so clock.time_format = \"\" hides the line and appearance.font_family = \"\" keeps the greeter's own font.",
+    "sections": {
+      "session": {
+        "keys": {
+          "default": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:212-213, resolved at src/greeter/greeter_preferences.cpp:417",
+            "note": "The session selected on startup, overriding the last choice in sync.toml. The value is a desktop entry's Name= — the same text the picker shows — with the .desktop filename accepted as a case-insensitive fallback, and a Name= match winning if both apply. Sessions are discovered from wayland-sessions and xsessions directories under /usr/local/share, /usr/share, /run/current-system/sw/share and every XDG_DATA_DIRS entry; when a wayland-sessions and an xsessions entry share a Name=, the wayland one wins. A command line --session or --cmd overrides this key (docs/user/configuration.md, src/main.cpp:186-190).",
+            "xsession_note": "An xsessions entry's Exec= is run through noctalia-greeter-xsession, which bootstraps Xorg with startx and needs xinit installed; without it the session fails with a 'startx not found' error instead of starting.",
+            "this_project_note": "The isolated legacy session this repository still ships would be selectable by its desktop entry name, 'iArch by Safari (isolated session)' (legacy/session/minimalinux.desktop). Nothing here pins it, and the v5 payload is a Hyprland session that the distribution's own package provides."
+          },
+          "last": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_store.h:44-45, migrated at src/greeter/greeter_config_io.cpp:1077-1132",
+            "note": "Legacy only. It is parsed so that an old file does not warn, migrated into sync.toml, and stripped the next time greeter.toml is written. Setting it here cannot work: writeConfig never persists session.last (src/greeter/greeter_config_store.h:115-116).",
+            "runtime_migrated": true
+          }
+        }
+      },
+      "user": {
+        "keys": {
+          "default": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:219-224, resolved at src/greeter/greeter_preferences.cpp:418",
+            "note": "Opens the password step for this account on startup instead of showing the user picker. A command line --user overrides it. This project does not set it: the account name is a per-machine fact, and the payload is derived only from repository state."
+          }
+        }
+      },
+      "appearance": {
+        "keys": {
+          "scheme": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:229-230, precedence at src/greeter/greeter_preferences.cpp:420",
+            "enum": [
+              "Synced"
+            ],
+            "enum_note": "'Synced' is the only name with a constant (kSyncedSchemeDisplayName, src/greeter/appearance_sync.h:31); the built-in schemes are a data set the greeter ships and this record does not enumerate, because examples/greeter.toml names 'Noctalia' and 'Catppuccin' as examples rather than as a list. Not validated at parse time. Setting this key pins the scheme permanently and overrides the user's last pick on the login screen, which is why this project does not set it.",
+            "note": "Selects the colour scheme. When set it wins over the last scheme the login UI stored in sync.toml."
+          },
+          "password_style": {
+            "type": "string",
+            "default": "default",
+            "source": "src/greeter/greeter_preferences.cpp:423-428",
+            "enum": [
+              "default",
+              "random"
+            ],
+            "enum_note": "Validated in code: 'random' selects PasswordMaskStyle::RandomIcons, 'default' keeps filled circles, and anything else logs \"invalid appearance.password_style '<value>' (using filled circles)\".",
+            "note": "The password mask. 'default' is filled circles; 'random' cycles glyph shapes. hyprlock's equivalent, hide_input_base_color, rotates a hue in oklab instead — two different fallback lock surfaces, two different masks, and neither is configurable from this repository."
+          },
+          "hide_logo": {
+            "type": "bool",
+            "default": false,
+            "source": "src/greeter/greeter_preferences.cpp:429-431",
+            "note": "Hides the Noctalia brand logo on the login screen. This project leaves it false and does not ship the key: hiding an upstream logo is a branding decision for the greeter's own settings page, and the repository's branding rules apply to files this project writes, not to a third-party binary's assets."
+          },
+          "power_buttons_position": {
+            "type": "string",
+            "default": "bottom-right",
+            "source": "default at src/greeter/greeter_surface.cpp:2124, consumed at :2663-2711",
+            "enum": [
+              "bottom-right",
+              "bottom-left",
+              "top-left",
+              "top-right",
+              "hidden"
+            ],
+            "enum_note": "Documented at docs/user/configuration.md and matched by equality in greeter_surface.cpp, but never validated: an unrecognized string falls through every branch and lands in the bottom-right layout, with no warning. The vocabulary is recorded as an enumeration so that a reader knows there are five values, not so that a generator can trust the greeter to reject a sixth.",
+            "note": "Where the power controls sit. Corner occupants stack inward without overlapping: scheme selector, then power buttons, then clock."
+          },
+          "scheme_selector_position": {
+            "type": "string",
+            "default": "top-right",
+            "source": "default at src/greeter/greeter_surface.cpp:2125, consumed at :1281-1295 and :2835",
+            "enum": [
+              "top-right",
+              "top-left",
+              "bottom-left",
+              "bottom-right",
+              "hidden"
+            ],
+            "enum_note": "Same situation as power_buttons_position: five documented values, matched by equality, never validated, and an unrecognized value behaves like the default.",
+            "note": "Where the colour scheme picker sits."
+          },
+          "theme_mode": {
+            "type": "string",
+            "default": "dark",
+            "source": "src/greeter/appearance_config.cpp:114",
+            "note": "The mode the Synced appearance is resolved in. Sync writes the shell's resolved mode here, so this key only matters for a greeter.toml that overrides Sync."
+          },
+          "corner_radius_scale": {
+            "type": "float",
+            "default": 1.0,
+            "source": "parser at src/greeter/greeter_config_io.cpp:243-253, default at src/greeter/appearance_config.cpp:115",
+            "range": [
+              0.0,
+              3.4028235e+38
+            ],
+            "range_note": "The parser accepts any finite value >= 0.0 and warns 'invalid appearance.corner_radius_scale value' otherwise; there is no upper constant, so the maximum recorded here is FLT_MAX as an upper bound rather than a documented limit. This is not the shell's [shell] corner_radius_scale, but Sync copies that value into it, so the login screen's radius scale is this repository's tokens radius scale of 1.5 without this project writing anything.",
+            "note": "Multiplies the greeter's own corner radii. Zero gives square corners on the login screen only."
+          },
+          "font_family": {
+            "type": "string",
+            "default": "",
+            "source": "parser at src/greeter/greeter_config_io.cpp:255-256, default at src/greeter/appearance_config.cpp:116",
+            "note": "A Fontconfig family for the Synced appearance; empty or omitted keeps the greeter's own font. The synced font must be resolvable by the greeter account through Fontconfig, so a family installed only in a user's home directory does not reach the login screen (docs/user/sync.md). Sync writes this key only when the shell's [shell] font_family is non-empty (src/shell/greeter/greeter_appearance_sync.cpp:449-451), and this repository ships font_family = \"\" — so the login screen keeps the greeter's own font, which is the safe outcome while the UI font this project names is not guaranteed to be installed system-wide (docs/FONTS.md, TP-13)."
+          },
+          "palette": {
+            "type": "table",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:257-266, completeness at src/greeter/appearance_sync.h:44-52, hex validation at src/greeter/appearance_config.cpp:134",
+            "note": "Sixteen hex colours, and all sixteen or nothing: hasCompletePalette() gates the Synced scheme on the full requiredPaletteKeys() set, and an incomplete table is treated as absent. A complete table here wins over the palette Sync wrote into sync.toml. An invalid hex value logs 'greeter.toml appearance.palette has an invalid hex value'. See palette_contract for where each of the sixteen comes from in this repository's own palette files."
+          },
+          "wallpaper": {
+            "type": "table",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:267-273 and parseWallpaperTable at :163-184",
+            "note": "path (absolute, or color:#RRGGBB), fill_mode and fill_color. fill_color also works without an image. JPEG XL wallpapers are supported. Applied independently of the scheme, so a wallpaper here overrides the synced one even while a built-in scheme is selected.",
+            "keys": {
+              "path": {
+                "type": "string",
+                "default": null,
+                "note": "An absolute path, or color:#RRGGBB for a solid background."
+              },
+              "fill_mode": {
+                "type": "string",
+                "default": "crop",
+                "source": "parseFillMode at src/greeter/appearance_sync.cpp:439-457, default at src/greeter/appearance_config.h:16",
+                "enum": [
+                  "center",
+                  "crop",
+                  "fit",
+                  "stretch",
+                  "repeat",
+                  "span"
+                ],
+                "enum_note": "WallpaperFillMode at src/config/config_types.h:5-12, parsed by parseFillMode at src/greeter/appearance_sync.cpp:439-457. Validated on both sides of a sync, differently: the greeter silently keeps its default crop when the value does not parse (src/greeter/appearance_config.cpp:32-36, with no warning), while the privileged apply helper rejects a staged wallpaper whose fill_mode does not parse (src/tools/secure_appearance_sync.cpp:908). 'span' projects one image across the logical multi-monitor layout and behaves like crop when only one output is pinned.",
+                "note": "How the image fills the output."
+              },
+              "fill_color": {
+                "type": "color",
+                "default": null,
+                "note": "A solid background colour, usable with or without path."
+              }
+            }
+          },
+          "wallpapers": {
+            "type": "map",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:274-283",
+            "note": "Per-connector wallpaper overrides keyed by connector name, each holding the same three keys as [appearance.wallpaper]. A connector key whose value is not a table logs 'appearance.wallpapers.<connector> must be a table'. Connector names are machine facts, so nothing here can ship one."
+          }
+        }
+      },
+      "clock": {
+        "keys": {
+          "enabled": {
+            "type": "bool",
+            "default": true,
+            "source": "src/greeter/greeter_preferences.cpp:435-437, default at src/greeter/greeter_preferences.h:39",
+            "note": "Whether the login screen shows a clock at all. When it is off, both the time and the date lines are rendered empty rather than hidden by layout (src/greeter/greeter_surface.cpp:1029-1030), so the panel keeps its shape."
+          },
+          "position": {
+            "type": "string",
+            "default": "above-panel",
+            "source": "src/greeter/greeter_preferences.cpp:438-447, default at src/greeter/greeter_preferences.h:40",
+            "enum": [
+              "above-panel",
+              "top-left",
+              "top-center",
+              "top-right",
+              "bottom-left",
+              "bottom-center",
+              "bottom-right"
+            ],
+            "enum_note": "The one position key the greeter does validate: a seven-value constexpr array at src/greeter/greeter_preferences.cpp:439-441, with \"invalid clock.position '<value>' (using above-panel)\" for anything else.",
+            "note": "bottom-center uses the logo slot when hide_logo is true, or stacks above a visible logo."
+          },
+          "time_format": {
+            "type": "string",
+            "default": "{:%H:%M}",
+            "source": "src/greeter/greeter_preferences.cpp:448-450, default at src/greeter/greeter_preferences.h:41",
+            "note": "Noctalia-compatible bare strftime or C++ chrono format. Empty hides the line. Sync does not carry the shell's [shell] time_format, so the login screen keeps this default; this repository ships the same string, so the two agree by coincidence rather than by mechanism."
+          },
+          "date_format": {
+            "type": "string",
+            "default": "%A, %x",
+            "source": "src/greeter/greeter_preferences.cpp:451-453, default at src/greeter/greeter_preferences.h:42",
+            "note": "Empty hides the line. Sync does not carry the shell's [shell] date_format either, and this repository ships \"%a, %x\" there — an abbreviated weekday. The login screen therefore spells the weekday out while the session's bar abbreviates it. Recorded rather than fixed: closing the gap means writing a root-owned greeter.toml, and greeter.toml wins over Sync for every key it sets."
+          }
+        }
+      },
+      "output": {
+        "keys": {
+          "name": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:316-317, bridge at :1164",
+            "note": "Pins the greeter to one connector or stable EDID identifier; omitted mirrors on every monitor. 'noctalia-greeter outputs --details' lists both spellings. Identifiers containing spaces are separated by semicolons in the map keys."
+          },
+          "use_synced_settings": {
+            "type": "bool",
+            "default": true,
+            "source": "src/greeter/greeter_config_io.cpp:318-323 and :1160-1162, also :1092",
+            "note": "When true the greeter takes layout, transforms and scales from sync.toml for anything not declared here. When false the whole sync file is skipped for outputs, so Sync still stores the metadata and the greeter ignores it. A non-boolean logs 'invalid output.use_synced_settings value (expected a boolean)'."
+          },
+          "layout": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:324-325, precedence at :1173",
+            "note": "Multi-monitor positions in logical pixels, 'DP-1:0,0; DP-2:2560,0'. Overrides the synced layout. Outputs missing from the map are appended to the right with automatic scale."
+          },
+          "scale": {
+            "type": "float",
+            "default": null,
+            "source": "parser at src/greeter/greeter_config_io.cpp:326-331, bridge at :1182-1184, compositor at src/compositor/noctalia_compositor.c:717-719",
+            "range": [
+              1.0,
+              3.4028235e+38
+            ],
+            "range_note": "Two different gates, and the second is the one that matters. The parser accepts any finite value above 0.0 (positiveFloatValue at :117-125), but the bridge into the compositor copies it only when it is at least 1.0 (:1182-1184) and the compositor repeats that test (:717-719). A scale below 1.0 is therefore accepted without a warning and then dropped: the recorded range is the one the greeter honours.",
+            "note": "A manual UI scale forced on every output. Omitted or invalid falls back to per-output scales, then to automatic scaling from display geometry."
+          },
+          "scales": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:353-354, precedence at :1177",
+            "note": "Per-output scales, 'DP-1:1; DP-2:1', by connector or stable identifier, matching the session's logical layout coordinates. Distinct from the global scale above and not range-checked at parse time. Overrides the synced scales."
+          },
+          "width": {
+            "type": "int",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:332-337, modeDimensionValue at :136-143",
+            "range": [
+              1,
+              16384
+            ],
+            "range_note": "modeDimensionValue accepts 1 to 16384 inclusive and warns 'invalid output.width value' otherwise. Both width and height are required to prefer a DRM mode.",
+            "note": "Preferred DRM mode width in pixels."
+          },
+          "height": {
+            "type": "int",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:338-343, modeDimensionValue at :136-143",
+            "range": [
+              1,
+              16384
+            ],
+            "range_note": "The same modeDimensionValue gate as width, with its own message: 'invalid output.height value'. Both are required to prefer a DRM mode, so one without the other is ignored.",
+            "note": "Preferred DRM mode height in pixels."
+          },
+          "refresh_rate": {
+            "type": "float",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:344-351, bridge at :1189-1191, per-entry revalidation at src/compositor/noctalia_compositor.c:655-666",
+            "range": [
+              0.0,
+              1000.0
+            ],
+            "range_note": "One key with two accepted shapes. A number above 0 and at most 1000 is a global rate in hertz; anything else is tried as a string map, 'DP-1:120; HDMI-A-1:60', whose entries the compositor re-validates against the same 0-1000 range and logs individually. Nominal values match fractional modes within 1 Hz. Use one form or the other.",
+            "note": "Preferred refresh rate, globally or per output."
+          },
+          "transforms": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:352-353, precedence at :1175",
+            "enum": [
+              "normal",
+              "0",
+              "none",
+              "90",
+              "180",
+              "270",
+              "flipped",
+              "flipped-90",
+              "flipped-180",
+              "flipped-270"
+            ],
+            "enum_note": "The token vocabulary is documented at docs/user/configuration.md and examples/greeter.toml; the parser stores the whole 'NAME:token; NAME:token' string without validating a token, so the enumeration is recorded as documentation of the accepted words, not as a check the greeter performs.",
+            "note": "Per-output DRM transform by connector or stable identifier. Overrides the synced transforms."
+          }
+        }
+      },
+      "idle": {
+        "note": "The greeter's own idle handling, and the third idle subsystem in this stack after the shell's [idle.behavior.*] and hypridle. It blanks outputs; it does not lock, and it cannot, because nothing is unlocked at the login screen. It runs inside the greeter's embedded wlroots compositor, not through ext_idle_notifier_v1, so it is unaffected by the shell's inhibitors and by hypridle.",
+        "keys": {
+          "timeout": {
+            "type": "int",
+            "default": 0,
+            "source": "parser at src/greeter/greeter_config_io.cpp:362-367 with idleTimeoutValue at :145-152, bridge at :1194-1196, compositor at src/compositor/noctalia_compositor.c:700 and :728-730",
+            "range": [
+              0,
+              86400
+            ],
+            "range_note": "idleTimeoutValue accepts 0 to 86400 seconds inclusive and warns 'invalid idle.timeout value' otherwise. The bridge passes an explicit 0 through (>= 0), and the compositor starts from 0 and only enables blanking when the value is above 0, so the default is blanking disabled. examples/greeter.toml shows timeout = 300 as a sample value, not as a default.",
+            "note": "Seconds with no input before the outputs are blanked; 0 disables. The countdown is polled every 2000 ms (IDLE_POLL_MS at src/compositor/noctalia_compositor.c:1177) and pointer or scroll noise does not reset it — the comment at :1232 says so explicitly, and only a wake after blanking restarts it. That is the opposite of the shell's pre-action fade, where any activity cancels the pending action.",
+            "env_override": "NOCTALIA_GREETER_IDLE_TIMEOUT, validated to the same 0-86400 range and logged as an error when out of it (src/compositor/noctalia_compositor.c:731-748). It wins over the file."
+          }
+        }
+      },
+      "cursor": {
+        "keys": {
+          "theme": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:375-376, bridge at :1165, resolved at src/compositor/noctalia_compositor.c:2684-2692",
+            "note": "The exact, case-sensitive name of the directory that directly contains the cursor theme, not the human-readable name a desktop appearance setting shows. docs/user/input.md:131-142 gives Arch's Breeze as the example: the package is breeze-cursors and the directory is breeze_cursors. Omitted, the compositor falls back to XCURSOR_THEME from the environment and then to a NULL theme name, which is xcursor's own default. This project does not ship the key for exactly that reason -- the cursor theme this repository names is Bibata on Arch and an unverified name on Fedora (TP-18), and a directory name that is wrong on one distribution silently leaves the login screen with the default cursor."
+          },
+          "size": {
+            "type": "int",
+            "default": 24,
+            "source": "parser at src/greeter/greeter_config_io.cpp:378-382 with cursorSizeValue at :127-134, bridge at :1197-1199, compositor default at src/compositor/noctalia_compositor.c:2693-2705",
+            "range": [
+              1,
+              1024
+            ],
+            "range_note": "cursorSizeValue accepts 1 to 1024 inclusive and warns 'invalid cursor.size value' otherwise, and the compositor re-validates XCURSOR_SIZE against the same 1-1024 range before it will use it (src/compositor/noctalia_compositor.c:2700-2703). Note the parser's shape here: every known cursor key that is not theme or path is tried as a size, so size is the only other key the section can hold.",
+            "note": "The cursor size in pixels. 24 is the compositor's own fallback rather than a default the parser supplies, and the precedence is the file, then XCURSOR_SIZE, then 24. The value goes straight into wlr_xcursor_manager_create, so it is the size the theme is loaded at."
+          },
+          "path": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:377, bridge at :1166, exported at src/compositor/noctalia_compositor.c:2707-2710",
+            "note": "A colon-separated search path for when the theme is not under the default icon directories. The compositor resolves it and exports it as XCURSOR_PATH for the whole greeter process, so it also changes where any child looks for cursors."
+          }
+        }
+      },
+      "keyboard": {
+        "note": "The greeter does not read the session compositor's keyboard configuration. With layout unset it tries XKB_DEFAULT_* from the environment, then the system XKB configuration — /etc/default/keyboard, /etc/vconsole.conf, /etc/sysconfig/keyboard, /etc/X11/xorg.conf and the xorg.conf.d directory (src/compositor/system_keyboard_config.c:213-218, chosen at src/compositor/noctalia_compositor.c:794-833) — and only then the xkb defaults. This repository's session sets kb_layout = \"us\" and numlock_by_default = true in .config/hypr/inputs.lua:3-5, and neither reaches the login screen.",
+        "keys": {
+          "layout": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:387-388, bridge at :1167",
+            "note": "Comma-separated for multiple layouts, as an XKB layout list."
+          },
+          "variant": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:389-390, bridge at :1168",
+            "note": "Comma-separated, positionally matched to layout; an empty element means no variant for that layout, as in layout = \"us,cz\" with variant = \",qwertz\"."
+          },
+          "options": {
+            "type": "string",
+            "default": null,
+            "source": "src/greeter/greeter_config_io.cpp:391-392, bridge at :1169",
+            "note": "XKB options, for example grp:alt_shift_toggle."
+          },
+          "numlock": {
+            "type": "bool",
+            "default": false,
+            "source": "parser at src/greeter/greeter_config_io.cpp:393-396, bridge at :1170-1172, compositor at src/compositor/noctalia_compositor.c:2176-2186",
+            "note": "The bridge maps true to 1, false to -1 and an absent key to 0, and the compositor locks Num Lock only when the value is above 0, under a comment that says 'Enable Num Lock only when explicitly requested in greeter.toml'. The effective default is therefore off. The setting has no effect when the active keymap provides no Num Lock modifier. See doc_disagreements: two upstream documents claim the opposite default.",
+            "doc_disagreement": true
+          }
+        }
+      },
+      "auth": {
+        "keys": {
+          "allow_empty_password": {
+            "type": "bool",
+            "default": false,
+            "source": "src/greeter/greeter_config_io.cpp:404-409, default at src/greeter/greeter_preferences.h:33",
+            "note": "Permits an empty submission to start fprintd or smartcard PAM. PAM stays serialized, so this does not allow typing a password while pam_fprintd waits. This project would emit false if it emitted the file at all, for the same reason [lockscreen] allow_empty_password is emitted as false: an empty submit that reaches an authentication stack is not a convenience. hyprlock's equivalent is ignore_empty_input, also false here.",
+            "security_relevant": true
+          },
+          "request_timeout": {
+            "type": "int",
+            "default": 60,
+            "source": "parser at src/greeter/greeter_config_io.cpp:410-414 with authRequestTimeoutValue at :154-161, default at src/greeter/greeter_preferences.h:34, applied at src/greeter/greeter.cpp:76",
+            "range": [
+              0,
+              3600
+            ],
+            "range_note": "authRequestTimeoutValue accepts 0 to 3600 seconds inclusive and warns 'invalid auth.request_timeout value' otherwise. 0 disables the watchdog. docs/user/configuration.md advises keeping it longer than any fingerprint timeout, because it is the seconds waited for each greetd reply.",
+            "note": "Seconds to wait for each greetd reply before the greeter gives up on it."
+          }
+        }
+      }
+    }
+  },
+  "sync_toml": {
+    "path": "/var/lib/noctalia-greeter/sync.toml",
+    "note": "Written by Sync and by the login UI, never by an administrator and never by this repository. Recorded because it is what the login screen actually reads when no greeter.toml exists, and because its shape explains what Sync can and cannot carry.",
+    "source": "src/greeter/greeter_config_store.h:86-110",
+    "keys": {
+      "session.last": "The last session picked on the login screen.",
+      "appearance.scheme": "The last colour scheme picked, unless greeter.toml pins one.",
+      "appearance.*": "The Sync-owned palette, wallpaper, per-output wallpapers, theme mode, corner radius scale and font family, with the same shapes as in greeter.toml.",
+      "output.layout": "The synced monitor layout.",
+      "output.transforms": "The synced per-output transforms.",
+      "output.scales": "The synced per-output scales.",
+      "session.power.suspend": "A suspend command carried over from the legacy authenticated path only.",
+      "session.power.reboot": "A reboot command carried over from the legacy authenticated path only.",
+      "session.power.shutdown": "A shutdown command carried over from the legacy authenticated path only.",
+      "session.actions": "An array of tables with action, command, label and glyph, carried over from the legacy authenticated path only."
+    },
+    "session_payload_note": "The constrained --sync path deliberately excludes session power commands and custom session actions; only the legacy administrator-authenticated path still carries them, because older greeters expect them (docs/user/sync.md, and GreeterSyncAppearanceUpdate::replaceSession at src/greeter/greeter_preferences.h:60-67). This repository ships no [shell.session.power] overrides and no [[shell.session.actions]] for the session either, so there is nothing for either path to carry — the two decisions agree from opposite directions."
+  },
+  "sync": {
+    "note": "The only supported way appearance reaches the login screen. The shell stages a snapshot and a privileged helper merges it into the state directory.",
+    "ipc": {
+      "command": "noctalia msg greeter-sync",
+      "source": "src/cli/schema_msg.h:529-530 in Noctalia v5.4.1, bound at src/shell/greeter/greeter_appearance_sync.cpp registerIpc",
+      "note": "Takes no argument; a non-empty one returns 'error: usage: greeter-sync'. Replies are 'ok', 'ok: staged (run legacy privilege install manually)', 'error: greeter appearance sync is already in progress', 'error: failed to start greeter appearance sync' and 'error: noctalia greeter is not installed'. The handler is not registered at all when appearanceSyncAvailable() is false, so on a machine without the greeter the command does not exist rather than failing."
+    },
+    "availability": {
+      "requires": [
+        "/usr/bin/noctalia-greeter or /usr/local/bin/noctalia-greeter",
+        "the privileged apply helper, noctalia-greeter-apply-appearance",
+        "a resolvable privilege escalator, or a [shell.greeter_sync] privilege_command override"
+      ],
+      "source": "src/shell/greeter/greeter_appearance_sync.cpp appearanceSyncAvailable()"
+    },
+    "copies": [
+      "the wallpaper, including per-output wallpapers",
+      "the palette, as the greeter's own sixteen keys",
+      "the resolved theme mode",
+      "[shell] corner_radius_scale",
+      "[shell] font_family, only when it is not empty",
+      "the monitor layout, orientation and effective per-output scale"
+    ],
+    "excludes": [
+      "session power commands",
+      "custom session actions",
+      "[shell] time_format and date_format",
+      "the cursor theme",
+      "the keyboard configuration",
+      "the idle blanking timeout",
+      "the session and user defaults",
+      "the power button and scheme selector positions",
+      "both [auth] keys"
+    ],
+    "source": "docs/user/sync.md and src/shell/greeter/greeter_appearance_sync.cpp:439-475",
+    "precedence": "greeter.toml wins over sync.toml when both set the same value, and palette and wallpaper precedence are resolved independently: a complete [appearance.palette] in greeter.toml selects the declarative Synced colours, while [appearance.wallpaper] and the per-output values override the matching synced wallpaper values even when a built-in scheme is selected.",
+    "auto_sync": {
+      "key": "[shell.greeter_sync] auto_sync",
+      "default": false,
+      "source": "src/config/schema/config_schema.cpp:1750-1770 and src/config/config_types.h:276-285 in Noctalia v5.4.1",
+      "note": "Syncs whenever the wallpaper, palette, theme mode or shell font changes, debounced so that rapid changes become one operation. A corner-radius-only change still needs a manual Sync Now unless it arrives together with another trigger. Only one sync runs at a time; an overlapping settings or auto-sync request leaves the active operation untouched and an overlapping greeter-sync IPC request reports that a sync is already in progress.",
+      "why_not_shipped": "Each sync elevates through pkexec, and the packaged polkit action requires administrator authentication for every sync unless somebody has installed a site-local passwordless rule for that account (see authorization). Turning auto_sync on in a shipped payload would therefore raise an authentication dialog on every wallpaper or palette change for every user who has not opted in. A stale login screen is a smaller harm than an unattended privilege prompt, so this project leaves the setting at its default and says so in the documentation."
+    },
+    "authorization": {
+      "action_id": "org.noctalia.greeter.sync-appearance",
+      "policy_source": "data/org.noctalia.greeter.apply-appearance.policy.in at v1.7.0",
+      "defaults": "<allow_any>auth_admin</allow_any>, <allow_inactive>auth_admin</allow_inactive> and <allow_active>auth_admin</allow_active> -- all three states require administrator authentication",
+      "matches_only": "noctalia-greeter-apply-appearance --sync <staging-directory>",
+      "note": "Administrator authentication is the default and is a supported long-term mode, not a migration step. Passwordless sync is opt-in per account: 'sudo noctalia-greeter passwordless-sync enable <user>' writes a narrow rule limited to the exact packaged helper, the root target account, and that user in an active local session. It never covers the legacy positional helper mode, never creates a general passwordless sudo rule, and does not turn on Auto-Sync Greeter.",
+      "legacy_action_warning": "Releases through 1.3.1 used org.noctalia.greeter.apply-appearance, scoped only by executable path. A passwordless rule must never be pointed at that action, because it would also authorize the legacy helper mode.",
+      "agent_requirement": "The authenticated flow needs a polkit authentication agent running in the desktop session. This repository starts one in .config/hypr/startup.lua:19 — polkit-gnome-authentication-agent-1 on Arch, replaced with xfce-polkit on Fedora by fedora_install.sh:825-839 — so the prompt has somewhere to appear. The shell's own agent stays off; see not_shipped.shell_polkit_agent.",
+      "trusted_install_requirement": "The helper is only elevated when it is a root-owned regular executable reached through a root-owned, non-user-writable directory chain. A helper in a user checkout or build directory is rejected on purpose, and the passwordless-sync commands refuse to write a rule for such an installation.",
+      "version_requirement": "Passwordless sync needs Noctalia Greeter 1.5.0 or newer together with the Noctalia release after 5.0.1. When either component is older, Sync uses the retained administrator-authenticated legacy path, and it never grants that path passwordless access."
+    },
+    "helper_protocol": {
+      "values": [
+        "Unknown",
+        "Legacy",
+        "SecureSyncV1"
+      ],
+      "source": "src/shell/greeter/greeter_appearance_sync.h:19-27 and classifyApplyHelperProtocol, which tests the helper's usage output for '--sync <staging-directory>' at src/shell/greeter/greeter_appearance_sync.cpp:953",
+      "note": "The shell asks the installed helper what it supports before staging anything. A compatible helper gets the constrained appearance-only payload through pkexec and --sync; a recognized older helper gets the legacy positional mode and its session payload; an unrecognized response stops the operation. A failed or cancelled constrained sync is never retried through the legacy path."
+    },
+    "staged_payload_note": "The staged sync.toml must contain a complete appearance.palette or the helper refuses it with 'staged sync.toml is missing a complete appearance.palette' (src/greeter/appearance_sync.cpp:467 and :633). That is why palette_contract below is a test in this repository rather than a comment: a palette file missing one of the sixteen roles would make every sync fail on the machine, with the failure visible only in the helper's output."
+  },
+  "palette_contract": {
+    "note": "The sixteen colours the greeter requires, and where each one comes from in this repository. The greeter's key names are snake_case and its palette must be complete; the shell's palette files are camelCase. Sync does the renaming, and two of the sixteen are renamed through a role that no longer exists under the name the greeter uses.",
+    "required_keys_source": "requiredPaletteKeys() at src/greeter/appearance_sync.h:44-52, completeness at GreeterTomlAppearance::hasCompletePalette()",
+    "mapping_source": "src/shell/greeter/greeter_appearance_sync.cpp:453-472 in Noctalia v5.4.1, with the comment 'Keys follow the greeter's own 16-color palette schema; its surface_variant and outline are the shell's surface_container and outline_variant.'",
+    "palette_file_source": "docs/user/theming/palette.mdx:37-47 in Noctalia v5.4.1: surface_container is mSurfaceVariant and outline_variant is mOutline, the former surface_variant and outline roles having been renamed with the same colours.",
+    "mapping": {
+      "primary": "mPrimary",
+      "on_primary": "mOnPrimary",
+      "secondary": "mSecondary",
+      "on_secondary": "mOnSecondary",
+      "tertiary": "mTertiary",
+      "on_tertiary": "mOnTertiary",
+      "error": "mError",
+      "on_error": "mOnError",
+      "surface": "mSurface",
+      "on_surface": "mOnSurface",
+      "surface_variant": "mSurfaceVariant",
+      "on_surface_variant": "mOnSurfaceVariant",
+      "outline": "mOutline",
+      "shadow": "mShadow",
+      "hover": "mHover",
+      "on_hover": "mOnHover"
+    },
+    "round_trip_note": "surface_variant and outline come full circle. The shell's palette file says mSurfaceVariant and mOutline; the shell's runtime roles were renamed surface_container and outline_variant in 5.4.x, with the retired names still accepted for plugins until 5.5.0 (src/ui/palette.h:144-146); and Sync writes those two runtime roles back out under the greeter's older names surface_variant and outline. The colour a palette file calls mSurfaceVariant is the colour the login screen calls surface_variant, by way of a role the shell no longer names that way. outline_variant is also the role the shell's own lock panel border uses (src/shell/lockscreen/lock_surface.cpp:1329), so the login screen's outline and the lock screen's border are the same colour for the same reason.",
+    "dropped_keys_note": "A palette file's terminal object is not part of the contract: Sync sends sixteen colours and nothing else, so the terminal palette in .config/noctalia/palettes/*.json never reaches the login screen."
+  },
+  "pam": {
+    "note": "Authentication at the login screen is greetd's, through PAM, and the greeter only drives the conversation. Two scripts matter to this repository because both installers call one of them.",
+    "setup_greetd_pam": {
+      "path": "/usr/share/noctalia-greeter/setup_greetd_pam.sh",
+      "source": "scripts/setup_greetd_pam.sh at v1.7.0, called from install.sh:1408-1415 and fedora_install.sh:586-593",
+      "behaviour": "Requires root. Exits 0 without touching anything when /etc/pam.d/greetd is missing, which is how it behaves when greetd is not installed. Looks for pam_systemd.so and then pam_elogind.so under /usr/lib/security, /usr/lib64/security, /lib/security and /lib64/security, and exits 0 with a warning when neither exists. When the module is already named in the file it does nothing. Otherwise it backs the file up to /etc/pam.d/greetd.bak.noctalia.<timestamp>, inserts 'session    required     <module>' after the last existing session line (or appends it when there is none), and installs the result as 0644.",
+      "why_it_matters": "Without a session module in the greeter's PAM stack, a session started from the login screen is not registered with logind, so the desktop that follows has no session to lock, suspend or inhibit. This is the same subsystem the lock screen and the idle behaviors depend on: loginctl lock-session in .config/hypr/hypridle.conf's before_sleep_cmd only means something if logind knows the session exists."
+    },
+    "fingerprint_note": "PAM handles authentication methods in the order the system configures them, and pam_fprintd cannot accept a password while it is waiting for a fingerprint. That serialization is why [auth] allow_empty_password exists at all, and why it does not make the two checks parallel.",
+    "faillock_note": "Arch's pambase ships pam_faillock.so, which locks an account for ten minutes after three failed attempts. That applies to the greeter's PAM conversation as well as to hyprlock's, and it is why .config/hypr/hyprlock.conf names no PAM module of its own."
+  },
+  "cli": {
+    "binary": "noctalia-greeter",
+    "source": "src/main.cpp:86-100 and the usage text at :165-200",
+    "commands": {
+      "sessions": "Lists the available session names and exits. These are the values [session].default accepts.",
+      "outputs": "Lists connectors and stable display identifiers; --details adds the EDID-derived spelling. These are the values [output].name and the map keys accept.",
+      "passwordless-sync enable USER": "Adds one local login account to the CLI-managed narrow polkit rule, without removing accounts already allowed. Root only, and it rejects an untrusted helper installation.",
+      "passwordless-sync disable USER": "Removes that account's managed authorization. Prompts resume only when no other polkit rule allows the action.",
+      "passwordless-sync status [USER]": "Reports the authorization managed by this CLI for one account or for all of them. It does not report arbitrary administrator-authored rules, and it may need root on a distribution that restricts reads of the polkit rules directory."
+    },
+    "options": {
+      "--session, --cmd NAME": "Default session, overriding [session].default. A desktop entry Name= or filename.",
+      "--user NAME": "Default user, overriding [user].default; skips the picker and opens the password step.",
+      "-v, --version": "Prints 'noctalia-greeter <version>' from the meson project version (src/main.cpp:150-152, meson.build:214).",
+      "--log-test": "Writes test lines to every log path and exits.",
+      "-h, --help": "The usage text."
+    },
+    "environment": {
+      "GREETD_SOCK": "Path to the greetd Unix socket.",
+      "WAYLAND_DISPLAY": "Set by the greeter's own compositor.",
+      "NOCTALIA_GREETER_LOG": "Under greetd, unset means syslog with the standard descriptors parked; stderr, none or - means the console; a path means that log file.",
+      "NOCTALIA_GREETER_STATE_DIR": "Moves the state directory for both the C++ preferences and the compositor bridge.",
+      "NOCTALIA_GREETER_IDLE_TIMEOUT": "Overrides [idle].timeout, validated to 0-86400.",
+      "NOCTALIA_GREETER_SESSION_BIN": "Overrides the session wrapper the setup scripts look for.",
+      "NOCTALIA_GREETER_APPLY_APPEARANCE": "Overrides the apply helper the setup scripts look for.",
+      "NOCTALIA_GREETER_ASSETS_DIR": "Overrides the asset bundle, and is rejected with a warning when it is not one — a valid bundle has fonts/tabler.ttf and fonts/tabler.json (src/core/resource_paths.cpp:44-70)."
+    }
+  },
+  "motion": {
+    "note": "The login screen animates and cannot be told how. greeter.toml's top-level vocabulary is nine fixed tables — session, user, appearance, output, cursor, keyboard, auth, idle, clock (isKnownTopLevelKey at src/greeter/greeter_config_io.cpp:45-55) — and none of them holds a duration, an easing, a distance or an on/off switch for motion. The greeter has its own animation manager and its own easing set, both compiled in.",
+    "easings": [
+      "Linear",
+      "EaseInCubic",
+      "EaseOutCubic",
+      "EaseInOutCubic",
+      "EaseOutBack"
+    ],
+    "easings_source": "src/render/animation/animation.h:7-13, with easeValue at :15-32 and an Animation struct carrying durationMs and easing at :34-40",
+    "overshoot_note": "EaseOutBack is the same family of overshoot this project's motion presets express through their own curves, and it is the one easing in the greeter that goes past its target — with the standard 1.70158 overshoot constant. It is not selectable and its durations are not configurable, so the login screen's motion is the one surface in this stack that reduce-motion, the Performance intensity and the motion presets all fail to reach.",
+    "corner_radius_note": "The one appearance value motion-adjacent that Sync does carry is [appearance] corner_radius_scale, which comes from this repository's [shell] corner_radius_scale of 1.5, so the login screen's radii follow the design tokens without this project writing a greeter file.",
+    "wallpaper_transition_note": "src/config/config_types.h:14-21 declares a WallpaperTransition enumeration of six values — Fade, Wipe, Disc, Stripes, Zoom, Honeycomb, a subset of the eleven the shell's lock screen randomizes between — and nothing in the v1.7.0 tree reads it. A declared enumeration with no reader is recorded here rather than emitted anywhere, for the same reason the shell's write-only idle behavior_order is not emitted."
+  },
+  "not_shipped": {
+    "note": "Three keys and one file this project could emit and does not, with the reason for each. Recorded because the absence is a decision, not an oversight, and because each of them looks like an easy win from the other side.",
+    "greeter_toml": {
+      "what": "/var/lib/noctalia-greeter/greeter.toml",
+      "why": "Four reasons, each sufficient on its own. It is a root-owned system file outside the payload model, which stages into $XDG_CONFIG_HOME and nowhere else. It wins over Sync for every key it sets, so shipping an appearance section would freeze the login screen against the one mechanism that keeps it current. Its parser only warns, so a key this project misspells ships as a login screen that quietly looks default. And nearly everything worth setting in it is a machine fact — a connector name, an account name, a cursor theme directory, a keyboard layout — which the payload may not depend on, because the payload is derived only from repository state.",
+      "what_sync_covers_instead": "The palette, the wallpaper including per-output ones, the theme mode, the corner radius scale and the monitor layout all reach the login screen through Sync, from values this repository already ships in .config/noctalia/config.toml and .config/noctalia/palettes/."
+    },
+    "shell_greeter_sync": {
+      "what": "[shell.greeter_sync] auto_sync and privilege_command",
+      "source": "src/config/schema/config_schema.cpp:1750-1770 and src/config/config_types.h:276-285 in Noctalia v5.4.1",
+      "why": "auto_sync would raise an administrator authentication dialog on every wallpaper, palette, theme mode or font change, because the packaged polkit action is auth_admin in all three states and passwordless sync is a per-account opt-in this repository never performs. privilege_command is worse than a setting: it is a privilege escalator prefix that the shell appends --sync to and runs, so emitting any value there means emitting a command that runs as root. Both are left at their defaults, false and empty."
+    },
+    "shell_polkit_agent": {
+      "what": "[shell] polkit_agent",
+      "default": false,
+      "source": "src/config/config_types.h:1364 in Noctalia v5.4.1, schema at src/config/schema/config_schema.cpp:1824",
+      "why": "Enabling it would run the shell's own authentication agent beside the one .config/hypr/startup.lua:19 already starts — polkit-gnome-authentication-agent-1 on Arch, xfce-polkit on Fedora after fedora_install.sh:825-839 rewrites that line. Two agents on one seat compete for the same request. The key is also at its upstream default, so emitting it would restate a default and buy nothing. The consequence worth knowing is a positive one: because an agent is already running, Sync's administrator prompt has somewhere to appear, and 'ok: staged (run legacy privilege install manually)' is not the outcome a Hyprland session gets.",
+      "inert_payload_note": "The glass payload does carry a window rule for the shell's own polkit panel, namespace ^noctalia-polkit$ (data/design/tokens.json:441-446, rendered into .config/hypr/generated/glass.lua:159-161), and [shell.panel] ships polkit_placement and polkit_position. With the agent off that panel never exists, so those three values are inert unless a user turns the agent on in the shell's own settings — in which case they are already correct."
+    }
+  },
+  "not_in_greeter": [
+    "No motion settings at all: no duration, easing, distance or enable switch for any animation (see motion).",
+    "No blur, opacity or transparency key. The login screen's backdrop is the wallpaper, and there is no equivalent of the shell's panel transparency_mode or of hyprlock's background blur.",
+    "No radius token or per-element radius. Only the single [appearance] corner_radius_scale multiplier.",
+    "No theme or palette file of its own: [appearance.palette] is sixteen inline hex colours, not a path.",
+    "No idle lock, no suspend and no dpms key. [idle] timeout blanks the outputs and that is the whole of it.",
+    "No password file, hash or unlock command. Authentication is greetd's PAM conversation.",
+    "No per-widget or per-panel configuration; the only positioning keys are the two corner selectors and the clock.",
+    "No reader for the WallpaperTransition enumeration it declares (src/config/config_types.h:14-21).",
+    "No way to make an invalid value fail: the parser warns and ignores, so a greeter.toml cannot be validated by running the greeter."
+  ],
+  "doc_disagreements": [
+    {
+      "id": "numlock",
+      "docs_say": "examples/greeter.toml comments numlock as 'Start with Num Lock locked (default true if omitted)', and docs/user/input.md:104 says 'The compositor enables Num Lock at startup by default so numeric keypads work immediately.'",
+      "code_does": "The bridge maps an absent key to 0 and the compositor locks Num Lock only when the value is above 0, under the comment 'Enable Num Lock only when explicitly requested in greeter.toml' (src/greeter/greeter_config_io.cpp:1170-1172, src/compositor/noctalia_compositor.c:2176-2186). Nothing in keymap composition enables it either (src/compositor/noctalia_compositor.c:794-833).",
+      "recorded_default": false,
+      "consequence": "This repository's session sets numlock_by_default = true in .config/hypr/inputs.lua:5 and the login screen does not inherit it, so a numeric keypad is off at the login screen and on in the session. Believing the documentation would hide that."
+    },
+    {
+      "id": "output_scale",
+      "docs_say": "docs/user/configuration.md describes [output].scale as a 'Manual UI scale for all outputs; omit or invalid -> per-output scales, else auto from display geometry', and the parser accepts any finite value above 0.",
+      "code_does": "The value reaches the compositor only when it is at least 1.0 (src/greeter/greeter_config_io.cpp:1182-1184, src/compositor/noctalia_compositor.c:717-719), so a scale between 0 and 1 is accepted without a warning and then dropped.",
+      "recorded_range": [
+        1.0,
+        3.4028235e+38
+      ],
+      "consequence": "A fractional downscale on the login screen silently does nothing. The recorded range is the honoured one, not the parsed one."
+    },
+    {
+      "id": "idle_default",
+      "docs_say": "examples/greeter.toml shows timeout = 300 under [idle], which reads as the default.",
+      "code_does": "The compositor starts from 0 and enables blanking only for a value above 0 (src/compositor/noctalia_compositor.c:700 and :728-730), so the default is disabled.",
+      "recorded_default": 0,
+      "consequence": "An unconfigured login screen never blanks. Anyone assuming 300 would look for a blanking bug that is really an absent setting."
+    },
+    {
+      "id": "position_validation",
+      "docs_say": "docs/user/configuration.md lists the same five or seven values for power_buttons_position, scheme_selector_position and clock.position, which reads as three validated enumerations.",
+      "code_does": "Only clock.position is validated, against a seven-value array with a warning and a fallback (src/greeter/greeter_preferences.cpp:438-447). The other two are matched by equality in the layout code, so an unrecognized string falls through to the default corner silently (src/greeter/greeter_surface.cpp:2663-2711 and :1281-1295).",
+      "consequence": "Two of the three position keys accept anything. The enumerations are recorded so a reader knows the vocabulary, with enum_note saying plainly that the greeter will not reject a value outside it."
+    }
+  ],
+  "installer": {
+    "note": "What this repository's installers do to the login screen, recorded next to what upstream's own helper does, because the two were written independently and one line had drifted.",
+    "functions": {
+      "install.sh": "install.sh:1367-1416, called at :1533 after the AUR package is installed at :1526",
+      "fedora_install.sh": "fedora_install.sh:545-594, a byte-identical copy of the Arch one, called at :1037"
+    },
+    "steps": [
+      "resolve the session wrapper with command -v, falling back to /usr/bin/noctalia-greeter-session",
+      "create the greeter account with useradd -r -s /usr/bin/nologin -d /var/lib/noctalia-greeter when it does not exist",
+      "create the state directory and hand it to the greeter account",
+      "back up an existing /etc/greetd/config.toml to config.toml.bak.<epoch seconds>",
+      "write the two-table greetd configuration",
+      "run /usr/share/noctalia-greeter/setup_greetd_pam.sh when it is present and executable, warning instead of failing when it is not"
+    ],
+    "agreements_with_upstream": [
+      "the greetd configuration is the same two tables with the same three keys and the same values",
+      "the greeter account is created the same way, with the same shell and home directory",
+      "the state directory is the same path with the same owner",
+      "the PAM setup is delegated to the packaged script rather than reimplemented"
+    ],
+    "drift_found": {
+      "what": "The state directory was created with mkdir -p and left at the umask default of 0755, world-readable, while upstream tightens it to 0750 in two places (kSyncedDirMode at src/greeter/greeter_preferences.cpp:29 and src/greeter/appearance_sync.cpp:30, applied at :481, and ensure_greeter_paths at scripts/greetd_setup_lib.sh:67-79, whose chmod 0750 is line 72).",
+      "why_it_matters": "The directory holds sync.toml, greeter.toml and the synced wallpaper images. Nothing in it is a secret — there is no password, no hash and no key material — but the greeter's own installer treats it as private to the greeter account, and a directory any local user can list is a directory any local user can read a machine's wallpaper and layout from.",
+      "fix": "Both installers now chmod 0750 the directory between creating it and handing it to the greeter account (install.sh:1385-1391, fedora_install.sh:563-569), and tests/test_greeter.py asserts the line is present in both and that the two setup_noctalia_greeter functions remain byte-identical, so the next drift between them is a test failure rather than a surprise."
+    },
+    "not_changed": [
+      "The greeter account name stays hardcoded as 'greeter' rather than resolved through the apply helper's --print-greeter-user. Upstream's own resolution falls back to the same name, the installers create the account when it is missing, and calling a root-owned helper to ask for a name during install is a larger change than the drift it would remove.",
+      "No session is pinned with --session, so the greeter keeps its picker and remembers the last choice in sync.toml.",
+      "The display manager switch stays as it is: install.sh:1535-1539 disables sddm and enables greetd unconditionally. That is the riskiest operation in the installer and it belongs to the installer-safety work, not to this record."
+    ]
+  }
+}

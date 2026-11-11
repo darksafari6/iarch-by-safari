@@ -19,93 +19,175 @@
   ],
   "additionalProperties": false,
   "properties": {
-    "_copyright": { "type": "string" },
-    "_note": { "type": "string", "minLength": 20 },
-    "verified_against": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$" },
-    "source": { "type": "string", "pattern": "config_schema\\.cpp" },
-
+    "_copyright": {
+      "type": "string"
+    },
+    "_note": {
+      "type": "string",
+      "minLength": 20
+    },
+    "verified_against": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "source": {
+      "type": "string",
+      "pattern": "config_schema\\.cpp"
+    },
     "diagnostics": {
       "type": "object",
-      "required": ["unknown_key", "out_of_range", "bad_type_or_color", "consequence"],
+      "required": [
+        "unknown_key",
+        "out_of_range",
+        "bad_type_or_color",
+        "consequence"
+      ],
       "additionalProperties": false,
       "properties": {
-        "unknown_key": { "type": "string" },
-        "out_of_range": { "type": "string" },
-        "bad_type_or_color": { "type": "string" },
-        "consequence": { "type": "string" }
+        "unknown_key": {
+          "type": "string"
+        },
+        "out_of_range": {
+          "type": "string"
+        },
+        "bad_type_or_color": {
+          "type": "string"
+        },
+        "consequence": {
+          "type": "string"
+        }
       }
     },
-
     "bar_container": {
       "type": "object",
-      "required": ["_note", "order_key", "keyed_outside_fields", "monitor_override_schema"],
+      "required": [
+        "_note",
+        "order_key",
+        "keyed_outside_fields",
+        "monitor_override_schema"
+      ],
       "additionalProperties": false,
       "properties": {
-        "_note": { "type": "string" },
-        "order_key": { "type": "string" },
-        "keyed_outside_fields": { "$ref": "#/definitions/string_list" },
-        "monitor_override_schema": { "type": "string" }
+        "_note": {
+          "type": "string"
+        },
+        "order_key": {
+          "type": "string"
+        },
+        "keyed_outside_fields": {
+          "$ref": "#/definitions/string_list"
+        },
+        "monitor_override_schema": {
+          "type": "string"
+        }
       }
     },
-
     "color_roles": {
-      "allOf": [{ "$ref": "#/definitions/string_list" }],
+      "allOf": [
+        {
+          "$ref": "#/definitions/string_list"
+        }
+      ],
       "minItems": 28,
       "maxItems": 28,
       "description": "The 28 user-facing colour roles from docs/user/theming/palette.mdx."
     },
-    "color_roles_note": { "type": "string" },
-
+    "color_roles_note": {
+      "type": "string"
+    },
     "palette": {
       "type": "object",
       "required": [
-        "_note", "directory", "selected_by", "modes", "light_optional", "fields",
-        "field_forms", "terminal_optional", "terminal_fields", "terminal_ansi",
-        "terminal_groups", "name_sanitization"
+        "_note",
+        "directory",
+        "selected_by",
+        "modes",
+        "light_optional",
+        "fields",
+        "field_forms",
+        "terminal_optional",
+        "terminal_fields",
+        "terminal_ansi",
+        "terminal_groups",
+        "name_sanitization"
       ],
       "additionalProperties": false,
       "properties": {
-        "_note": { "type": "string" },
-        "directory": { "type": "string" },
-        "selected_by": { "type": "string" },
-        "modes": { "$ref": "#/definitions/string_list" },
-        "light_optional": { "type": "string" },
+        "_note": {
+          "type": "string"
+        },
+        "directory": {
+          "type": "string"
+        },
+        "selected_by": {
+          "type": "string"
+        },
+        "modes": {
+          "$ref": "#/definitions/string_list"
+        },
+        "light_optional": {
+          "type": "string"
+        },
         "fields": {
-          "allOf": [{ "$ref": "#/definitions/string_list" }],
+          "allOf": [
+            {
+              "$ref": "#/definitions/string_list"
+            }
+          ],
           "minItems": 16,
           "maxItems": 16,
           "description": "The m-prefixed colours a palette file defines; every other role is derived from these."
         },
-        "field_forms": { "type": "string" },
-        "terminal_optional": { "type": "boolean" },
-        "terminal_fields": { "$ref": "#/definitions/string_list" },
-        "terminal_ansi": { "$ref": "#/definitions/string_list" },
-        "terminal_groups": { "$ref": "#/definitions/string_list" },
-        "name_sanitization": { "type": "string" }
+        "field_forms": {
+          "type": "string"
+        },
+        "terminal_optional": {
+          "type": "boolean"
+        },
+        "terminal_fields": {
+          "$ref": "#/definitions/string_list"
+        },
+        "terminal_ansi": {
+          "$ref": "#/definitions/string_list"
+        },
+        "terminal_groups": {
+          "$ref": "#/definitions/string_list"
+        },
+        "name_sanitization": {
+          "type": "string"
+        }
       }
     },
-
     "sections": {
       "type": "object",
       "minProperties": 1,
-      "additionalProperties": { "$ref": "#/definitions/section" }
+      "additionalProperties": {
+        "$ref": "#/definitions/section"
+      }
     }
   },
-
   "definitions": {
     "string_list": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "uniqueItems": true
     },
-
     "section": {
       "type": "object",
-      "required": ["schema", "keys"],
+      "required": [
+        "schema",
+        "keys"
+      ],
       "additionalProperties": false,
       "properties": {
-        "schema": { "type": "string", "pattern": "^[a-zA-Z]+Schema$" },
+        "schema": {
+          "type": "string",
+          "pattern": "^[a-zA-Z]+Schema$"
+        },
         "note": {
           "type": "string",
           "description": "What the section is for, and which other surface in this repository competes with it. A section-level note is where a decision that spans several settings belongs: the idle section has to say why hypridle.conf ships unlaunched, and no single key can carry that."
@@ -113,33 +195,102 @@
         "keys": {
           "type": "object",
           "minProperties": 1,
-          "additionalProperties": { "$ref": "#/definitions/setting" }
+          "additionalProperties": {
+            "$ref": "#/definitions/setting"
+          }
+        },
+        "withheld": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Settings the pinned release really does declare, and that this project deliberately does not emit. They are not listed under keys, because a renderer must never write one; they are listed here so that the validator can say 'withheld on purpose, and here is why' instead of claiming upstream has no such setting, which for these keys would be false.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "reason",
+              "recorded_in",
+              "where",
+              "source"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 40
+              },
+              "recorded_in": {
+                "type": "string",
+                "pattern": "^data/design/[a-z_]+\\.json$",
+                "description": "The surface file that records the setting in full."
+              },
+              "where": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The dotted path inside that file, so a reader lands on the entry."
+              },
+              "source": {
+                "type": "string",
+                "pattern": "\\.(cpp|h|c|md|mdx)(:|$|[ ,)])",
+                "description": "Where upstream declares it, which is what makes withholding it a decision rather than an omission."
+              }
+            }
+          }
         }
       }
     },
-
     "setting": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "type": { "enum": ["bool", "integer", "float", "string", "array"] },
-        "enum": { "$ref": "#/definitions/string_list" },
-        "enum_constant": { "type": "string" },
-        "enum_note": { "type": "string" },
+        "type": {
+          "enum": [
+            "bool",
+            "integer",
+            "float",
+            "string",
+            "array"
+          ]
+        },
+        "enum": {
+          "$ref": "#/definitions/string_list"
+        },
+        "enum_constant": {
+          "type": "string"
+        },
+        "enum_note": {
+          "type": "string"
+        },
         "range": {
           "type": "array",
           "minItems": 2,
           "maxItems": 3,
-          "items": { "type": "number" }
+          "items": {
+            "type": "number"
+          }
         },
-        "range_constant": { "type": "string" },
-        "range_note": { "type": "string" },
-        "color": { "type": "boolean" },
-        "color_note": { "type": "string" },
-        "parser": { "type": "string" },
-        "container_level": { "type": "boolean" },
-        "named_map": { "type": "boolean" },
-        "note": { "type": "string" },
+        "range_constant": {
+          "type": "string"
+        },
+        "range_note": {
+          "type": "string"
+        },
+        "color": {
+          "type": "boolean"
+        },
+        "color_note": {
+          "type": "string"
+        },
+        "parser": {
+          "type": "string"
+        },
+        "container_level": {
+          "type": "boolean"
+        },
+        "named_map": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        },
         "not_in_upstream_schema": {
           "type": "boolean",
           "description": "This project wanted a setting upstream never declared. A test asserts nothing carries the flag: it exists so the wish is recorded as a wish."
@@ -148,11 +299,16 @@
           "type": "boolean",
           "description": "Upstream declares the key and its writer emits it, but the reader installed beside that writer discards it, so setting it cannot change behaviour. Different from not_in_upstream_schema: the key is real, and useless. A test asserts the renderer never emits one."
         },
-        "table": { "type": "string", "pattern": "^[a-zA-Z]+Schema$" },
+        "table": {
+          "type": "string",
+          "pattern": "^[a-zA-Z]+Schema$"
+        },
         "keys": {
           "type": "object",
           "minProperties": 1,
-          "additionalProperties": { "$ref": "#/definitions/setting" }
+          "additionalProperties": {
+            "$ref": "#/definitions/setting"
+          }
         }
       }
     }

@@ -58,6 +58,15 @@ unknown key and the engine ignores it, and an integer outside its bound is clamp
 `gen_fontconfig.py` does the same against `data/design/fontconfig.json`, the
 configuration DTD, because fontconfig warns about an element it does not know and
 keeps loading, and a family no installed font provides is silently skipped.
+A setting the pinned release really does declare, and that this project refuses to
+emit, is not the same as a setting that does not exist, and `render_noctalia.py` no
+longer says so: a section's `withheld` map carries the reason, the record that covers
+it and the citation, so `shell.polkit_agent` and `shell.greeter_sync` are refused as
+withheld on purpose rather than as keys Noctalia v5.4.1 never had. Both are recorded
+in `data/design/greeter.json`, which is the one surface file in `data/design/` with no
+generator behind it — the login screen's config is root-owned, wins over the shell's
+own Sync for every key it sets, and is mostly facts about one machine.
+
 `render_hyprlock.py` does the same against `data/design/hyprlock.json`, and
 hyprlock is forgiving in the same direction as the shell: an unknown variable is a
 warning and the lock screen still appears, so a misspelled `blur_passses` ships as

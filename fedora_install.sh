@@ -560,6 +560,12 @@ setup_noctalia_greeter() {
 
     echo "Preparing greeter state directory..."
     mkdir -p /var/lib/noctalia-greeter
+    # 0750 rather than the umask default of 0755. The greeter's own setup tightens
+    # this directory to the greeter account (kSyncedDirMode = S_IRWXU | S_IRGRP |
+    # S_IXGRP, noctalia-greeter src/greeter/greeter_preferences.cpp:29, applied at
+    # :481). It holds sync.toml, greeter.toml and the synced wallpaper images: no
+    # secret, but not a directory every local user should be able to list either.
+    chmod 0750 /var/lib/noctalia-greeter
     chown -R "$greeter_user:$greeter_user" /var/lib/noctalia-greeter
 
     if [ -f "$greetd_config_file" ]; then

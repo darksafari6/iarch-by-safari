@@ -287,6 +287,27 @@ follows the same switch. Both are asserted against every intensity by
 `iarch/cli/qa_motion.sh` fails if the two files ever disagree with
 `[shell.animation] enabled`.
 
+The login screen is the one surface none of this reaches, and it is worth saying
+so where the rest of the motion story is told. `greetd` starts
+`noctalia-greeter-session`, which brings its own embedded wlroots compositor, so
+no preset, no intensity and no reduce-motion setting applies there. The greeter
+animates with five compiled-in easings — `Linear`, `EaseInCubic`, `EaseOutCubic`,
+`EaseInOutCubic` and an overshooting `EaseOutBack` carrying the standard
+1.70158 constant (`src/render/animation/animation.h:7-13` in noctalia-greeter
+v1.7.0) — and its whole configuration vocabulary is nine tables with no
+duration, easing, distance or on/off switch among them. There is no key to set
+and no key to refuse, so `data/design/greeter.json` records the absence under
+`motion` and `not_in_greeter` instead: a surface that cannot be tuned has to say
+that as plainly as one that can.
+
+One appearance value does cross over, and it is radius rather than motion: Sync
+copies `[shell] corner_radius_scale` — this repository's derived
+`radius.lg / radius.md`, 24 px over 16 px, so 1.5 — into the greeter's own
+`corner_radius_scale`, which multiplies its base radii. The login screen's
+corners therefore follow the same tokens as the panels, without this repository
+writing a greeter file. Its clock formats do not cross over, so the weekday is
+spelled out at login and abbreviated in the bar.
+
 ## Notifications
 
 iArch runs no notification daemon of its own. Noctalia's built-in one is claimed
@@ -433,6 +454,7 @@ cannot do is see a window arrive, which is why the visual steps are steps.
 | `data/design/gtk.json` | What each GTK version parses, and which of those properties are animatable |
 | `data/design/noctalia.json` | The shell settings that exist upstream, with their types and bounds — including `[lockscreen]` and `[idle]` |
 | `data/design/hyprlock.json` | The hyprlock and hypridle variables, their types, defaults, enumerations and ranges |
+| `data/design/greeter.json` | The login screen's surface, recorded and generated from by nothing: what Sync carries, what it cannot, and the four places the greeter's docs disagree with its code |
 | `iarch/cli/gen_animations_lua.py` | Preset → Lua, plus `resolve_modifiers`, the one place the clamp, the cap and the forced preset live |
 | `iarch/cli/iarch_anim.py` | `iarch-anim`: switch, verify against the compositor, roll back |
 | `iarch/cli/render_gtk_css.py` | The GTK sheets, their transition groups and the `--reduce-motion` render |
@@ -446,7 +468,7 @@ cannot do is see a window arrive, which is why the visual steps are steps.
 
 ## What is not verified
 
-Fifteen items in [UNVERIFIED.md](UNVERIFIED.md), each with the evidence that does exist
+Twenty items in [UNVERIFIED.md](UNVERIFIED.md), each with the evidence that does exist
 and the claim it blocks. Five are about motion: [MOT-01](UNVERIFIED.md) the presets have
 never been rendered where a window actually opens; [MOT-02](UNVERIFIED.md) whether a leaf set to
 `enabled = false` really stops moving without affecting its parent or siblings;
@@ -484,9 +506,24 @@ against the current manual rather than a release tag; and
 intensity's blur recipe, which it is not claimed to — the multiplication by 40 px
 is verified and no conversion to `decoration:blur:size` exists.
 
+Five more are about the login screen, and none of them is a motion question —
+which is itself the finding: [GRE-01](UNVERIFIED.md) whether a sync really
+produces a login screen matching the session, where both halves of the
+sixteen-colour contract are read out of source and no sync has ever run here;
+[GRE-02](UNVERIFIED.md) whether the packaged polkit action really prompts on an
+installed machine, the policy file being read at v1.7.0 while the installer pulls
+the AUR `-git` build; [GRE-03](UNVERIFIED.md) the four places the greeter's
+documentation disagrees with its code, each a code reading and none an
+observation; [GRE-04](UNVERIFIED.md) whether the `-git` package is still the
+release the record pins, `main` already carrying two `[clock]` keys v1.7.0 does
+not have; and [GRE-05](UNVERIFIED.md) whether the state directory's mode is
+already correct before an installer runs, two upstream paths agreeing on 0750 and
+neither observed.
+
 No duration, easing or effect in this document was chosen because it looked right in
 a mockup and then written down. Where an effect is not supported it says so: GTK 3
 gets no transform, the shell gets no per-event durations, the wallpaper crossfade
 ignores the global speed switch, a toast has one 200 ms reveal rather than a
 configurable in/out pair, hover-pause is unconditional and has no key, and no urgency
-makes a notification persistent on its own.
+makes a notification persistent on its own, and the login screen has no motion
+setting at all.

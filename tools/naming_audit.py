@@ -52,6 +52,8 @@ ALLOWLIST: Dict[str, str] = {
     "tools/glass_preset.py": FROZEN + " (~/.config/minimalinux of the legacy session)",
     "tools/preflight.py": FROZEN + " (~/.config/minimalinux of the legacy session)",
     "tools/recover_session.py": FROZEN + " (~/.config/minimalinux of the legacy session)",
+    "data/design/greeter.json": FROZEN + " (records that the login screen can select the legacy "
+                                "session by its desktop entry name, and cites the file by path)",
     # --- Policy and enforcement -----------------------------------------
     "branding/product.env": POLICY,
     "tools/branding_lint.py": POLICY,

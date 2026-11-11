@@ -66,6 +66,7 @@ the map. Read it before changing anything.
 │   │   ├── tokens.json     Radii, spacing, motion, blur per intensity, class groups.
 │   │   ├── noctalia.json   The shell settings that exist upstream, with their types and bounds.
 │   │   ├── hyprlock.json   The hyprlock and hypridle variables, types, defaults and enumerations.
+│   │   ├── greeter.json    The login screen: greetd, greeter.toml, sync.toml and what Sync carries.
 │   │   ├── gtk.json        The GTK 4 and GTK 3 CSS each version really parses, kept apart.
 │   │   ├── kvantum.json    The Kvantum theme keys, types and integer bounds, from the parser.
 │   │   ├── fontconfig.json The fontconfig XML elements and attributes the DTD declares.
@@ -221,6 +222,17 @@ Rules every generator obeys, implemented once in `iarch/lib/configstore.py` and 
    generations. `uninstall.sh` and `tools/profile_preset.py revert` read from there.
 5. **Never write inside the repository at runtime.** `IARCH_CONFIG_DIR` and `IARCH_STATE_DIR`
    relocate both roots, which is also how the tests run without touching a real home directory.
+6. **A surface record may exist with no generator behind it.** `data/design/greeter.json` records
+   the whole login screen — greetd's two tables, the greeter's declarative `greeter.toml`, the
+   mutable `sync.toml`, what Sync carries and what it cannot — and nothing is generated from it.
+   The file it describes is root-owned, wins over Sync for every key it sets, only ever warns about
+   a value it dislikes, and is mostly machine facts: a connector name, an account name, a cursor
+   theme directory. A record like that exists to make an absence checkable rather than assumed.
+7. **A withheld key says so.** When upstream really does declare a setting and this project
+   deliberately does not emit it, the section's `withheld` map carries the reason, the record that
+   covers it and the citation, so a validator can say "withheld on purpose" instead of claiming the
+   pinned release has no such setting. `[shell] polkit_agent` and `[shell.greeter_sync]` are the two
+   today, and the first version of that message was false about both.
 
 ```mermaid
 flowchart LR

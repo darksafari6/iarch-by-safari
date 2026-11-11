@@ -689,8 +689,20 @@ def validate(doc: Dict[str, Any], surface: Dict[str, Any]) -> List[str]:
             if key not in keys:
                 if allow_container and key in container_keys:
                     continue
-                problems.append(f"{here}: Noctalia {surface['verified_against']} has no such "
-                                f"setting; it would warn 'unknown setting' and ignore it")
+                withheld = spec.get("withheld", {}).get(key)
+                if withheld is not None:
+                    # Upstream really does declare this one; this project refuses
+                    # to emit it. Saying "has no such setting" here would be a
+                    # lie about the pinned release, and the lie would point a
+                    # reader at the wrong fix -- there is nothing to rename.
+                    problems.append(
+                        f"{here}: Noctalia {surface['verified_against']} declares this setting "
+                        f"and this project withholds it on purpose ({withheld['reason']}); "
+                        f"the surface is recorded in {withheld['recorded_in']} "
+                        f"({withheld['where']})")
+                else:
+                    problems.append(f"{here}: Noctalia {surface['verified_against']} has no such "
+                                    f"setting; it would warn 'unknown setting' and ignore it")
                 continue
             entry = keys[key]
             if isinstance(value, dict):

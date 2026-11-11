@@ -101,6 +101,59 @@ does and does not protect.
   session where it is not — which is what `lock_cmd = pidof noctalia || hyprlock`
   in the shipped `hypridle.conf` expresses.
 
+## The login screen
+
+`greetd` runs `noctalia-greeter-session` as the unprivileged `greeter` account,
+and the greeter collects the password through greetd's PAM conversation. This
+repository writes two things that touch it and refuses to write a third.
+
+- **The installers write `/etc/greetd/config.toml`.** Two tables, three keys:
+  `[terminal] vt = 1`, and `[default_session] command` and `user`. They back up
+  an existing file first, and they are the same three keys upstream's own helper
+  prints (`scripts/greetd_setup_lib.sh:107-112` in noctalia-greeter v1.7.0).
+- **They create `/var/lib/noctalia-greeter` at mode 0750, owned by `greeter`.**
+  It holds `sync.toml`, any `greeter.toml`, and the synced wallpaper images. No
+  secret lives there — no password, no hash, no key material — but the greeter's
+  own setup treats the directory as private to its account
+  (`kSyncedDirMode`, `src/greeter/greeter_preferences.cpp:29`), and both
+  installers now do the same. They previously left it at the umask default of
+  0755, which let any local user list a machine's wallpaper and monitor layout.
+- **They delegate PAM to the packaged script, and never write `/etc/pam.d`.**
+  `/usr/share/noctalia-greeter/setup_greetd_pam.sh` inserts
+  `session required pam_systemd.so` (or `pam_elogind.so`) into
+  `/etc/pam.d/greetd` when it is missing, backing the file up first, and exits
+  without touching anything when greetd is not installed or no runtime module
+  exists. Without that line a session started at the login screen is not
+  registered with logind, and the lock screen and idle behaviors that follow
+  depend on logind knowing the session exists. A missing script is a warning,
+  not a failed install.
+- **No `greeter.toml` ships.** The greeter's declarative config is root-owned,
+  wins over Sync for every key it sets, and only ever warns about a value it does
+  not like — so a file this repository guessed at would be a login screen that
+  quietly looks default, on a machine that cannot tell the difference. Its
+  `[auth] allow_empty_password` defaults to `false` and stays that way, which is
+  the same posture the lock screen takes: an empty submission is not a
+  convenience worth accepting.
+- **No passwordless privilege rule is installed.** Syncing appearance to the
+  login screen elevates through `pkexec`, and the packaged action
+  `org.noctalia.greeter.sync-appearance` requires administrator authentication in
+  all three polkit states. Passwordless sync is a per-account opt-in
+  (`sudo noctalia-greeter passwordless-sync enable <user>`) that writes a narrow
+  rule for one helper, one target account and one user in an active local
+  session. This repository does not run it, does not write a rule of its own, and
+  leaves `[shell.greeter_sync] auto_sync` off — with auto-sync on and no rule
+  installed, every wallpaper change would raise an authentication dialog.
+  `[shell.greeter_sync] privilege_command` is a prefix the shell appends `--sync`
+  to and runs as root, so the renderer refuses it rather than emitting one.
+- **One polkit agent, started by the session.** `.config/hypr/startup.lua:19`
+  starts `polkit-gnome-authentication-agent-1` (`xfce-polkit` on Fedora), which
+  is what the Sync prompt appears in. The shell's own agent stays off, because
+  two agents on one seat compete for the same request.
+
+`data/design/greeter.json` records the whole login-screen surface — both files,
+the precedence between them, what Sync carries and what it cannot, and four
+places where the greeter's documentation disagrees with its code.
+
 ## Scope
 
 Only the current session payload is in scope: `.config/`, `lib/`, `tools/`,
