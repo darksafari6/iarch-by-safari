@@ -24,6 +24,7 @@ PAIRS = {
     "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
     "data/design/tokens.json": "data/schemas/tokens.schema.json",
     "data/design/noctalia.json": "data/schemas/noctalia.schema.json",
+    "data/design/hyprlock.json": "data/schemas/hyprlock.schema.json",
     "data/design/gtk.json": "data/schemas/gtk.schema.json",
     "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
     "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",

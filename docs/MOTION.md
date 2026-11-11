@@ -247,11 +247,45 @@ that moves continuously rather than in answer to something, so it follows
 `tests/test_noctalia.py` asserts both values really occur, because a key that never
 changes is a key that does nothing.
 
-The lock screen has the same eleven transitions and its own `transition_duration`
-(1500 ms) plus `edge_smoothness` (0.3), under
-[Shell settings → Lock screen](https://docs.noctalia.dev/noctalia/configuration/shell/).
-An empty `transition` disables the lock and unlock animation, which is how
-reduce-motion should reach it in Part 7.
+The shell's own lock screen is a motion surface with a surprise in it.
+`[lockscreen] transition` is not a list of effects that play in order: the shell
+picks **one of them at random** for every lock and unlock —
+`std::floor(Random::randomFloat(0, transitions.size()))` at
+`src/shell/lockscreen/lock_screen.cpp:1152` — and randomizes the chosen effect's
+own parameters too, direction 0-3, centre 0.2-0.8, stripe count 4-24, angle
+0-360, cell size 0.02-0.06 (`:1159-1176`). Upstream's struct default lists all
+eleven (`config_types.h:602-607`), so an unconfigured session locks into a random
+one of melt, vortex, honeycomb, pixel, golden and the rest, for 1500 ms each time.
+
+This project therefore emits `transition = ["fade"]` — one named effect, the only
+way to get a repeatable one — and derives the duration from the motion preset's
+own `fadeIn` leaf. `kLockscreenTransitionDurationRange` is `{100, 30000, 100}`
+(`src/config/schema/ranges.h:35`), a 100 ms step with a 100 ms floor, and neither
+preset value is a multiple of it: smooth asks for 120 ms and minimal for 90 ms, so
+both snap to the floor and the lock screen fades in 100 ms. That loss is recorded
+in the key's note rather than hidden behind the shipped number. With motion off
+the list is empty, which is how upstream disables the lock and unlock animation
+entirely, and `blurred_desktop`, `blur_intensity` and `tint_intensity` follow the
+intensity's blur switch.
+
+`edge_smoothness` (0.3, upstream's default) feathers a transition's edge, so at
+`transition = ["fade"]` it is stored and read and cannot change what is on screen
+— a fade has no edge. It is emitted anyway, so the file states the value instead
+of leaving it to change upstream. `blurred_desktop` needs
+`zwlr_screencopy_manager_v1`, which the shell binds at version 3
+(`src/wayland/wayland_connection.cpp:35, :84, :1706-1709`) and which Hyprland
+v0.57.2 still ships (`src/protocols/Screencopy.cpp` in its own tree); a capture
+that fails is warned about and skipped, not fatal.
+
+The other lock screen this repository renders — `.config/hypr/hyprlock.conf`, for
+a session where the shell is not running — animates through hyprlock's own
+`animations` block, which takes the same preset's `fadeIn`/`fadeOut` durations in
+seconds and has no speed multiplier to scale them. `general:compositor_fade`
+fades the lock surface together with the compositor's blur contribution and
+follows the same switch. Both are asserted against every intensity by
+`tests/test_noctalia.py` and `tests/test_hyprlock.py`, and
+`iarch/cli/qa_motion.sh` fails if the two files ever disagree with
+`[shell.animation] enabled`.
 
 ## Notifications
 
@@ -397,19 +431,22 @@ cannot do is see a window arrive, which is why the visual steps are steps.
 | `data/design/animations.json` | The Hyprland v0.57.2 surface: 34 leaves, their parents, per-leaf styles, builtin curves, and every numeric bound |
 | `data/design/animations/*.json` | The five presets: named curves and per-event settings |
 | `data/design/gtk.json` | What each GTK version parses, and which of those properties are animatable |
-| `data/design/noctalia.json` | The shell settings that exist upstream, with their types and bounds |
+| `data/design/noctalia.json` | The shell settings that exist upstream, with their types and bounds — including `[lockscreen]` and `[idle]` |
+| `data/design/hyprlock.json` | The hyprlock and hypridle variables, their types, defaults, enumerations and ranges |
 | `iarch/cli/gen_animations_lua.py` | Preset → Lua, plus `resolve_modifiers`, the one place the clamp, the cap and the forced preset live |
 | `iarch/cli/iarch_anim.py` | `iarch-anim`: switch, verify against the compositor, roll back |
 | `iarch/cli/render_gtk_css.py` | The GTK sheets, their transition groups and the `--reduce-motion` render |
 | `iarch/cli/gen_glass_lua.py` | The glow and the rest of the decoration block |
-| `iarch/cli/render_noctalia.py` | The shell's `config.toml`: `[shell.animation]`, and every toast setting in the table above |
+| `iarch/cli/render_noctalia.py` | The shell's `config.toml`: `[shell.animation]`, every toast setting in the table above, `[lockscreen]` and `[idle]` |
+| `iarch/cli/render_hyprlock.py` | The fallback lock screen and the unlaunched idle fallback: the intensity's blur recipe, and the preset's `fadeIn`/`fadeOut` in seconds |
 | `iarch/cli/iarch_doctor.py` | `iarch-doctor notify-test` and `iarch-doctor dnd` — the only way to exercise any of this against a live session |
 | `.config/noctalia/config.toml` | The shipped payload the two above render and CI checks |
+| `.config/hypr/hyprlock.conf`, `.config/hypr/hypridle.conf` | The shipped fallback lock screen and the idle file that declares no timer |
 | `iarch/cli/qa_motion.sh` | The walk-through above |
 
 ## What is not verified
 
-Ten items in [UNVERIFIED.md](UNVERIFIED.md), each with the evidence that does exist
+Fifteen items in [UNVERIFIED.md](UNVERIFIED.md), each with the evidence that does exist
 and the claim it blocks. Five are about motion: [MOT-01](UNVERIFIED.md) the presets have
 never been rendered where a window actually opens; [MOT-02](UNVERIFIED.md) whether a leaf set to
 `enabled = false` really stops moving without affecting its parent or siblings;
@@ -430,6 +467,22 @@ should; [NOT-03](UNVERIFIED.md) hover-pause and the countdown accent as behaviou
 `iarch-doctor` sends, exercised here only against a fake shell on `PATH`; and
 [NOT-05](UNVERIFIED.md) whether the seven process names in the competing-daemon check
 are the ones that actually hold the bus.
+
+Five more are about the two lock screens and the idle daemon, and they split the
+same way: [LOCK-01](UNVERIFIED.md) whether a blurred desktop snapshot really
+renders on Hyprland v0.57.2, where the protocol is verified in both source trees
+and the gate that skips it when absent is verified, but no capture was ever taken;
+[LOCK-02](UNVERIFIED.md) whether one named transition is really deterministic,
+which is arithmetic on a verified `randomFloat(0, size)` rather than an
+observation, and says nothing about the parameters that stay random;
+[LOCK-03](UNVERIFIED.md) whether `hyprctl dispatch dpms on` is the right spelling
+on a Lua-config Hyprland, since the hypridle manual's own example uses a
+different one; [LOCK-04](UNVERIFIED.md) whether hyprlock itself parses the
+emitted file, which no hyprlock process has ever done here and which is recorded
+against the current manual rather than a release tag; and
+[LOCK-05](UNVERIFIED.md) whether the shell's `blur_intensity = 0.5` looks like the
+intensity's blur recipe, which it is not claimed to — the multiplication by 40 px
+is verified and no conversion to `decoration:blur:size` exists.
 
 No duration, easing or effect in this document was chosen because it looked right in
 a mockup and then written down. Where an effect is not supported it says so: GTK 3

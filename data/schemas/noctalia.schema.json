@@ -106,6 +106,10 @@
       "additionalProperties": false,
       "properties": {
         "schema": { "type": "string", "pattern": "^[a-zA-Z]+Schema$" },
+        "note": {
+          "type": "string",
+          "description": "What the section is for, and which other surface in this repository competes with it. A section-level note is where a decision that spans several settings belongs: the idle section has to say why hypridle.conf ships unlaunched, and no single key can carry that."
+        },
         "keys": {
           "type": "object",
           "minProperties": 1,
@@ -136,7 +140,14 @@
         "container_level": { "type": "boolean" },
         "named_map": { "type": "boolean" },
         "note": { "type": "string" },
-        "not_in_upstream_schema": { "type": "boolean" },
+        "not_in_upstream_schema": {
+          "type": "boolean",
+          "description": "This project wanted a setting upstream never declared. A test asserts nothing carries the flag: it exists so the wish is recorded as a wish."
+        },
+        "write_only": {
+          "type": "boolean",
+          "description": "Upstream declares the key and its writer emits it, but the reader installed beside that writer discards it, so setting it cannot change behaviour. Different from not_in_upstream_schema: the key is real, and useless. A test asserts the renderer never emits one."
+        },
         "table": { "type": "string", "pattern": "^[a-zA-Z]+Schema$" },
         "keys": {
           "type": "object",

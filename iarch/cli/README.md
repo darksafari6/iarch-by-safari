@@ -10,6 +10,7 @@ a preset, renders a configuration file, and can verify what it previously wrote:
 | `python3 iarch/cli/gen_glass_lua.py` | `~/.config/hypr/generated/glass.lua` | that the committed default matches a fresh render of the tokens |
 | `python3 iarch/cli/gen_animations_lua.py` | `~/.config/hypr/generated/animations.lua` | that the committed default matches a fresh render of the default intensity's motion preset |
 | `python3 iarch/cli/render_noctalia.py` | `~/.config/noctalia/config.toml` and its palette | that the committed shell config and all six palettes match a fresh render |
+| `python3 iarch/cli/render_hyprlock.py` | `~/.config/hypr/hyprlock.conf` and `~/.config/hypr/hypridle.conf` | that the committed lock screen and the unlaunched idle fallback match a fresh render, and that neither leaves the recorded surface |
 | `python3 iarch/cli/render_gtk_css.py` | `~/.config/gtk-4.0/gtk.css` and `~/.config/gtk-3.0/gtk.css` | that the committed sheets match a fresh render of the tokens |
 | `python3 iarch/cli/render_kvantum.py` | `~/.config/Kvantum/kvantum.kvconfig` and `~/.config/Kvantum/iarch/iarch.kvconfig` | that the committed theme matches a fresh render of the tokens |
 | `python3 iarch/cli/gen_fontconfig.py` | `~/.config/fontconfig/fonts.conf` | that the committed file matches a fresh render of the tokens |
@@ -57,6 +58,13 @@ unknown key and the engine ignores it, and an integer outside its bound is clamp
 `gen_fontconfig.py` does the same against `data/design/fontconfig.json`, the
 configuration DTD, because fontconfig warns about an element it does not know and
 keeps loading, and a family no installed font provides is silently skipped.
+`render_hyprlock.py` does the same against `data/design/hyprlock.json`, and
+hyprlock is forgiving in the same direction as the shell: an unknown variable is a
+warning and the lock screen still appears, so a misspelled `blur_passses` ships as
+a lock screen with no blur and no error. The record covers hypridle's two blocks as
+well, because that file is generated too — and because hyprlock's only published
+specification is its manual page, the record names the page it was read from rather
+than a release tag it did not fetch.
 A render that does not
 validate is refused before anything is written, and a write that fails part way
 through puts every file back byte for byte. `iarch-theme apply` runs all six

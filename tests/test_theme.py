@@ -43,7 +43,10 @@ except ImportError:
 requires_jinja = unittest.skipUnless(HAVE_JINJA, "Jinja2 is not installed")
 requires_jsonschema = unittest.skipUnless(HAVE_JSONSCHEMA, "jsonschema is not installed")
 
-# The nine surfaces one apply renders, relative to --config-home.
+# The eleven surfaces one apply renders, relative to --config-home. The last two
+# sit in hypr/ itself rather than hypr/generated/, because hyprlock and hypridle
+# each search for their own fixed filename ($XDG_CONFIG_HOME/hypr/<tool>.conf) and
+# have no include mechanism to point at a generated directory.
 EXPECTED_TARGETS = (
     "hypr/generated/glass.lua",
     "hypr/generated/animations.lua",
@@ -54,6 +57,8 @@ EXPECTED_TARGETS = (
     "fontconfig/fonts.conf",
     "noctalia/config.toml",
     "noctalia/palettes/iarch-midnight.json",
+    "hypr/hyprlock.conf",
+    "hypr/hypridle.conf",
 )
 
 
@@ -437,7 +442,9 @@ class ApplyWrites(ThemeBase):
         self.run_cli(self.apply_argv("midnight-glass", "--no-reload"))
         code, out, _err = self.run_cli(self.apply_argv("midnight-glass", "--no-reload"))
         self.assertEqual(code, theme.EXIT_OK)
-        self.assertIn("wrote 0, unchanged 9", out)
+        # Counted from EXPECTED_TARGETS rather than spelled out, so adding a
+        # surface cannot leave a stale number asserting the old one.
+        self.assertIn(f"wrote 0, unchanged {len(EXPECTED_TARGETS)}", out)
         self.assertNotIn("  write  ", out)
 
     def test_apply_records_the_theme_in_settings(self):

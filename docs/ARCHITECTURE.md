@@ -19,9 +19,14 @@ the map. Read it before changing anything.
 ├── THIRD_PARTY_NOTICES.md    Generated. Third-party credit; edit branding/notices.json instead.
 │
 ├── .config/                  The v5 session payload only (see "Two payloads" below).
-│   ├── hypr/                 Compositor configuration, Lua API only.
+│   ├── hypr/                 Compositor configuration, Lua API only -- with two exceptions.
 │   │   ├── generated/glass.lua       Rendered from the design tokens; never edited.
-│   │   └── generated/animations.lua  Rendered from the motion tokens; never edited.
+│   │   ├── generated/animations.lua  Rendered from the motion tokens; never edited.
+│   │   ├── hyprlock.conf     Rendered lock screen. hyprlock is its own binary and searches
+│   │   │                     for this exact filename, which is why a generated file sits
+│   │   │                     beside the Lua payload instead of under generated/.
+│   │   └── hypridle.conf     Rendered idle fallback, shipped UNLAUNCHED: the shell already
+│   │                         watches ext_idle_notifier_v1. See glass-experience.md.
 │   ├── noctalia/             Shell configuration: config.toml + palettes/.
 │   ├── fastfetch/            System information layout and artwork.
 │   ├── kitty/                Terminal configuration and generated color/profile includes.
@@ -41,6 +46,8 @@ the map. Read it before changing anything.
 │   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
 │   │   ├── gen_animations_lua.py  Hyprland curves and animation leaves from a motion preset.
 │   │   ├── render_noctalia.py Shell config.toml and one palette per preset, from the same tokens.
+│   │   ├── render_hyprlock.py The lock screen and the unlaunched idle fallback, from the same
+│   │   │                      tokens: hyprlock's blur *is* the intensity's blur recipe.
 │   │   ├── render_gtk_css.py  The GTK 4 and GTK 3 glass overlays, from templates in lib/templates.
 │   │   ├── render_kvantum.py  The Qt/Kvantum glass theme, recoloured from the presets.
 │   │   ├── gen_fontconfig.py  The fontconfig file that applies the font tokens.
@@ -58,6 +65,7 @@ the map. Read it before changing anything.
 │   ├── design/               Glass design tokens and the six colour presets.
 │   │   ├── tokens.json     Radii, spacing, motion, blur per intensity, class groups.
 │   │   ├── noctalia.json   The shell settings that exist upstream, with their types and bounds.
+│   │   ├── hyprlock.json   The hyprlock and hypridle variables, types, defaults and enumerations.
 │   │   ├── gtk.json        The GTK 4 and GTK 3 CSS each version really parses, kept apart.
 │   │   ├── kvantum.json    The Kvantum theme keys, types and integer bounds, from the parser.
 │   │   ├── fontconfig.json The fontconfig XML elements and attributes the DTD declares.
@@ -167,10 +175,15 @@ display manager (greetd) ──> Hyprland ──> .config/hypr/hyprland.lua
                                                         │
                                                         └──> shell process (bar, dock, launcher,
                                                              Control Center, notifications, Settings,
-                                                             lock screen) driven by `noctalia msg ...`
+                                                             lock screen, idle) driven by `noctalia msg ...`
                                                                       │
                           scripts/iarch-control-center.sh ────────────┘  allowlisted IPC shortcuts
                           scripts/iarch-healthcheck.sh ─── read-only probe of shell, compositor, audio
+
+hyprlock (.config/hypr/hyprlock.conf) is the *other* session-lock client, and only one can hold
+ext_session_lock_v1 at a time. The shell wins whenever it is running, so hyprlock is the lock
+screen for a session without the shell -- which is also why hypridle.conf ships unlaunched and
+declares no listener: a second idle daemon would race the shell's [idle.behavior.*] timers.
 ```
 
 Keybind descriptions in `keybind.lua` are the data source for the shortcut overlay planned in
@@ -306,6 +319,7 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `python3 iarch/cli/gen_glass_lua.py --check` | The committed `glass.lua` still matches a fresh render of the tokens |
 | `python3 iarch/cli/gen_animations_lua.py --check` | The committed `animations.lua` still matches a fresh render of the default intensity's motion preset |
 | `python3 iarch/cli/render_noctalia.py --check` | The committed `config.toml` and all six palettes still match a fresh render |
+| `python3 iarch/cli/render_hyprlock.py --check` | The committed `hyprlock.conf` and `hypridle.conf` still match a fresh render |
 | `python3 iarch/cli/render_gtk_css.py --check --repo` | The committed GTK 4 and GTK 3 sheets still match a fresh render |
 | `python3 iarch/cli/render_kvantum.py --check` | The committed Kvantum pointer and theme still match a fresh render |
 | `python3 iarch/cli/gen_fontconfig.py --check` | The committed `fonts.conf` still matches a fresh render |

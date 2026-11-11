@@ -104,6 +104,7 @@ jobs:
           python iarch/cli/gen_glass_lua.py --check    # shipped glass.lua matches the tokens
           python iarch/cli/gen_animations_lua.py --check  # shipped animations.lua matches the motion tokens
           python iarch/cli/render_noctalia.py --check  # shipped config.toml + palettes match the presets
+          python iarch/cli/render_hyprlock.py --check  # shipped hyprlock.conf + hypridle.conf match a fresh render
           python iarch/cli/render_gtk_css.py --check --repo  # shipped GTK sheets match the tokens
           python iarch/cli/render_kvantum.py --check  # shipped Kvantum theme matches the tokens
           python iarch/cli/gen_fontconfig.py --check  # shipped fonts.conf matches the tokens
@@ -125,6 +126,7 @@ jobs:
               "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
               "data/design/tokens.json": "data/schemas/tokens.schema.json",
               "data/design/noctalia.json": "data/schemas/noctalia.schema.json",
+              "data/design/hyprlock.json": "data/schemas/hyprlock.schema.json",
               "data/design/gtk.json": "data/schemas/gtk.schema.json",
               "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
               "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",

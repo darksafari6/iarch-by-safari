@@ -234,3 +234,33 @@ enable_power_sounds = true
 enable_screenshot_sounds = true
 sound_volume = 0.38
 sound_theme = "freedesktop"
+
+# Idle behaviours. The shell watches ext_idle_notifier_v1 itself, so .config/hypr/hypridle.conf ships unlaunched rather than racing it.
+[idle]
+pre_action_fade_seconds = 2.0
+
+# Fifteen minutes idle locks the session.
+[idle.behavior.lock]
+enabled = true
+timeout = 900
+action = "lock"
+
+# One minute after that the monitors go off, and come back on their own when you return.
+[idle.behavior.screen_off]
+enabled = true
+timeout = 960
+action = "screen_off"
+
+# The shell's own lock screen: the one this session shows whenever the shell is running, so hyprlock.conf is the fallback. One transition, chosen by name, because the shell picks a random one of whatever is listed.
+[lockscreen]
+enabled = true
+lock_before_suspend = true
+grace_period_seconds = 0
+fingerprint = true
+allow_empty_password = false
+blurred_desktop = true
+transition = ["fade"]
+transition_duration = 100.0
+edge_smoothness = 0.3
+blur_intensity = 0.5
+tint_intensity = 0.34

@@ -297,6 +297,157 @@ else
     skip "python3 is not installed; the notification path was not checked"
 fi
 
+iarch::heading "Lock screen and idle: does the switch reach them, and is only one daemon idle-watching?"
+# Read-only on purpose. Locking the session is the person's step below: a QA
+# script that locks the machine it was run from takes the terminal away with it.
+if [[ -n $PY ]]; then
+    if expect_ok "hyprlock.conf and hypridle.conf match a fresh render" \
+        "$PY" "$repo/iarch/cli/render_hyprlock.py" --check; then
+        # Parsed, not grepped. hyprlock's form is INI-like rather than TOML --
+        # `monitor = ` has an empty value and `animation = fadeIn, 1, 0.12,
+        # standard` is a bare comma list, neither of which tomllib accepts -- so
+        # the two lock files get a nine-line block parser and the shell's real
+        # TOML gets tomllib. A regex that half-matched would report a
+        # disagreement that was only a quoting difference.
+        lock_state=$("$PY" - "$repo" <<'PYLOCK'
+import re
+import sys
+import tomllib
+from pathlib import Path
+
+root = Path(sys.argv[1])
+
+
+def blocks(text):
+    """hyprlock/hypridle blocks: {name: [{key: value}, ...]} in file order."""
+    out, name, current = {}, None, None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.endswith("{"):
+            name = line[:-1].strip()
+            current = {}
+            out.setdefault(name, []).append(current)
+        elif line == "}":
+            name = current = None
+        elif current is not None and "=" in line:
+            key, _, value = line.partition("=")
+            current[key.strip()] = value.strip()
+    return out
+
+
+lock = blocks((root / ".config/hypr/hyprlock.conf").read_text(encoding="utf-8"))
+idle = blocks((root / ".config/hypr/hypridle.conf").read_text(encoding="utf-8"))
+with (root / ".config/noctalia/config.toml").open("rb") as handle:
+    shell = tomllib.load(handle)
+
+general = lock["general"][0]
+animations = lock["animations"][0]
+background = lock["background"][0]
+# `animation` repeats inside one block, so the block parser keeps only the last
+# of them; the lines are read straight out of the file instead.
+lines = re.findall(r"^    animation = (\w+), (\d), ([\d.]+), (\w+)$",
+                   (root / ".config/hypr/hyprlock.conf").read_text(encoding="utf-8"), re.M)
+behaviors = shell["idle"]["behavior"]
+vocabulary = {"lock", "screen_off", "suspend", "lock_and_suspend", "command"}
+
+
+def flag(value):
+    """TOML gives a bool and hyprlock's form gives the word, so print one shape.
+
+    Comparing Python's True against the string true is a disagreement that exists
+    only in this script, and it is exactly the kind of false failure that teaches
+    somebody to ignore the QA run.
+    """
+    return "true" if value is True else "false" if value is False else str(value)
+print(general.get("compositor_fade", "?"),
+      animations.get("enabled", "?"),
+      len(lines),
+      ",".join(f"{leaf}:{seconds}s:{curve}" for leaf, _e, seconds, curve in lines) or "-",
+      background.get("path") or "<empty>",
+      background.get("blur_passes", "?"),
+      len(idle.get("listener", [])),
+      flag(shell["shell"]["animation"]["enabled"]),
+      shell["idle"]["pre_action_fade_seconds"],
+      ",".join(f"{name}={value['action']}@{value['timeout']:g}s"
+               for name, value in sorted(behaviors.items())) or "-",
+      all(value["action"] in vocabulary for value in behaviors.values()))
+PYLOCK
+        )
+        read -r fade anim_enabled anim_count anim_lines capture passes listeners shell_anim \
+            idle_fade idle_behaviors idle_actions_known <<<"$lock_state"
+        iarch::detail "hyprlock.conf: compositor_fade=$fade animations.enabled=$anim_enabled \
+$anim_count animation line(s) [$anim_lines] path=$capture blur_passes=$passes"
+        iarch::detail "hypridle.conf: $listeners listener block(s)"
+        iarch::detail "config.toml: [shell.animation] enabled=$shell_anim, \
+[idle] pre_action_fade_seconds=$idle_fade, behaviours $idle_behaviors"
+        if [[ $fade == "$shell_anim" && $anim_enabled == "$shell_anim" ]]; then
+            pass "the lock screen follows the same motion switch as the shell ($fade)"
+        else
+            fail "the lock screen disagrees with [shell.animation] enabled=$shell_anim: \
+compositor_fade=$fade animations.enabled=$anim_enabled"
+        fi
+        if [[ $anim_enabled == true && $anim_count -eq 0 ]]; then
+            fail "animations are enabled but no animation line was emitted"
+        elif [[ $anim_enabled == false && $anim_count -ne 0 ]]; then
+            fail "animations are disabled but $anim_count animation line(s) were emitted"
+        else
+            pass "the animation block and its lines agree ($anim_count line(s))"
+        fi
+        if [[ $passes == 0 && $capture != "<empty>" ]]; then
+            fail "blur is off but the background still captures the desktop: a password \
+field over sharp content is the least readable background there is"
+        else
+            pass "the background matches the intensity's blur ($passes pass(es), path=$capture)"
+        fi
+        if [[ $listeners == 0 ]]; then
+            pass "hypridle.conf declares no listener, so it owns no idle timer"
+        else
+            fail "hypridle.conf declares $listeners listener(s) and would race the shell's \
+[idle.behavior.*] timers"
+        fi
+        # The idle side of the same switch: the pre-action overlay is a fullscreen
+        # fade, so a session that has asked not to animate must not get one.
+        if [[ $shell_anim == false && $idle_fade != 0 ]]; then
+            fail "[shell.animation] enabled=false but [idle] still fades for \
+$idle_fade second(s) before acting"
+        elif [[ $shell_anim == true && $idle_fade == 0 ]]; then
+            fail "[shell.animation] enabled=true but [idle] pre_action_fade_seconds is 0"
+        else
+            pass "the idle pre-action fade follows the switch ($idle_fade second(s))"
+        fi
+        if [[ $idle_actions_known == True ]]; then
+            pass "every idle action is one the shell recognizes ($idle_behaviors)"
+        else
+            fail "an idle action is not in the documented vocabulary: upstream would run an \
+empty shell command instead ($idle_behaviors)"
+        fi
+    fi
+    # A running hypridle beside the shell's own idle system is a race, but it is
+    # the machine's state and not a repository regression, so it warns.
+    if command -v pgrep >/dev/null 2>&1; then
+        if pgrep -x hypridle >/dev/null 2>&1; then
+            iarch::warn "hypridle is running: the shell also watches ext_idle_notifier_v1"
+            iarch::detail "two idle daemons lock, dim and suspend the same session; stop one"
+        else
+            pass "hypridle is not running, so the shell owns idle alone"
+        fi
+    else
+        skip "pgrep is not installed; nothing is claimed about a running hypridle"
+    fi
+    manual "press Super+L (or run 'noctalia msg session lock')" \
+        "the desktop blurs into the lock surface over 120ms, a frosted card holds the field, and the clock above it reads the same time as the bar"
+    manual "type a wrong password, then press Esc" \
+        "the field's outline goes to the palette's danger accent with the failure reason and attempt count, then Esc clears the buffer without unlocking"
+    manual "apply the performance intensity, then lock again" \
+        "the screen appears at once with no fade and no blur: a flat palette background instead of a capture, because compositor_fade and blur_passes both follow the switch"
+    manual "wait fifteen minutes idle, or run 'noctalia msg session lock' after setting a short [idle.behavior.lock] timeout" \
+        "the surface colour fades in over two seconds and the session locks; moving the mouse during the fade cancels it"
+else
+    skip "python3 is not installed; the lock screen and idle paths were not checked"
+fi
+
 if [[ $APPLY_SWITCHES == 1 ]]; then
     iarch::heading "Round-trip: does every preset apply and come back cleanly?"
     if [[ -n $PY ]]; then

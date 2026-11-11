@@ -50,6 +50,7 @@ from iarch.lib import configstore  # noqa: E402  (repo-root import by design)
 TOKENS_PATH = ROOT / "data" / "design" / "tokens.json"
 SURFACE_PATH = ROOT / "data" / "design" / "noctalia.json"
 PRESET_DIR = ROOT / "data" / "design" / "presets"
+ANIMATION_DIR = ROOT / "data" / "design" / "animations"
 REPO_CONFIG = ROOT / ".config" / "noctalia" / "config.toml"
 REPO_PALETTES = ROOT / ".config" / "noctalia" / "palettes"
 
@@ -125,6 +126,44 @@ PROFILE: Dict[str, Any] = OrderedDict(
     # docs/user/ipc/shell.mdx gives for a held-modifier keybind. mru is the one value
     # that differs from upstream's default: Alt+Tab means most-recently-used to most
     # people, and workspace order is what the workspace switcher is for.
+    # The lock screen. The two security keys are emitted explicitly at their
+    # restrictive values rather than left to a default: grace_period_seconds > 0
+    # lets any keypress, or a mouse move beyond 5 px, unlock the session with no
+    # password at all, and allow_empty_password accepts an empty one. Neither is
+    # a glass effect, and a test asserts both stay where they are.
+    #
+    # transition is a single effect on purpose. The shell picks one of the listed
+    # transitions at random for every lock and unlock, and randomizes its
+    # parameters too, so upstream's default list of all eleven means a lock is
+    # now a melt, now a vortex, now a honeycomb. A design system that promises
+    # calm, predictable motion cannot also promise that.
+    lockscreen_grace_period_seconds=0,
+    lockscreen_fingerprint=True,
+    lockscreen=OrderedDict(
+        transition=["fade"],
+        # blur_intensity is a 0-1 dial the code turns into a radius by
+        # multiplying (blur_intensity * 40 px), which is not Hyprland's
+        # decoration:blur:size scale and has no verified conversion to it, so it
+        # stays at the documented midpoint. tint_intensity *is* convertible: it
+        # is the alpha of a ColorRole::Surface overlay, which is exactly what the
+        # intensity's glass.tint_alpha means everywhere else in this project.
+        blur_intensity=0.5,
+        edge_smoothness=0.3,
+    ),
+    # Idle: fifteen minutes to a locked session, one minute more to dark monitors.
+    # The shape is the manual's -- docs/user/services/idle.mdx and example.toml
+    # both ship exactly these two behaviors, a lock and a screen-off, in that
+    # order, both disabled -- and the 60-second gap between them is theirs too.
+    # The values are 900 and 960 rather than the documented 600 and 660 because a
+    # desktop that locks ten minutes after you stop typing takes the screen away
+    # from somebody reading a long page or watching a video that holds no idle
+    # inhibitor; fifteen minutes is the same design with more room. Timeouts are
+    # the real order: behavior_order is write-only upstream.
+    idle_pre_action_fade_seconds=2.0,
+    idle_behaviors=OrderedDict(
+        lock=OrderedDict(enabled=True, timeout=900, action="lock"),
+        screen_off=OrderedDict(enabled=True, timeout=960, action="screen_off"),
+    ),
     window_switcher=OrderedDict(
         style="carousel", mru=True, show_caption=True, show_count=True,
         show_app_icon=True, show_all_outputs=True, current_workspace_only=False,
@@ -222,6 +261,15 @@ SECTION_COMMENTS: Dict[str, str] = {
     "control_center.media": "Media tab. The visualizer follows the intensity's motion switch.",
     "notification": "Notification toasts.",
     "audio": "Shell sounds. Notification sounds are off by design.",
+    "lockscreen": "The shell's own lock screen: the one this session shows whenever the "
+                  "shell is running, so hyprlock.conf is the fallback. One transition, "
+                  "chosen by name, because the shell picks a random one of whatever is "
+                  "listed.",
+    "idle": "Idle behaviours. The shell watches ext_idle_notifier_v1 itself, so "
+            ".config/hypr/hypridle.conf ships unlaunched rather than racing it.",
+    "idle.behavior.lock": "Fifteen minutes idle locks the session.",
+    "idle.behavior.screen_off": "One minute after that the monitors go off, and come back "
+                                "on their own when you return.",
 }
 
 
@@ -465,6 +513,124 @@ def render_config(tokens: Dict[str, Any], preset: Dict[str, Any],
         control_center=control_center_section(intensity),
         notification=notification_section(tokens, intensity),
         audio=OrderedDict(PROFILE["audio"]),
+        idle=idle_section(intensity),
+        lockscreen=lockscreen_section(tokens, intensity, intensity_name),
+    )
+
+
+def lockscreen_transition_ms(tokens: Dict[str, Any], intensity_name: str) -> float:
+    """The lock transition in milliseconds, snapped to the range's own step.
+
+    ``kLockscreenTransitionDurationRange`` is {100, 30000, 100}, so a duration has
+    to be a multiple of 100 ms and cannot go below it. The motion preset's own
+    ``fadeIn`` is the honest source -- 120 ms for smooth, 90 ms for minimal -- and
+    neither is a multiple of 100, so both land on the floor. That is stated rather
+    than hidden: the lock screen fades at the fastest duration upstream allows,
+    which is the nearest thing to the session's own fade that this key can express.
+    """
+    motion = tokens["intensities"][intensity_name]["motion"]
+    path = ANIMATION_DIR / f"{motion['preset']}.json"
+    if not path.is_file():
+        raise NoctaliaError(f"no animation preset {motion['preset']!r} in {label(ANIMATION_DIR)}")
+    events = load_json(path)["events"]
+    fade = events.get("fadeIn")
+    if not isinstance(fade, dict) or not fade.get("enabled"):
+        # Motion off is not a duration: the transition list is what disables the
+        # animation, and the caller emits an empty one.
+        return 100.0
+    duration = float(fade.get("duration_ms", 0))
+    low, high, step = 100.0, 30000.0, 100.0
+    snapped = round(duration / step) * step
+    return float(min(high, max(low, snapped)))
+
+
+def lockscreen_section(tokens: Dict[str, Any], intensity: Dict[str, Any],
+                       intensity_name: str) -> Dict[str, Any]:
+    """The shell's own lock screen -- the one this session actually shows.
+
+    It wins ``ext_session_lock_v1`` whenever the shell is running, so
+    ``.config/hypr/hyprlock.conf`` is the fallback for a session without it, and
+    both are rendered from the same tokens: the card behind hyprlock's field is
+    the palette's surface at the intensity's tint alpha, which is what
+    ``tint_intensity`` does here (``colorForRole(ColorRole::Surface, …)``).
+
+    ``transition`` names exactly one effect. The shell picks one of the listed
+    transitions at random for every lock and unlock, and randomizes that effect's
+    own parameters too (``lock_screen.cpp:1152-1176``), so upstream's default list
+    of all eleven means a lock is now a melt, now a vortex, now a honeycomb. A
+    design system that promises calm, predictable motion cannot also promise a
+    random vortex, and one named effect is the only way to get a repeatable one.
+
+    ``transition_duration`` is motion, so it follows the switch the rest of the
+    session follows: with motion off the transition list is empty, which is how
+    upstream disables the lock and unlock animation entirely.
+    """
+    motion = intensity["motion"]
+    blurred = bool(intensity["blur"]["enabled"])
+    section = OrderedDict(
+        enabled=True,
+        # Lock on logind's PrepareForSleep, so a lid close cannot suspend an
+        # unlocked session. This is the shell's own version of the hypridle
+        # fallback's before_sleep_cmd, and it is why that file needs no listener.
+        lock_before_suspend=True,
+        grace_period_seconds=PROFILE["lockscreen_grace_period_seconds"],
+        fingerprint=PROFILE["lockscreen_fingerprint"],
+        allow_empty_password=False,
+        # A blurred snapshot of the desktop as the background. It needs
+        # zwlr_screencopy_manager_v1, which Hyprland v0.57.2 still ships, and a
+        # capture that fails is warned about and skipped rather than fatal. With
+        # blur off there is nothing to blur, so the wallpaper is shown as it is.
+        blurred_desktop=blurred,
+        transition=list(PROFILE["lockscreen"]["transition"]) if motion["enabled"] else [],
+        transition_duration=lockscreen_transition_ms(tokens, intensity_name),
+        # Feathering of a transition's edge. A fade has no edge, so at
+        # transition = ["fade"] this is stored and read and cannot change what is
+        # on screen; it is emitted at upstream's default so the file states the
+        # value instead of leaving it to change upstream.
+        edge_smoothness=PROFILE["lockscreen"]["edge_smoothness"],
+        blur_intensity=PROFILE["lockscreen"]["blur_intensity"] if blurred else 0.0,
+        tint_intensity=float(intensity["glass"]["tint_alpha"]) if blurred else 0.0,
+    )
+    return section
+
+
+def idle_section(intensity: Dict[str, Any]) -> Dict[str, Any]:
+    """The shell's own idle system: lock, then turn the monitors off.
+
+    This is the surface ``.config/hypr/hypridle.conf`` deliberately does *not*
+    duplicate. Noctalia v5.4.1 watches ``ext_idle_notifier_v1`` itself and
+    respects D-Bus and Wayland idle inhibitors, so a second idle daemon would
+    race this one to lock and suspend the same session; the fallback file ships
+    unlaunched and declares no listener.
+
+    Every action here is native. ``action = "command"`` exists upstream and takes
+    a shell string, but an idle timer is the wrong place to invent a command line
+    for somebody else's machine -- the same rule that keeps
+    ``[[shell.session.actions]]`` and ``[shell.launcher.dmenu.entry.*]`` out of
+    the payload. Suspend is left out entirely: which backend suspends this
+    machine is not knowable from a repository, and a wrong guess takes somebody's
+    session away while they are reading.
+
+    The two behaviors, their order and the 60-second gap between them come from
+    [Idle](https://docs.noctalia.dev/noctalia/services/idle/) -- upstream's own
+    ``docs/user/services/idle.mdx`` and ``example.toml`` both ship a disabled lock
+    and a disabled screen-off, and nothing else. The 900/960 values are this
+    project's, and PROFILE says why: ten minutes takes the screen away from
+    somebody reading a long page. The same page publishes the vocabulary for
+    ``action``; upstream does not enum-validate it and quietly falls back to
+    running ``command``, so the record in ``data/design/noctalia.json`` carries
+    the list and this renderer refuses a typo the shell would swallow.
+    """
+    return OrderedDict(
+        # The pre-action overlay is a fullscreen fade in the surface colour, so
+        # it is motion, and it follows the same switch as everything else: a
+        # Performance session gets the action immediately instead of a two second
+        # fade it has asked not to see.
+        pre_action_fade_seconds=PROFILE["idle_pre_action_fade_seconds"]
+        if intensity["motion"]["enabled"] else 0.0,
+        behavior=OrderedDict(
+            (name, OrderedDict(values)) for name, values in PROFILE["idle_behaviors"].items()
+        ),
     )
 
 
@@ -494,8 +660,17 @@ def validate(doc: Dict[str, Any], surface: Dict[str, Any]) -> List[str]:
             problems.append(f"{path}: {value!r} is not a string")
         elif kind == "array" and not isinstance(value, list):
             problems.append(f"{path}: {value!r} is not an array")
-        if "enum" in spec and value not in spec["enum"]:
-            problems.append(f"{path}: {value!r} is not one of {spec['enum']}")
+        if "enum" in spec:
+            if isinstance(value, list):
+                # An enumArrayField (lockscreen.transition): the enumeration
+                # constrains each entry, and the list itself may be empty, which
+                # is how upstream disables the animation. Checking the list
+                # against the enum would refuse every legal value it can hold.
+                for item in value:
+                    if item not in spec["enum"]:
+                        problems.append(f"{path}: {item!r} is not one of {spec['enum']}")
+            elif value not in spec["enum"]:
+                problems.append(f"{path}: {value!r} is not one of {spec['enum']}")
         if "range" in spec and isinstance(value, (int, float)) and not isinstance(value, bool):
             low, high = spec["range"][0], spec["range"][1]
             if not low <= value <= high:
@@ -610,6 +785,19 @@ def is_table_array(value: Any) -> bool:
     return isinstance(value, list) and bool(value) and all(isinstance(i, dict) for i in value)
 
 
+def is_named_map(value: Any) -> bool:
+    """A map whose *keys* are instance names and whose values are all tables.
+
+    Upstream spells several settings this way -- ``[idle.behavior.<name>]``,
+    ``[notification.filter.<name>]``, ``[shell.launcher.providers.<name>]`` --
+    where the name is chosen by the user and the sub-table's keys are the ones
+    the schema declares. It is not a sub-table: emitting ``[idle.behavior]`` with
+    ``[idle.behavior.lock]`` under it would add a table upstream never reads.
+    """
+    return (isinstance(value, dict) and bool(value)
+            and all(isinstance(item, dict) for item in value.values()))
+
+
 def emit_toml(doc: Dict[str, Any], header: str) -> str:
     lines: List[str] = [header.rstrip("\n"), ""]
 
@@ -625,7 +813,10 @@ def emit_toml(doc: Dict[str, Any], header: str) -> str:
                 lines.append(f"{key} = {toml_scalar(value)}")
         lines.append("")
         for key, value in values.items():
-            if isinstance(value, dict):
+            if is_named_map(value):
+                for name, item in value.items():
+                    table(item, f"{path}.{key}.{name}")
+            elif isinstance(value, dict):
                 table(value, f"{path}.{key}")
             elif is_table_array(value):
                 for item in value:

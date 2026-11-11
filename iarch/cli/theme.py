@@ -82,6 +82,7 @@ from iarch.cli import (  # noqa: E402  (repo-root import by design)
     render_gtk_css,
     render_kvantum,
     render_noctalia,
+    render_hyprlock,
 )
 
 DEFAULT_PRESET = "midnight-glass"
@@ -122,6 +123,7 @@ RENDER_ERRORS = (
     render_kvantum.KvantumError,
     gen_fontconfig.FontconfigError,
     render_noctalia.NoctaliaError,
+    render_hyprlock.HyprlockError,
 )
 
 
@@ -418,6 +420,15 @@ def _plan(tokens: Dict[str, Any], preset: Dict[str, Any], intensity: str,
         (p, b, _rendered(p, b)) for p, b in render_noctalia.user_targets(
             tokens, render_noctalia.load_surface(), preset, intensity, config_home / "noctalia"))
 
+    # hyprlock: the session-lock surface, and the hypridle fallback that ships
+    # unlaunched. Both live next to hyprland.lua because that is where hyprlock
+    # and hypridle look for them, not in iarch's own config dir. The lock screen
+    # is intensity-dependent -- its blur *is* the intensity's blur recipe -- so it
+    # has to be re-rendered here rather than left to a one-off command.
+    targets.extend(
+        (p, b, _rendered(p, b)) for p, b in render_hyprlock.user_targets(
+            tokens, preset, intensity, config_home / "hypr"))
+
     return targets
 
 
@@ -511,7 +522,7 @@ def _config_home(raw: str) -> Path:
 def cmd_apply(args: argparse.Namespace, env: Dict[str, str]) -> int:
     config_home = _config_home(args.config_home)
     # Fail before touching the desktop. A settings file nobody can parse is
-    # knowable right now, and this command writes nine generated files before it
+    # knowable right now, and this command writes eleven generated files before it
     # records anything, so discovering it at the end would leave a session
     # re-rendered under a state that was never saved.
     configstore.load("settings", ROOT, env)

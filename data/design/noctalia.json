@@ -1356,6 +1356,168 @@
           "note": "Accepted and ignored: empty read callback, superseded by allowed_urgencies."
         }
       }
+    },
+    "idle": {
+      "schema": "idleSchema",
+      "note": "The shell's own idle system, driven by the Wayland ext_idle_notifier_v1 protocol and respecting D-Bus (org.freedesktop.ScreenSaver, which is how a browser holds idle off during playback) and Wayland idle inhibitors. When the resolved config defines no behavior at all, Noctalia seeds built-in Lock and Monitor off behaviors, both disabled. This is why .config/hypr/hypridle.conf ships unlaunched: a second idle daemon watching the same protocol would race this one to lock, dim and suspend.",
+      "keys": {
+        "pre_action_fade_seconds": {
+          "type": "float",
+          "range": [
+            0.0,
+            120.0
+          ],
+          "range_note": "Inline Range<float>{0.0F, 120.0F} passed straight to field() at src/config/config_schema.cpp:1066, so there is no named constant to cite. The in-app Settings stepper only offers whole seconds 0-30, which is narrower than the parser.",
+          "note": "After the compositor reports idle, the shell fades a fullscreen layer-shell overlay in the surface colour from transparent to opaque over this many seconds and only then runs the behavior. The overlay covers the whole monitor including the bar, and stays click-through so pointer and keyboard activity still reaches the compositor: becoming active during the fade cancels the pending action. 0 disables the overlay and the action runs as soon as the compositor reports idle."
+        },
+        "behavior_order": {
+          "type": "array",
+          "write_only": true,
+          "note": "Write-only. config_schema.cpp:1069-1080 installs a reader that discards the array and a writer that emits it from the order the behaviors ended up in, so the only thing setting it can do is be ignored: names not listed are appended after the listed ones and unknown names are dropped. Recorded so nobody 'fixes' the order with it. The order that matters is the timeouts themselves."
+        },
+        "behavior": {
+          "type": "array",
+          "table": "idleBehaviorSchema",
+          "named_map": true,
+          "note": "A named map, written [idle.behavior.<name>]. The name is the identity: it is what Settings lists, what behavior_order refers to and what the shell keys its timers by. A behavior whose timeout does not change keeps its existing timer across a config reload rather than restarting.",
+          "keys": {
+            "enabled": {
+              "type": "bool",
+              "note": "Upstream's struct default is true (src/config/config_types.h:289), but the two behaviors Noctalia seeds when a config defines none are both disabled, and example.toml:377-385 ships them disabled too. So an idle action is opt-in, and this project opts in explicitly rather than relying on a default that differs by path."
+            },
+            "timeout": {
+              "type": "float",
+              "note": "Seconds before the behavior triggers; fractional values are allowed. 0 disables the behavior while the session is unlocked."
+            },
+            "locked_timeout": {
+              "type": "float",
+              "note": "Alternate timeout while the session is locked; 0 uses timeout. With timeout = 0 a positive value here enables the behavior *only* while locked."
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "lock",
+                "screen_off",
+                "suspend",
+                "lock_and_suspend",
+                "command"
+              ],
+              "enum_note": "Not enum-validated upstream. The custom reader at config_schema.cpp:1028-1038 takes any string and trims it, and resolveIdleBehaviorActions (config_types.cpp:224-262) falls through to commandIdleAction(behavior.command) for anything it does not recognize -- so a typo'd action becomes a behavior that silently runs an empty shell command and never locks, dims or suspends. The vocabulary is the struct comment at config_types.h:291 and the table in docs/user/services/idle.mdx. This project records it as an enum so its own renderer refuses the typo upstream would swallow."
+            },
+            "command": {
+              "type": "string",
+              "note": "Only for action = \"command\": a shell command run when idle. Normal shell, so `noctalia msg ...` is how a command calls back into the shell's own IPC. Not emitted by this project: every action it wants is native, and an idle timer is the wrong place to invent a command line for somebody else's machine."
+            },
+            "resume_command": {
+              "type": "string",
+              "note": "Optional shell command run when activity resumes. For screen_off the shell restores monitor power first and then runs it, and it runs even if restoring monitor power reported a failure."
+            },
+            "lock_before_suspend": {
+              "type": "bool",
+              "note": "For action = \"suspend\" only, and only emitted then. normalizeIdleBehaviorAction (config_types.cpp:218-222) rewrites suspend with this true into lock_and_suspend, so the two spellings are the same behavior and this project writes the explicit one."
+            }
+          }
+        }
+      }
+    },
+    "lockscreen": {
+      "schema": "lockscreenSchema",
+      "note": "The shell's own lock screen, and the one this session actually shows: it wins ext_session_lock_v1 whenever the shell is running, so .config/hypr/hyprlock.conf is the fallback for a session without it. Two of these keys are security settings rather than appearance (grace_period_seconds, allow_empty_password), and one decides whether a snapshot of the desktop is taken at all (blurred_desktop).",
+      "keys": {
+        "enabled": {
+          "type": "bool",
+          "note": "Upstream's struct default is true (src/config/config_types.h:589)."
+        },
+        "lock_before_suspend": {
+          "type": "bool",
+          "note": "Locks on logind's PrepareForSleep (a lid close or `systemctl suspend`) through a sleep-delay inhibit. Distinct from an idle behavior's action = \"lock_and_suspend\" and from the idle behavior key of the same name, which is about the idle timer (config_types.h:590-592)."
+        },
+        "grace_period_seconds": {
+          "type": "integer",
+          "range": [
+            0,
+            60
+          ],
+          "range_note": "Inline Range<std::int64_t>{0, 60} passed straight to field() at src/config/config_schema.cpp:133, so there is no named constant to cite.",
+          "note": "A convenience window in which any keypress, or mouse movement beyond 5 px, unlocks the session WITHOUT a password. 0 disables it, which is the struct default, and it is additionally revoked on sleep transitions and on logind resume as defense in depth (config_types.h:593-598). This project emits 0 and a test asserts it: a glass desktop is not a reason to let a nudge of the mouse end a lock."
+        },
+        "fingerprint": {
+          "type": "bool",
+          "note": "Fingerprint authentication through fprintd, in parallel with the password. Upstream's default is true; with no fprintd and no scanner there is nothing for it to talk to."
+        },
+        "allow_empty_password": {
+          "type": "bool",
+          "note": "Accepts an empty password. Upstream's default is false (config_types.h:600) and this project emits false, so an account with no password still has to press Enter rather than being waved through."
+        },
+        "blurred_desktop": {
+          "type": "bool",
+          "note": "Uses a snapshot of the desktop as the lock screen background, blurred by blur_intensity and tinted by tint_intensity. example.toml:257 says it requires wlr-screencopy, and the code agrees: WaylandConnection binds zwlr_screencopy_manager_v1 at version 3 (src/wayland/wayland_connection.cpp:35, :84, :1706-1709) and hasScreencopy() is what gates the capture (:1106, lock_screen.cpp:981-985). A capture that fails is warned about and skipped, not fatal. Hyprland v0.57.2 still ships the protocol (src/protocols/Screencopy.cpp and protocols/wlr-screencopy-unstable-v1.xml in its own tree), so this is on."
+        },
+        "transition": {
+          "type": "array",
+          "enum": [
+            "diamond",
+            "disc",
+            "fade",
+            "golden",
+            "honeycomb",
+            "melt",
+            "pixel",
+            "stripes",
+            "vortex",
+            "wipe",
+            "zoom"
+          ],
+          "enum_constant": "kLockscreenTransitions",
+          "note": "A list of allowed transitions, and the shell picks ONE OF THEM AT RANDOM for each lock and unlock: std::floor(Random::randomFloat(0, transitions.size())) at src/shell/lockscreen/lock_screen.cpp:1152, with the effect's own parameters randomized too -- direction 0-3, centre 0.2-0.8, stripe count 4-24, angle 0-360, cell size 0.02-0.06 (:1159-1176). The struct default lists all eleven (config_types.h:602-607), so out of the box a lock is a random one of melt, vortex, honeycomb, pixel and the rest. An empty list disables the lock and unlock animation. This project emits [\"fade\"] alone: a design system that promises calm, predictable motion cannot also promise a random vortex, and one named effect is the only way to get a repeatable one."
+        },
+        "transition_duration": {
+          "type": "float",
+          "range": [
+            100.0,
+            30000.0,
+            100.0
+          ],
+          "range_constant": "kLockscreenTransitionDurationRange",
+          "note": "Milliseconds, in a 100 ms step (src/config/schema/ranges.h:35). The step is why this cannot simply be the motion preset's own fadeIn: smooth asks for 120 ms and minimal for 90 ms, and neither is a multiple of 100, so the renderer rounds to the nearest legal value and the result is the range's floor. The struct default is 1500 (config_types.h:608), a second and a half, which is ten times the session's own fade."
+        },
+        "edge_smoothness": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "range_constant": "kUnitRange",
+          "note": "Feathering of a transition's edge: 0.0 is sharp, 1.0 is soft. Only the effects that have an edge -- wipe, disc, stripes, diamond and the rest -- can show it; a fade has no edge to feather, so at transition = [\"fade\"] this key is stored and read and cannot change what is on screen. It is emitted at upstream's default rather than left out, so the file states the value instead of leaving it to change upstream."
+        },
+        "blur_intensity": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "range_constant": "kUnitRange",
+          "note": "A 0-1 dial, and the code turns it into a radius by multiplying: blurRadius = blur_intensity * 40.0 px (src/shell/lockscreen/lock_surface.cpp:2007, :2104), so 1.0 is a 40 px radius and 0 is no blur at all. That is not the same scale as Hyprland's decoration:blur:size, which is a distance in pixels run for blur:passes passes, and there is no verified way to convert one into the other -- so this project emits the documented midpoint and records the gap rather than inventing a mapping."
+        },
+        "tint_intensity": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "range_constant": "kUnitRange",
+          "note": "The alpha of a surface-colour overlay over the background, and it is the palette's own role: colorForRole(ColorRole::Surface, tintIntensity) at lock_surface.cpp:1321, hidden entirely at 0.0 (:1316). That is the same pairing this project's hyprlock card uses -- the palette's surface at the intensity's glass.tint_alpha -- and the login panel's border is ColorRole::OutlineVariant (:1329), the same role render_noctalia.py already writes for every panel border. So this key is written from the intensity rather than chosen."
+        },
+        "wallpaper": {
+          "type": "string",
+          "parser": "pathStringField",
+          "note": "An optional image path for the lock screen background; empty uses the desktop wallpaper. Not emitted: a path on somebody's disk is not repository state, and the desktop wallpaper is the right default for a session whose wallpaper this project already generates."
+        },
+        "monitors": {
+          "type": "array",
+          "note": "Connector names that show the lock screen; empty shows it on every monitor and leaves the others black. Not emitted: a connector name is machine state, and 'every monitor' is the only answer that is right on a machine this repository has never seen."
+        }
+      }
     }
   }
 }

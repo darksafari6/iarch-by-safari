@@ -138,9 +138,76 @@ then bind `hyprctl dispatch overview` to a key that is not in use, and add the p
 
 The profile selects Noctalia's built-in Freedesktop sound theme at a reduced volume, but notification sounds are disabled by default. GUI-managed overrides may take precedence. The currently documented v5 configuration does not establish an arbitrary custom audio-file path for notifications, so this profile does not create a second notification daemon or falsely claim that a custom iPhone-style sound is connected. A custom twinkle asset should only be integrated through a supported Noctalia sound API or a tested extension that will not duplicate notifications.
 
+## Lock screen and idle
+
+Two things have to be settled before a lock screen can be designed, and both are decisions rather than settings.
+
+**Which client locks.** Noctalia v5.4.1 has its own lock surface (`src/shell/lockscreen/lock_screen.cpp` and `lock_surface.cpp`) and hyprlock is a separate one; both implement `ext_session_lock_v1`, and the protocol hands the lock to whichever asks first. So this project does not run both. The shell owns the lock while it is running — `Super + L` is `noctalia msg session lock` in `.config/hypr/keybind.lua`, and the launcher's `/session` provider and the session panel reach the same action — and `.config/hypr/hyprlock.conf` is the lock screen for a session where the shell is not running. That is the whole content of `lock_cmd = pidof noctalia || hyprlock` in the shipped `hypridle.conf`: prefer the lock surface that is already up, and only start a second one when it is not.
+
+**Which daemon idles.** Hyprland's `hypridle` and the shell both watch `ext_idle_notifier_v1`, so running both means two processes racing to lock, dim and suspend the same session, and nothing on screen tells you which one won. The shell's idle system is the one this project configures, because it already respects D-Bus inhibitors (`org.freedesktop.ScreenSaver`, which is how a browser holds idle off during playback) and Wayland idle inhibitors:
+
+| Behaviour | Timeout | Action |
+| --- | --- | --- |
+| `lock` | 900 s (15 min) | native `lock` — the session locks |
+| `screen_off` | 960 s (16 min) | native `screen_off` — monitors off, and back on by themselves when you return |
+
+Before either fires, `[idle] pre_action_fade_seconds = 2.0` fades a fullscreen overlay in the surface colour from transparent to opaque over two seconds — click-through, so pointer and keyboard activity still reaches the compositor, and becoming active during the fade cancels the action. That overlay is motion, so it follows the same switch as everything else: at the Performance intensity it is `0` and the action runs as soon as the compositor reports idle.
+
+`.config/hypr/hypridle.conf` therefore ships **unlaunched**. It declares no listener, so it owns no timer: only `lock_cmd`, `before_sleep_cmd = loginctl lock-session` and `after_sleep_cmd = hyprctl dispatch dpms on`, the three commands a session with no shell still needs. Nothing in `.config/hypr/startup.lua` starts it, and a test fails if any shipped file does. To use it *instead* of the shell's idle system, add `hypridle` to the `exec_once` list in `startup.lua` **and** disable every `[idle.behavior.*]` entry in `config.toml`; doing only the first is what causes the race.
+
+Two idle features are deliberately absent. `action = "command"` exists upstream and takes a shell string, but an idle timer is the wrong place to invent a command line for somebody else's machine — the same rule that keeps `[[shell.session.actions]]` and `[shell.launcher.dmenu.entry.*]` out of the payload. Suspend is left out entirely: which backend suspends a given machine is not knowable from a repository, and a wrong guess takes somebody's session away while they are reading. `behavior_order` is recorded but never emitted, because upstream installs a reader that discards it and a writer that emits it — setting it can only be ignored.
+
+### The lock screen you actually see
+
+`[lockscreen]` in the generated `config.toml` configures the shell's own lock surface, and three of its keys are decisions rather than preferences.
+
+**One transition, named.** `transition` is not a list of effects that play in order — the shell picks *one of them at random* for every lock and unlock (`lock_screen.cpp:1152`) and randomizes that effect's own parameters too: direction 0-3, centre 0.2-0.8, stripe count 4-24, angle 0-360, cell size 0.02-0.06 (`:1159-1176`). Upstream's default lists all eleven, so an unconfigured session locks into a random one of melt, vortex, honeycomb, pixel and golden, for 1500 ms. This project emits `["fade"]`, which is the only way to get a repeatable effect, and takes the duration from the motion preset's own `fadeIn` leaf. `kLockscreenTransitionDurationRange` is `{100, 30000, 100}` — a 100 ms step with a 100 ms floor — and neither smooth's 120 ms nor minimal's 90 ms is a multiple of it, so both snap to the floor. The lock screen fades in 100 ms, the fastest upstream allows, and the record says which number was lost rather than letting 100 look like a choice nobody made. With motion off the list is empty, which is how upstream disables the lock and unlock animation entirely.
+
+**A blurred snapshot of your own desktop.** `blurred_desktop = true` captures the desktop through `zwlr_screencopy_manager_v1`, which the shell binds at version 3 (`wayland_connection.cpp:35, :84, :1706-1709`) and which Hyprland v0.57.2 still ships (`src/protocols/Screencopy.cpp` in its own tree). A capture that fails is warned about and skipped, not fatal, so the worst case is a lock screen without the snapshot. `blur_intensity` is a 0-1 dial the code turns into a radius by multiplying — `blur_intensity * 40.0` px (`lock_surface.cpp:2007, :2104`) — which is *not* Hyprland's `decoration:blur:size` scale, and there is no verified way to convert one into the other, so it stays at the documented midpoint of 0.5 and the gap is recorded. `tint_intensity` *is* convertible: it is the alpha of a `ColorRole::Surface` overlay (`lock_surface.cpp:1321`), which is exactly what the intensity's `glass.tint_alpha` means everywhere else here, so it is written from the intensity — 0.22 for crystal, 0.34 for frosted, 0.52 for soft, 0.0 when blur is off. The login panel's border is `ColorRole::OutlineVariant` (`:1329`), the same role every other panel border in this project uses.
+
+**Two keys are security settings, and both are emitted at their restrictive values.** `grace_period_seconds` above zero lets any keypress, or a mouse move beyond 5 px, end a lock *with no password at all*; it is emitted as `0` and a test asserts it stays there across every preset and intensity. `allow_empty_password` accepts an empty password; it is emitted `false`. `lock_before_suspend = true` locks on logind's `PrepareForSleep`, so a lid close cannot suspend an unlocked session — which is also why the hypridle fallback needs no listener of its own.
+
+`wallpaper` and `monitors` are recorded and not emitted: a path on somebody's disk and a connector name are machine state, not repository state, and the defaults (the desktop wallpaper, every monitor) are the only answers that are right on a machine this repository has never seen.
+
+### What the fallback lock screen looks like
+
+The rest of this section is `.config/hypr/hyprlock.conf`, which a session only reaches when the shell is not running.
+
+
+`python3 iarch/cli/render_hyprlock.py` renders it from the same tokens as everything else, and the central claim is that **hyprlock's blur is Hyprland's blur**: its manual says the background's blur options are taken from Hyprland, so `blur_passes`, `blur_size`, `noise`, `contrast`, `brightness` and `vibrancy` are written from the intensity's own `decoration:blur` values, number for number. The lock screen frosts by the same recipe as the panels and windows, rather than by a similar-looking one.
+
+| Layer | What it is | Where it comes from |
+| --- | --- | --- |
+| Background | A capture of the desktop taken when the lock starts, blurred | `path = screenshot`, plus the intensity's blur recipe |
+| Card | A frosted panel, 460×170, 24 px corners, hairline border | the palette's `surface` at the intensity's `tint_alpha`, `radius.panel`, `layout.border_size`, `outline_variant` at `border_alpha` |
+| Field | hyprlock's own documented 400×90, 12 px corners, dots centred | `radius.input`, the palette's `surface_variant` at `tint_alpha_strong`, `on_surface` text |
+| Clock | `$TIME` at the top, 28 px, with a shadow behind it | `type.sizes.xxl`, `font.ui` |
+| Name and hint | `$DESC` and "Enter to unlock · Esc clears the field" below the card | `type.sizes.lg` and `sm`, `on_surface_variant` |
+
+The field's three state colours are the palette's semantic accents — `warning` while PAM is being asked, `danger` when it refuses, `primary` when Caps Lock is on — which is the same mapping the shell uses for a critical notification's border. hyprlock documents each as a gradient, and a gradient accepts one colour.
+
+Only `background` blurs in hyprlock, so the "frosted card" is a translucent surface colour over an already-blurred capture: the shell's panel recipe, minus a second blur pass it has no variable for. `rounding` is an int in pixels — there is no percentage rounding and no shared radius scale — and the shadow alpha is carried once, in `shadow_boost`, because that variable *multiplies* the shadow's opacity and putting the alpha in the colour too would square it.
+
+Motion reaches the lock screen two ways. `general:compositor_fade` fades the lock surface together with the compositor's blur contribution and follows the intensity's motion switch, falling back to hyprlock's own client-side fade when the compositor does not advertise `hyprland_surface_manager_v1`. And the `animations` block takes its durations from the motion preset's own `fadeIn` and `fadeOut` leaves — 120 ms for smooth, 90 ms for minimal, nothing at all for off — converted to the seconds hyprlock's `animation` keyword takes. The tokens' `speed_multiplier` is deliberately not applied: it scales Hyprland's tree through `generated/animations.lua`, and hyprlock has no multiplier, so scaling one side would make the lock screen disagree with the session it locks.
+
+At the Performance intensity there is no fade, no capture and no blur. `blur_passes = 0` means the desktop would be shown sharp, and a password field over sharp high-contrast content is the least readable background there is, so `path` goes empty and the palette's background fills the screen instead. `iarch/cli/qa_motion.sh` fails that combination if it ever reappears.
+
+### What the lock screen cannot do
+
+Recorded in `data/design/hyprlock.json` under `not_in_hyprlock`, so nobody invents a variable that silently does nothing:
+
+- **No per-widget blur.** Only `background` blurs; a frosted card has to be a translucent colour.
+- **No theme or palette file.** Colours are literals in the file, so the generator resolves the palette itself.
+- **No global speed multiplier** and no reading of `hyprland.lua`: each `animation` line carries its own duration.
+- **No unlock command, password file or hash.** Authentication is PAM or fprintd and nothing else.
+- **No idle timeout.** hyprlock does not lock itself; a daemon does, which is the hypridle question above.
+- **`SIGUSR1` unlocks it without a password**, and `onclick` can attach a command to a label, image or shape. The generator emits no `onclick`, and [SECURITY.md](../SECURITY.md) says plainly what both facts mean: a lock screen keeps a session private from somebody walking up to it, and is not a boundary against a local user who can already run commands as you.
+
+A *live* blurred desktop behind the field — rather than a capture that freezes the moment you lock — is available and is not enabled. It needs Hyprland's `misc:session_lock_xray` and `misc:session_lock_blur` (both real v0.57.2 leaves, `src/config/values/ConfigValues.cpp:587-588`), `general:compositor_fade = true` and an empty `background:path` with a transparent colour. Those two leaves keep every workspace rendering underneath a locked session, which is compositor work spent on a screen nobody is looking at, so they stay off by default and this paragraph is how you turn them on. Fingerprint authentication is the same shape: `auth:fingerprint:enabled = true` needs fprintd and a scanner, and hyprlock reports the result through `$FPRINTPROMPT` and `$FPRINTFAIL`.
+
 ## Security and desktop boundaries
 
-The profile retains Noctalia's existing Settings and session/lock integrations. The actual lock screen remains backed by the Linux session locker/authentication stack; no custom password collection is introduced. Apple-specific AirDrop, iCloud, cellular toggles, and exact iOS app lifecycle have no direct universal desktop equivalent and are not emulated as fake working controls.
+The profile retains Noctalia's existing Settings and session integrations. The lock screen is the shell's own while the shell runs, with `.config/hypr/hyprlock.conf` as the fallback for a session where it does not; both authenticate through PAM, and neither collects a password on this project's behalf — [SECURITY.md](../SECURITY.md) records what that does and does not protect, including hyprlock's `SIGUSR1` unlock. Apple-specific AirDrop, iCloud, cellular toggles, and exact iOS app lifecycle have no direct universal desktop equivalent and are not emulated as fake working controls.
 
 ## Rollback
 
