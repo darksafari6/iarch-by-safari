@@ -21,6 +21,8 @@ a preset, renders a configuration file, and can verify what it previously wrote:
 | `python3 iarch/cli/iarch_anim.py toggle EVENT` | the same file | that the event is one the active preset declares |
 | `python3 iarch/cli/iarch_anim.py reduce-motion on\|off` | the same file | that reduce-motion renders the forced preset with every duration under the cap |
 | `python3 iarch/cli/iarch_anim.py current [--live]` | nothing — it reports | the recorded state, the resolved per-event plan, whether the file matches it, and with `--live` what the compositor says it is animating with |
+| `python3 iarch/cli/iarch_doctor.py notify-test` | nothing — it asks | that the shell answers IPC, that Do Not Disturb is off, that no other daemon holds the bus, and that low, normal and critical toasts are acknowledged |
+| `python3 iarch/cli/iarch_doctor.py dnd on\|off\|toggle\|status` | nothing — it asks | that the shell took the change, by reading the state back |
 
 Every command exits 0 on success, 1 when the repository or the host is out of
 step — for `iarch-theme`, a preset the contrast gate refuses; for `iarch-anim`, a
@@ -63,9 +65,14 @@ refused if any single surface — or the palette's contrast — would be, and it
 write across the nine files is all-or-nothing the same way. See
 `docs/GTK-NOTES.md`, `docs/KVANTUM-NOTES.md` and `docs/FONTS.md`.
 
-The commands still to come are `iarch-keybinds`, `iarch-anim` and `iarch-doctor`.
-Each one reads user state through `iarch.lib.configstore` and writes only
-generated files, under the contract in `iarch/lib/renderers.py`.
+`iarch-doctor` is the one command here that writes nothing at all: it asks a
+running session what it is actually doing, because a render that validates is not
+proof the desktop changed. It follows the same rule about a missing binary — no
+`noctalia`, no `notify-send`, no `pgrep` means a check that could not run, which
+is reported as such and never as a pass. The remaining commands are
+`iarch-keybinds` and the rest of `iarch-doctor` (Part 5). Each one reads user
+state through `iarch.lib.configstore` and writes only generated files, under the
+contract in `iarch/lib/renderers.py`.
 
 Nothing here may be renamed to an older product name; the conventions live in
 `branding/product.env`.

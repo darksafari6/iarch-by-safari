@@ -112,7 +112,11 @@ class VerifiedSurface(unittest.TestCase):
                                         f"{path} lists an enum with no upstream constant")
                     if "range" in spec:
                         self.assertLessEqual(spec["range"][0], spec["range"][1])
-                        self.assertIn("range_constant", spec)
+                        # An inline Range<...>{lo, hi} passed straight to field() has no named
+                        # constant, so a note citing the expression counts as the citation --
+                        # the same escape hatch `parser` gives an enum with no kEnum constant.
+                        self.assertTrue(spec.get("range_constant") or spec.get("range_note"),
+                                        f"{path} lists a range with no upstream citation")
 
         for name, section in SURFACE["sections"].items():
             walk(section["keys"], name)
@@ -655,6 +659,132 @@ class CommandLine(unittest.TestCase):
                      "--write-repo-default", "--output-dir"):
             self.assertIn(flag, result.stdout)
 
+
+
+class NotificationSurface(unittest.TestCase):
+    """The toast settings: what the payload picks, and what the record knows.
+
+    iArch never runs a second notification daemon, so the whole of Part 3's
+    notification work is these keys plus the shell's own IPC verbs. The record in
+    ``data/design/noctalia.json`` has to be complete even where the payload is
+    deliberately silent: filter tables, the legacy blacklist shim and the
+    section-level urgency list all exist at v5.4.1, and a later change that
+    reaches for one of them must find it already verified rather than invent it.
+    """
+
+    # config_schema.cpp:292-372 notificationSchema(), in declaration order,
+    # including the three customs and the section-level allowed_urgencies.
+    UPSTREAM_KEYS = [
+        "enable_daemon", "show_app_name", "show_actions", "position", "layer",
+        "scale", "width", "background_opacity", "border", "border_color",
+        "border_width", "follow_focused_output", "offset_x", "offset_y",
+        "monitors", "collapse_on_dismiss", "keep_dismissed_in_history",
+        "history_retention_hours", "max_visible", "blacklist",
+        "blacklist_allow_critical", "filter_order", "filter", "allowed_urgencies",
+    ]
+
+    # config_schema.cpp:247-291 notificationFilterSchema(), same rule.
+    UPSTREAM_FILTER_KEYS = [
+        "enabled", "matches", "match", "match_content", "show_toast",
+        "save_history", "play_sound", "bypass_dnd", "allow_permanent",
+        "override_duration", "allowed_urgencies", "allow_critical",
+    ]
+
+    def setUp(self):
+        self.keys = SURFACE["sections"]["notification"]["keys"]
+        self.filter_section = SURFACE["sections"]["notification.filter"]
+        self.doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.notification = self.doc["notification"]
+
+    def test_the_record_covers_every_setting_upstream_declares(self):
+        self.assertEqual(sorted(self.UPSTREAM_KEYS), sorted(self.keys))
+
+    def test_the_filter_table_is_recorded_as_a_table_and_as_its_own_section(self):
+        self.assertEqual("notificationFilterSchema", self.keys["filter"]["table"])
+        self.assertEqual("notificationFilterSchema", self.filter_section["schema"])
+        # One definition, two ways in: a sub-table of [notification] and a
+        # section of its own, so either spelling validates the same keys.
+        self.assertEqual(self.keys["filter"]["keys"], self.filter_section["keys"])
+        self.assertEqual(sorted(self.UPSTREAM_FILTER_KEYS),
+                         sorted(self.filter_section["keys"]))
+
+    def test_the_two_keys_upstream_accepts_and_ignores_say_so(self):
+        for key in ("blacklist_allow_critical", "allow_critical"):
+            spec = (self.keys if key == "blacklist_allow_critical"
+                    else self.filter_section["keys"])[key]
+            with self.subTest(setting=key):
+                self.assertIn("ignored", spec["note"],
+                              "a no-op key has to be recorded as one, or someone "
+                              "will wire a setting to it")
+
+    def test_the_payload_emits_no_filter_tables(self):
+        # A filter needs a real sender to match. Inventing one would ship a rule
+        # that silently swallows somebody's notifications.
+        self.assertNotIn("filter", self.notification)
+        for key, value in self.notification.items():
+            with self.subTest(setting=key):
+                self.assertNotIsInstance(value, dict, f"{key} would render a sub-table")
+
+    def test_the_keys_left_unemitted_are_still_recorded(self):
+        unused = [key for key in self.UPSTREAM_KEYS if key not in self.notification]
+        self.assertEqual(
+            sorted(["blacklist", "blacklist_allow_critical", "filter_order",
+                    "filter", "allowed_urgencies"]), sorted(unused))
+        for key in unused:
+            with self.subTest(setting=key):
+                self.assertIn("note", self.keys[key],
+                              "a key we choose not to emit still needs its reason recorded")
+
+    def test_the_margin_is_one_number_on_both_axes(self):
+        self.assertEqual(16, self.notification["offset_x"])
+        self.assertEqual(self.notification["offset_x"], self.notification["offset_y"])
+        for key in ("offset_x", "offset_y"):
+            with self.subTest(setting=key):
+                self.assertIsInstance(self.notification[key], int)
+                self.assertGreaterEqual(self.notification[key], 0)
+                self.assertIn("note", self.keys[key],
+                              "offset_x and offset_y are not applied the same way "
+                              "upstream, and the difference has to be written down")
+
+    def test_toasts_stay_on_the_output_they_appeared_on(self):
+        self.assertIs(False, self.notification["follow_focused_output"])
+        self.assertEqual([], self.notification["monitors"])
+
+    def test_the_stack_is_capped_and_history_is_kept_for_a_week(self):
+        self.assertIs(True, self.notification["collapse_on_dismiss"])
+        self.assertIs(True, self.notification["keep_dismissed_in_history"])
+        self.assertEqual(4, self.notification["max_visible"])
+        self.assertEqual(168, self.notification["history_retention_hours"])
+        for key in ("max_visible", "history_retention_hours"):
+            with self.subTest(setting=key):
+                low, high = self.keys[key]["range"][:2]
+                self.assertLessEqual(low, self.notification[key])
+                self.assertLessEqual(self.notification[key], high)
+
+    def test_the_corner_it_sits_in_and_the_layer_it_sits_on(self):
+        self.assertEqual("top_right", self.notification["position"])
+        self.assertEqual("top", self.notification["layer"])
+        self.assertIs(True, self.notification["enable_daemon"],
+                      "the shell's own daemon is the only one iArch allows")
+
+    def test_the_recorded_position_values_are_the_documented_six(self):
+        note = self.keys["position"]["note"]
+        for value in ("top_right", "top_left", "top_center",
+                      "bottom_right", "bottom_left", "bottom_center"):
+            with self.subTest(position=value):
+                self.assertIn(value, note)
+        # It is a plain string field upstream, so the record must not claim an
+        # enum that notificationSchema() does not enforce.
+        self.assertNotIn("enum", self.keys["position"])
+        self.assertNotIn("enum", self.keys["layer"])
+
+    def test_every_combination_keeps_the_toast_settings_inside_their_bounds(self):
+        for preset_id, intensity in COMBINATIONS:
+            with self.subTest(preset=preset_id, intensity=intensity):
+                doc = render(preset_id, intensity)
+                problems = [line for line in noctalia.validate(doc, SURFACE)
+                            if line.startswith("notification")]
+                self.assertEqual([], problems)
 
 
 if __name__ == "__main__":

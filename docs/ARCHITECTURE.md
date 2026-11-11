@@ -35,7 +35,7 @@ the map. Read it before changing anything.
 ├── iarch/                    The product's own code, all of it iarch-prefixed.
 │   ├── lib/configstore.py    User state: defaults merge, atomic writes, backups. The rules below.
 │   ├── lib/renderers.py      Generators. Contract shipped; renderers land in Parts 2 and 5.
-│   ├── cli/                  iarch-theme (Part 2), iarch-anim (Part 3); iarch-keybinds, iarch-doctor (Part 5).
+│   ├── cli/                  iarch-theme (Part 2), iarch-anim and iarch-doctor (Part 3); iarch-keybinds (Part 5).
 │   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
 │   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
 │   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
@@ -45,8 +45,10 @@ the map. Read it before changing anything.
 │   │   ├── render_kvantum.py  The Qt/Kvantum glass theme, recoloured from the presets.
 │   │   ├── gen_fontconfig.py  The fontconfig file that applies the font tokens.
 │   │   ├── theme.py           iarch-theme: one preset across every surface above; gates on contrast.
-│   │   └── iarch_anim.py      iarch-anim: switch the motion preset, speed, reduce-motion and
-│   │                          per-event overrides; verifies with the compositor and rolls back.
+│   │   ├── iarch_anim.py      iarch-anim: switch the motion preset, speed, reduce-motion and
+│   │   │                      per-event overrides; verifies with the compositor and rolls back.
+│   │   └── iarch_doctor.py    iarch-doctor: ask a running session whether it took the settings --
+│   │                          notifications in Part 3, the rest of the session in Part 5.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
 ├── data/                     Repository defaults. A user never edits these after install.

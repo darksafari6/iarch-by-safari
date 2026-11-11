@@ -235,6 +235,99 @@ The lock screen has the same eleven transitions and its own `transition_duration
 An empty `transition` disables the lock and unlock animation, which is how
 reduce-motion should reach it in Part 7.
 
+## Notifications
+
+iArch runs no notification daemon of its own. Noctalia's built-in one is claimed
+with `[notification] enable_daemon = true` in the generated `config.toml`, and
+everything below is that daemon: its motion, its timeout rules, and the three
+things the Part 3 brief asked for that v5.4.1 has no setting for.
+
+**What moves, and how long it takes.** Read out of
+`src/shell/notification/notification_toast.cpp` at v5.4.1:
+
+| Effect | Duration | Easing | Call | Follows `[shell.animation]` |
+| --- | --- | --- | --- | --- |
+| Card reveal on arrival | `Style::animNormal` = 200 ms | `EaseOutCubic` | `animate()` at `:1073` | yes |
+| Foreground slide inside the reveal | 12 px (`kContentSlideOffset`, `:110`) | — | same animation | yes |
+| Cards re-stacking after a dismiss | 200 ms | `EaseInOutQuad` | `animate()` at `:1981` | yes |
+| An arrival that interrupts a re-stack | retargets from the current reveal, 200 ms | `EaseOutCubic` | `animate()` at `:1959` | yes |
+| Flash when a notification replaces one already on screen | `Style::animFast` = 100 ms | `EaseOutCubic` | `animate()` at `:846` | yes |
+| The countdown bar draining | the toast's own timeout | `Linear` | `animateTimer()` at `:827` | **no, by design** |
+
+Two consequences worth stating, because both are the opposite of what a reader
+would assume:
+
+* The toast animations go through `AnimationManager::animate()`, which honours the
+  global motion enable and speed. So `[shell.animation] enabled = false` — what the
+  `performance` intensity writes — stops toasts sliding as well as panels, and
+  `speed` scales them. The wallpaper crossfade was the only exempt effect named
+  earlier; the countdown bar is a second one, and for the same reason: a timer that
+  has to agree with a real deadline cannot be scaled by a preference.
+* There is no slide-in/slide-out pair to configure. The brief's ~300 ms in and
+  ~200 ms out is not reachable in v5.4.1: one 200 ms reveal, one 200 ms re-stack,
+  and a retract that reuses them. This document records the real numbers instead of
+  pretending to set them.
+
+**Hover pauses the timeout — always, and not through a setting.** Pointer-inside
+calls `NotificationManager::pauseExpiry()` (`src/notification/notification_manager.cpp:762`),
+which clears the expiry outright, and leaving calls `resumeExpiry(id, remainingMs)`
+(`:781`) with what was left. No countdown timer is started while a card is hovered
+(`notification_toast.cpp:824`), and focusing an inline reply input pauses it the same
+way (`:1103`). There is no key to turn this off, so `iarch-doctor notify-test`
+tells you to look for it rather than claiming to configure it.
+
+**The progress bar is the timeout, and urgency decides whether it shows at all.**
+`showToastProgressAccent()` (`:350`) draws the 3 px accent for any toast with a
+deadline. A toast with none — `resolveDisplayDuration()` maps `timeout <= 0` to `-1`
+(`:103`) — shows the bar full and static if it is critical, and hidden if it is not
+(`:818`). Nothing here is configurable either.
+
+**Urgency styling is real; urgency persistence is not.**
+
+| Urgency | Border colour | Border width | Lifetime |
+| --- | --- | --- | --- |
+| low, normal | `[notification] border_color` (`outline_variant` as shipped) | `border_width`, 1.0 as shipped | the sender's timeout, or 6000 ms |
+| critical | `ColorRole::Error`, ignoring `border_color` (`:127`) | at least `Style::emphasizedBorderWidth`, or `border_width` when that is larger (`:137`) | **the sender's timeout, or 6000 ms** |
+
+`normalizeNotifyExpireTimeout()` (`src/notification/notification_manager.h:39`) maps
+`0` to persistent and any negative value to `kDefaultNotificationTimeout = 6000`
+**without looking at urgency**, so a critical toast that stays until it is dismissed
+is a choice its application made, not something this theme can switch on. The two
+levers that do exist are per sender, in `[notification.filter.<name>]`:
+`override_duration` replaces the timeout for every toast from that sender, and
+`allow_permanent = false` forces a sender's persistent toasts back to the standard
+timeout. `border = false` removes the outline for every urgency including critical.
+Both filter keys are recorded in `data/design/noctalia.json` and neither is emitted:
+a filter needs a real application to match, and inventing one would ship a rule that
+silently swallows somebody's notifications. `iarch-doctor notify-test` sends its
+critical probe with `timeout_ms = 0` and says so in the body, which demonstrates the
+one path that does keep a toast on screen without teaching anyone that urgency did it.
+
+**Grouping, history and the corner it sits in.** What the shipped payload sets, and
+why:
+
+| Key | Value | Reason |
+| --- | --- | --- |
+| `position` | `top_right` | The bar's clock is centred and its session controls are right; toasts belong on the same side as the panel that lists them |
+| `offset_x`, `offset_y` | 16, 16 | One margin on both axes. `offset_x` is split by `shell::surface_edge_inset::resolve()` (`src/shell/surface/edge_inset.h:15`) into a layer margin plus the card's own inner padding, so the painted edge lands 16 px out either way; `offset_y` is used verbatim as the layer margin (`notification_toast.cpp:521`). Whether that vertical margin is measured from the screen edge or from the bar above it is NOT-01 |
+| `width` | 380 | Inside the 240–500 `kNotificationWidthRange`, and wide enough for three body lines at the shell's type scale |
+| `background_opacity` | the intensity's `shell.notification_opacity` | 0.7 as shipped, so the compositor's blur shows through: this is a glass card, not a painted one |
+| `border`, `border_color`, `border_width` | true, `outline_variant`, 1.0 | The same hairline every other floating surface carries, and a colour role so it follows the palette |
+| `collapse_on_dismiss` | true | Dismissing one card slides the rest into a compact stack — the 200 ms re-stack above. `false` keeps stable slots instead |
+| `max_visible` | 4 | Inside `Range{0, 20}`; 0 would fill the screen edge |
+| `keep_dismissed_in_history`, `history_retention_hours` | true, 168 | A dismissed toast stays in the control-centre history for a week (upstream allows 0–8760, where 0 means forever) |
+| `follow_focused_output`, `monitors` | false, `[]` | Toasts stay on the output they appeared on; an empty monitor list means every monitor |
+| `layer` | `top` | Above normal windows. `overlay` would put them above fullscreen apps, which is a video call's worst moment |
+
+Do Not Disturb has no config key at all in v5.4.1: `notification-dnd-set on|off`,
+`notification-dnd-toggle` and `notification-dnd-status` are IPC verbs, and
+`notificationSchema()` declares no schedule, no quiet hours and no exceptions. There
+is therefore nothing to render and nothing to fake — `iarch-doctor dnd` wraps the
+verbs, and anything that wants quiet hours has to call it. `[osd] kinds.dnd = true`
+is the popup shown when the state changes, not the state. Sounds stay off through
+`[audio] enable_notification_sounds = false`: the shell should not speak for
+applications that already make their own noise.
+
 ## Checking it on a machine
 
 `iarch/cli/qa_motion.sh` is the manual QA walk-through. It is read-only unless asked,
@@ -269,6 +362,9 @@ the compositor was not asked, not that it disagreed. The same rule the CLIs foll
 | `reduce-motion on`, then open a window | Nothing slides and nothing overshoots; only short fades remain, each under 90 ms |
 | `reduce-motion on`, then hover | The fill changes at once, with no fade |
 | `reduce-motion off` | The preset you had chosen comes back, overshoot included |
+| `iarch-doctor notify-test --dry-run` | Every probe builds and none is sent, Do Not Disturb is off, and no other notification daemon is in the process table. Suppression or a missing shell is a SKIP, never a FAIL |
+| Run `iarch-doctor notify-test` for real | Three cards stack in the top-right corner, each revealing over 200 ms; hovering one pauses its countdown bar; the critical one keeps a red edge and stays until it is dismissed, because that probe asked for `timeout_ms = 0` |
+| The `performance` intensity, then `notify-test` again | The same cards appear without sliding, since `[shell.animation] enabled = false` reaches the toast animations too — NOT-02 |
 | The `--apply-switches` round-trip | All five presets apply and your recorded preset is restored afterwards |
 
 The acceptance test for the round-trip is that `iarch-anim set bouncy` followed by
@@ -288,13 +384,16 @@ cannot do is see a window arrive, which is why the visual steps are steps.
 | `iarch/cli/iarch_anim.py` | `iarch-anim`: switch, verify against the compositor, roll back |
 | `iarch/cli/render_gtk_css.py` | The GTK sheets, their transition groups and the `--reduce-motion` render |
 | `iarch/cli/gen_glass_lua.py` | The glow and the rest of the decoration block |
+| `iarch/cli/render_noctalia.py` | The shell's `config.toml`: `[shell.animation]`, and every toast setting in the table above |
+| `iarch/cli/iarch_doctor.py` | `iarch-doctor notify-test` and `iarch-doctor dnd` — the only way to exercise any of this against a live session |
+| `.config/noctalia/config.toml` | The shipped payload the two above render and CI checks |
 | `iarch/cli/qa_motion.sh` | The walk-through above |
 
 ## What is not verified
 
-Five items in [UNVERIFIED.md](UNVERIFIED.md), each with the evidence that does exist
-and the claim it blocks: [MOT-01](UNVERIFIED.md) the presets have never been rendered
-where a window actually opens; [MOT-02](UNVERIFIED.md) whether a leaf set to
+Ten items in [UNVERIFIED.md](UNVERIFIED.md), each with the evidence that does exist
+and the claim it blocks. Five are about motion: [MOT-01](UNVERIFIED.md) the presets have
+never been rendered where a window actually opens; [MOT-02](UNVERIFIED.md) whether a leaf set to
 `enabled = false` really stops moving without affecting its parent or siblings;
 [MOT-03](UNVERIFIED.md) how long a spring takes and how far it overshoots, since the
 damping ratios quoted in the preset files are textbook arithmetic on the declared
@@ -303,7 +402,20 @@ stiffness, damping and mass rather than measurements of Hyprland's integrator;
 an opacity or a colour; and [MOT-05](UNVERIFIED.md) whether `hyprctl configerrors` is
 empty in a stock session this project did not configure.
 
+Five more are about notifications, and every one of them is a behaviour that has to be
+watched rather than a value that can be checked: [NOT-01](UNVERIFIED.md) whether the
+16 px `offset_y` is measured from the screen edge or from the bar that reserves its
+exclusive zone above it; [NOT-02](UNVERIFIED.md) whether toast motion really follows
+`[shell.animation]`, which the split between `animate()` and `animateTimer()` says it
+should; [NOT-03](UNVERIFIED.md) hover-pause and the countdown accent as behaviour;
+[NOT-04](UNVERIFIED.md) whether an installed `noctalia` accepts the JSON payload form
+`iarch-doctor` sends, exercised here only against a fake shell on `PATH`; and
+[NOT-05](UNVERIFIED.md) whether the seven process names in the competing-daemon check
+are the ones that actually hold the bus.
+
 No duration, easing or effect in this document was chosen because it looked right in
 a mockup and then written down. Where an effect is not supported it says so: GTK 3
-gets no transform, the shell gets no per-event durations, and the wallpaper crossfade
-ignores the global speed switch.
+gets no transform, the shell gets no per-event durations, the wallpaper crossfade
+ignores the global speed switch, a toast has one 200 ms reveal rather than a
+configurable in/out pair, hover-pause is unconditional and has no key, and no urgency
+makes a notification persistent on its own.

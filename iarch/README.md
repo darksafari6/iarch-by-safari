@@ -16,8 +16,10 @@ Everything this project authors lives under this directory, named with the
 | `cli/render_kvantum.py` | The Qt/Kvantum glass theme, validated against the keys `ThemeConfig.cpp` reads | shipped, tested |
 | `cli/gen_fontconfig.py` | The fontconfig file applying the font tokens, validated against the config DTD | shipped, tested |
 | `cli/theme.py` | `iarch-theme`: applies one preset across every surface at once — contrast gate first, all-or-nothing render, verified reload | shipped, tested |
+| `cli/iarch_anim.py` | `iarch-anim`: switches the motion preset, speed, reduce-motion and per-event overrides, verifies against the compositor and rolls back a rejection | shipped, tested |
+| `cli/iarch_doctor.py` | `iarch-doctor`: asks a running session whether the settings took — notification probes and Do Not Disturb today, the rest of the session in Part 5 | shipped, tested |
 | `lib/templates/` | Jinja2 templates the renderers fill from the tokens | shipped, tested |
-| `cli/` | `iarch-keybinds`, `iarch-anim`, `iarch-doctor` | Part 5 |
+| `cli/` | `iarch-keybinds`, and the rest of `iarch-doctor` | Part 5 |
 | `settings-app/` | GTK4 + libadwaita settings application | Part 4 |
 
 User state lives in `~/.config/iarch/`; the repository ships defaults in

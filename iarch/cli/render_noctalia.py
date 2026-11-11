@@ -135,7 +135,19 @@ PROFILE: Dict[str, Any] = OrderedDict(
     notification=OrderedDict(
         enable_daemon=True, show_app_name=True, show_actions=True,
         position="top_right", layer="top", scale=1.0, width=380,
-        offset_x=18, offset_y=12, collapse_on_dismiss=True,
+        # One margin on both axes, and it is a real edge distance on both: offset_x is split
+        # by shell::surface_edge_inset::resolve() into a layer margin plus the card's own
+        # inner padding, so the painted card edge lands 16 px out either way, while offset_y
+        # is used verbatim as the layer surface's top margin. Whether that 16 px is measured
+        # from the screen edge or from the bar that reserves its exclusive zone above it is
+        # NOT-01 in docs/UNVERIFIED.md -- it needs a live session to answer.
+        offset_x=16, offset_y=16,
+        # Toasts stay on the output they appeared on: follow_focused_output would move each
+        # new one to wherever the pointer is, which reads as flicker on a multi-monitor desk.
+        # An empty monitors list is "every monitor", and Noctalia falls back to every monitor
+        # anyway if the listed ones are all disconnected, so there is nothing to pin here.
+        follow_focused_output=False, monitors=[],
+        collapse_on_dismiss=True,
         keep_dismissed_in_history=True, max_visible=4, history_retention_hours=168,
     ),
     audio=OrderedDict(

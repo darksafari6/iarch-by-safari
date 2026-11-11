@@ -129,6 +129,7 @@
           "items": { "type": "number" }
         },
         "range_constant": { "type": "string" },
+        "range_note": { "type": "string" },
         "color": { "type": "boolean" },
         "color_note": { "type": "string" },
         "parser": { "type": "string" },

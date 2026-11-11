@@ -231,6 +231,72 @@ manual "with reduce-motion still on, hover a GTK button" \
 manual "run 'iarch-anim reduce-motion off'" \
     "the preset you had chosen comes back, including its overshoot if it had one"
 
+iarch::heading "Notifications: does the shell's own daemon answer, and does it move?"
+# Read-only on purpose. --dry-run builds every probe and reports what the session
+# says without putting one toast on screen; sending them is the person's step
+# below, because a check that covers the screen unasked is one nobody runs twice.
+if [[ -n $PY ]]; then
+    report=$("$PY" "$repo/iarch/cli/iarch_doctor.py" notify-test --dry-run --json 2>/dev/null)
+    summary=""
+    if [[ -n $report ]]; then
+        summary=$(printf '%s' "$report" | "$PY" -c '
+import json
+import sys
+
+try:
+    report = json.load(sys.stdin)
+except ValueError:
+    sys.exit(0)
+print(report["verdict"], report["do_not_disturb"], report["competing_daemons_searched"],
+      ",".join(report["competing_daemons"]) or "-", len(report["probes"]))
+' 2>/dev/null)
+    fi
+    if [[ -z $summary ]]; then
+        fail "iarch-doctor notify-test --dry-run gave no readable report"
+        notify_blocked=1
+    else
+        read -r verdict dnd searched others probes <<<"$summary"
+        notify_blocked=0
+        case $verdict in
+            dry-run) pass "iarch-doctor built $probes probe(s) without sending one" ;;
+            not-run)
+                skip "noctalia is not installed or not answering, so no probe could be built"
+                notify_blocked=1
+                ;;
+            blocked)
+                skip "the probes are suppressed rather than broken; nothing would be visible"
+                notify_blocked=1
+                ;;
+            *)     fail "iarch-doctor notify-test --dry-run reported: $verdict" ;;
+        esac
+        case $dnd in
+            True)
+                skip "Do Not Disturb is on: toasts are suppressed, so the steps below stay invisible"
+                iarch::detail "run 'python3 iarch/cli/iarch_doctor.py dnd off' to see them"
+                notify_blocked=1
+                ;;
+            False) pass "Do Not Disturb is off" ;;
+            *)     skip "the Do Not Disturb state could not be read" ;;
+        esac
+        if [[ $others != "-" ]]; then
+            iarch::warn "another notification daemon is running: $others"
+            iarch::detail "whichever claimed the bus first keeps it; nothing was stopped"
+        elif [[ $searched == True ]]; then
+            pass "no other notification daemon in the process table"
+        else
+            skip "the process table was not searched, so no claim is made about other daemons"
+        fi
+    fi
+    if [[ ${notify_blocked:-0} == 0 ]]; then
+        manual "run 'python3 iarch/cli/iarch_doctor.py notify-test'" \
+            "three cards stack in the top-right corner, each revealing over 200ms; hovering one pauses its countdown bar, and the critical one keeps a red edge until it is dismissed"
+        manual "apply the performance intensity, then run notify-test again" \
+            "the same cards appear without sliding, because [shell.animation] enabled = false reaches the toast animations too (docs/UNVERIFIED.md NOT-02)"
+    fi
+else
+    skip "python3 is not installed; the notification path was not checked"
+fi
+
 if [[ $APPLY_SWITCHES == 1 ]]; then
     iarch::heading "Round-trip: does every preset apply and come back cleanly?"
     if [[ -n $PY ]]; then

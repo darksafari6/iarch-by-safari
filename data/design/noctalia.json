@@ -744,10 +744,12 @@
           "type": "bool"
         },
         "position": {
-          "type": "string"
+          "type": "string",
+          "note": "Documented values: top_right, top_left, top_center, bottom_right, bottom_left, bottom_center. This is a plain string field, not an enum: notification_toast.cpp only tests starts_with(\"bottom_\") and ends_with(\"_left\"/\"_center\"), so any other value lands on the top-right branch instead of being rejected."
         },
         "layer": {
-          "type": "string"
+          "type": "string",
+          "note": "top keeps toasts above normal windows; overlay puts them above fullscreen apps. Plain string field: an unrecognised value is not rejected by the schema."
         },
         "scale": {
           "type": "float",
@@ -768,10 +770,12 @@
           "range_constant": "kNotificationWidthRange"
         },
         "offset_x": {
-          "type": "integer"
+          "type": "integer",
+          "note": "Absolute margin from the screen edge. It is split by shell::surface_edge_inset::resolve() into a layer margin plus the card's own inner padding, so the painted card edge sits exactly offset_x from the edge either way."
         },
         "offset_y": {
-          "type": "integer"
+          "type": "integer",
+          "note": "Absolute margin from the screen edge, used verbatim as the layer surface's top (and bottom) margin: no inset compensation like offset_x gets."
         },
         "collapse_on_dismiss": {
           "type": "bool"
@@ -780,10 +784,22 @@
           "type": "bool"
         },
         "max_visible": {
-          "type": "integer"
+          "type": "integer",
+          "range": [
+            0,
+            20
+          ],
+          "range_note": "inline Range<std::int64_t>{0, 20} passed to field() in notificationSchema(); no named constant upstream",
+          "note": "0 = fill the available space; otherwise at most this many toasts."
         },
         "history_retention_hours": {
-          "type": "integer"
+          "type": "integer",
+          "range": [
+            0,
+            8760
+          ],
+          "range_note": "inline Range<std::int64_t>{0, 8760} passed to field() in notificationSchema(); no named constant upstream",
+          "note": "0 keeps history indefinitely; the sweep runs every 60 s."
         },
         "background_opacity": {
           "type": "float",
@@ -810,6 +826,81 @@
             0.5
           ],
           "range_constant": "kNotificationToastBorderWidthRange"
+        },
+        "follow_focused_output": {
+          "type": "bool",
+          "note": "New toasts appear on the focused output; toasts already on screen stay put and each output keeps its own stack. Takes precedence over monitors."
+        },
+        "monitors": {
+          "type": "array",
+          "note": "Empty = every monitor. Otherwise exact connector names (eDP-1) or word-boundary tokens from the monitor description. If none of the listed monitors is connected Noctalia falls back to all of them rather than dropping toasts."
+        },
+        "blacklist": {
+          "type": "array",
+          "note": "Legacy shim. Read only while no [notification.filter.*] table exists; each token becomes a filter with show_toast, save_history and play_sound all false. Never written back out."
+        },
+        "blacklist_allow_critical": {
+          "type": "bool",
+          "note": "Accepted and ignored: the read callback is empty, so this key can no longer change anything. Recorded so the validator does not call it unknown."
+        },
+        "filter_order": {
+          "type": "array",
+          "note": "Write-only. The writer emits the filter names in table order; a value read from disk is ignored because ordering comes from the tables themselves."
+        },
+        "filter": {
+          "type": "array",
+          "table": "notificationFilterSchema",
+          "note": "A named map, not an array: [notification.filter.<name>] where <name> becomes the filter's name. Recorded with type array because the C++ member is std::vector<NotificationFilterConfig>; the on-disk shape is the named map.",
+          "keys": {
+            "enabled": {
+              "type": "bool"
+            },
+            "matches": {
+              "type": "array",
+              "note": "Custom reader: the first non-blank token becomes match. Ignored entirely when match is set."
+            },
+            "match": {
+              "type": "string",
+              "note": "Case-insensitive token matched against the app name (exact or substring), the desktop entry or the category; normalized on read."
+            },
+            "match_content": {
+              "type": "string",
+              "note": "Optional regular expression matched against the summary or the body."
+            },
+            "show_toast": {
+              "type": "bool"
+            },
+            "save_history": {
+              "type": "bool"
+            },
+            "play_sound": {
+              "type": "bool"
+            },
+            "bypass_dnd": {
+              "type": "bool",
+              "note": "Default false. When play_sound is also true the sound bypasses Do Not Disturb too."
+            },
+            "allow_permanent": {
+              "type": "bool",
+              "note": "Default true. False forces a sender's persistent (0-timeout) toasts back to the standard timeout."
+            },
+            "override_duration": {
+              "type": "integer",
+              "note": "Milliseconds. Replaces both the server default and whatever timeout the sender asked for."
+            },
+            "allowed_urgencies": {
+              "type": "array",
+              "note": "low, normal, critical. Empty or all three = every level passes."
+            },
+            "allow_critical": {
+              "type": "bool",
+              "note": "Accepted and ignored: empty read callback, superseded by allowed_urgencies."
+            }
+          }
+        },
+        "allowed_urgencies": {
+          "type": "array",
+          "note": "Section level, not a filter key: it fills in every filter whose own allowed_urgencies is empty. Read only; never written back out."
         }
       }
     },
@@ -842,6 +933,55 @@
         },
         "sound_theme": {
           "type": "string"
+        }
+      }
+    },
+    "notification.filter": {
+      "schema": "notificationFilterSchema",
+      "keys": {
+        "enabled": {
+          "type": "bool"
+        },
+        "matches": {
+          "type": "array",
+          "note": "Custom reader: the first non-blank token becomes match. Ignored entirely when match is set."
+        },
+        "match": {
+          "type": "string",
+          "note": "Case-insensitive token matched against the app name (exact or substring), the desktop entry or the category; normalized on read."
+        },
+        "match_content": {
+          "type": "string",
+          "note": "Optional regular expression matched against the summary or the body."
+        },
+        "show_toast": {
+          "type": "bool"
+        },
+        "save_history": {
+          "type": "bool"
+        },
+        "play_sound": {
+          "type": "bool"
+        },
+        "bypass_dnd": {
+          "type": "bool",
+          "note": "Default false. When play_sound is also true the sound bypasses Do Not Disturb too."
+        },
+        "allow_permanent": {
+          "type": "bool",
+          "note": "Default true. False forces a sender's persistent (0-timeout) toasts back to the standard timeout."
+        },
+        "override_duration": {
+          "type": "integer",
+          "note": "Milliseconds. Replaces both the server default and whatever timeout the sender asked for."
+        },
+        "allowed_urgencies": {
+          "type": "array",
+          "note": "low, normal, critical. Empty or all three = every level passes."
+        },
+        "allow_critical": {
+          "type": "bool",
+          "note": "Accepted and ignored: empty read callback, superseded by allowed_urgencies."
         }
       }
     }
