@@ -1,0 +1,45 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "name": "snappy",
+  "label": "Snappy",
+  "description": "For a person who finds the default languid. Every event lands inside 120-220 ms: windows and layers move in 160 ms, a workspace switch in 220 ms, and nothing that leaves the screen takes longer than 120 ms. The curves are the same four as smooth — the character of the motion is unchanged, only its length is — so switching presets does not change how the desktop feels, only how long it spends getting there.",
+  "source": "Hyprland v0.57.2, read out into data/design/animations.json: leaf names and their parents from src/config/shared/animation/AnimationTree.cpp, the per-leaf style lists from AnimationManager::styleValidInConfigVar, and the numeric bounds from src/config/lua/bindings/LuaBindingsConfigRules.cpp with src/config/lua/types/LuaConfigFloat.cpp — bezier components in [-1, 2], spring values strictly above 0.5, speed in (0, 100] where duration_ms = 100 * speed, every one of them a config error rather than a clamp.",
+  "master": true,
+
+  "curves": {
+    "standard":   { "type": "bezier", "points": [[0.4, 0.0], [0.2, 1.0]] },
+    "emphasized": { "type": "bezier", "points": [[0.2, 0.0], [0.0, 1.0]] },
+    "decelerate": { "type": "bezier", "points": [[0.0, 0.0], [0.2, 1.0]] },
+    "accelerate": { "type": "bezier", "points": [[0.4, 0.0], [1.0, 1.0]] },
+    "spring": {
+      "type": "spring",
+      "stiffness": 380.0,
+      "damping": 34.0,
+      "mass": 1.0,
+      "_note": "The same damping ratio as smooth's spring (zeta = 34 / (2 * sqrt(380)) = 0.87) at a 1.3 times higher natural frequency (sqrt(380/220)), so it settles in about three quarters of the time with the same character rather than a different bounce. Stiffness and damping both stay well above the 0.5 floor hl.curve enforces."
+    }
+  },
+
+  "events": {
+    "windows":          { "enabled": true, "duration_ms": 160, "curve": "standard",   "style": "slide" },
+    "windowsIn":        { "enabled": true, "duration_ms": 160, "curve": "spring",     "style": "slide", "_note": "duration_ms is inert for a spring curve; the renderer emits it as the speed the binding requires and the generated file says so." },
+    "windowsOut":       { "enabled": true, "duration_ms": 120, "curve": "accelerate", "style": "slide" },
+    "windowsMove":      { "enabled": true, "duration_ms": 160, "curve": "standard",   "style": "slide" },
+    "workspaces":       { "enabled": true, "duration_ms": 220, "curve": "emphasized", "style": "slide" },
+    "specialWorkspace": { "enabled": true, "duration_ms": 220, "curve": "emphasized", "style": "slide" },
+    "layers":           { "enabled": true, "duration_ms": 160, "curve": "decelerate", "style": "fade" },
+    "layersIn":         { "enabled": true, "duration_ms": 160, "curve": "decelerate", "style": "fade" },
+    "layersOut":        { "enabled": true, "duration_ms": 120, "curve": "accelerate", "style": "fade" },
+    "fade":             { "enabled": true, "duration_ms": 120, "curve": "standard" },
+    "fadeIn":           { "enabled": true, "duration_ms": 120, "curve": "standard" },
+    "fadeOut":          { "enabled": true, "duration_ms": 120, "curve": "accelerate" },
+    "fadeSwitch":       { "enabled": true, "duration_ms": 120, "curve": "standard" },
+    "fadeShadow":       { "enabled": true, "duration_ms": 120, "curve": "standard" },
+    "fadeDim":          { "enabled": true, "duration_ms": 160, "curve": "standard" },
+    "fadeLayers":       { "enabled": true, "duration_ms": 120, "curve": "decelerate" },
+    "border":           { "enabled": true, "duration_ms": 120, "curve": "standard", "_note": "Already at the floor in smooth, so focus feedback is the one thing this preset does not speed up: 120 ms is the fast_ms token and the shortest duration in the design system." },
+    "borderangle":      { "enabled": true, "duration_ms": 3000, "curve": "standard", "style": "loop", "_note": "Left at the 3000 ms period the static default ships. Shortening a looping sweep makes it pulse rather than glide, which is not what snappy is for; the multiplier from iarch-anim speed still scales it if anyone wants that." }
+  },
+
+  "_note": "Every duration here is between 120 ms and 220 ms, the band the design brief specifies for snappy, and every one is strictly shorter than or equal to the matching smooth event — tests/test_animation_presets.py asserts that ordering per event, so a future edit cannot make snappy slower than the preset it is meant to quicken. The curve set is identical to smooth's four beziers (the same token points), which keeps the two presets comparable: the difference is duration, not shape."
+}

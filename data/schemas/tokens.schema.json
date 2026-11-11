@@ -72,7 +72,7 @@
 
     "motion": {
       "type": "object",
-      "required": ["fast_ms", "normal_ms", "slow_ms", "easing", "spring"],
+      "required": ["fast_ms", "normal_ms", "slow_ms", "easing", "spring", "animation"],
       "additionalProperties": false,
       "properties": {
         "_note": { "type": "string" },
@@ -94,11 +94,48 @@
           "type": "object",
           "required": ["stiffness", "damping", "mass"],
           "additionalProperties": false,
-          "description": "hl.curve(name, { type = \"spring\", ... }) rejects any of the three below 0.5.",
+          "description": "hl.curve(name, { type = \"spring\", ... }) rejects any of the three at or below 0.5: LuaBindingsConfigRules.cpp parses each with CLuaConfigFloat and calls Internal::configError when the value is <= 0.5F, so the usable bound is strictly greater than 0.5 (exclusiveMinimum), not >= 0.5.",
           "properties": {
-            "stiffness": { "type": "number", "minimum": 0.5 },
-            "damping": { "type": "number", "minimum": 0.5 },
-            "mass": { "type": "number", "minimum": 0.5 }
+            "stiffness": { "type": "number", "exclusiveMinimum": 0.5 },
+            "damping": { "type": "number", "exclusiveMinimum": 0.5 },
+            "mass": { "type": "number", "exclusiveMinimum": 0.5 }
+          }
+        },
+        "animation": {
+          "type": "object",
+          "required": ["default_preset", "presets", "speed_multiplier", "reduce_motion"],
+          "additionalProperties": false,
+          "description": "The compositor motion selection added in Part 3. The named curves and the per-event durations, curves and styles live in data/design/animations/<preset>.json (one file per preset, validated by data/schemas/animations_preset.schema.json), not here: this block only carries what every preset shares. 'presets' is the closed list iarch-anim accepts, and it must match the files on disk -- tests/test_animation_presets.py asserts the two agree, so a preset file with no name here, or a name here with no file, fails CI rather than failing in the user's session. Overshoot beziers are deliberately absent from 'easing' above: that vocabulary is shared with the GTK CSS renderer, cubic-bezier() requires every component inside [0,1] and tests/test_design_tokens.py enforces the unit square, whereas hl.curve accepts [-1, 2] per component. A preset that wants overshoot declares it in its own file.",
+          "properties": {
+            "_note": { "type": "string" },
+            "default_preset": { "enum": ["smooth", "snappy", "bouncy", "minimal", "off"] },
+            "presets": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["smooth", "snappy", "bouncy", "minimal", "off"] }
+            },
+            "speed_multiplier": {
+              "type": "object",
+              "required": ["min", "max", "default"],
+              "additionalProperties": false,
+              "description": "The bounds iarch-anim clamps a global multiplier to. Greater than 1 is FASTER: effective_ms = duration_ms / multiplier, the same direction render_noctalia.py already uses for shell.animation (MOTION_BASELINE_MS / normal_ms).",
+              "properties": {
+                "min": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+                "max": { "type": "number", "minimum": 1, "maximum": 4 },
+                "default": { "type": "number", "exclusiveMinimum": 0 }
+              }
+            },
+            "reduce_motion": {
+              "type": "object",
+              "required": ["preset", "max_duration_ms"],
+              "additionalProperties": false,
+              "description": "What 'iarch-anim reduce-motion on' resolves to: the named preset (fades only, no transform) with every duration capped at max_duration_ms.",
+              "properties": {
+                "preset": { "enum": ["smooth", "snappy", "bouncy", "minimal", "off"] },
+                "max_duration_ms": { "type": "integer", "minimum": 1, "exclusiveMaximum": 100 }
+              }
+            }
           }
         }
       }
@@ -360,7 +397,7 @@
     },
     "intensity": {
       "type": "object",
-      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal", "shell", "gtk", "qt", "motion"],
+      "required": ["label", "description", "blur", "glass", "shadow", "glow", "window", "terminal", "shell", "gtk", "qt", "motion"],
       "additionalProperties": false,
       "properties": {
         "label": { "type": "string", "minLength": 1 },
@@ -419,6 +456,20 @@
             },
             "scale": { "type": "number", "minimum": 0.01, "maximum": 2 },
             "sharp": { "type": "boolean" }
+          }
+        },
+        "glow": {
+          "type": "object",
+          "description": "Hyprland's inner window glow: decoration:glow:* in ConfigValues.cpp at v0.57.2. It is a focus cue, not decoration for its own sake, so the colour is an accent role rather than a fixed hex and the alphas are low enough that the glow reads as light on the edge of the window. enabled defaults to false upstream, which is why the Performance intensity sets it false: the glow is an extra render pass per window, and the fade it arrives with (the fadeGlow animation leaf) is warped to nothing when the intensity turns motion off, which would leave an instant flash instead of a cue. range and render_power carry the MS<Int> bounds Hyprland itself enforces, so a value outside them is a config error in the session rather than a clamp.",
+          "required": ["enabled", "range", "render_power", "role", "alpha", "alpha_inactive"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "range": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "render_power": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "role": { "$ref": "#/definitions/accent_role_name" },
+            "alpha": { "$ref": "#/definitions/alpha" },
+            "alpha_inactive": { "$ref": "#/definitions/alpha" }
           }
         },
         "window": {
@@ -492,11 +543,12 @@
         },
         "motion": {
           "type": "object",
-          "description": "The compositor animation switch for this intensity. enabled=false makes gen_animations_lua.py emit hl.config({ animations = { enabled = false } }), which Hyprland's AnimationManager turns into a warp: every animated variable jumps straight to its final value with no per-frame bezier or spring work (AnimationManager.cpp:279, warp = !*PANIMENABLED || !PAV->enabled()). That is how the Performance intensity measurably lowers compositor work; docs/UNVERIFIED.md PERF-01 records that the frame-time saving was not measured on real hardware. When enabled=true the curves and durations come from the global motion block, never from this switch.",
-          "required": ["enabled"],
+          "description": "The compositor animation switch for this intensity. enabled=false makes gen_animations_lua.py emit hl.config({ animations = { enabled = false } }), which Hyprland's AnimationManager turns into a warp: every animated variable jumps straight to its final value with no per-frame bezier or spring work (AnimationManager.cpp:279, warp = !*PANIMENABLED || !PAV->enabled()). That is how the Performance intensity measurably lowers compositor work; docs/UNVERIFIED.md PERF-01 records that the frame-time saving was not measured on real hardware. 'preset' names the motion preset this intensity renders from -- a file in data/design/animations/ -- so the Performance profile in Part 3 switches intensity and motion in one step instead of two disagreeing switches. The two keys must agree: enabled=false only with preset 'off', enabled=true only with a preset whose own master switch is on. tests/test_animation_presets.py asserts that pairing, and asserts the 'smooth' preset's curves and durations still equal the global motion block, so an intensity never silently drifts away from the tokens the CSS and Noctalia renderers use.",
+          "required": ["enabled", "preset"],
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean" }
+            "enabled": { "type": "boolean" },
+            "preset": { "enum": ["smooth", "snappy", "bouncy", "minimal", "off"] }
           }
         }
       }

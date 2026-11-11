@@ -12,5 +12,11 @@
     "colour_preset": "midnight-glass",
     "intensity": "frosted"
   },
+  "animation": {
+    "preset": "smooth",
+    "speed": 1.0,
+    "reduce_motion": false,
+    "event_overrides": {}
+  },
   "notes": "Repository defaults. Your own copy lives in ~/.config/iarch/settings.json and wins over these values."
 }

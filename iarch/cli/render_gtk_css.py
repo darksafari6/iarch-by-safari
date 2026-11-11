@@ -182,25 +182,40 @@ def transition_groups(version: str) -> Dict[str, str]:
     longhands at parse time and carries no animated flag of its own, so
     transitioning it does nothing at all. Each group below is checked against
     the version's animated list by :func:`validate_sheet`.
+
+    A rule carries one ``transition-property``, so a control that both sinks when
+    pressed and grows a ring when focused has to name every property it animates
+    in that single list. That is why ``ring`` is composed into the interactive
+    groups instead of being emitted beside them: the ``:focus-visible`` rules in
+    these templates set ``outline-color`` and ``outline-width`` on controls whose
+    base rule transitioned only its fill, so the ring appeared instantly while
+    everything around it faded. The same reasoning puts ``box-shadow`` in
+    ``window``, whose backdrop rule changes the inset hairline.
     """
     border = ("border-top-color, border-right-color, "
               "border-bottom-color, border-left-color")
-    press = "background-color, box-shadow" + (", transform" if version == "4" else "")
+    ring = "outline-color, outline-width"
+    # Only GTK 4 has transform at all, so the 2% press sink is a GTK 4 group
+    # member and the GTK 3 sheet answers a press with a darker fill instead.
+    sink = ", transform" if version == "4" else ""
     return OrderedDict(
+        # A plain surface whose fill changes with the theme.
         fill="background-color",
+        # The window: focus moves its inset hairline, so the shadow must fade too.
+        window="background-color, box-shadow",
+        # The title bar: its backdrop rule changes both the fill and the border.
         fill_border=f"background-color, {border}",
-        border=border,
-        press=press,
-        ring="outline-color, outline-width",
-        entry=f"background-color, {border}, outline-color, outline-width",
-        indicator=f"background-color, {border}",
-        tab=f"background-color, {border}, color",
+        # A control that sinks when pressed and wears a ring when focused.
+        press=f"background-color, box-shadow, {ring}{sink}",
+        entry=f"background-color, {border}, {ring}",
+        indicator=f"background-color, {border}, {ring}",
+        tab=f"background-color, {border}, color, {ring}",
     )
 
 
 def build_context(tokens: Dict[str, Any], preset: Dict[str, Any],
                   surface: Dict[str, Any], intensity_name: str,
-                  version: str = "4") -> Dict[str, Any]:
+                  version: str = "4", reduce_motion: bool = False) -> Dict[str, Any]:
     intensity = require(tokens, ("intensities", intensity_name), "tokens.json")
     glass = require(intensity, ("glass",), intensity_name)
     blur = require(intensity, ("blur",), intensity_name)
@@ -324,8 +339,15 @@ def build_context(tokens: Dict[str, Any], preset: Dict[str, Any],
             scrollbar=int(spacing["xs"]),
         ),
         "m": OrderedDict(
-            fast=int(motion["fast_ms"]), normal=int(motion["normal_ms"]),
-            slow=int(motion["slow_ms"]),
+            # reduce_motion renders every duration as 0 rather than a short fade.
+            # GTK 4 answers the desktop's prefers-reduced-motion media query on its
+            # own, but GTK 3 cannot parse @media at all, so a GTK 3 application has
+            # no way to hear that preference: the only lever is the sheet itself.
+            # Zero is also what the compositor does under the `off` motion preset,
+            # so one setting means the same thing on both sides of the session.
+            fast=0 if reduce_motion else int(motion["fast_ms"]),
+            normal=0 if reduce_motion else int(motion["normal_ms"]),
+            slow=0 if reduce_motion else int(motion["slow_ms"]),
             standard=bezier(motion["easing"], "standard"),
             emphasized=bezier(motion["easing"], "emphasized"),
             decelerate=bezier(motion["easing"], "decelerate"),
@@ -539,8 +561,10 @@ def check_declarations(declarations: str, known: set, animated: set, colour_fns:
 
 def targets_for(version: str, tokens: Dict[str, Any], preset: Dict[str, Any],
                 surface: Dict[str, Any], intensity: str,
-                root: Optional[Path] = None) -> Tuple[Path, str]:
-    context = build_context(tokens, preset, surface, intensity, version)
+                root: Optional[Path] = None,
+                reduce_motion: bool = False) -> Tuple[Path, str]:
+    context = build_context(tokens, preset, surface, intensity, version,
+                            reduce_motion=reduce_motion)
     body = render_sheet(version, context)
     problems = validate_sheet(body, surface, version)
     if problems:
@@ -618,7 +642,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         help="refresh the shipped payload under .config/gtk-{4.0,3.0}/")
     parser.add_argument("--repo", action="store_true",
                         help="with --check, verify the shipped payload rather than $HOME")
+    parser.add_argument("--reduce-motion", action="store_true",
+                        help="render every transition with a 0ms duration: the only "
+                             "reduce-motion lever GTK 3 has, since it cannot parse @media")
     args = parser.parse_args(argv)
+
+    if args.reduce_motion and args.write_repo_default:
+        # The shipped payload is the state a fresh install starts in. Writing a
+        # reduce-motion sheet as the repository default would make every later
+        # --check --repo report drift for a file nobody asked to change.
+        print("gtk: --reduce-motion cannot be combined with --write-repo-default; "
+              "the shipped payload is rendered with motion on", file=sys.stderr)
+        return 2
 
     versions = VERSIONS if args.gtk == "both" else (args.gtk,)
     try:
@@ -632,7 +667,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             root = lambda v: REPO_CONFIG / f"gtk-{v}.0"  # noqa: E731
         else:
             root = lambda v: None  # noqa: E731
-        targets = [targets_for(version, tokens, preset, surface, intensity, root(version))
+        targets = [targets_for(version, tokens, preset, surface, intensity, root(version),
+                               reduce_motion=args.reduce_motion)
                    for version in versions]
     except GtkError as exc:
         print(f"gtk: {exc}", file=sys.stderr)

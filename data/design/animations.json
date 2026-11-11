@@ -14,18 +14,21 @@
   "curve_types": {
     "bezier": {
       "shape": "{ type = \"bezier\", points = { {x1,y1}, {x2,y2} } }",
-      "constraints": "exactly 2 points, each a table of 2 numbers"
+      "constraints": "exactly 2 points, each a table of 2 numbers, and each of the four coordinates inside [-1, 2]. LuaBindingsConfigRules.cpp parses every coordinate with CLuaConfigFloat(0, -1, 2), which returns PARSE_ERROR_OUT_OF_RANGE rather than clamping, so a coordinate outside that range fails hl.curve and Hyprland rejects the whole config. Overshoot (y above 1) and undershoot (y below 0) inside the range are valid, and are how a spring-like bezier is expressed: the shipped static animations/default.lua already uses {0.1, 1.1} and {0.3, -0.3}.",
+      "component_min": -1.0,
+      "component_max": 2.0
     },
     "spring": {
       "shape": "{ type = \"spring\", stiffness = s, damping = d, mass = m }",
-      "constraints": "stiffness, damping and mass each strictly greater than 0.5"
+      "constraints": "stiffness, damping and mass each strictly greater than 0.5",
+      "value_min_exclusive": 0.5
     }
   },
   "speed_formula": {
     "equation": "duration_ms = 100 * speed",
     "speed_min_exclusive": 0.0,
     "speed_max": 100.0,
-    "source": "hyprutils src/animation/AnimatedVariable.cpp CBaseAnimatedVariable::getPercent(): percent = clamp((elapsed_ms / 100) / internalSpeed, 0, 1); the animation finishes when percent reaches 1, i.e. after 100*speed milliseconds. hl.animation additionally rejects speed <= 0 (LuaBindingsConfigRules.cpp) and CLuaConfigFloat clamps it to [0, 100], so a usable speed is in (0, 100] and a usable duration in (0, 10000] ms.",
+    "source": "hyprutils src/animation/AnimatedVariable.cpp CBaseAnimatedVariable::getPercent(): percent = clamp((elapsed_ms / 100) / internalSpeed, 0, 1); the animation finishes when percent reaches 1, i.e. after 100*speed milliseconds. hl.animation additionally rejects speed <= 0, and parses speed with CLuaConfigFloat(0, 0, 100), which returns PARSE_ERROR_OUT_OF_RANGE instead of clamping (src/config/lua/types/LuaConfigFloat.cpp:30-48). So a usable speed is in (0, 100] and a usable duration in (0, 10000] ms, and a value outside that is a loud config error rather than a silent clamp.",
     "consequence": "'speed' is a duration in centiseconds despite the name: a larger value is a SLOWER, longer animation. The shipped static default.lua confirms it -- border speed=1 is a 100ms colour snap, borderangle speed=30 a 3000ms gradient sweep, fade speed=10 a 1s fade. gen_animations_lua.py derives every speed as duration_ms/100 from the motion tokens rather than picking a number by hand."
   },
   "builtin_curves": [
@@ -34,8 +37,8 @@
   ],
   "animation_params": {
     "leaf": "string, required; must be a node in the tree",
-    "enabled": "bool; false (or absent) disables the leaf",
-    "speed": "number > 0; a multiplier, not a duration -- higher is faster (Hyprland's global default is 8)",
+    "enabled": "bool; false (or absent) disables the leaf. hl.animation returns early on enabled=false after setConfigForNode(leaf, false, 1, \"default\"), so a disabled leaf needs no speed, bezier or spring",
+    "speed": "number in (0, 100]; duration_ms = 100 * speed, so despite the name a larger value is a SLOWER, longer animation (Hyprland's own global default is 8, i.e. 800 ms). Out of range is PARSE_ERROR_OUT_OF_RANGE, not a clamp. For a spring curve the value is inert -- the spring integrates to its own resting time -- but the binding still requires it to be present and greater than 0",
     "bezier": "string; the name of a registered or built-in bezier curve (mutually required with spring)",
     "spring": "string; the name of a registered spring curve (mutually required with bezier)",
     "style": "string, optional; must be valid for the leaf, and a leaf with no styles must omit it"

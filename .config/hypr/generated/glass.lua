@@ -52,6 +52,13 @@ hl.config({
             scale = 1.0,
             sharp = false,
         },
+        glow = {
+            enabled = true,
+            range = 14,
+            render_power = 3,
+            color = "rgba(139, 149, 255, 0.24)",
+            color_inactive = "rgba(139, 149, 255, 0.07)",
+        },
     },
 })
 

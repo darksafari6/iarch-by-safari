@@ -80,14 +80,30 @@ def _merge(base: Any, overlay: Any) -> Any:
 
 
 def load(name: str, repo_root: Path, env: Optional[Mapping[str, str]] = None) -> Dict[str, Any]:
-    """Return repository defaults for ``name`` with the user's file merged on top."""
+    """Return repository defaults for ``name`` with the user's file merged on top.
+
+    A user file that is not valid JSON is a ConfigError naming the path, not a
+    JSONDecodeError escaping to a traceback: this file is hand-editable by
+    design, so a stray comma is an expected event and the person needs to be told
+    which file to fix rather than shown a stack. The repository defaults are not
+    given the same treatment because a broken one is a packaging fault, and it is
+    already reported as a missing file above.
+    """
     defaults_file = defaults_path(name, repo_root)
     if not defaults_file.is_file():
         raise ConfigError(f"Repository defaults are missing: {defaults_file}")
     merged = json.loads(defaults_file.read_text(encoding="utf-8"))
     own = user_path(name, env)
     if own.is_file():
-        merged = _merge(merged, json.loads(own.read_text(encoding="utf-8")))
+        text = own.read_text(encoding="utf-8")
+        try:
+            overlay = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ConfigError(
+                f"{own} is not valid JSON ({exc.msg} at line {exc.lineno} column "
+                f"{exc.colno}). Fix that line, or delete the file to fall back to "
+                f"the repository defaults in {defaults_file}.") from exc
+        merged = _merge(merged, overlay)
     return merged
 
 

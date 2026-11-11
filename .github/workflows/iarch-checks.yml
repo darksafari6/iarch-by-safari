@@ -135,6 +135,13 @@ jobs:
                   p.as_posix(): "data/schemas/preset.schema.json"
                   for p in sorted(Path("data/design/presets").glob("*.json"))
               },
+              # Animation presets are a family the same way (Part 3): one JSON per
+              # motion preset. The singular data/design/animations.json listed above
+              # is the Hyprland API surface and keeps its own schema.
+              **{
+                  p.as_posix(): "data/schemas/animations_preset.schema.json"
+                  for p in sorted(Path("data/design/animations").glob("*.json"))
+              },
           }
 
           documents = {p.as_posix() for p in Path("data").rglob("*.json")}

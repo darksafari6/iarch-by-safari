@@ -1,0 +1,45 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "name": "smooth",
+  "label": "Smooth",
+  "description": "The default. Calm, decelerating motion: a window slides in over 220 ms and settles, a workspace switch takes the full 380 ms so the eye can follow it, and everything that merely changes opacity — a fade, the focus border, a layer — is over in 120 ms so it never feels like it is holding the session up. Entering events decelerate (they arrive quickly and ease to rest) and leaving events accelerate (they gather speed on the way out), which is the pairing Material's motion guidance calls for and the reason four curves are named separately instead of one.",
+  "source": "Hyprland v0.57.2, read out into data/design/animations.json: leaf names and their parents from src/config/shared/animation/AnimationTree.cpp, the per-leaf style lists from AnimationManager::styleValidInConfigVar, and the numeric bounds from src/config/lua/bindings/LuaBindingsConfigRules.cpp with src/config/lua/types/LuaConfigFloat.cpp — bezier components in [-1, 2], spring values strictly above 0.5, speed in (0, 100] where duration_ms = 100 * speed, every one of them a config error rather than a clamp.",
+  "master": true,
+
+  "curves": {
+    "standard":   { "type": "bezier", "points": [[0.4, 0.0], [0.2, 1.0]] },
+    "emphasized": { "type": "bezier", "points": [[0.2, 0.0], [0.0, 1.0]] },
+    "decelerate": { "type": "bezier", "points": [[0.0, 0.0], [0.2, 1.0]] },
+    "accelerate": { "type": "bezier", "points": [[0.4, 0.0], [1.0, 1.0]] },
+    "spring": {
+      "type": "spring",
+      "stiffness": 220.0,
+      "damping": 26.0,
+      "mass": 1.0,
+      "_note": "Damping ratio zeta = damping / (2 * sqrt(stiffness * mass)) = 26 / 29.66 = 0.88, and the overshoot that ratio implies is exp(-pi * zeta / sqrt(1 - zeta^2)) = 0.33 percent: underdamped in the strict sense, but far too little to see, so windowIn reads as arriving with weight rather than bouncing. Raising the overshoot is what the bouncy preset is for. All three values must be strictly above 0.5 or hl.curve refuses the config."
+    }
+  },
+
+  "events": {
+    "windows":          { "enabled": true, "duration_ms": 220, "curve": "standard",   "style": "slide" },
+    "windowsIn":        { "enabled": true, "duration_ms": 220, "curve": "spring",     "style": "slide", "_note": "A spring curve ignores duration_ms — advanceSpring integrates it by wall-clock delta until it rests — but hl.animation still requires a speed above 0, so the renderer emits duration_ms / 100 anyway and the generated file says it is inert." },
+    "windowsOut":       { "enabled": true, "duration_ms": 120, "curve": "accelerate", "style": "slide" },
+    "windowsMove":      { "enabled": true, "duration_ms": 220, "curve": "standard",   "style": "slide" },
+    "workspaces":       { "enabled": true, "duration_ms": 380, "curve": "emphasized", "style": "slide" },
+    "specialWorkspace": { "enabled": true, "duration_ms": 380, "curve": "emphasized", "style": "slide" },
+    "layers":           { "enabled": true, "duration_ms": 220, "curve": "decelerate", "style": "fade" },
+    "layersIn":         { "enabled": true, "duration_ms": 220, "curve": "decelerate", "style": "fade" },
+    "layersOut":        { "enabled": true, "duration_ms": 120, "curve": "accelerate", "style": "fade" },
+    "fade":             { "enabled": true, "duration_ms": 120, "curve": "standard" },
+    "fadeIn":           { "enabled": true, "duration_ms": 120, "curve": "standard" },
+    "fadeOut":          { "enabled": true, "duration_ms": 120, "curve": "accelerate" },
+    "fadeSwitch":       { "enabled": true, "duration_ms": 120, "curve": "standard" },
+    "fadeShadow":       { "enabled": true, "duration_ms": 120, "curve": "standard" },
+    "fadeDim":          { "enabled": true, "duration_ms": 220, "curve": "standard", "_note": "The dim behind an unfocused window is slower than the other fades on purpose: it is a background change the user is not waiting on, and a 120 ms dim reads as a flicker." },
+    "fadeLayers":       { "enabled": true, "duration_ms": 120, "curve": "decelerate" },
+    "border":           { "enabled": true, "duration_ms": 120, "curve": "standard", "_note": "The focus border colour. 120 ms is the fastest of the three token durations and sits inside the 120-180 ms band the hover and focus feedback is specified in, so focus follows the keypress without a visible lag." },
+    "borderangle":      { "enabled": true, "duration_ms": 3000, "curve": "standard", "style": "loop", "_note": "The continuous gradient sweep around a focused border, and the one event here whose duration is a period rather than a transition: with style 'loop' it restarts every 3000 ms for as long as it is enabled. 3000 ms and 'loop' are what the static animations/default.lua already ships, so the generated file keeps the same look instead of changing it. It is the first thing the minimal preset turns off, since a looping sweep costs compositor work every frame for no interaction feedback." }
+  },
+
+  "_note": "The eleven events above the fade group are the set Part 2 shipped, with the same curves and the same token durations (fast_ms 120, normal_ms 220, slow_ms 380); Part 3 adds the seven remaining leaves Hyprland exposes — fadeIn, fadeOut, fadeSwitch, fadeShadow, fadeDim, fadeLayers and borderangle — so that a preset, reduce-motion and game mode can reach every event rather than leaving six of them inheriting from a parent. tests/test_animation_presets.py asserts that this preset's curves equal tokens.json motion.easing and motion.spring, and that its durations are drawn from fast_ms, normal_ms, slow_ms or the documented borderangle period, so the default cannot drift away from the tokens the GTK CSS and Noctalia renderers also read. The transform events sit in the 220-380 ms band the design brief asks for; the opacity fades deliberately stay at fast_ms, because a window whose fade-in took 380 ms would still be materialising after its slide had finished."
+}

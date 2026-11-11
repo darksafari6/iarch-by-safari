@@ -34,8 +34,8 @@
       "required": ["bezier", "spring"],
       "additionalProperties": false,
       "properties": {
-        "bezier": { "$ref": "#/definitions/curveType" },
-        "spring": { "$ref": "#/definitions/curveType" }
+        "bezier": { "$ref": "#/definitions/bezierCurveType" },
+        "spring": { "$ref": "#/definitions/springCurveType" }
       }
     },
     "builtin_curves": { "type": "array", "minItems": 1, "items": { "type": "string" } },
@@ -98,13 +98,27 @@
     }
   },
   "definitions": {
-    "curveType": {
+    "bezierCurveType": {
       "type": "object",
-      "required": ["shape", "constraints"],
+      "required": ["shape", "constraints", "component_min", "component_max"],
       "additionalProperties": false,
+      "description": "The bounds are numbers and not only prose, because gen_animations_lua.py reads them the same way it reads speed_formula.speed_min_exclusive and speed_max: one file records what the pinned release enforces and the generator refuses anything outside it, rather than hardcoding a second copy of the limit that can drift. component_min and component_max are the CLuaConfigFloat(0, -1, 2) range each of the four bezier coordinates is parsed against, and LuaConfigFloat.cpp returns PARSE_ERROR_OUT_OF_RANGE instead of clamping, so a preset outside them is a config error that stops the session. Note these are deliberately not one shared definition with springCurveType under an allOf: curveType-style additionalProperties false cannot see keys added by a sibling schema, so each definition lists its own properties.",
       "properties": {
         "shape": { "type": "string", "minLength": 5 },
-        "constraints": { "type": "string", "minLength": 5 }
+        "constraints": { "type": "string", "minLength": 5 },
+        "component_min": { "type": "number", "maximum": 0 },
+        "component_max": { "type": "number", "minimum": 1 }
+      }
+    },
+    "springCurveType": {
+      "type": "object",
+      "required": ["shape", "constraints", "value_min_exclusive"],
+      "additionalProperties": false,
+      "description": "value_min_exclusive is the floor hl.curve applies to stiffness, damping and mass alike, and it is exclusive: the binding calls Internal::configError when a value is <= 0.5F, so 0.5 itself is refused.",
+      "properties": {
+        "shape": { "type": "string", "minLength": 5 },
+        "constraints": { "type": "string", "minLength": 5 },
+        "value_min_exclusive": { "type": "number", "minimum": 0, "maximum": 1 }
       }
     },
     "leaf": {

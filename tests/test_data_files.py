@@ -36,6 +36,14 @@ PAIRS = {
         f"data/design/presets/{path.name}": "data/schemas/preset.schema.json"
         for path in sorted((ROOT / "data" / "design" / "presets").glob("*.json"))
     },
+    # Animation presets are a family the same way, added in Part 3: one JSON per
+    # motion preset under data/design/animations/, all validated by one schema.
+    # Note the singular data/design/animations.json above is a different document
+    # -- the Hyprland animation API surface -- and keeps its own schema.
+    **{
+        f"data/design/animations/{path.name}": "data/schemas/animations_preset.schema.json"
+        for path in sorted((ROOT / "data" / "design" / "animations").glob("*.json"))
+    },
 }
 
 PALETTE_FIELDS = {

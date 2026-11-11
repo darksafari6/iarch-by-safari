@@ -12,8 +12,8 @@ window.background {
   background-color: alpha(#0b0e1a, 0.88);
   color: #e6e9f8;
   backdrop-filter: blur(10px);
-  transition-property: background-color;
-  transition-duration: 220ms;
+  transition-property: background-color, box-shadow;
+  transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -55,7 +55,7 @@ headerbar,
   box-shadow: none;
   min-height: 46px;
   transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color;
-  transition-duration: 220ms;
+  transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -114,7 +114,7 @@ button {
   color: #e6e9f8;
   padding: 4px 12px;
   box-shadow: 0 1px 2px alpha(#05070f, 0.126);
-  transition-property: background-color, box-shadow, transform;
+  transition-property: background-color, box-shadow, outline-color, outline-width, transform;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -317,7 +317,7 @@ switch {
   border: 1px solid alpha(#333a58, 0.18);
   border-radius: 26px;
   color: #b3bad6;
-  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color;
+  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -350,7 +350,7 @@ radio {
   color: #b3bad6;
   min-width: 16px;
   min-height: 16px;
-  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color;
+  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -412,7 +412,7 @@ scale slider {
   box-shadow: 0 1px 3px alpha(#05070f, 0.126);
   min-width: 18px;
   min-height: 18px;
-  transition-property: background-color, box-shadow, transform;
+  transition-property: background-color, box-shadow, outline-color, outline-width, transform;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -527,7 +527,7 @@ tabs tab {
   color: #b3bad6;
   margin: 4px;
   padding: 4px 8px;
-  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, color;
+  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, color, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -570,7 +570,7 @@ row,
 listview > row {
   border-radius: 12px;
   padding: 6px 12px;
-  transition-property: background-color, box-shadow, transform;
+  transition-property: background-color, box-shadow, outline-color, outline-width, transform;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -645,7 +645,7 @@ popover.menu box > button {
   border-radius: 12px;
   color: #e6e9f8;
   padding: 4px 12px;
-  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, color;
+  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, color, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -833,20 +833,27 @@ paned > separator {
   min-height: 1px;
 }
 
-/* Respect a user who asks the desktop for less motion. */
+/* Respect a user who asks the desktop for less motion.
+
+   A universal selector rather than a list of the controls this sheet happens to
+   transition today, because an enumerated list silently misses whatever is added
+   next. This one already had: spinbutton, .titlebar, listview > row and the three
+   menu-item selectors each transition at 120ms, and not one of them was named
+   here, so a user who asked for less motion still got a fading menu.
+
+   transition-delay goes with transition-duration: a delayed transition is motion
+   the user still has to sit through. animation-duration deliberately does not.
+   This sheet emits no keyframe animation at all, so every animation in a session
+   comes from the application's own theme, and the common one is a spinner.
+   Freezing a spinner does not reduce motion so much as hide the fact that
+   something is still working.
+
+   GTK 3 has no @media (its at-rule list stops at binding-set, define-color,
+   import and keyframes), so a GTK 3 application gets reduce-motion from the
+   iArch setting instead: docs/MOTION.md. */
 @media (prefers-reduced-motion: reduce) {
-  window.background,
-  headerbar,
-  button,
-  entry,
-  switch,
-  check,
-  radio,
-  scale slider,
-  scrollbar slider,
-  row,
-  notebook > header > tabs > tab,
-  tabs tab {
+  * {
     transition-duration: 0ms;
+    transition-delay: 0ms;
   }
 }

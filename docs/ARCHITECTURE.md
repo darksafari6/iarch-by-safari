@@ -35,16 +35,18 @@ the map. Read it before changing anything.
 ├── iarch/                    The product's own code, all of it iarch-prefixed.
 │   ├── lib/configstore.py    User state: defaults merge, atomic writes, backups. The rules below.
 │   ├── lib/renderers.py      Generators. Contract shipped; renderers land in Parts 2 and 5.
-│   ├── cli/                  iarch-theme (Part 2); iarch-keybinds, iarch-anim, iarch-doctor (Part 5).
+│   ├── cli/                  iarch-theme (Part 2), iarch-anim (Part 3); iarch-keybinds, iarch-doctor (Part 5).
 │   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
 │   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
 │   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
-│   │   ├── gen_animations_lua.py  Hyprland curves and animation leaves from the motion tokens.
+│   │   ├── gen_animations_lua.py  Hyprland curves and animation leaves from a motion preset.
 │   │   ├── render_noctalia.py Shell config.toml and one palette per preset, from the same tokens.
 │   │   ├── render_gtk_css.py  The GTK 4 and GTK 3 glass overlays, from templates in lib/templates.
 │   │   ├── render_kvantum.py  The Qt/Kvantum glass theme, recoloured from the presets.
 │   │   ├── gen_fontconfig.py  The fontconfig file that applies the font tokens.
-│   │   └── theme.py           iarch-theme: one preset across every surface above; gates on contrast.
+│   │   ├── theme.py           iarch-theme: one preset across every surface above; gates on contrast.
+│   │   └── iarch_anim.py      iarch-anim: switch the motion preset, speed, reduce-motion and
+│   │                          per-event overrides; verifies with the compositor and rolls back.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
 ├── data/                     Repository defaults. A user never edits these after install.
@@ -58,6 +60,7 @@ the map. Read it before changing anything.
 │   │   ├── kvantum.json    The Kvantum theme keys, types and integer bounds, from the parser.
 │   │   ├── fontconfig.json The fontconfig XML elements and attributes the DTD declares.
 │   │   ├── animations.json The Hyprland animation leaves, per-leaf styles and curve shapes.
+│   │   ├── animations/     Five motion presets: named curves and per-event durations and styles.
 │   │   └── presets/        Six palettes; each must clear the WCAG gate to apply.
 │   ├── schemas/              JSON Schema for every file above; CI validates defaults against them.
 │   └── licenses.json         Generated third-party credit, read by Settings → About.
@@ -299,7 +302,7 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `python3 iarch/cli/contrast_check.py --quiet` | Every preset clears 4.5:1 for text and 3:1 for non-text UI |
 | `python3 iarch/cli/gen_wallpapers.py --check` | Generated wallpapers exist, are 4K WebP and inside 600 KB; nothing orphaned |
 | `python3 iarch/cli/gen_glass_lua.py --check` | The committed `glass.lua` still matches a fresh render of the tokens |
-| `python3 iarch/cli/gen_animations_lua.py --check` | The committed `animations.lua` still matches a fresh render of the motion tokens |
+| `python3 iarch/cli/gen_animations_lua.py --check` | The committed `animations.lua` still matches a fresh render of the default intensity's motion preset |
 | `python3 iarch/cli/render_noctalia.py --check` | The committed `config.toml` and all six palettes still match a fresh render |
 | `python3 iarch/cli/render_gtk_css.py --check --repo` | The committed GTK 4 and GTK 3 sheets still match a fresh render |
 | `python3 iarch/cli/render_kvantum.py --check` | The committed Kvantum pointer and theme still match a fresh render |
