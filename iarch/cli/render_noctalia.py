@@ -131,7 +131,30 @@ PROFILE: Dict[str, Any] = OrderedDict(
         # a scale on hover, no blur and no framebuffer pass.
         magnification=True, magnification_scale=1.18,
     ),
-    control_center=OrderedDict(sidebar="full", width=700),
+    # Six is the most the Home tab shows, so this list is the entire visible set.
+    # `notification` is Do Not Disturb, `power_profile` cycles the system power
+    # profile, and `caffeine` holds idle and sleep off. Four tiles the design brief
+    # asks for have no type upstream -- airplane, game mode, focus mode and
+    # screenshot -- and `screen_recorder` stays permanently disabled without the
+    # official plugin, so none of them is emitted as a button that does nothing.
+    # docs/glass-experience.md says where each of those lands instead.
+    control_center_shortcuts=["wifi", "bluetooth", "notification", "nightlight",
+                              "power_profile", "caffeine"],
+    control_center=OrderedDict(
+        sidebar="full", sidebar_section="compact", width=700,
+        show_shortcut_labels=True, show_session_button=True,
+        circular_avatar=True, show_avatar_border=True,
+        # Every tab stays reachable. A hidden tab also drops out of keyboard
+        # navigation and out of the launcher's Panels provider, so hiding one is a
+        # person's choice rather than a default this project should pick.
+        hidden_tabs=[],
+        calendar=OrderedDict(
+            show_events_card=True, show_week_numbers=False, show_events_location=True,
+            # A panel opened for a glance should say what happens next, not what
+            # already did; fifteen minutes keeps an event that has just started.
+            hide_past_events=True, past_events_threshold_minutes=15,
+        ),
+    ),
     notification=OrderedDict(
         enable_daemon=True, show_app_name=True, show_actions=True,
         position="top_right", layer="top", scale=1.0, width=380,
@@ -173,7 +196,9 @@ SECTION_COMMENTS: Dict[str, str] = {
     "shell.launcher": "Launcher layout and content.",
     "bar": "Bars live at the config root: order names them, [bar.<name>] configures each.",
     "dock": "Dock geometry and magnification.",
-    "control_center": "Control centre layout.",
+    "control_center": "Control centre layout, its tabs and the Home shortcut row.",
+    "control_center.calendar": "Calendar tab: the card on Home and the month view.",
+    "control_center.media": "Media tab. The visualizer follows the intensity's motion switch.",
     "notification": "Notification toasts.",
     "audio": "Shell sounds. Notification sounds are off by design.",
 }
@@ -382,6 +407,22 @@ def dock_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> Dict[str,
     )
 
 
+def control_center_section(intensity: Dict[str, Any]) -> Dict[str, Any]:
+    """The control centre: fixed layout, plus the two keys that follow a switch.
+
+    ``media.show_visualizer`` is the one element in the panel that moves
+    continuously rather than in answer to something, so it follows the same
+    ``motion.enabled`` that decides whether the shell animates at all -- off in the
+    performance intensity, on everywhere else. The shortcut row is an array of
+    one-key tables, which is the shape ``[[control_center.shortcuts]]`` needs.
+    """
+    section = OrderedDict(PROFILE["control_center"])
+    section["media"] = OrderedDict(show_visualizer=bool(intensity["motion"]["enabled"]))
+    section["shortcuts"] = [OrderedDict(type=name)
+                            for name in PROFILE["control_center_shortcuts"]]
+    return section
+
+
 def notification_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> Dict[str, Any]:
     notification = OrderedDict(PROFILE["notification"])
     notification["background_opacity"] = float(intensity["shell"]["notification_opacity"])
@@ -399,7 +440,7 @@ def render_config(tokens: Dict[str, Any], preset: Dict[str, Any],
         shell=shell_section(tokens, intensity),
         bar=bar_section(tokens, intensity),
         dock=dock_section(tokens, intensity),
-        control_center=OrderedDict(PROFILE["control_center"]),
+        control_center=control_center_section(intensity),
         notification=notification_section(tokens, intensity),
         audio=OrderedDict(PROFILE["audio"]),
     )
@@ -462,6 +503,15 @@ def validate(doc: Dict[str, Any], surface: Dict[str, Any]) -> List[str]:
                     walk(value, entry, here)
                 continue
             check_value(here, entry, value)
+            if isinstance(value, list) and "keys" in entry:
+                # An array of tables, written [[section.key]]. Each entry is checked
+                # because upstream would not: an unknown shortcut type renders no
+                # button at all and never warns.
+                for index, item in enumerate(value):
+                    if isinstance(item, dict):
+                        walk(item, entry, f"{here}[{index}]")
+                    else:
+                        problems.append(f"{here}[{index}]: {item!r} is not a table")
 
     for name, values in doc.items():
         if name == "bar":
@@ -519,21 +569,36 @@ def toml_scalar(value: Any) -> str:
     raise NoctaliaError(f"cannot render {value!r} as TOML")
 
 
+def is_table_array(value: Any) -> bool:
+    """A non-empty list of tables, which TOML writes as repeated ``[[path]]`` blocks.
+
+    An empty list is deliberately *not* one: ``shortcuts = []`` and
+    ``hidden_tabs = []`` are meaningful settings upstream, and the only way to
+    write either is the inline form.
+    """
+    return isinstance(value, list) and bool(value) and all(isinstance(i, dict) for i in value)
+
+
 def emit_toml(doc: Dict[str, Any], header: str) -> str:
     lines: List[str] = [header.rstrip("\n"), ""]
 
-    def table(values: Dict[str, Any], path: str) -> None:
+    def table(values: Dict[str, Any], path: str, array: bool = False) -> None:
         comment = SECTION_COMMENTS.get(path)
         if comment:
             lines.append(f"# {comment}")
-        lines.append(f"[{path}]")
+        lines.append(f"[[{path}]]" if array else f"[{path}]")
+        # Every key of this table comes before any header below it, or TOML would
+        # read the later keys as belonging to the sub-table instead.
         for key, value in values.items():
-            if not isinstance(value, dict):
+            if not isinstance(value, dict) and not is_table_array(value):
                 lines.append(f"{key} = {toml_scalar(value)}")
         lines.append("")
         for key, value in values.items():
             if isinstance(value, dict):
                 table(value, f"{path}.{key}")
+            elif is_table_array(value):
+                for item in value:
+                    table(item, f"{path}.{key}", array=True)
 
     for name, values in doc.items():
         table(values, name)

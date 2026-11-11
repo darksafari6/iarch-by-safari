@@ -107,9 +107,13 @@ class VerifiedSurface(unittest.TestCase):
                     self.assertIn(spec["type"], ("bool", "integer", "float", "string", "array"))
                     if "enum" in spec:
                         self.assertTrue(spec["enum"])
-                        # A custom parser has no kEnum constant; it must say so.
-                        self.assertTrue(spec.get("enum_constant") or spec.get("parser"),
-                                        f"{path} lists an enum with no upstream constant")
+                        # A custom parser has no kEnum constant, and a vocabulary this project
+                        # enforces because upstream silently ignores an unknown value has
+                        # neither -- but both have to say which of those they are.
+                        self.assertTrue(spec.get("enum_constant") or spec.get("parser")
+                                        or spec.get("enum_note"),
+                                        f"{path} lists an enum with no upstream constant "
+                                        f"and no note explaining where it came from")
                     if "range" in spec:
                         self.assertLessEqual(spec["range"][0], spec["range"][1])
                         # An inline Range<...>{lo, hi} passed straight to field() has no named
@@ -785,6 +789,146 @@ class NotificationSurface(unittest.TestCase):
                 problems = [line for line in noctalia.validate(doc, SURFACE)
                             if line.startswith("notification")]
                 self.assertEqual([], problems)
+
+
+class ControlCenterPanel(unittest.TestCase):
+    """The Super+I panel: what it can hold, and what it cannot.
+
+    Noctalia's control centre is a fixed set of tabs and a row of at most six
+    shortcut buttons drawn from a closed vocabulary. There is no custom tile and no
+    custom slider in v5.4.1, so the honest work is to fill the six slots with the
+    types that really exist, to refuse a type that would render no button at all,
+    and to record the one place a config file *can* add a button that runs a
+    command of ours -- ``[[shell.session.actions]]`` -- without emitting a command
+    line this project has no business inventing.
+    """
+
+    # config_schema.cpp:551-569 controlCenterSchema(), in declaration order.
+    UPSTREAM_KEYS = [
+        "sidebar", "sidebar_section", "width", "show_shortcut_labels",
+        "show_session_button", "circular_avatar", "show_avatar_border",
+        "hidden_tabs", "calendar", "media", "shortcuts",
+    ]
+
+    # config_schema.cpp:1772-1784 shellSessionSchema() and :1674-1746
+    # sessionActionSchema(), cross-checked against docs/user/configuration/shell.mdx.
+    SESSION_KEYS = ["grid", "grid_columns", "show_shortcuts", "actions", "power"]
+    ACTION_KEYS = ["action", "enabled", "command", "label", "glyph", "shortcut",
+                   "lockscreen_shortcut", "countdown_seconds", "variant"]
+
+    def setUp(self):
+        self.keys = SURFACE["sections"]["control_center"]["keys"]
+        self.session = SURFACE["sections"]["shell"]["keys"]["session"]
+        self.doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.panel = self.doc["control_center"]
+
+    def test_the_record_covers_every_setting_upstream_declares(self):
+        self.assertEqual(sorted(self.UPSTREAM_KEYS), sorted(self.keys))
+
+    def test_the_session_panel_command_hook_is_recorded(self):
+        self.assertEqual("shellSessionSchema", self.session["table"])
+        self.assertEqual(sorted(self.SESSION_KEYS), sorted(self.session["keys"]))
+        actions = self.session["keys"]["actions"]
+        self.assertEqual("sessionActionSchema", actions["table"])
+        self.assertEqual(sorted(self.ACTION_KEYS), sorted(actions["keys"]))
+        self.assertIn("/bin/sh -c", actions["keys"]["command"]["note"])
+        self.assertEqual("array", actions["type"], "it is [[shell.session.actions]]")
+
+    def test_the_variant_enum_carries_six_values_and_says_the_docs_list_five(self):
+        variant = self.session["keys"]["actions"]["keys"]["variant"]
+        self.assertEqual(6, len(variant["enum"]))
+        self.assertEqual("kSessionActionButtonVariants", variant["enum_constant"])
+        self.assertIn("ghost", variant["enum_note"])
+
+    def test_no_session_action_is_emitted_because_no_command_is_ours_to_invent(self):
+        self.assertNotIn("session", self.doc["shell"])
+        self.assertIn("no business inventing", self.session["keys"]["power"]["note"])
+
+    def test_the_shortcut_row_fills_the_six_slots_the_home_tab_shows(self):
+        types = [entry["type"] for entry in self.panel["shortcuts"]]
+        self.assertEqual(6, len(types), "Home shows at most six")
+        self.assertEqual(len(types), len(set(types)), "a repeated tile wastes a slot")
+        allowed = self.keys["shortcuts"]["keys"]["type"]["enum"]
+        for name in types:
+            with self.subTest(shortcut=name):
+                self.assertIn(name, allowed)
+
+    def test_the_tiles_the_brief_asks_for_and_upstream_has_are_present(self):
+        types = [entry["type"] for entry in self.panel["shortcuts"]]
+        for wanted in ("wifi", "bluetooth", "notification", "nightlight"):
+            with self.subTest(shortcut=wanted):
+                self.assertIn(wanted, types)
+
+    def test_no_tile_is_emitted_for_something_that_would_render_nothing(self):
+        types = [entry["type"] for entry in self.panel["shortcuts"]]
+        # Airplane mode, game mode, focus mode and a screenshot button have no
+        # type at all; screen_recorder exists but stays disabled without the
+        # official plugin, which is a dead button by another name.
+        for absent in ("airplane", "game", "focus", "screenshot", "screen_recorder"):
+            with self.subTest(shortcut=absent):
+                self.assertNotIn(absent, types)
+
+    def test_an_invented_tile_is_refused_rather_than_shipped_as_a_dead_button(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["control_center"]["shortcuts"] = [{"type": "airplane"}]
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("airplane", problems[0])
+        self.assertIn("is not one of", problems[0])
+
+    def test_a_shortcut_entry_carries_the_one_field_it_has(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["control_center"]["shortcuts"] = [{"type": "wifi", "label": "Wireless"}]
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("no such setting", problems[0])
+
+    def test_the_visualizer_follows_the_motion_switch_and_actually_varies(self):
+        seen = set()
+        for intensity in INTENSITIES:
+            with self.subTest(intensity=intensity):
+                doc = render(noctalia.DEFAULT_PRESET, intensity)
+                expected = bool(TOKENS["intensities"][intensity]["motion"]["enabled"])
+                self.assertEqual(expected, doc["control_center"]["media"]["show_visualizer"])
+                seen.add(expected)
+        self.assertEqual({True, False}, seen,
+                         "a key that never changes is a key that does nothing")
+
+    def test_the_calendar_card_shows_what_is_next_not_what_already_happened(self):
+        calendar = self.panel["calendar"]
+        self.assertIs(True, calendar["show_events_card"])
+        self.assertIs(True, calendar["hide_past_events"])
+        threshold = calendar["past_events_threshold_minutes"]
+        low, high, step = self.keys["calendar"]["keys"]["past_events_threshold_minutes"]["range"]
+        self.assertLessEqual(low, threshold)
+        self.assertLessEqual(threshold, high)
+        self.assertEqual(0, threshold % step)
+        self.assertGreater(threshold, 0, "zero would hide an event that just started")
+
+    def test_the_panel_is_wide_enough_and_every_tab_stays_reachable(self):
+        low, high, step = self.keys["width"]["range"]
+        width = self.panel["width"]
+        self.assertLessEqual(low, width)
+        self.assertLessEqual(width, high)
+        self.assertEqual(0, (width - low) % step)
+        self.assertEqual([], self.panel["hidden_tabs"])
+        self.assertEqual("full", self.panel["sidebar"])
+        self.assertEqual("compact", self.panel["sidebar_section"])
+
+    def test_an_array_of_tables_renders_as_repeated_double_bracket_blocks(self):
+        text = noctalia.emit_toml(self.doc, "# header")
+        self.assertEqual(6, text.count("[[control_center.shortcuts]]"))
+        self.assertIn('type = "wifi"', text)
+        # An empty list is a setting of its own upstream, so it stays inline
+        # rather than becoming a table with no entries.
+        self.assertIn("hidden_tabs = []", text)
+        self.assertNotIn("[[control_center.hidden_tabs]]", text)
+
+    def test_a_plain_array_and_a_table_array_are_not_confused(self):
+        self.assertTrue(noctalia.is_table_array([{"type": "wifi"}]))
+        self.assertFalse(noctalia.is_table_array([]))
+        self.assertFalse(noctalia.is_table_array(["monitor"]))
+        self.assertFalse(noctalia.is_table_array([{"a": 1}, "b"]))
 
 
 if __name__ == "__main__":

@@ -378,6 +378,96 @@
               "type": "bool"
             }
           }
+        },
+        "session": {
+          "table": "shellSessionSchema",
+          "keys": {
+            "grid": {
+              "type": "bool",
+              "note": "Lay the actions out over rows of grid_columns instead of fitting them on one row."
+            },
+            "grid_columns": {
+              "type": "integer",
+              "range": [
+                1,
+                5,
+                1
+              ],
+              "range_constant": "kSessionGridColumnsRange",
+              "note": "Actions per row when grid is true; ignored otherwise."
+            },
+            "show_shortcuts": {
+              "type": "bool",
+              "note": "Show each action's keyboard shortcut at the top right of its button."
+            },
+            "actions": {
+              "type": "array",
+              "table": "sessionActionSchema",
+              "note": "An array of tables, written [[shell.session.actions]]. Omitting it keeps the default five actions, whose shortcuts are the keys 1 to 5; an explicit empty array hides every session button. This is the one place v5.4.1 lets a config file add a button that runs a command of yours.",
+              "keys": {
+                "action": {
+                  "type": "string",
+                  "note": "lock, logout, suspend, lock_and_suspend, reboot, reboot_uefi, shutdown, or command for a custom entry. Lowercased and trimmed on read, and not enum-validated, so an unknown word yields a button that does nothing."
+                },
+                "enabled": {
+                  "type": "bool",
+                  "note": "False hides the button."
+                },
+                "command": {
+                  "type": "string",
+                  "note": "Run with /bin/sh -c instead of the built-in handler. Required when action is command. Noctalia runs the string, so it is as privileged as the session."
+                },
+                "label": {
+                  "type": "string",
+                  "note": "Button label; otherwise the translated default for the action."
+                },
+                "glyph": {
+                  "type": "string",
+                  "note": "A bar-style icon id; otherwise the action's default. The id vocabulary is not published in the schema, so an unknown glyph is a guess."
+                },
+                "shortcut": {
+                  "type": "string",
+                  "note": "Any XKB key name (1, F1, Escape) or modifier combo (Ctrl+1), active while the session panel is open. Empty disables it."
+                },
+                "lockscreen_shortcut": {
+                  "type": "string",
+                  "note": "Triggers the action from the lock screen. Keys that type text are rejected because the password field owns them."
+                },
+                "countdown_seconds": {
+                  "type": "integer",
+                  "note": "Above zero, the first activation starts a countdown on the button badge; a second activation runs it at once. Zero runs immediately."
+                },
+                "variant": {
+                  "type": "string",
+                  "enum": [
+                    "default",
+                    "primary",
+                    "secondary",
+                    "destructive",
+                    "outline",
+                    "ghost"
+                  ],
+                  "enum_constant": "kSessionActionButtonVariants",
+                  "enum_note": "The enum constant carries six variants; the user documentation lists five and does not mention ghost."
+                }
+              }
+            },
+            "power": {
+              "table": "shellSessionPowerSchema",
+              "note": "Command overrides for the built-in suspend, reboot and shutdown, used by the session panel, the launcher, IPC and idle. Each is run with /bin/sh -lc. Left unset, Noctalia tries its own prioritized backend list (systemd, logind, privileged helpers), which is why this project emits nothing here: it has no business inventing a sudo command line.",
+              "keys": {
+                "suspend": {
+                  "type": "string"
+                },
+                "reboot": {
+                  "type": "string"
+                },
+                "shutdown": {
+                  "type": "string"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -718,7 +808,8 @@
             "compact",
             "none"
           ],
-          "enum_constant": "kControlCenterSidebarModes"
+          "enum_constant": "kControlCenterSidebarModes",
+          "note": "Tab navigation when the panel opens on Home. full = icons and labels, compact = icons only, none = no sidebar."
         },
         "width": {
           "type": "integer",
@@ -727,7 +818,106 @@
             1200.0,
             10.0
           ],
-          "range_constant": "kControlCenterWidthRange"
+          "range_constant": "kControlCenterWidthRange",
+          "note": "Panel width in logical pixels."
+        },
+        "sidebar_section": {
+          "type": "string",
+          "enum": [
+            "full",
+            "compact",
+            "none"
+          ],
+          "enum_constant": "kControlCenterSidebarModes",
+          "note": "Sidebar used when an open jumps straight to a tab (a bar volume, network or media widget, or `panel-toggle control-center <context>`). Defaults to compact."
+        },
+        "show_shortcut_labels": {
+          "type": "bool",
+          "note": "Text under each Home shortcut icon. Off, the icons scale with the cell, which helps at narrow widths."
+        },
+        "show_session_button": {
+          "type": "bool",
+          "note": "The session-actions button in the Home tab header. Independent of a type = \"session\" shortcut and of the bar's session widget."
+        },
+        "circular_avatar": {
+          "type": "bool",
+          "note": "Off, the avatar follows the shell's corner roundness."
+        },
+        "show_avatar_border": {
+          "type": "bool",
+          "note": "The accent ring around the Home avatar, including on hover and keyboard focus."
+        },
+        "hidden_tabs": {
+          "type": "array",
+          "note": "Tab context ids to hide: home, media, audio, monitor, system, network, bluetooth, weather, calendar, notifications, screen-time, power. Empty shows every available tab, and Home cannot be hidden. Hidden tabs also drop out of keyboard navigation and the launcher's Panels provider."
+        },
+        "calendar": {
+          "table": "calendarTabSchema",
+          "keys": {
+            "show_events_card": {
+              "type": "bool"
+            },
+            "show_week_numbers": {
+              "type": "bool",
+              "note": "ISO 8601 week numbers in the month grid."
+            },
+            "show_events_location": {
+              "type": "bool"
+            },
+            "hide_past_events": {
+              "type": "bool"
+            },
+            "past_events_threshold_minutes": {
+              "type": "integer",
+              "range": [
+                0,
+                1440,
+                5
+              ],
+              "range_constant": "kPastEventsThresholdMinutesRange"
+            }
+          }
+        },
+        "media": {
+          "table": "mediaTabSchema",
+          "keys": {
+            "show_visualizer": {
+              "type": "bool",
+              "note": "The PipeWire visualizer beside the playback controls; also toggled from the tab header."
+            }
+          }
+        },
+        "shortcuts": {
+          "type": "array",
+          "table": "shortcutSchema",
+          "note": "An array of tables, written [[control_center.shortcuts]]. Up to six are shown on Home. Omitting the array entirely gives the default set (wifi, bluetooth, caffeine, nightlight, notification, power_profile); an explicit empty array hides every shortcut button.",
+          "keys": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "wifi",
+                "bluetooth",
+                "nightlight",
+                "notification",
+                "dark_mode",
+                "caffeine",
+                "audio",
+                "mic_mute",
+                "power_profile",
+                "media",
+                "weather",
+                "system",
+                "screen_time",
+                "keyboard_layout",
+                "screen_recorder",
+                "wallpaper",
+                "session",
+                "clipboard"
+              ],
+              "enum_note": "Not an upstream enum. shortcutSchema() declares a plain string field, so an unknown type is not warned about or rejected -- it simply renders no button. The eighteen documented types are recorded here, from docs/user/control-center/shortcuts.mdx, so the renderer refuses a tile that would never appear instead of shipping a dead one.",
+              "note": "The only field a shortcut entry has. weather, system and screen_time need their service enabled to appear; screen_recorder needs the official plugin enabled or the shortcut stays disabled."
+            }
+          }
         }
       }
     },

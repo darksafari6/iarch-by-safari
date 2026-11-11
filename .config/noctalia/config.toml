@@ -142,10 +142,46 @@ inactive_scale = 0.9
 magnification = true
 magnification_scale = 1.18
 
-# Control centre layout.
+# Control centre layout, its tabs and the Home shortcut row.
 [control_center]
 sidebar = "full"
+sidebar_section = "compact"
 width = 700
+show_shortcut_labels = true
+show_session_button = true
+circular_avatar = true
+show_avatar_border = true
+hidden_tabs = []
+
+# Calendar tab: the card on Home and the month view.
+[control_center.calendar]
+show_events_card = true
+show_week_numbers = false
+show_events_location = true
+hide_past_events = true
+past_events_threshold_minutes = 15
+
+# Media tab. The visualizer follows the intensity's motion switch.
+[control_center.media]
+show_visualizer = true
+
+[[control_center.shortcuts]]
+type = "wifi"
+
+[[control_center.shortcuts]]
+type = "bluetooth"
+
+[[control_center.shortcuts]]
+type = "notification"
+
+[[control_center.shortcuts]]
+type = "nightlight"
+
+[[control_center.shortcuts]]
+type = "power_profile"
+
+[[control_center.shortcuts]]
+type = "caffeine"
 
 # Notification toasts.
 [notification]

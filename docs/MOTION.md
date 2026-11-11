@@ -229,6 +229,13 @@ not a bug here, and it is why the wallpaper duration is its own setting:
 `diamond`, `golden`, `melt`) and a separate `transition_on_startup`.
 [Wallpaper](https://docs.noctalia.dev/noctalia/desktop/wallpaper/).
 
+One control-centre key is a motion key, and this project writes it from the same
+switch: `[control_center.media] show_visualizer` is the only element in the panel
+that moves continuously rather than in answer to something, so it follows
+`intensity.motion.enabled` — on for crystal, frosted and soft, off for performance.
+`tests/test_noctalia.py` asserts both values really occur, because a key that never
+changes is a key that does nothing.
+
 The lock screen has the same eleven transitions and its own `transition_duration`
 (1500 ms) plus `edge_smoothness` (0.3), under
 [Shell settings → Lock screen](https://docs.noctalia.dev/noctalia/configuration/shell/).
