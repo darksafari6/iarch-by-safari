@@ -45,12 +45,17 @@ A short video tour of the session is on YouTube: <https://www.youtube.com/watch?
 | Shortcut overlay (Super+H) | Press a key, see every shortcut on screen | Key is reserved, overlay is Part 7 |
 | Settings app | GTK4 + libadwaita window that edits `~/.config/iarch/`, regenerates your configuration and reloads the session | Part 4 |
 | Presets | A lower-cost Performance overlay that only ever changes values of settings the shipped profile already has | CLI ships today (`tools/profile_preset.py`); switching in-session is later |
-| Game mode | One switch that drops compositor effects for latency | Not built. The installer does offer a gaming package selection (Steam, MangoHud, Lutris, Proton tools) |
+| Game mode | One switch that turns off blur, glow, inactive dimming and every animation, saves what they were, and puts them back | Command ships today (`python3 iarch/cli/iarch_gamemode.py toggle`); no key is bound to it and the latency saving is not measured (`PERF-01`) |
+| Focus mode | Do Not Disturb, caffeine, and every unfocused window dimmed | Command ships today (`python3 iarch/cli/iarch_focus.py toggle`); it is runtime state, so a reload, a relogin or a theme change ends the dim |
 | Contact page | Your name, role and links, rendered by the settings app | Defaults ship in `data/contacts.default.json`; the page is Part 4 |
 
 Honest summary: the session, the installers, the configuration data and the
-checks are real. The settings app, the overlay and game mode are not built yet.
-Everything this project claims but cannot yet prove is listed with an id in
+checks are real. The settings app and the shortcut overlay are not built yet, and
+game mode and focus mode are commands you run rather than buttons you click: no
+key is bound to either, and neither has been watched on a live session. The
+installer does offer a gaming package selection (Steam, MangoHud, Lutris, Proton
+tools), which is a package list and not a mode. Everything this project claims but
+cannot yet prove is listed with an id in
 [`docs/UNVERIFIED.md`](docs/UNVERIFIED.md), and the order of work is in
 [`docs/ROADMAP.md`](docs/ROADMAP.md).
 

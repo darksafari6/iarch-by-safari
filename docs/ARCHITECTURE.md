@@ -40,7 +40,10 @@ the map. Read it before changing anything.
 ├── iarch/                    The product's own code, all of it iarch-prefixed.
 │   ├── lib/configstore.py    User state: defaults merge, atomic writes, backups. The rules below.
 │   ├── lib/renderers.py      Generators. Contract shipped; renderers land in Parts 2 and 5.
-│   ├── cli/                  iarch-theme (Part 2), iarch-anim and iarch-doctor (Part 3); iarch-keybinds (Part 5).
+│   ├── lib/modes.py          Mode switches: the compositor and shell calls, the modes.<name>
+│   │                         record, and the matches/differs/unverified vocabulary both share.
+│   ├── cli/                  iarch-theme (Part 2), iarch-anim, iarch-doctor, iarch-gamemode and
+│   │                         iarch-focus (Part 3); iarch-keybinds (Part 5).
 │   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
 │   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
 │   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
@@ -54,8 +57,12 @@ the map. Read it before changing anything.
 │   │   ├── theme.py           iarch-theme: one preset across every surface above; gates on contrast.
 │   │   ├── iarch_anim.py      iarch-anim: switch the motion preset, speed, reduce-motion and
 │   │   │                      per-event overrides; verifies with the compositor and rolls back.
-│   │   └── iarch_doctor.py    iarch-doctor: ask a running session whether it took the settings --
-│   │                          notifications in Part 3, the rest of the session in Part 5.
+│   │   ├── iarch_doctor.py    iarch-doctor: ask a running session whether it took the settings --
+│   │   │                      notifications in Part 3, the rest of the session in Part 5.
+│   │   ├── iarch_gamemode.py  iarch-gamemode: run iarch-theme and iarch-anim as one switch, save
+│   │   │                      the state they replaced, and read four leaves back to check.
+│   │   └── iarch_focus.py     iarch-focus: Do Not Disturb, caffeine and a runtime dim on every
+│   │                          unfocused window. Writes no file, so a reload ends it.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
 ├── data/                     Repository defaults. A user never edits these after install.
@@ -203,6 +210,17 @@ every file a program writes is generated.** Nothing in between is allowed.
 | User settings | `~/.config/iarch/` (`settings.json`, `keybinds.json`, `contacts.json`, `presets/`) | The settings app, or the user | Yes — this is the only configuration anyone edits |
 | Generated files | `~/.config/hypr/generated/*.lua`, Noctalia overrides, kitty includes | The generators in `iarch/cli/`, and `iarch-theme` which drives them, under the contract in `iarch/lib/renderers.py` | No — they carry the GENERATED header and are rewritten wholesale |
 | Backups | `~/.local/state/iarch/backups/` | `iarch/lib/configstore.py` | No — read them only to roll back |
+| Mode state | `~/.config/iarch/settings.json` under `modes.<name>` | `iarch/lib/modes.py`, from `iarch-gamemode` and `iarch-focus` | Yes, though `--forget` is the supported way to clear a record |
+
+A mode switch is not a fourth kind of writer. It composes values that already
+exist — an intensity, a motion preset, two decoration leaves — and adds only the
+round trip: read the state, record it, apply it, verify it, restore it. So
+`iarch-gamemode` renders nothing itself and `iarch-focus` writes no file at all,
+and the record under `modes.<name>` is the only new byte either one owns. That is
+also why the record has to be read from the user's file rather than from the
+merged document `configstore.load` returns: with the repository defaults merged
+underneath, "never switched on" and "matches the default" are the same object, and
+a mode that cannot tell them apart cannot be turned off.
 
 Rules every generator obeys, implemented once in `iarch/lib/configstore.py` and proven by
 `tests/test_config_store.py`:

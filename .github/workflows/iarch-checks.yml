@@ -109,6 +109,8 @@ jobs:
           python iarch/cli/render_kvantum.py --check  # shipped Kvantum theme matches the tokens
           python iarch/cli/gen_fontconfig.py --check  # shipped fonts.conf matches the tokens
           python iarch/cli/theme.py apply midnight-glass --dry-run  # the capstone renders every surface together, gates on contrast, writes nothing
+          python iarch/cli/iarch_gamemode.py on --dry-run  # composes theme + anim, reads the tokens, writes nothing (no compositor in CI, so the checks report unverified)
+          python iarch/cli/iarch_focus.py on --dry-run     # names the exact IPC and eval vectors it would send, writes nothing
 
       - name: Validate every JSON file in data/ against its schema
         run: |

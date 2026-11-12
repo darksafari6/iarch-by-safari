@@ -15,6 +15,7 @@
     "accent",
     "default_intensity",
     "intensities",
+    "modes",
     "layout",
     "app_classes",
     "window_opacity",
@@ -205,6 +206,74 @@
         "frosted": { "$ref": "#/definitions/intensity" },
         "soft": { "$ref": "#/definitions/intensity" },
         "performance": { "$ref": "#/definitions/intensity" }
+      }
+    },
+
+    "modes": {
+      "type": "object",
+      "description": "The two mode switches added in Part 3: iarch-gamemode and iarch-focus. Neither invents a value. game.intensity must name one of the four intensities above, and the animation preset game mode applies is not repeated here on purpose -- it is the one intensities.<name>.motion already pairs with that intensity, read through gen_animations_lua.preset_for_intensity, so the two cannot disagree. focus.dim_strength must sit inside hyprland.ranges for the leaf it sets, and every name in focus.leaves must appear in hyprland.leaves, which is the list that makes a leaf emittable at all, whether a generator writes it or a mode sets it while the session runs. runtime records the compositor call both modes go through and the spelling of it that was rejected, with the evidence.",
+      "required": ["_note", "runtime", "game", "focus"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string", "minLength": 1 },
+        "runtime": {
+          "type": "object",
+          "description": "The four compositor calls a mode may make while the session runs, and the one it may not. Every value is a literal command shape rather than a description of one, so a test can compare what a tool actually sent against what this file says is possible. rejected_spelling is required, not optional: a mechanism this repository stopped using stays in the record with the evidence that it does not work, because the shipped manual still documents it and the next person to read that manual will otherwise write it again.",
+          "required": ["set_via", "read_via", "errors_via", "reload_via", "source",
+                       "_note", "rejected_spelling", "rejected_note"],
+          "additionalProperties": false,
+          "properties": {
+            "set_via": {
+              "type": "string", "pattern": "^hyprctl eval ",
+              "description": "Must start with `hyprctl eval `. Nothing registers a keyword or setoption command at v0.57.2 (src/ipc/s1/Commands.cpp:2084-2126 lists the 38 that are registered, and only src/plugins/PluginAPI.cpp:357 may add one), so eval is the only request that can change a leaf in a running Lua-configured session."
+            },
+            "read_via": {
+              "type": "string", "pattern": "^hyprctl getoption ",
+              "description": "The read a verification compares against. dispatchGetOption answers one JSON object under -j and the literal `no such option` for a leaf it does not know, even under -j, which is why an unreadable leaf is reported as unverified rather than as a pass or a failure (src/ipc/s1/Commands.cpp:1717-1800)."
+            },
+            "errors_via": { "type": "string", "const": "hyprctl configerrors" },
+            "reload_via": {
+              "type": "string", "const": "hyprctl reload",
+              "description": "Synchronous: reloadRequest re-parses the config and then answers ok, so a leaf read after it is the state now running rather than a state that is about to be (src/ipc/s1/Commands.cpp:1352-1370)."
+            },
+            "source": { "type": "string", "minLength": 1 },
+            "_note": { "type": "string", "minLength": 1 },
+            "rejected_spelling": { "type": "string", "minLength": 1 },
+            "rejected_note": { "type": "string", "minLength": 1 }
+          }
+        },
+        "game": {
+          "type": "object",
+          "required": ["intensity", "_note"],
+          "additionalProperties": false,
+          "properties": {
+            "intensity": { "$ref": "#/definitions/intensity_name" },
+            "_note": { "type": "string", "minLength": 1 }
+          }
+        },
+        "focus": {
+          "type": "object",
+          "required": ["dim_inactive", "dim_strength", "leaves", "leaves_note", "_note"],
+          "additionalProperties": false,
+          "properties": {
+            "dim_inactive": {
+              "const": true,
+              "description": "Focus mode without dimming would be Do Not Disturb plus caffeine, which are two control-centre tiles that already exist. The dim is the part only the compositor can do, so the switch is not optional here."
+            },
+            "dim_strength": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "The bounds hyprland.ranges records for decoration:dim_strength, which are the ones MS<Float> declares at src/config/values/ConfigValues.cpp:228 in v0.57.2. The shipped 0.5 is that leaf's own upstream default, handed back to the compositor while focusing; the four intensities lower it to 0.0-0.10."
+            },
+            "leaves": {
+              "$ref": "#/definitions/string_list",
+              "description": "The Hyprland leaves iarch-focus sets at runtime. Every entry must also be in hyprland.leaves; tests/test_focus.py asserts it, because a leaf set through runtime.eval is held to the same recorded-vocabulary rule as one a generator writes."
+            },
+            "leaves_note": { "type": "string", "minLength": 1 },
+            "_note": { "type": "string", "minLength": 1 }
+          }
+        }
       }
     },
 

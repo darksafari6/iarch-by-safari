@@ -166,6 +166,21 @@ Runtime helper scripts under `scripts/` are read-only or allowlisted:
 `iarch-healthcheck.sh` changes nothing, and `iarch-control-center.sh` only sends
 shell IPC commands from a fixed list.
 
+The two mode switches send IPC and nothing else. `iarch-gamemode` runs
+`iarch-theme` and `iarch-anim` in-process and then asks the compositor and the
+shell to reload; `iarch-focus` asks the shell for Do Not Disturb and caffeine and
+sends the compositor one `hyprctl eval` carrying two decoration values. That eval
+is worth stating plainly, because it is the sharpest thing in this repository:
+`hyprctl eval` runs Lua inside the compositor, so anything that can write to
+`$XDG_RUNTIME_DIR/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock` can already change
+any config leaf, and this project adds no capability the socket does not have.
+What it does add is discipline — the values come from `data/design/tokens.json`
+(`modes.focus`), never from an argument, so the command cannot be pointed at an
+arbitrary leaf; `hyprctl keyword`, the spelling a reader of the shipped manual
+would reach for, is not used because v0.57.2 does not register it and would answer
+`unknown request` while still exiting 0. Neither switch runs a shell, and neither
+writes a file that is not generated.
+
 ## If something already went wrong
 
 1. Do not run the installer again.

@@ -55,6 +55,19 @@ short durations: it emits `hl.config({ animations = { enabled = false } })` and 
 leaves at all, and Hyprland's `AnimationManager` then warps every animated variable
 straight to its final value, so there is no per-frame curve work to skip.
 
+Game mode does not name that preset. `data/design/tokens.json` records
+`modes.game.intensity = performance` and nothing else, and
+`iarch/cli/iarch_gamemode.py` reads the preset through
+`gen_animations_lua.preset_for_intensity`, which is the same function the renderer
+uses and which refuses an intensity whose `motion.enabled` and `motion.preset`
+disagree. One pairing, one reader, no second copy to drift.
+
+Reduce-motion outranks game mode. With `animation.reduce_motion` on, the motion
+half renders `minimal` rather than `off` — `iarch_anim._effective_preset` forces
+it — and `iarch-gamemode` reports that instead of quietly switching an
+accessibility setting off. The master switch it then checks is `minimal`'s, not
+`off`'s, so the check follows the render rather than the intention.
+
 ## Speed
 
 `speed = duration_ms / 100`. That is not a convention this project chose: Hyprland

@@ -18,5 +18,13 @@
     "reduce_motion": false,
     "event_overrides": {}
   },
+  "modes": {
+    "game": {
+      "active": false
+    },
+    "focus": {
+      "active": false
+    }
+  },
   "notes": "Repository defaults. Your own copy lives in ~/.config/iarch/settings.json and wins over these values."
 }
