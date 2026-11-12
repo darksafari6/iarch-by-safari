@@ -497,9 +497,9 @@ and the gate that skips it when absent is verified, but no capture was ever take
 [LOCK-02](UNVERIFIED.md) whether one named transition is really deterministic,
 which is arithmetic on a verified `randomFloat(0, size)` rather than an
 observation, and says nothing about the parameters that stay random;
-[LOCK-03](UNVERIFIED.md) whether `hyprctl dispatch dpms on` is the right spelling
-on a Lua-config Hyprland, since the hypridle manual's own example uses a
-different one; [LOCK-04](UNVERIFIED.md) whether hyprlock itself parses the
+[LOCK-03](UNVERIFIED.md) whether the resume command really brings the outputs
+back, the spelling itself now settled from the compositor's own dispatch path
+rather than from a manual that still documents a form v0.57.2 cannot compile; [LOCK-04](UNVERIFIED.md) whether hyprlock itself parses the
 emitted file, which no hyprlock process has ever done here and which is recorded
 against the current manual rather than a release tag; and
 [LOCK-05](UNVERIFIED.md) whether the shell's `blur_intensity = 0.5` looks like the

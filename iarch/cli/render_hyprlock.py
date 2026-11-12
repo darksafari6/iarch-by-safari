@@ -89,14 +89,28 @@ CLOCK_OFFSET_Y = 96
 USER_OFFSET_Y = 72
 HINT_OFFSET_Y = 104
 
-# hypridle's two commands. `pidof noctalia ||` is the same shape as the lock_cmd
+# hypridle's three commands. `pidof noctalia ||` is the same shape as the lock_cmd
 # the hypridle manual's own example uses (`pidof hyprlock || hyprlock`): prefer
 # the lock surface that is already running, and only start a second one when it
 # is not. Nothing here is a shell function of the user's input, so there is no
-# string to escape.
+# string to escape, and hypridle runs each one through `/bin/sh -c`
+# (hypridle src/core/Hypridle.cpp:286-289, identical at v0.1.8 and on main),
+# which is what makes the `||` and the quoting below work at all.
 IDLE_LOCK_CMD = "pidof noctalia || hyprlock"
 IDLE_BEFORE_SLEEP_CMD = "loginctl lock-session"
-IDLE_AFTER_SLEEP_CMD = "hyprctl dispatch dpms on"
+# Not the hypridle manual's `hyprctl dispatch dpms on`, and the reason is in the
+# compositor rather than in the daemon. Hyprland v0.57.2 answers `dispatch X` by
+# evaluating `return hl.dispatch(X)` when the config provider is Lua
+# (src/ipc/s1/Commands.cpp:1332-1350), and this session's config is Lua, so
+# `dpms on` would be handed to the Lua compiler as `hl.dispatch(dpms on)` and
+# come back a syntax error. hl.dsp.dpms is the dispatcher that exists
+# (src/config/lua/bindings/LuaBindingsDispatchers.cpp:1380) and its action words
+# are enable/on, disable/off and toggle, with anything else silently toggling
+# (LuaBindingsInternal.cpp:317-325) -- which is why the word is spelled out here
+# rather than left to a default. `hyprctl keyword` is not an alternative: no
+# keyword command is registered at v0.57.2, and the manual itself says it will
+# not work with a Lua config provider (docs/hyprctl.1.rst:36-40).
+IDLE_AFTER_SLEEP_CMD = "hyprctl dispatch \"hl.dsp.dpms({ action = 'enable' })\""
 
 
 # --------------------------------------------------------------- colours
@@ -766,9 +780,11 @@ IDLE_COMMENT = (
     "Doing only the first is what causes the race.\n"
     "\n"
     "after_sleep_cmd is the hypridle manual's own remedy for a display that needs a key\n"
-    "press to come back after resume; the `hyprctl dispatch dpms on` spelling is the one\n"
-    "that manual uses, and docs/UNVERIFIED.md LOCK-03 records that it has not been run\n"
-    "against a live Hyprland v0.57.2."
+    "press to come back after resume, in the spelling this compositor can run: Hyprland\n"
+    "v0.57.2 evaluates `hyprctl dispatch X` as Lua when the config provider is Lua, so the\n"
+    "manual's legacy `dpms on` form is a syntax error here and hl.dsp.dpms is the dispatcher\n"
+    "that exists. docs/UNVERIFIED.md LOCK-03 records that no compositor in this project's\n"
+    "reach ever ran either spelling."
 )
 
 

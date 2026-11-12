@@ -159,7 +159,8 @@
         "required",
         "note",
         "general_keys",
-        "listener_keys"
+        "listener_keys",
+        "commands"
       ],
       "properties": {
         "tool": {
@@ -195,6 +196,37 @@
         },
         "listeners_note": {
           "type": "string"
+        },
+        "commands": {
+          "type": "object",
+          "description": "The command strings this project ships in the generated hypridle.conf, with the reason each is spelled the way it is. They are recorded here rather than only in the renderer because one of them is Lua inside a shell string, and the compositor version that decides the spelling is not the daemon the file belongs to.",
+          "additionalProperties": false,
+          "required": [
+            "note",
+            "compositor_verified_against",
+            "lock_cmd",
+            "before_sleep_cmd",
+            "after_sleep_cmd"
+          ],
+          "properties": {
+            "note": {
+              "type": "string",
+              "minLength": 1
+            },
+            "compositor_verified_against": {
+              "type": "string",
+              "minLength": 1
+            },
+            "lock_cmd": {
+              "$ref": "#/definitions/shipped_command"
+            },
+            "before_sleep_cmd": {
+              "$ref": "#/definitions/shipped_command"
+            },
+            "after_sleep_cmd": {
+              "$ref": "#/definitions/shipped_command"
+            }
+          }
         }
       }
     }
@@ -388,6 +420,33 @@
           }
         }
       ]
+    },
+    "shipped_command": {
+      "description": "One command string a generated file ships, plus why it is spelled that way. A rejected_spelling names the form that was replaced and why it could not work, so a later edit cannot quietly go back to it without also deleting the evidence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "note"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rejected_spelling": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rejected_note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     }
   }
 }

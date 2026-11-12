@@ -21,11 +21,16 @@ rather than against a frozen snapshot of the output:
   process inside the lock surface and hangs it if the command never exits;
 * ``hypridle.conf`` declares no listener and nothing in the repository starts
   it, because the shell already watches ``ext_idle_notifier_v1`` and two idle
-  daemons would race to lock and suspend the same session.
+  daemons would race to lock and suspend the same session;
+* the three commands it does declare are the ones the record names, and the
+  resume command is the spelling a Lua-config Hyprland v0.57.2 can actually
+  run -- proved here by running it through ``/bin/sh -c`` the way hypridle does
+  and reading the argv a fake ``hyprctl`` receives.
 """
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -616,6 +621,84 @@ class TheIdleFallback(unittest.TestCase):
         self.assertEqual("pidof noctalia || hyprlock", hl.IDLE_LOCK_CMD)
         # The same shape the hypridle manual's own example uses.
         self.assertIn("pidof", SURFACE["hypridle_fallback"]["note"] + hl.IDLE_COMMENT)
+
+    def test_every_shipped_command_is_the_one_the_record_names(self):
+        commands = SURFACE["hypridle_fallback"]["commands"]
+        self.assertEqual("Hyprland v0.57.2", commands["compositor_verified_against"])
+        for name, constant in (("lock_cmd", hl.IDLE_LOCK_CMD),
+                               ("before_sleep_cmd", hl.IDLE_BEFORE_SLEEP_CMD),
+                               ("after_sleep_cmd", hl.IDLE_AFTER_SLEEP_CMD)):
+            with self.subTest(command=name):
+                self.assertEqual(constant, commands[name]["value"])
+                self.assertGreater(len(commands[name]["note"]), 40)
+        # And the file on disk carries all three, so the record cannot drift
+        # away from the payload it describes.
+        text = hl.emit_idle_conf(hl.render_idle_document(SURFACE), "# test")
+        for name in ("lock_cmd", "before_sleep_cmd", "after_sleep_cmd"):
+            self.assertIn(f"{name} = {commands[name]['value']}", text)
+
+    def test_the_resume_command_is_the_spelling_this_compositor_can_run(self):
+        # Hyprland v0.57.2 answers `hyprctl dispatch X` by evaluating
+        # `return hl.dispatch(X)` as Lua when the config provider is Lua
+        # (src/ipc/s1/Commands.cpp:1332-1350), and this session's config is Lua.
+        command = hl.IDLE_AFTER_SLEEP_CMD
+        self.assertIn("hl.dsp.dpms", command)
+        self.assertIn("action = 'enable'", command)
+        self.assertTrue(command.startswith("hyprctl dispatch "))
+
+    def test_the_manuals_spelling_is_recorded_as_rejected_not_silently_dropped(self):
+        entry = SURFACE["hypridle_fallback"]["commands"]["after_sleep_cmd"]
+        self.assertEqual("hyprctl dispatch dpms on", entry["rejected_spelling"])
+        self.assertNotEqual(entry["value"], entry["rejected_spelling"])
+        self.assertNotIn(entry["rejected_spelling"], hl.IDLE_AFTER_SLEEP_CMD)
+        # The reason has to name both the mechanism that broke it and the
+        # alternative that is not available either, or the next reader will
+        # "simplify" the string straight back.
+        for phrase in ("hyprctl keyword", "hyprctl.1.rst", "unknown request",
+                       "PluginAPI.cpp", "S1.cpp", "Lua-config"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, entry["rejected_note"])
+        for phrase in ("Commands.cpp:1332-1350", "LuaBindingsDispatchers.cpp:1380",
+                       "LuaBindingsInternal.cpp:317-325", "silently toggling",
+                       "hyprctl/src/main.cpp:283-288"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, entry["note"])
+
+    def test_the_resume_command_reaches_hyprctl_as_one_lua_argument(self):
+        """Run it the way hypridle does, and read the argv a fake hyprctl gets.
+
+        hypridle spawns every command through ``/bin/sh -c`` (``spawn()``,
+        hypridle ``src/core/Hypridle.cpp:286-289``, the same at v0.1.8 and on
+        main), so the quoting in the emitted line is what decides how many
+        arguments the compositor sees. No compositor is needed to prove that
+        half, and the rejected spelling is run the same way to show the
+        difference: three arguments, which the compositor would paste into
+        ``hl.dispatch(dpms on)`` and fail to compile.
+        """
+        script = (
+            "#!/bin/sh\n"
+            'for arg in "$@"; do printf "%s\\n" "$arg"; done > "$ARGV_LOG"\n'
+            'printf "ok\\n"\n'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "argv.log"
+            fake = Path(tmp) / "hyprctl"
+            fake.write_text(script.replace("$ARGV_LOG", str(log)), encoding="utf-8")
+            fake.chmod(0o755)
+            env = dict(os.environ, PATH=tmp)
+
+            def argv_for(command: str) -> List[str]:
+                result = subprocess.run(["/bin/sh", "-c", command], capture_output=True,
+                                        text=True, env=env, timeout=30, check=False)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual("ok", result.stdout.strip())
+                return log.read_text(encoding="utf-8").splitlines()
+
+            self.assertEqual(["dispatch", "hl.dsp.dpms({ action = 'enable' })"],
+                             argv_for(hl.IDLE_AFTER_SLEEP_CMD))
+            rejected = SURFACE["hypridle_fallback"]["commands"]["after_sleep_cmd"][
+                "rejected_spelling"]
+            self.assertEqual(["dispatch", "dpms", "on"], argv_for(rejected))
 
     def test_an_unknown_hypridle_variable_is_refused(self):
         doc = hl.render_idle_document(SURFACE)

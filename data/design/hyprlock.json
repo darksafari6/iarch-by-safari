@@ -682,6 +682,24 @@
         "note": "Re-runs condition_cmd every N seconds while the user stays idle, firing on-timeout as soon as it succeeds. 0 disables retrying and skips the deferred on-timeout for this idle cycle. Checked on hypridle's ~5 s tick, so smaller values are effectively rounded up."
       }
     },
-    "listeners_note": "Any number of listener { } blocks may appear, in any order. This project's file declares none: with no listener, hypridle only runs the general commands, which is exactly the fallback role -- lock before sleep, and lock on a D-Bus lock event -- with no second set of idle timers to disagree with the shell's."
+    "listeners_note": "Any number of listener { } blocks may appear, in any order. This project's file declares none: with no listener, hypridle only runs the general commands, which is exactly the fallback role -- lock before sleep, and lock on a D-Bus lock event -- with no second set of idle timers to disagree with the shell's.",
+    "commands": {
+      "note": "The three command strings .config/hypr/hypridle.conf ships, recorded because two of them are shell syntax and one of them is Lua, and the hypridle manual alone does not show that. hypridle runs every command through /bin/sh -c (spawn(), hypridle src/core/Hypridle.cpp:286-289, the same at v0.1.8 and on main), which is what makes the || in lock_cmd and the quoting in after_sleep_cmd work at all; the six general:*_cmd values are plain Hyprlang STRINGs (hypridle src/config/ConfigManager.cpp:66-71). None of the three is built from user input, so there is no string to escape.",
+      "compositor_verified_against": "Hyprland v0.57.2",
+      "lock_cmd": {
+        "value": "pidof noctalia || hyprlock",
+        "note": "Prefer the lock surface that is already running and only start a second one when it is not -- the same `pidof x || y` shape the hypridle manual's own example uses. The shell's lock screen reads ~/.config/noctalia/config.toml; hyprlock reads the hyprlock.conf next to this file."
+      },
+      "before_sleep_cmd": {
+        "value": "loginctl lock-session",
+        "note": "Asks logind to lock the session, which the shell answers through ext_session_lock_v1 and hyprlock answers directly. Spelled this way in the hypridle manual's example."
+      },
+      "after_sleep_cmd": {
+        "value": "hyprctl dispatch \"hl.dsp.dpms({ action = 'enable' })\"",
+        "note": "The remedy for a display that needs a key press to come back after resume. The spelling is the compositor's rather than the daemon's: Hyprland v0.57.2 answers `hyprctl dispatch X` by evaluating `return hl.dispatch(X)` as Lua whenever the config provider is Lua (src/ipc/s1/Commands.cpp:1332-1350), and this session's config is Lua, so the legacy `dpms on` form reaches the Lua compiler as `hl.dispatch(dpms on)` and comes back a syntax error. hl.dsp.dpms is the dispatcher that exists (src/config/lua/bindings/LuaBindingsDispatchers.cpp:1380, one argument, a table), and its action words are enable/on, disable/off and toggle, with anything else silently toggling instead of failing (LuaBindingsInternal.cpp:317-325, field name `action` at LuaBindingsInternal.hpp:151) -- which is why the word is spelled out here rather than left to a default. A successful dispatch replies `ok`, and hyprctl exits 7 only when the reply starts with `error:` (hyprctl/src/main.cpp:283-288), so the reply has to be read rather than merely waited for.",
+        "rejected_spelling": "hyprctl dispatch dpms on",
+        "rejected_note": "What the hypridle manual's after_sleep_cmd example uses and what this file shipped until the compositor's own dispatch path was read. It cannot work on a Lua-config Hyprland v0.57.2, for the reason in the note above. `hyprctl keyword` is no way round it either: no keyword command is registered anywhere at v0.57.2 (only a plugin may register one, src/plugins/PluginAPI.cpp:357), an unregistered request answers `unknown request` (src/ipc/s1/S1.cpp:107) and hyprctl still exits 0 because that reply does not start with `error:`, and the manual says outright that keyword 'will not work if your config provider is lua (refer to eval)' (docs/hyprctl.1.rst:36-40)."
+      }
+    }
   }
 }
