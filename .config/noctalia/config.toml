@@ -235,6 +235,14 @@ enable_screenshot_sounds = true
 sound_volume = 0.38
 sound_theme = "freedesktop"
 
+# The desktop wallpaper. One named transition, and none at the Performance intensity: the shell animates a change on its own timer, so neither Hyprland's animations:enabled nor the shell's own [shell.animation] reaches it.
+[wallpaper]
+fill_color = "surface_container"
+transition = ["fade"]
+transition_duration = 100.0
+edge_smoothness = 0.3
+transition_on_startup = true
+
 # Idle behaviours. The shell watches ext_idle_notifier_v1 itself, so .config/hypr/hypridle.conf ships unlaunched rather than racing it.
 [idle]
 pre_action_fade_seconds = 2.0

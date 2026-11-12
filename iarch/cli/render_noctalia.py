@@ -239,6 +239,39 @@ PROFILE: Dict[str, Any] = OrderedDict(
         enable_volume_sounds=True, enable_power_sounds=True,
         enable_screenshot_sounds=True, sound_volume=0.38, sound_theme="freedesktop",
     ),
+    # The desktop wallpaper. transition names one effect for the reason the lock
+    # screen's does: the shell picks one of whatever is listed at random for every
+    # change and randomizes that effect's parameters too
+    # (src/shell/wallpaper/wallpaper.cpp:1486-1490), so upstream's default list of
+    # all eleven means a wallpaper change is now a melt, now a vortex.
+    #
+    # This one is not reachable from either motion switch. Hyprland's
+    # animations:enabled governs the compositor's own animated config values and
+    # nothing inside another process, and the shell's [shell.animation] is ignored
+    # here on purpose: upstream says so in terms, animateTimer takes neither the
+    # animation-speed multiplier nor the animations-enabled toggle because
+    # "disabling animations must not skip the crossfade" (wallpaper.cpp:1516-1518).
+    # So a Performance intensity that only turned off animation would still
+    # crossfade every change, and the switch that actually turns this off is an
+    # empty transition list (wallpaper.cpp:1474-1479). That is what
+    # wallpaper_section emits when motion is off.
+    #
+    # transition_on_startup goes with it, because the reader requires a non-empty
+    # list as well: with transition = [] the flag does nothing at all
+    # (wallpaper.cpp:1418), and a true beside an empty list would be a setting that
+    # looks like an effect and is not one.
+    #
+    # edge_smoothness is upstream's default and cannot change a fade, which has no
+    # edge; it is emitted for the reason the lock screen's copy is, so the file
+    # states the value instead of leaving it to change upstream. The directories,
+    # the monitor overrides and the slideshow are all recorded in
+    # data/design/noctalia.json and none is emitted: a path on somebody's disk, an
+    # output name and a preference for changing the picture every half hour are not
+    # repository state.
+    wallpaper=OrderedDict(
+        transition=["fade"],
+        edge_smoothness=0.3,
+    ),
 )
 
 # Colour roles, not hex values, so every edge follows the active palette.
@@ -261,6 +294,10 @@ SECTION_COMMENTS: Dict[str, str] = {
     "control_center.media": "Media tab. The visualizer follows the intensity's motion switch.",
     "notification": "Notification toasts.",
     "audio": "Shell sounds. Notification sounds are off by design.",
+    "wallpaper": "The desktop wallpaper. One named transition, and none at the "
+                 "Performance intensity: the shell animates a change on its own "
+                 "timer, so neither Hyprland's animations:enabled nor the shell's "
+                 "own [shell.animation] reaches it.",
     "lockscreen": "The shell's own lock screen: the one this session shows whenever the "
                   "shell is running, so hyprlock.conf is the fallback. One transition, "
                   "chosen by name, because the shell picks a random one of whatever is "
@@ -502,6 +539,48 @@ def notification_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> D
     return notification
 
 
+def wallpaper_section(tokens: Dict[str, Any], intensity: Dict[str, Any],
+                       intensity_name: str) -> Dict[str, Any]:
+    """The desktop wallpaper: how an image fills an output, and how a change looks.
+
+    This is the surface neither motion switch reaches. Hyprland's
+    ``animations:enabled`` governs the compositor's own animated config values and
+    nothing inside another process; and the shell's own ``[shell.animation]`` is
+    ignored by this animation on purpose -- ``animateTimer`` takes neither the
+    animation-speed multiplier nor the animations-enabled toggle, because
+    "disabling animations must not skip the crossfade"
+    (src/shell/wallpaper/wallpaper.cpp:1516-1518). So ``iarch-anim set off``, the
+    Performance intensity and Game mode all leave this animation running unless this
+    section stops it, and the way to stop it is an empty ``transition`` list, which
+    the reader honours by finishing the change immediately
+    (wallpaper.cpp:1474-1479).
+
+    ``transition_on_startup`` is emitted as its pair. The reader requires a non-empty
+    list before it will animate the first wallpaper of a session
+    (wallpaper.cpp:1418), so with motion off both go off together: a true beside an
+    empty list is a setting that looks like an effect and is not one. With motion on
+    it is what makes the desktop fade in at login rather than appear -- the startup
+    half of this surface, and the reason ``.config/hypr/startup.lua`` needs no reload
+    of its own to make the session look finished.
+
+    ``fill_color`` is a palette role, not a hex value, so letterboxing behind an
+    image that does not cover the output sits on the preset's own surface colour.
+    The directories, the per-monitor overrides and the slideshow are recorded in
+    ``data/design/noctalia.json`` and deliberately not emitted: a path on somebody's
+    disk, an output name and a timer that changes the picture are not repository
+    state, and a slideshow would keep doing the one animation the Performance
+    intensity is asking the session to stop.
+    """
+    motion = intensity["motion"]
+    return OrderedDict(
+        fill_color=FILL_ROLE,
+        transition=list(PROFILE["wallpaper"]["transition"]) if motion["enabled"] else [],
+        transition_duration=wallpaper_transition_ms(tokens, intensity_name),
+        edge_smoothness=PROFILE["wallpaper"]["edge_smoothness"],
+        transition_on_startup=bool(motion["enabled"]),
+    )
+
+
 def render_config(tokens: Dict[str, Any], preset: Dict[str, Any],
                   intensity_name: str) -> Dict[str, Any]:
     intensity = tokens["intensities"][intensity_name]
@@ -513,20 +592,27 @@ def render_config(tokens: Dict[str, Any], preset: Dict[str, Any],
         control_center=control_center_section(intensity),
         notification=notification_section(tokens, intensity),
         audio=OrderedDict(PROFILE["audio"]),
+        wallpaper=wallpaper_section(tokens, intensity, intensity_name),
         idle=idle_section(intensity),
         lockscreen=lockscreen_section(tokens, intensity, intensity_name),
     )
 
 
-def lockscreen_transition_ms(tokens: Dict[str, Any], intensity_name: str) -> float:
-    """The lock transition in milliseconds, snapped to the range's own step.
+def fade_duration_ms(tokens: Dict[str, Any], intensity_name: str,
+                     low: float, high: float, step: float) -> float:
+    """The motion preset's own fadeIn duration, snapped to a key's range and step.
 
-    ``kLockscreenTransitionDurationRange`` is {100, 30000, 100}, so a duration has
-    to be a multiple of 100 ms and cannot go below it. The motion preset's own
-    ``fadeIn`` is the honest source -- 120 ms for smooth, 90 ms for minimal -- and
-    neither is a multiple of 100, so both land on the floor. That is stated rather
-    than hidden: the lock screen fades at the fastest duration upstream allows,
-    which is the nearest thing to the session's own fade that this key can express.
+    Two of the shell's transition keys want a duration and both bound it the same
+    way -- ``kLockscreenTransitionDurationRange`` and
+    ``kWallpaperTransitionDurationRange`` are each {100, 30000, 100}
+    (src/config/schema/ranges.h:49) -- so a duration has to be a multiple of 100 ms
+    and cannot go below it. The motion preset's ``fadeIn`` is the honest source:
+    120 ms for smooth, 90 ms for minimal, and neither is a multiple of 100, so both
+    land on the floor. That is stated rather than hidden -- the surface fades at the
+    fastest duration upstream allows, which is the nearest thing to the session's own
+    fade that these keys can express -- and deriving it here is what keeps the lock
+    screen and the wallpaper fading at the same speed instead of at two numbers
+    somebody picked.
     """
     motion = tokens["intensities"][intensity_name]["motion"]
     path = ANIMATION_DIR / f"{motion['preset']}.json"
@@ -537,11 +623,29 @@ def lockscreen_transition_ms(tokens: Dict[str, Any], intensity_name: str) -> flo
     if not isinstance(fade, dict) or not fade.get("enabled"):
         # Motion off is not a duration: the transition list is what disables the
         # animation, and the caller emits an empty one.
-        return 100.0
+        return low
     duration = float(fade.get("duration_ms", 0))
-    low, high, step = 100.0, 30000.0, 100.0
     snapped = round(duration / step) * step
     return float(min(high, max(low, snapped)))
+
+
+def lockscreen_transition_ms(tokens: Dict[str, Any], intensity_name: str) -> float:
+    """The lock transition in milliseconds; see ``fade_duration_ms``."""
+    return fade_duration_ms(tokens, intensity_name, 100.0, 30000.0, 100.0)
+
+
+def wallpaper_transition_ms(tokens: Dict[str, Any], intensity_name: str) -> float:
+    """The wallpaper transition in milliseconds; see ``fade_duration_ms``.
+
+    The key is named ``transition_duration`` and is documented in milliseconds, but
+    the reader multiplies it: an animation runs for ``|toTime - fromTime| *
+    transition_duration`` (src/shell/wallpaper/wallpaper.cpp:1509), so a full
+    0-to-1 fade lasts exactly this long and a redirected one proportionally less.
+    Upstream's default is 1500 (config_types.h:567); this session fades a wallpaper
+    in its own fade time instead, which is four times shorter and matches the lock
+    screen, the windows and the panels.
+    """
+    return fade_duration_ms(tokens, intensity_name, 100.0, 30000.0, 100.0)
 
 
 def lockscreen_section(tokens: Dict[str, Any], intensity: Dict[str, Any],

@@ -1,0 +1,248 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/startup.schema.json",
+  "title": "The compositor startup surface, and everything this session starts",
+  "description": "Schema for data/design/startup.json. Two things are recorded here and only here: the Lua bindings and event names Hyprland v0.57.2 actually offers a startup module, and the environment variables and commands this session exports and spawns. gen_startup_lua.py emits nothing that is not in this file, so a command nobody wrote a reason for cannot be added by editing the render. The reason is required rather than optional on purpose: the executor discards a command's output and exit status, so a startup command that fails is indistinguishable from one that was never needed, and the only defence is that somebody had to say why it is there.",
+  "type": "object",
+  "required": [
+    "_copyright", "_note", "verified_against", "source", "fetched",
+    "entry_point", "bindings", "events", "executor", "env", "exec_once",
+    "optional_groups", "installer_anchors", "removed", "not_shipped"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string", "minLength": 20 },
+    "verified_against": { "type": "string", "pattern": "^v\\d+\\.\\d+\\.\\d+$" },
+    "source": { "type": "string", "minLength": 20 },
+    "fetched": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "entry_point": {
+      "type": "object",
+      "required": ["file", "required_by", "module_name", "cache_cleared_on_reload", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "file": { "const": ".config/hypr/startup.lua" },
+        "required_by": { "type": "string", "pattern": "^\\.config/hypr/hyprland\\.lua:\\d+$" },
+        "module_name": { "const": "startup" },
+        "cache_cleared_on_reload": {
+          "const": false,
+          "description": "Asserted as a constant because it is a decision with a consequence: were the module in hyprland.lua's cache-clear list, every reload would re-export the environment and register a second handler for an event that fires once per compositor launch."
+        },
+        "note": { "type": "string", "minLength": 40 }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "required": ["hl.env", "hl.exec_cmd", "hl.on"],
+      "additionalProperties": false,
+      "properties": {
+        "hl.env": {
+          "allOf": [{ "$ref": "#/definitions/binding" }],
+          "required": ["dbus_flag"],
+          "properties": {
+            "dbus_flag": {
+              "type": "object",
+              "required": ["behaviour", "source", "first_launch", "why_it_matters"],
+              "additionalProperties": false,
+              "properties": {
+                "behaviour": { "type": "string", "minLength": 40 },
+                "source": { "$ref": "#/definitions/upstream_lines" },
+                "first_launch": { "type": "string", "minLength": 40 },
+                "why_it_matters": { "type": "string", "minLength": 40 }
+              }
+            }
+          }
+        },
+        "hl.exec_cmd": { "$ref": "#/definitions/binding" },
+        "hl.on": { "$ref": "#/definitions/binding" }
+      }
+    },
+    "events": {
+      "type": "object",
+      "required": ["source", "used", "used_note", "known"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "$ref": "#/definitions/upstream_lines" },
+        "used": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z]+(\\.[a-z_]+)+$" },
+          "description": "The events the rendered module registers. tests/test_startup_lua.py asserts every one of them appears in known, which is the offline half of Hyprland's own refusal: an unknown name is a config error listing the known ones."
+        },
+        "used_note": { "type": "string", "minLength": 40 },
+        "known": {
+          "type": "array",
+          "minItems": 30,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z]+(\\.[a-z_]+)+$" }
+        }
+      }
+    },
+    "executor": {
+      "type": "object",
+      "required": ["shell", "source", "note", "consequences"],
+      "additionalProperties": false,
+      "properties": {
+        "shell": { "const": "/bin/sh -c" },
+        "source": { "$ref": "#/definitions/upstream_lines" },
+        "note": { "type": "string", "minLength": 40 },
+        "consequences": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 40 }
+        }
+      }
+    },
+    "env": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/env_entry" }
+    },
+    "exec_once": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/exec_entry" }
+    },
+    "optional_groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "flag", "enabled_by_default", "why", "installer_flips_the_flag", "env"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+          "flag": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "enabled_by_default": { "const": false },
+          "why": { "type": "string", "minLength": 40 },
+          "installer_flips_the_flag": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^[a-z_]+\\.sh:\\d+(-\\d+)?$" }
+          },
+          "env": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/definitions/env_entry" }
+          }
+        }
+      }
+    },
+    "installer_anchors": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Lines both installers rewrite in the rendered file with sed. Each one is a constraint on the renderer, not a note: the render has to keep the anchor line present, alone and spelled exactly, or the installer warns and ships a session missing that piece. tests/test_startup_lua.py asserts every anchor survives a render.",
+      "items": {
+        "type": "object",
+        "required": ["file", "lines", "anchor", "replacement", "match", "whole_line", "why"],
+        "additionalProperties": false,
+        "properties": {
+          "file": { "type": "string", "pattern": "^[a-z_]+\\.sh$" },
+          "lines": { "type": "string", "pattern": "^\\d+(-\\d+)?$" },
+          "anchor": { "type": "string", "minLength": 5 },
+          "whole_line": {
+            "type": "boolean",
+            "description": "How the installer's sed matches: true when the anchor has to be the entire line (a ^...$ expression), false when any line containing it is replaced. The renderer asserts the anchor appears exactly once either way, and when it is false that also means the string may not appear in a comment, because a comment would be replaced too and the file would stop parsing."
+          },
+          "replacement": { "type": "string", "minLength": 1 },
+          "match": { "type": "string", "minLength": 10 },
+          "why": { "type": "string", "minLength": 40 }
+        }
+      }
+    },
+    "removed": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["what", "legacy", "why", "what_replaces_it"],
+        "additionalProperties": false,
+        "properties": {
+          "what": { "type": "string", "minLength": 10 },
+          "legacy": { "type": "string", "pattern": "^legacy/" },
+          "why": { "type": "string", "minLength": 80 },
+          "what_replaces_it": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "not_shipped": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Daemons this session deliberately does not start. Each one is a second implementation of something the shell already owns, so starting it would put two processes on one seat or one bus name.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["why", "recorded_in", "where"],
+        "additionalProperties": false,
+        "properties": {
+          "why": { "type": "string", "minLength": 40 },
+          "recorded_in": { "type": "string", "pattern": "^data/design/[a-z_.]+\\.json$" },
+          "where": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "upstream_lines": {
+      "type": "string",
+      "pattern": "^src/.+(:\\d+(-\\d+)?)(,|$| \\()",
+      "description": "A path inside the pinned upstream release with the line or line range that carries the claim."
+    },
+    "binding": {
+      "type": "object",
+      "required": ["registered_at", "implemented_at", "arguments", "note", "returns"],
+      "additionalProperties": false,
+      "properties": {
+        "registered_at": { "$ref": "#/definitions/upstream_lines" },
+        "implemented_at": { "$ref": "#/definitions/upstream_lines" },
+        "arguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[a-z_]+$" }
+        },
+        "note": { "type": "string", "minLength": 40 },
+        "returns": { "type": "string", "minLength": 1 },
+        "dbus_flag": { "type": "object" }
+      }
+    },
+    "env_entry": {
+      "type": "object",
+      "required": ["name", "value", "why"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" },
+        "value": { "type": "string", "minLength": 1 },
+        "dbus": {
+          "type": "boolean",
+          "description": "Passes true as hl.env's third argument, which makes upstream export the variable into the systemd user environment and the dbus activation environment as well."
+        },
+        "why": { "type": "string", "minLength": 40 }
+      }
+    },
+    "exec_entry": {
+      "type": "object",
+      "required": ["command", "why"],
+      "additionalProperties": false,
+      "properties": {
+        "command": { "type": "string", "minLength": 3 },
+        "why": { "type": "string", "minLength": 40 },
+        "note": { "type": "string", "minLength": 20 },
+        "installer": {
+          "type": "string",
+          "minLength": 5,
+          "description": "Where the package this command runs is installed, so a reader can tell a missing binary from a missing reason."
+        },
+        "installer_rewritten_by": {
+          "type": "string",
+          "pattern": "^[a-z_]+\\.sh:\\d+(-\\d+)?$",
+          "description": "The installer line that replaces this command's whole line in the rendered file."
+        },
+        "provenance": {
+          "type": "string",
+          "minLength": 10,
+          "description": "What this entry replaces, or where it came from, when it is not new."
+        }
+      }
+    }
+  }
+}

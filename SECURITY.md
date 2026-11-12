@@ -145,7 +145,7 @@ repository writes two things that touch it and refuses to write a third.
   installed, every wallpaper change would raise an authentication dialog.
   `[shell.greeter_sync] privilege_command` is a prefix the shell appends `--sync`
   to and runs as root, so the renderer refuses it rather than emitting one.
-- **One polkit agent, started by the session.** `.config/hypr/startup.lua:19`
+- **One polkit agent, started by the session.** `.config/hypr/startup.lua:22`
   starts `polkit-gnome-authentication-agent-1` (`xfce-polkit` on Fedora), which
   is what the Sync prompt appears in. The shell's own agent stays off, because
   two agents on one seat compete for the same request.
@@ -165,6 +165,21 @@ back; it is maintained for correctness but not hardened further, and running
 Runtime helper scripts under `scripts/` are read-only or allowlisted:
 `iarch-healthcheck.sh` changes nothing, and `iarch-control-center.sh` only sends
 shell IPC commands from a fixed list.
+
+`.config/hypr/startup.lua` is the only file in the payload that starts programs, and
+it is rendered from `data/design/startup.json`, which will not accept a command
+without a reason beside it. Seven commands: a polkit authentication agent, a keyring,
+two portal units, the shell, a clipboard keeper and an audio service, plus one
+`systemctl --user import-environment`. Each runs as `/bin/sh -c` in a child whose
+output the compositor discards (`Executor.cpp:198-205` at v0.57.2), so a failure is
+silent by construction — which is why the record demands a reason per entry, why the
+renderer refuses a command that begins with `[` (upstream would parse it as an
+execution rule) and why `scripts/iarch-healthcheck.sh`, not this file, is what reports
+a service that did not come up. No daemon is started that would race one the shell
+already owns: no hypridle, no hyprlock, no second notification daemon, each absence
+recorded with the reason. Nothing in it is privileged, and nothing reloads the
+compositor at startup any more — the v4 session's `exec-once = hyprctl reload &` is
+recorded as removed, because a second parse discards runtime state no file records.
 
 The two mode switches send IPC and nothing else. `iarch-gamemode` runs
 `iarch-theme` and `iarch-anim` in-process and then asks the compositor and the

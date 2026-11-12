@@ -9,6 +9,7 @@ a preset, renders a configuration file, and can verify what it previously wrote:
 | `python3 iarch/cli/gen_wallpapers.py` | `assets/wallpapers/generated/*.webp` | that the shipped art is 4K, WebP, inside 600 KB and rendered by some preset |
 | `python3 iarch/cli/gen_glass_lua.py` | `~/.config/hypr/generated/glass.lua` | that the committed default matches a fresh render of the tokens |
 | `python3 iarch/cli/gen_animations_lua.py` | `~/.config/hypr/generated/animations.lua` | that the committed default matches a fresh render of the default intensity's motion preset |
+| `python3 iarch/cli/gen_startup_lua.py` | `~/.config/hypr/startup.lua` | that the committed module matches a fresh render of `data/design/startup.json`, that every event it registers is one Hyprland dispatches, and that the two lines `install.sh` and `fedora_install.sh` rewrite with `sed` are each still in it exactly once |
 | `python3 iarch/cli/render_noctalia.py` | `~/.config/noctalia/config.toml` and its palette | that the committed shell config and all six palettes match a fresh render |
 | `python3 iarch/cli/render_hyprlock.py` | `~/.config/hypr/hyprlock.conf` and `~/.config/hypr/hypridle.conf` | that the committed lock screen and the unlaunched idle fallback match a fresh render, and that neither leaves the recorded surface |
 | `python3 iarch/cli/render_gtk_css.py` | `~/.config/gtk-4.0/gtk.css` and `~/.config/gtk-3.0/gtk.css` | that the committed sheets match a fresh render of the tokens |

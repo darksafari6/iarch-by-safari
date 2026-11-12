@@ -1405,5 +1405,234 @@ class LockScreen(unittest.TestCase):
                 self.assertEqual(doc["lockscreen"], parsed["lockscreen"])
 
 
+class Wallpaper(unittest.TestCase):
+    """The desktop wallpaper: the one animation the compositor's switch cannot reach.
+
+    Three findings drove these tests, and all three are read out of Noctalia v5.4.1
+    rather than assumed:
+
+    * the shell picks one of the *listed* transitions at random for every change and
+      randomizes that effect's own parameters too
+      (``src/shell/wallpaper/wallpaper.cpp:1486-1490``), so upstream's default list
+      of all eleven means a wallpaper change is now a melt, now a vortex;
+    * the transition runs on the shell's own timer and neither motion switch reaches
+      it: Hyprland's ``animations:enabled`` governs the compositor's own animated
+      values, and the shell's ``[shell.animation]`` is ignored here on purpose --
+      upstream's own comment says "disabling animations must not skip the crossfade"
+      (``wallpaper.cpp:1516-1518``). So ``iarch-anim set off``, the Performance
+      intensity and Game mode all leave this animation running unless *this* section
+      stops it, and the way to stop it is an empty ``transition`` list
+      (``wallpaper.cpp:1474-1479``);
+    * ``transition_duration`` is a scale, not a duration: the animation runs for
+      ``|toTime - fromTime| * transition_duration`` (``wallpaper.cpp:1509``).
+
+    ``[wallpaper]`` also carries app-managed state -- ``wallpaper.default``,
+    ``wallpaper.last``, ``wallpaper.monitors`` and ``wallpaper.favorite`` are
+    accepted as unknown paths so the shell can remember what somebody picked
+    (``src/config/schema/config_sections.cpp:44-49``) -- and none of it is written
+    here, because a chosen wallpaper is not repository state.
+    """
+
+    # config_schema.cpp:1863-1886 wallpaperSchema(), in declaration order.
+    KEYS = ["enabled", "fill_mode", "fill_color", "transition", "transition_duration",
+            "edge_smoothness", "transition_on_startup", "directory", "directory_light",
+            "directory_dark", "per_monitor_directories", "automation", "monitor"]
+
+    # config_types.h:1035-1046 kWallpaperTransitions, alphabetically as declared.
+    TRANSITIONS = ["diamond", "disc", "fade", "golden", "honeycomb", "melt", "pixel",
+                   "stripes", "vortex", "wipe", "zoom"]
+
+    # What the renderer emits. Everything else in KEYS is recorded and left alone.
+    EMITTED = ["fill_color", "transition", "transition_duration", "edge_smoothness",
+               "transition_on_startup"]
+
+    def setUp(self):
+        self.spec = SURFACE["sections"]["wallpaper"]
+        self.doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.wallpaper = self.doc["wallpaper"]
+
+    def test_the_record_covers_every_setting_upstream_declares(self):
+        self.assertEqual("wallpaperSchema", self.spec["schema"])
+        self.assertEqual(sorted(self.KEYS), sorted(self.spec["keys"]))
+
+    def test_every_emitted_key_is_one_upstream_declares(self):
+        for key in self.wallpaper:
+            with self.subTest(setting=key):
+                self.assertIn(key, self.KEYS)
+
+    def test_the_emitted_keys_are_exactly_the_ones_this_project_chose(self):
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                self.assertEqual(self.EMITTED, list(render(preset, intensity)["wallpaper"]))
+
+    def test_the_transition_vocabulary_is_the_upstream_constant(self):
+        self.assertEqual(self.TRANSITIONS, self.spec["keys"]["transition"]["enum"])
+        self.assertEqual("kWallpaperTransitions",
+                         self.spec["keys"]["transition"]["enum_constant"])
+
+    def test_the_record_says_the_shell_picks_one_transition_at_random(self):
+        note = self.spec["keys"]["transition"]["note"]
+        self.assertIn("AT RANDOM", note)
+        self.assertIn("wallpaper.cpp:1486-1490", note)
+        # The effect's parameters are randomized too, so naming one effect is the
+        # strongest determinism this key can express -- and the record says the
+        # empty list is how the animation is disabled rather than shortened.
+        self.assertIn("wallpaper.cpp:1474-1479", note)
+
+    def test_one_transition_is_emitted_because_eleven_would_be_a_random_one(self):
+        self.assertEqual(["fade"], self.wallpaper["transition"])
+
+    def test_the_record_says_the_master_animation_switch_cannot_reach_this_one(self):
+        """The sentence that stops a reader assuming animations:enabled covers it."""
+        note = self.spec["note"]
+        self.assertIn("wallpaper.cpp:1516-1518", note)
+        self.assertIn("animations-enabled", note)
+        self.assertIn("[shell.animation]", note)
+        self.assertIn("Performance", note)
+        comment = noctalia.SECTION_COMMENTS["wallpaper"]
+        self.assertIn("neither Hyprland's animations:enabled nor the shell's", comment)
+        self.assertIn("[shell.animation]", comment)
+        # And the shipped file carries that comment, not only the record.
+        self.assertIn(comment, (noctalia.REPO_CONFIG).read_text(encoding="utf-8"))
+
+    def test_motion_off_empties_the_list_rather_than_trusting_a_switch_that_cannot_see_it(self):
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                enabled = TOKENS["intensities"][intensity]["motion"]["enabled"]
+                self.assertEqual(["fade"] if enabled else [],
+                                 render(preset, intensity)["wallpaper"]["transition"])
+
+    def test_the_startup_transition_is_emitted_as_the_list_s_pair(self):
+        """wallpaper.cpp:1418 animates the first wallpaper only if the list is non-empty."""
+        self.assertIn("wallpaper.cpp:1418", self.spec["keys"]["transition_on_startup"]["note"])
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                section = render(preset, intensity)["wallpaper"]
+                enabled = TOKENS["intensities"][intensity]["motion"]["enabled"]
+                self.assertIs(enabled, section["transition_on_startup"])
+                # The pairing is the point: a true beside an empty list is a setting
+                # that looks like an effect and is not one.
+                self.assertEqual(bool(section["transition"]), section["transition_on_startup"])
+
+    def test_the_duration_is_the_preset_s_own_fade_snapped_to_the_range(self):
+        low, high, step = self.spec["keys"]["transition_duration"]["range"]
+        self.assertEqual([100.0, 30000.0, 100.0], [low, high, step])
+        self.assertEqual("kWallpaperTransitionDurationRange",
+                         self.spec["keys"]["transition_duration"]["range_constant"])
+        for intensity in sorted(TOKENS["intensities"]):
+            duration = noctalia.wallpaper_transition_ms(TOKENS, intensity)
+            with self.subTest(intensity=intensity):
+                self.assertEqual(0.0, duration % step)
+                self.assertLessEqual(low, duration)
+                self.assertLessEqual(duration, high)
+
+    def test_the_lock_screen_and_the_wallpaper_fade_at_the_same_speed(self):
+        """Two keys, one derivation: neither surface gets a number somebody picked."""
+        for intensity in sorted(TOKENS["intensities"]):
+            with self.subTest(intensity=intensity):
+                self.assertEqual(noctalia.lockscreen_transition_ms(TOKENS, intensity),
+                                 noctalia.wallpaper_transition_ms(TOKENS, intensity))
+        self.assertEqual(100.0, noctalia.wallpaper_transition_ms(TOKENS, "frosted"))
+
+    def test_the_record_says_the_duration_is_a_scale_rather_than_a_duration(self):
+        note = self.spec["keys"]["transition_duration"]["note"]
+        self.assertIn("|toTime - fromTime|", note)
+        self.assertIn("wallpaper.cpp:1509", note)
+        self.assertIn("1500.0", note, "upstream's default, so the difference is visible")
+
+    def test_the_fill_colour_is_a_palette_role_and_not_a_hex_value(self):
+        self.assertEqual(noctalia.FILL_ROLE, self.wallpaper["fill_color"])
+        self.assertIn(self.wallpaper["fill_color"], SURFACE["color_roles"])
+        self.assertNotRegex(self.wallpaper["fill_color"], HEX)
+        color_note = self.spec["keys"]["fill_color"]["color_note"]
+        self.assertIn("palette role token or a hex colour", color_note)
+        self.assertIn("color_spec.h:8", color_note)
+
+    def test_edge_smoothness_is_recorded_as_inert_for_a_fade_and_still_emitted(self):
+        note = self.spec["keys"]["edge_smoothness"]["note"]
+        self.assertIn("cannot change what is on screen", note)
+        self.assertEqual(0.3, self.wallpaper["edge_smoothness"])
+        low, high, step = self.spec["keys"]["edge_smoothness"]["range"]
+        self.assertEqual([0.0, 1.0, 0.01], [low, high, step])
+        self.assertEqual("kUnitRange", self.spec["keys"]["edge_smoothness"]["range_constant"])
+
+    def test_the_machine_specific_keys_are_recorded_but_never_emitted(self):
+        for key in ("enabled", "fill_mode", "directory", "directory_light", "directory_dark",
+                    "per_monitor_directories", "automation", "monitor"):
+            with self.subTest(setting=key):
+                self.assertIn(key, self.spec["keys"])
+                self.assertIn("Not emitted", self.spec["keys"][key]["note"])
+        for preset, intensity in COMBINATIONS:
+            section = render(preset, intensity)["wallpaper"]
+            for key in ("directory", "directory_light", "directory_dark",
+                        "per_monitor_directories", "automation", "monitor"):
+                with self.subTest(preset=preset, intensity=intensity, setting=key):
+                    self.assertNotIn(key, section)
+
+    def test_the_slideshow_is_recorded_with_the_range_upstream_bounds_it_by(self):
+        automation = self.spec["keys"]["automation"]
+        self.assertEqual("wallpaperAutomationSchema", automation["table"])
+        self.assertEqual(sorted(["enabled", "interval_seconds", "order", "recursive",
+                                 "pause_on_fullscreen"]), sorted(automation["keys"]))
+        low, high, step = automation["keys"]["interval_seconds"]["range"]
+        self.assertEqual([1, 86400, 1], [low, high, step])
+        self.assertEqual("kWallpaperAutomationIntervalRange",
+                         automation["keys"]["interval_seconds"]["range_constant"])
+        self.assertEqual(["random", "alphabetical"], automation["keys"]["order"]["enum"])
+        # A slideshow is a timer that keeps doing the one animation the Performance
+        # intensity is asking the session to stop, and the record says so.
+        self.assertIn("transition", automation["note"])
+
+    def test_the_monitor_override_table_is_recorded_as_a_named_map(self):
+        monitor = self.spec["keys"]["monitor"]
+        self.assertTrue(monitor["named_map"])
+        self.assertEqual("wallpaperMonitorSchema", monitor["table"])
+        self.assertEqual(["directory", "directory_dark", "directory_light", "enabled",
+                          "fill_color", "match"], sorted(monitor["keys"]))
+
+    def test_the_app_managed_state_is_never_written(self):
+        text = noctalia.emit_toml(self.doc, "# test")
+        for key in ("wallpaper.default", "wallpaper.last", "wallpaper.monitors",
+                    "wallpaper.favorite"):
+            with self.subTest(state=key):
+                self.assertNotIn(key, text)
+        self.assertIn("config_sections.cpp:44-49", self.spec["note"])
+
+    def test_an_invented_transition_is_refused(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["wallpaper"]["transition"] = ["dissolve"]
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("dissolve", problems[0])
+
+    def test_a_number_outside_its_range_is_refused_rather_than_clamped(self):
+        for key, value in (("transition_duration", 50.0), ("transition_duration", 31000.0),
+                           ("edge_smoothness", 1.5), ("edge_smoothness", -0.1)):
+            doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+            doc["wallpaper"][key] = value
+            with self.subTest(setting=key, value=value):
+                problems = noctalia.validate(doc, SURFACE)
+                self.assertEqual(1, len(problems))
+                self.assertIn("outside", problems[0])
+
+    def test_a_wrong_type_is_refused(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["wallpaper"]["transition_on_startup"] = "yes"
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("not a boolean", problems[0])
+
+    def test_the_section_round_trips_through_a_toml_parser(self):
+        for intensity in sorted(TOKENS["intensities"]):
+            with self.subTest(intensity=intensity):
+                doc = render(noctalia.DEFAULT_PRESET, intensity)
+                self.assertEqual([], noctalia.validate(doc, SURFACE))
+                parsed = tomllib.loads(noctalia.emit_toml(doc, "# test"))
+                self.assertEqual(doc["wallpaper"], parsed["wallpaper"])
+
+    def test_the_shipped_payload_carries_the_section(self):
+        parsed = tomllib.loads(noctalia.REPO_CONFIG.read_text(encoding="utf-8"))
+        self.assertEqual(self.wallpaper, parsed["wallpaper"])
+
 if __name__ == "__main__":
     unittest.main()

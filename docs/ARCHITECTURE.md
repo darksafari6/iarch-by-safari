@@ -22,6 +22,8 @@ the map. Read it before changing anything.
 │   ├── hypr/                 Compositor configuration, Lua API only -- with two exceptions.
 │   │   ├── generated/glass.lua       Rendered from the design tokens; never edited.
 │   │   ├── generated/animations.lua  Rendered from the motion tokens; never edited.
+│   │   ├── startup.lua       Rendered from data/design/startup.json: the environment, the
+│   │   │                     autostart commands, and the two lines both installers rewrite.
 │   │   ├── hyprlock.conf     Rendered lock screen. hyprlock is its own binary and searches
 │   │   │                     for this exact filename, which is why a generated file sits
 │   │   │                     beside the Lua payload instead of under generated/.
@@ -48,6 +50,8 @@ the map. Read it before changing anything.
 │   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
 │   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
 │   │   ├── gen_animations_lua.py  Hyprland curves and animation leaves from a motion preset.
+│   │   ├── gen_startup_lua.py  The compositor startup module from data/design/startup.json,
+│   │   │                      with both installers' sed anchors asserted in the render.
 │   │   ├── render_noctalia.py Shell config.toml and one palette per preset, from the same tokens.
 │   │   ├── render_hyprlock.py The lock screen and the unlaunched idle fallback, from the same
 │   │   │                      tokens: hyprlock's blur *is* the intensity's blur recipe.
@@ -78,6 +82,8 @@ the map. Read it before changing anything.
 │   │   ├── kvantum.json    The Kvantum theme keys, types and integer bounds, from the parser.
 │   │   ├── fontconfig.json The fontconfig XML elements and attributes the DTD declares.
 │   │   ├── animations.json The Hyprland animation leaves, per-leaf styles and curve shapes.
+│   │   ├── startup.json    The compositor startup surface: three bindings, the event names
+│   │   │                   hl.on accepts, and the reason beside every variable and command.
 │   │   ├── animations/     Five motion presets: named curves and per-event durations and styles.
 │   │   └── presets/        Six palettes; each must clear the WCAG gate to apply.
 │   ├── schemas/              JSON Schema for every file above; CI validates defaults against them.
@@ -174,7 +180,7 @@ matches on is not. `tools/branding_lint.py` encodes that line.
 ```
 display manager (greetd) ──> Hyprland ──> .config/hypr/hyprland.lua
                                               ├── monitors.lua   displays and scaling
-                                              ├── startup.lua    environment, autostart, shell launch
+                                              ├── startup.lua    environment, autostart, shell launch (rendered)
                                               ├── inputs.lua     keyboard and pointer
                                               ├── keybind.lua    every shortcut, each with a description
                                               ├── windowrules.lua  per-application rules
@@ -348,6 +354,7 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `python3 iarch/cli/gen_wallpapers.py --check` | Generated wallpapers exist, are 4K WebP and inside 600 KB; nothing orphaned |
 | `python3 iarch/cli/gen_glass_lua.py --check` | The committed `glass.lua` still matches a fresh render of the tokens |
 | `python3 iarch/cli/gen_animations_lua.py --check` | The committed `animations.lua` still matches a fresh render of the default intensity's motion preset |
+| `python3 iarch/cli/gen_startup_lua.py --check` | The committed `startup.lua` still matches a fresh render of the startup record, and both installers' `sed` anchors are still in it |
 | `python3 iarch/cli/render_noctalia.py --check` | The committed `config.toml` and all six palettes still match a fresh render |
 | `python3 iarch/cli/render_hyprlock.py --check` | The committed `hyprlock.conf` and `hypridle.conf` still match a fresh render |
 | `python3 iarch/cli/render_gtk_css.py --check --repo` | The committed GTK 4 and GTK 3 sheets still match a fresh render |

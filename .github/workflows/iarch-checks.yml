@@ -103,6 +103,7 @@ jobs:
           python iarch/cli/gen_wallpapers.py --check  # shipped 4K WebP art matches its presets
           python iarch/cli/gen_glass_lua.py --check    # shipped glass.lua matches the tokens
           python iarch/cli/gen_animations_lua.py --check  # shipped animations.lua matches the motion tokens
+          python iarch/cli/gen_startup_lua.py --check  # shipped startup.lua matches the startup record, installers' sed anchors intact
           python iarch/cli/render_noctalia.py --check  # shipped config.toml + palettes match the presets
           python iarch/cli/render_hyprlock.py --check  # shipped hyprlock.conf + hypridle.conf match a fresh render
           python iarch/cli/render_gtk_css.py --check --repo  # shipped GTK sheets match the tokens
@@ -134,6 +135,7 @@ jobs:
               "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
               "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",
               "data/design/animations.json": "data/schemas/animations.schema.json",
+              "data/design/startup.json": "data/schemas/startup.schema.json",
               "data/licenses.json": "data/schemas/licenses.schema.json",
               # Colour presets are a family under one schema.
               **{

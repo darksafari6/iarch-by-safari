@@ -230,7 +230,7 @@ Two of the sixteen colours travel under names that no longer exist in the shell.
 
 **Auto-sync stays off.** Each sync elevates through `pkexec`, and the packaged polkit action `org.noctalia.greeter.sync-appearance` is `auth_admin` in all three states, so every sync prompts unless somebody installed a site-local passwordless rule for that account (`sudo noctalia-greeter passwordless-sync enable <user>`). This repository never runs that command — granting passwordless execution of a root helper is yours to decide, not a payload's — so `[shell.greeter_sync] auto_sync = true` would mean an authentication dialog on every wallpaper or palette change. A stale login screen is the smaller harm. The renderer refuses the key outright and says why, rather than claiming upstream has no such setting; `[shell.greeter_sync] privilege_command` is refused for a sharper reason, being a prefix the shell appends `--sync` to and runs as root.
 
-For the prompt to appear at all, a polkit agent has to be running in the session, and one is: `.config/hypr/startup.lua:19` starts `polkit-gnome-authentication-agent-1`, replaced with `xfce-polkit` on Fedora. The shell's *own* agent (`[shell] polkit_agent`) stays off for that reason — two agents on one seat compete for the same request.
+For the prompt to appear at all, a polkit agent has to be running in the session, and one is: `.config/hypr/startup.lua:22` starts `polkit-gnome-authentication-agent-1`, replaced with `xfce-polkit` on Fedora. The shell's *own* agent (`[shell] polkit_agent`) stays off for that reason — two agents on one seat compete for the same request.
 
 ### What the login screen does not inherit
 

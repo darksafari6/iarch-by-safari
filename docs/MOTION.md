@@ -212,6 +212,31 @@ length and no easing choice to set from a config file.
 both, and says plainly that `enabled` disables all animated transitions and `speed`
 scales durations globally.
 
+That claim has an exception, and it is worth more than the two keys above. A
+wallpaper change does not go through this switch at all: the shell runs it on its own
+timer, and upstream says so in terms — `animateTimer` takes neither the speed
+multiplier nor the enabled toggle, because "disabling animations must not skip the
+crossfade" (`src/shell/wallpaper/wallpaper.cpp:1516-1518` at v5.4.1). Hyprland's
+`animations:enabled` was never going to reach into another process either. So
+`[shell.animation] enabled = false`, `iarch-anim set off`, the Performance intensity
+and Game mode all leave the desktop crossfading, and the switch that does stop it is
+the wallpaper's own: `[wallpaper] transition = []`, which the reader honours by
+finishing the change immediately (`wallpaper.cpp:1474-1479`).
+
+`render_noctalia.py` therefore emits that section from the same motion switch the
+rest of the session follows: one named `fade` at crystal, frosted and soft, an empty
+list at performance, and `transition_on_startup` as the list's pair — the reader
+animates the first wallpaper of a session only if the list is non-empty
+(`wallpaper.cpp:1418`), so a `true` beside `[]` would be a setting that looks like an
+effect and is not one. One effect rather than upstream's eleven for the reason the
+lock screen has one: the shell picks a listed transition at random for every change
+and randomizes that effect's parameters too (`wallpaper.cpp:1486-1490`). The duration
+is not a second number somebody chose — `transition_duration` is derived from the
+motion preset's own `fadeIn`, snapped to the key's 100 ms floor, by the same function
+the lock screen's duration uses. Note that it is a scale, not a duration: the
+animation runs for `|toTime - fromTime| * transition_duration`
+(`wallpaper.cpp:1509`), so a full fade lasts exactly that long.
+
 **Compiled in**, and therefore consistent but not adjustable:
 
 * Durations come from `src/ui/style.h`: `animFast = 100`, `animNormal = 200`,
@@ -481,8 +506,8 @@ cannot do is see a window arrive, which is why the visual steps are steps.
 
 ## What is not verified
 
-Twenty items in [UNVERIFIED.md](UNVERIFIED.md), each with the evidence that does exist
-and the claim it blocks. Five are about motion: [MOT-01](UNVERIFIED.md) the presets have
+The items in [UNVERIFIED.md](UNVERIFIED.md) that bear on motion, each with the
+evidence that does exist and the claim it blocks. Five are about motion: [MOT-01](UNVERIFIED.md) the presets have
 never been rendered where a window actually opens; [MOT-02](UNVERIFIED.md) whether a leaf set to
 `enabled = false` really stops moving without affecting its parent or siblings;
 [MOT-03](UNVERIFIED.md) how long a spring takes and how far it overshoots, since the
@@ -532,6 +557,22 @@ release the record pins, `main` already carrying two `[clock]` keys v1.7.0 does
 not have; and [GRE-05](UNVERIFIED.md) whether the state directory's mode is
 already correct before an installer runs, two upstream paths agreeing on 0750 and
 neither observed.
+
+Two more are about the desktop's own motion, and both are the same kind of gap:
+[WAL-01](UNVERIFIED.md) whether `[wallpaper] transition = ["fade"]` really fades and
+`[]` really does not, where the random pick, the empty-list early return and the
+decoupling from the global switch are all read out of v5.4.1 and asserted by
+`tests/test_noctalia.py`, and no wallpaper change was ever watched; and
+[WAL-02](UNVERIFIED.md) whether `transition_on_startup = true` animates the first
+wallpaper of a session, the pairing with a non-empty list being verified and the
+login itself not. Two more are about the module that starts the session:
+[START-01](UNVERIFIED.md) whether the seven commands `.config/hypr/startup.lua`
+spawns come up, where the executor discards a child's output and exit status
+(`Executor.cpp:198-205`) so a failure is silent by construction; and
+[START-02](UNVERIFIED.md) whether `hl.env`'s dbus export really reaches the systemd
+user environment and the dbus activation environment, the command upstream builds
+being read at `LuaBindingsConfigRules.cpp:531-541` and no `systemctl --user
+show-environment` ever run after a login.
 
 No duration, easing or effect in this document was chosen because it looked right in
 a mockup and then written down. Where an effect is not supported it says so: GTK 3
