@@ -35,6 +35,9 @@
     "cursor_theme": "",
     "cursor_size": 0
   },
+  "display": {
+    "monitors": []
+  },
   "modes": {
     "game": {
       "active": false
@@ -51,5 +54,5 @@
     "window_height": 720,
     "last_page": "home"
   },
-  "notes": "Repository defaults. Your own copy lives in ~/.config/iarch/settings.json and wins over these values. Version 2 added the sections the settings application owns: glass (overrides on top of an intensity, and per-window opacity), fonts (projected into ~/.config/gtk-4.0/settings.ini and ~/.config/gtk-3.0/settings.ini), startup (autostart entries, projected into ~/.config/autostart/) and app (this window). Sections that another program owns are deliberately absent: the shell's bar, dock, audio, idle and wallpaper keys are read and written through its IPC, the compositor's own leaves through hyprctl, and the power profile through UPower, so this file never holds a second copy that could disagree. preset and effects are derived from theme.intensity and animation by the settings application; see docs/SETTINGS-APP.md."
+  "notes": "Repository defaults. Your own copy lives in ~/.config/iarch/settings.json and wins over these values. Version 2 added the sections the settings application owns: glass (overrides on top of an intensity, and per-window opacity), fonts (projected into ~/.config/gtk-4.0/settings.ini and ~/.config/gtk-3.0/settings.ini), display (one entry per monitor, rendered into ~/.config/hypr/monitors.lua by iarch/cli/gen_monitors_lua.py), startup (autostart entries, projected into ~/.config/autostart/) and app (this window). Sections that another program owns are deliberately absent: the shell's bar, dock, audio, idle and wallpaper keys are read and written through its IPC, the compositor's own leaves through hyprctl, and the power profile through UPower, so this file never holds a second copy that could disagree. preset and effects are derived from theme.intensity and animation by the settings application; see docs/SETTINGS-APP.md."
 }

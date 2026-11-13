@@ -1,0 +1,154 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/monitors.schema.json",
+  "title": "The monitor surface",
+  "description": "A closed record of what the compositor answers for `hyprctl -j monitors` and what `hl.monitor` accepts. The Display page may read a field that is listed here and write a field that is listed here and marked written_by_this_project, and nothing else. tests/test_settings_display.py fails when the page or the generator names something this record does not.",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "description",
+    "verified_against",
+    "source",
+    "read",
+    "write",
+    "refused_by_this_project",
+    "payload",
+    "safety"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string" },
+    "version": { "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "verified_against": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "The compositor release every line cite below was read from, in the same form the other compositor records pin it."
+    },
+    "source": { "type": "string", "minLength": 1 },
+
+    "read": {
+      "type": "object",
+      "required": ["command", "all_command", "note", "text_note", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "command": { "$ref": "#/definitions/argv" },
+        "all_command": { "$ref": "#/definitions/argv" },
+        "note": { "type": "string", "minLength": 1 },
+        "text_note": { "type": "string", "minLength": 1 },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "evidence"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "type": { "enum": ["integer", "number", "string", "boolean", "array", "object"] },
+              "note": { "type": "string" },
+              "evidence": { "$ref": "#/definitions/cite" }
+            }
+          }
+        }
+      }
+    },
+
+    "write": {
+      "type": "object",
+      "required": ["function", "shape", "note", "unknown_field", "merges", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "function": { "const": "hl.monitor" },
+        "shape": { "type": "string", "minLength": 1 },
+        "note": { "type": "string", "minLength": 1 },
+        "unknown_field": { "type": "string", "minLength": 1 },
+        "merges": { "type": "string", "minLength": 1 },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "evidence", "written_by_this_project"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+              "type": { "enum": ["string", "integer", "float", "boolean", "css_gap"] },
+              "required": { "type": "boolean" },
+              "default": { "type": ["string", "number", "boolean"] },
+              "minimum": { "type": "number" },
+              "maximum": { "type": "number" },
+              "accepted": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "refused": { "type": "string" },
+              "note": { "type": "string" },
+              "evidence": { "$ref": "#/definitions/cite" },
+              "written_by_this_project": {
+                "type": "boolean",
+                "description": "False means the field exists and this project refuses to write it; refused_by_this_project says why."
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "refused_by_this_project": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["field", "why"],
+        "additionalProperties": false,
+        "properties": {
+          "field": { "type": "string", "minLength": 1 },
+          "why": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+
+    "payload": {
+      "type": "object",
+      "required": ["path", "required_by", "generated", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "pattern": "^\\.config/hypr/[a-z0-9._-]+\\.lua$" },
+        "required_by": { "type": "string", "minLength": 1 },
+        "generated": { "type": "boolean" },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "safety": {
+      "type": "object",
+      "required": ["revert_seconds", "note", "verify"],
+      "additionalProperties": false,
+      "properties": {
+        "revert_seconds": { "type": "integer", "minimum": 5, "maximum": 60 },
+        "note": { "type": "string", "minLength": 1 },
+        "verify": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+
+  "definitions": {
+    "argv": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "A command as an argument list, never as a string to be parsed by a shell."
+    },
+    "cite": {
+      "type": "string",
+      "pattern": "^src/",
+      "description": "A path in the pinned release, with the line or line range it was read from."
+    }
+  }
+}

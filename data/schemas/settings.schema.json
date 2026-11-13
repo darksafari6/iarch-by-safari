@@ -390,6 +390,59 @@
           "description": "A page id from the registry in iarch/settings-app/iarch_settings/pages/__init__.py. Not an enum here, because the schema would then have to be edited every time a page is added, and an unknown id is already handled: the window opens on Home and says nothing about a page that no longer exists."
         }
       }
+    },
+    "display": {
+      "type": "object",
+      "description": "The Display page. One entry per monitor the user configured, rendered into ~/.config/hypr/monitors.lua by iarch/cli/gen_monitors_lua.py. An empty list is the shipped default and means the identity rule -- output \"\", mode preferred, position auto, scale 1 -- which matches every output and is why a fresh install works on hardware nobody has seen. The shapes below are the ones the compositor's own parser accepts; the bounds and the field list are in data/design/monitors.json, and the generator refuses a value that record does not allow rather than emitting a line the compositor answers with a config error at login. Nothing the compositor reports about a monitor is stored here: the page reads `hyprctl -j monitors` and shows that, so there is no second copy of a resolution or a refresh rate to go stale.",
+      "required": [
+        "monitors"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "monitors": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "required": [
+              "output"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "output": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                "description": "The output name exactly as `hyprctl -j monitors` reported it (DP-1, HDMI-A-2, eDP-1). Restricted to characters that are safe inside a Lua string and inside a filename."
+              },
+              "mode": {
+                "type": "string",
+                "pattern": "^$|^pref[a-z]*$|^highrr[a-z]*$|^highres$|^maxwidth$|^[0-9]{1,5}x[0-9]{1,5}(@[0-9]{1,6}(\\.[0-9]{1,3})?(Hz)?)?$",
+                "description": "A resolution, optionally with a refresh rate. The spellings come from parseMode in src/config/shared/monitor/Parser.cpp at v0.57.2, and the optional Hz suffix is there because availableModes prints `WxH@RR.RRHz` and parseMode reads the rate with stof, which stops at the first character that is not part of a number; the generator additionally requires a WxH form to be one the compositor listed in availableModes, so a resolution nobody can drive is refused here rather than tried on the hardware."
+              },
+              "position": {
+                "type": "string",
+                "pattern": "^$|^auto(-(right|left|up|down|center-right|center-left|center-up|center-down))?$|^-?[0-9]{1,6}x-?[0-9]{1,6}$",
+                "description": "Either one of the nine auto spellings parsePosition accepts, or an XxY offset. An offset without the x is refused by the parser, which is why the pattern requires it."
+              },
+              "scale": {
+                "type": "string",
+                "pattern": "^$|^auto[a-z]*$|^[0-9]{1,3}(\\.[0-9]{1,3})?$",
+                "description": "A string, not a number: MONITOR_FIELDS builds this field with CLuaConfigString, so `scale = 1` unquoted is a parse error. parseScale refuses a value below 0.25 and resets it to 1, and the generator refuses it first with a message that says so."
+              },
+              "transform": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 7,
+                "description": "The wl_output_transform enumeration. 0 is normal, then the three rotations and the four flipped forms."
+              },
+              "disabled": {
+                "type": "boolean",
+                "description": "Switch the output off. The generator refuses to disable the last enabled monitor, because a monitor that is off cannot show the dialog that offers to turn it back on."
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

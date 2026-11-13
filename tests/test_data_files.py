@@ -37,6 +37,9 @@ PAIRS = {
     "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",
     "data/design/animations.json": "data/schemas/animations.schema.json",
     "data/design/startup.json": "data/schemas/startup.schema.json",
+    # The monitor surface: what `hyprctl -j monitors` answers and what
+    # `hl.monitor` accepts, each with the line of v0.57.2 it was read from.
+    "data/design/monitors.json": "data/schemas/monitors.schema.json",
     # The settings application's upstream surface: every GTK, libadwaita and
     # icon name it is allowed to use, each read out of a pinned upstream ref.
     "data/design/adwaita.json": "data/schemas/adwaita.schema.json",

@@ -20,17 +20,28 @@ Two rules shape this package, and both are testable without a display:
   widgets import ``gi`` inside the function that builds them, never at module
   level, which is what keeps a page's definition readable in a test.
 
-The application id is :data:`APP_ID`. It is deliberately *not* the session's
-``dev.safari.iarch`` from ``branding/product.env``: a Wayland compositor matches
-window rules on the application id, and the glass rule that makes this window
-translucent has to name one window rather than every window the session owns.
-Both ids are recorded in ``data/design/adwaita.json`` and in
-``data/design/tokens.json`` under ``app_classes.iarch_app``.
+The application id is :data:`APP_ID`, which is ``IARCH_APP_ID_SETTINGS`` in
+``branding/product.env`` and an anchored pattern in ``data/design/tokens.json``
+under ``app_classes.iarch_app``. It is deliberately *not* the session's
+``dev.safari.iarch``: a Wayland compositor matches a GTK 4 application's window
+rules on its application id, and both patterns are anchored, so
+``^dev\\.safari\\.iarch$`` does not match ``dev.safari.iarch.settings``. Without
+its own entry this window would match no rule at all.
+
+One thing the rule can and cannot do, because it is easy to get backwards: it
+carries ``opacity = 0.88`` and it cannot carry blur. ``WINDOW_RULE_EFFECT_DESCS``
+in Hyprland v0.57.2 has ``no_blur`` and no positive ``blur`` -- a window rule can
+only refuse the blur the session already renders, never ask for it. The blur
+behind this window therefore comes from ``decoration:blur:enabled``, which the
+intensity in ``data/design/tokens.json`` sets, and from ``blur:ignore_opacity``,
+which is what lets that blur show through a 0.88 alpha instead of being multiplied
+away by it. See docs/UNVERIFIED.md SET-01 for what none of this proves without a
+compositor to look at.
 """
 from __future__ import annotations
 
 APP_ID = "dev.safari.iarch.settings"
-"""The Wayland/GTK application id, and the window class the compositor blurs."""
+"""The Wayland/GTK application id, and the window class the glass rule matches."""
 
 DOMAIN = "iarch-settings"
 """The gettext domain. Catalogues live in ``po/`` next to this package."""

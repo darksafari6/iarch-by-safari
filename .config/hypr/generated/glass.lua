@@ -272,6 +272,13 @@ hl.window_rule({
 
 hl.window_rule({
     match = {
+        class = "^dev\\.safari\\.iarch\\.settings$",
+    },
+    opacity = 0.88,
+})
+
+hl.window_rule({
+    match = {
         class = "^iarch-settings$",
     },
     opacity = 0.88,
