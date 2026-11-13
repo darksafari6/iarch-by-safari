@@ -1,8 +1,57 @@
 {
   "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
-  "version": 1,
-  "display_name": "",
-  "role": "",
-  "links": [],
-  "notes": "Repository defaults for the Part 4 contact page. Your own copy lives in ~/.config/iarch/contacts.json."
+  "version": 2,
+  "display_name": "Safari",
+  "role": "Creator of iArch by Safari",
+  "portfolio": {
+    "url": "https://safari-official.vercel.app",
+    "button_label": "Visit My Portfolio",
+    "note": "All my social links and contact details are on my portfolio."
+  },
+  "rows": [
+    {
+      "kind": "portfolio",
+      "label": "Portfolio",
+      "subtitle": "safari-official.vercel.app",
+      "icon": "web-browser-symbolic",
+      "value": "https://safari-official.vercel.app"
+    },
+    {
+      "kind": "email",
+      "label": "Email",
+      "subtitle": "",
+      "icon": "mail-unread-symbolic",
+      "value": ""
+    },
+    {
+      "kind": "github",
+      "label": "GitHub",
+      "subtitle": "",
+      "icon": "accessories-text-editor-symbolic",
+      "value": ""
+    },
+    {
+      "kind": "instagram",
+      "label": "Instagram",
+      "subtitle": "",
+      "icon": "camera-photo-symbolic",
+      "value": ""
+    },
+    {
+      "kind": "tiktok",
+      "label": "TikTok",
+      "subtitle": "",
+      "icon": "camera-video-symbolic",
+      "value": ""
+    },
+    {
+      "kind": "whatsapp",
+      "label": "WhatsApp",
+      "subtitle": "",
+      "icon": "chat-message-new-symbolic",
+      "value": ""
+    }
+  ],
+  "_placeholder_note": "Every row below the first ships with an empty value on purpose, so the person who installs this fills in the ones they use and the Contact page hides the rest: a row whose value is empty is not shown at all, and a row whose value is present but refused by the link validator is shown with the reason instead of being opened. The kinds are identifiers the page matches on, not labels the product chooses — 'github' is where a code profile lives, and the label next to it is the row's own text. Only https, mailto and tel links are ever opened; see iarch/settings-app/iarch_settings/services/links.py, which holds the portfolio address as its single constant.",
+  "notes": "Repository defaults for the Contact page. Your own copy lives in ~/.config/iarch/contacts.json and is merged over these values, so a row you fill in there replaces the empty one here rather than needing this file to be edited."
 }

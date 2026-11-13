@@ -557,7 +557,9 @@ class SettingsSchema(unittest.TestCase):
     def test_the_shipped_default_validates(self):
         default = json.loads((ROOT / "data" / "settings.default.json").read_text())
         jsonschema.validate(default, self.schema)
-        self.assertEqual(default["theme"], {"colour_preset": "midnight-glass", "intensity": "frosted"})
+        self.assertEqual(default["theme"], {"colour_preset": "midnight-glass",
+                                          "intensity": "frosted",
+                                          "colour_mode": "dark", "accent": ""})
 
     def test_a_legacy_settings_file_without_theme_still_validates(self):
         legacy = {"version": 1, "preset": "glass",

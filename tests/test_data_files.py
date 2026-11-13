@@ -24,13 +24,22 @@ PAIRS = {
     "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
     "data/design/tokens.json": "data/schemas/tokens.schema.json",
     "data/design/noctalia.json": "data/schemas/noctalia.schema.json",
+    # The shell IPC verbs this project sends: arguments, choices and the line
+    # of the pinned release each one was read from.
+    "data/design/noctalia-ipc.json": "data/schemas/noctalia-ipc.schema.json",
     "data/design/hyprlock.json": "data/schemas/hyprlock.schema.json",
     "data/design/greeter.json": "data/schemas/greeter.schema.json",
     "data/design/gtk.json": "data/schemas/gtk.schema.json",
+    # The GtkSettings keys the settings app writes into settings.ini, each with
+    # the upstream line its value domain was read from.
+    "data/design/gtk-settings.json": "data/schemas/gtk-settings.schema.json",
     "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
     "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",
     "data/design/animations.json": "data/schemas/animations.schema.json",
     "data/design/startup.json": "data/schemas/startup.schema.json",
+    # The settings application's upstream surface: every GTK, libadwaita and
+    # icon name it is allowed to use, each read out of a pinned upstream ref.
+    "data/design/adwaita.json": "data/schemas/adwaita.schema.json",
     "data/licenses.json": "data/schemas/licenses.schema.json",
     # Colour presets are a family under one schema; expanding the directory keeps
     # a newly added preset mapped automatically, while a JSON file anywhere else

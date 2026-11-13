@@ -1,6 +1,6 @@
 {
   "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
-  "version": 1,
+  "version": 2,
   "preset": "glass",
   "effects": {
     "blur": true,
@@ -10,13 +10,30 @@
   },
   "theme": {
     "colour_preset": "midnight-glass",
-    "intensity": "frosted"
+    "intensity": "frosted",
+    "colour_mode": "dark",
+    "accent": ""
   },
   "animation": {
     "preset": "smooth",
     "speed": 1.0,
     "reduce_motion": false,
     "event_overrides": {}
+  },
+  "glass": {
+    "leaves": {},
+    "per_app_opacity": []
+  },
+  "fonts": {
+    "ui_family": "",
+    "size_pt": 0.0,
+    "antialias": true,
+    "hinting": true,
+    "hint_style": "hintslight",
+    "subpixel": "rgb",
+    "icon_theme": "",
+    "cursor_theme": "",
+    "cursor_size": 0
   },
   "modes": {
     "game": {
@@ -26,5 +43,13 @@
       "active": false
     }
   },
-  "notes": "Repository defaults. Your own copy lives in ~/.config/iarch/settings.json and wins over these values."
+  "startup": {
+    "autostart": []
+  },
+  "app": {
+    "window_width": 1100,
+    "window_height": 720,
+    "last_page": "home"
+  },
+  "notes": "Repository defaults. Your own copy lives in ~/.config/iarch/settings.json and wins over these values. Version 2 added the sections the settings application owns: glass (overrides on top of an intensity, and per-window opacity), fonts (projected into ~/.config/gtk-4.0/settings.ini and ~/.config/gtk-3.0/settings.ini), startup (autostart entries, projected into ~/.config/autostart/) and app (this window). Sections that another program owns are deliberately absent: the shell's bar, dock, audio, idle and wallpaper keys are read and written through its IPC, the compositor's own leaves through hyprctl, and the power profile through UPower, so this file never holds a second copy that could disagree. preset and effects are derived from theme.intensity and animation by the settings application; see docs/SETTINGS-APP.md."
 }

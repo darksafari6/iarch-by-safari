@@ -1,0 +1,460 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/adwaita.schema.json",
+  "title": "The GTK 4, libadwaita and icon-theme surface the settings application may use",
+  "description": "A closed record: a widget, style class, named colour, CSS property, pseudo-class, icon or API call the application names must be listed here, and tests/test_settings_surface.py fails when either side drifts. Everything carries the upstream ref it was read from, because none of it can be executed in this repository's CI.",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "description",
+    "verified_against",
+    "source",
+    "minimum_versions",
+    "introspection",
+    "widgets",
+    "api",
+    "style_classes",
+    "named_colors",
+    "css_properties",
+    "pseudo_classes",
+    "icons",
+    "portability",
+    "rejected"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "type": "string"
+    },
+    "_note": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verified_against": {
+      "type": "object",
+      "required": [
+        "gtk",
+        "libadwaita",
+        "glib",
+        "adwaita_icon_theme",
+        "introspection_versions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "gtk": {
+          "type": "object",
+          "required": [
+            "project",
+            "refs"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "project": {
+              "type": "string",
+              "const": "GNOME/gtk"
+            },
+            "refs": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "libadwaita": {
+          "type": "object",
+          "required": [
+            "project",
+            "ref",
+            "what"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "project": {
+              "type": "string",
+              "const": "GNOME/libadwaita"
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+            },
+            "what": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "glib": {
+          "type": "object",
+          "required": [
+            "project",
+            "ref",
+            "what"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "project": {
+              "type": "string",
+              "const": "GNOME/glib"
+            },
+            "ref": {
+              "type": "string",
+              "minLength": 1
+            },
+            "what": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "adwaita_icon_theme": {
+          "type": "object",
+          "required": [
+            "project",
+            "ref",
+            "what"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "project": {
+              "type": "string",
+              "const": "GNOME/adwaita-icon-theme"
+            },
+            "ref": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+$"
+            },
+            "what": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "introspection_versions": {
+          "type": "object",
+          "required": [
+            "gtk",
+            "adwaita"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "gtk": {
+              "type": "string",
+              "minLength": 1
+            },
+            "adwaita": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "minimum_versions": {
+      "type": "object",
+      "required": [
+        "gtk",
+        "libadwaita",
+        "pygobject"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "gtk": {
+          "$ref": "#/definitions/version_claim"
+        },
+        "libadwaita": {
+          "$ref": "#/definitions/version_claim"
+        },
+        "pygobject": {
+          "type": "object",
+          "description": "The one floor this record does not pin, and it says so rather than inventing a number.",
+          "required": [
+            "version",
+            "why",
+            "evidence"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "version": {
+              "type": "string"
+            },
+            "why": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evidence": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "introspection": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "namespace",
+          "version",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "namespace": {
+            "enum": [
+              "Gtk",
+              "Gdk",
+              "Adw",
+              "Gio",
+              "GLib",
+              "Pango",
+              "PangoCairo"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+(\\.[0-9]+)?$"
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "widgets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "since",
+          "used_for",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^(Gtk|Adw|Gdk)\\.[A-Z][A-Za-z0-9]*$"
+          },
+          "since": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+$"
+          },
+          "used_for": {
+            "type": "string",
+            "minLength": 1
+          },
+          "note": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string",
+            "pattern": "^GNOME/(gtk|libadwaita)@"
+          }
+        }
+      }
+    },
+    "api": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "call",
+          "python",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "call": {
+            "type": "string",
+            "pattern": "^(adw|gtk|g)_[a-z0-9_]+$"
+          },
+          "python": {
+            "type": "string",
+            "minLength": 1
+          },
+          "note": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string",
+            "pattern": "^GNOME/(gtk|libadwaita|glib)@"
+          }
+        }
+      }
+    },
+    "style_classes": {
+      "$ref": "#/definitions/name_list"
+    },
+    "named_colors": {
+      "$ref": "#/definitions/name_list"
+    },
+    "css_properties": {
+      "$ref": "#/definitions/name_list"
+    },
+    "pseudo_classes": {
+      "$ref": "#/definitions/name_list"
+    },
+    "icons": {
+      "type": "object",
+      "required": [
+        "evidence",
+        "names"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "type": "string",
+          "pattern": "^GNOME/adwaita-icon-theme@"
+        },
+        "_note": {
+          "type": "string"
+        },
+        "names": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Icon name to the place in the application that uses it. The value is prose, not a path, so a reader can tell what a missing icon would cost.",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          },
+          "propertyNames": {
+            "pattern": "^[a-z0-9][a-z0-9-]*-symbolic$"
+          }
+        }
+      }
+    },
+    "portability": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "call",
+          "problem",
+          "this_project_uses",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "call": {
+            "type": "string",
+            "pattern": "^(adw|gtk|g)_[a-z0-9_]+$"
+          },
+          "problem": {
+            "type": "string",
+            "minLength": 1
+          },
+          "this_project_uses": {
+            "type": "string",
+            "pattern": "^(adw|gtk|g)_[a-z0-9_]+$"
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "rejected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "spelling",
+          "why",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "spelling": {
+            "type": "string",
+            "minLength": 1
+          },
+          "why": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The upstream files this record was read from, named so a reader can find the line each entry cites."
+    }
+  },
+  "definitions": {
+    "version_claim": {
+      "type": "object",
+      "required": [
+        "version",
+        "why",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+$"
+        },
+        "why": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "name_list": {
+      "type": "object",
+      "required": [
+        "evidence",
+        "names"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "_note": {
+          "type": "string"
+        },
+        "names": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

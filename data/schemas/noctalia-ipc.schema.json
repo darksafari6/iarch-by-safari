@@ -1,0 +1,217 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/noctalia-ipc.schema.json",
+  "title": "The shell IPC verbs this project sends",
+  "description": "A closed record of the commands, their arguments and the line of the pinned release each was read from. The settings application, the two mode switches, the doctor and the control-centre helper may only send a verb listed here, and tests/test_settings_ipc.py fails when a verb in the code is not in this record.",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "description",
+    "verified_against",
+    "source",
+    "verbs",
+    "not_commands",
+    "not_used"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "type": "string"
+    },
+    "_note": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verified_against": {
+      "type": "object",
+      "required": [
+        "project",
+        "ref",
+        "file",
+        "invocation",
+        "reply_note"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "type": "string",
+          "const": "noctalia-dev/noctalia"
+        },
+        "ref": {
+          "type": "string",
+          "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "file": {
+          "type": "string",
+          "const": "src/cli/schema_msg.h"
+        },
+        "invocation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reply_note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "verbs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "verb",
+          "description",
+          "arguments",
+          "evidence",
+          "used_by"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "verb": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Upstream's own one-line description, quoted rather than paraphrased, so a reader can find the entry it came from."
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "required"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "choices": {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "note": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "flags": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "description": "Anything a caller has to know that the arguments do not say: what the reply means, or which of a closed choice list this project actually sends."
+          },
+          "prints": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string",
+            "pattern": "^src/cli/schema_msg\\.h:"
+          },
+          "used_by": {
+            "type": "array",
+            "description": "The callers in this repository. Empty means the verb is recorded because a neighbouring one is, or because a caller was considered and refused -- which not_used_note then says.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "not_used_note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "not_commands": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Names that look like verbs because they are string literals in the same header but are not: positional-argument names and choice values. Listed so nobody adds one to a call and discovers the refusal at runtime.",
+      "items": {
+        "type": "object",
+        "required": [
+          "spelling",
+          "what_it_really_is",
+          "why_it_matters",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "spelling": {
+            "type": "string",
+            "minLength": 1
+          },
+          "what_it_really_is": {
+            "type": "string",
+            "minLength": 1
+          },
+          "why_it_matters": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "pattern": "^src/cli/schema_msg\\.h:"
+          }
+        }
+      }
+    },
+    "not_used": {
+      "type": "array",
+      "description": "Verbs that exist and were deliberately not wired, with the reason. A capability this project refuses is recorded the same way a capability it does not have is, because both change what the product can do.",
+      "items": {
+        "type": "object",
+        "required": [
+          "verb",
+          "why",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "verb": {
+            "type": "string",
+            "minLength": 1
+          },
+          "why": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The upstream files this record was read from, named so a reader can find the line each entry cites."
+    }
+  }
+}
