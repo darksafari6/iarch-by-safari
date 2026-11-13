@@ -1,0 +1,705 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "tool": "hyprlock",
+  "verified_against": "hyprlock (hyprwm) manual at hyprland-wiki main, fetched 2026-11-09",
+  "source": "content/hypr-ecosystem/user/hyprlock.md and content/hypr-ecosystem/user/hypridle.md in hyprwm/hyprland-wiki",
+  "_note": "Everything a generator may put into ~/.config/hypr/hyprlock.conf, recorded with its documented type and default. hyprlock is *forgiving*: an unknown variable is a warning and the lock screen still appears, so a typo silently ships a setting that does nothing. iarch/cli/render_hyprlock.py refuses to write a variable that is not listed here. Types follow hyprlock's own vocabulary: bool, int, float, string, color (rgb()/rgba()), gradient (one or more colors plus an optional angle), layoutxy (vec2, pixels or %). The manual is the only published specification; hyprlock has no JSON schema to validate against and no version tag was fetched, so 'verified_against' names the manual page rather than a release.",
+  "search_path": [
+    "$XDG_CONFIG_HOME/hypr/hyprlock.conf",
+    "$HOME/.config/hypr/hyprlock.conf",
+    "each directory in $XDG_CONFIG_DIRS",
+    "/etc/xdg/hypr/hyprlock.conf"
+  ],
+  "search_path_note": "The first match wins, so the repo's .config/hypr/hyprlock.conf is what a session finds.",
+  "sections": {
+    "general": {
+      "table": "general { }",
+      "keys": {
+        "compositor_fade": {
+          "type": "bool",
+          "default": false,
+          "note": "Fades the lock surface's own opacity together with the compositor's blur contribution, using the fadeIn/fadeOut animations. Falls back to a client-side fade when the compositor does not advertise hyprland_surface_manager_v1. It animates the blur's contribution, not the blur radius."
+        },
+        "disable_screencopy": {
+          "type": "bool",
+          "default": false,
+          "note": "Stops taking the screencopy used for background effects. Useful with a semitransparent background and Hyprland's misc:session_lock_xray enabled."
+        },
+        "fail_timeout": {
+          "type": "int",
+          "default": 2000,
+          "note": "Milliseconds until the UI resets after a failed authentication attempt."
+        },
+        "fractional_scaling": {
+          "type": "int",
+          "default": 2,
+          "note": "0 disables, 1 enables, 2 is auto.",
+          "enum": [
+            0,
+            1,
+            2
+          ],
+          "enum_note": "Documented inline in the general table; hyprlock has no named constant for it."
+        },
+        "hide_cursor": {
+          "type": "bool",
+          "default": false
+        },
+        "ignore_empty_input": {
+          "type": "bool",
+          "default": false,
+          "note": "Skips validation when no password was typed. Enabling it would let Enter on an empty field reach PAM, so this project never does."
+        },
+        "immediate_render": {
+          "type": "bool",
+          "default": false,
+          "note": "Draw widgets immediately; backgrounds show background:color until their background:path resource is available."
+        },
+        "screencopy_mode": {
+          "type": "int",
+          "default": 0,
+          "note": "0 is GPU-accelerated, 1 is CPU-based and slow.",
+          "enum": [
+            0,
+            1
+          ],
+          "enum_note": "Documented inline in the general table."
+        },
+        "text_trim": {
+          "type": "bool",
+          "default": true,
+          "note": "Trims rendered text, to avoid trailing newlines in a command's output."
+        }
+      }
+    },
+    "auth": {
+      "table": "auth { }",
+      "note": "At least one authentication method must be enabled. There is no key for a password file, a hash or an unlock command: hyprlock authenticates through PAM or fprintd and nothing else.",
+      "keys": {
+        "pam:enabled": {
+          "type": "bool",
+          "default": true
+        },
+        "pam:module": {
+          "type": "string",
+          "default": "hyprlock",
+          "note": "The PAM module used for authentication; falls back to 'su' when it is not in /etc/pam.d. This project leaves it at the default rather than naming a module that may not exist on the reader's system."
+        },
+        "fingerprint:enabled": {
+          "type": "bool",
+          "default": false,
+          "note": "Parallel fingerprint authentication through fprintd. Off unless the machine has a scanner and fprintd running; hyprlock reports the failure through the label substitutions $FPRINTPROMPT and $FPRINTFAIL."
+        },
+        "fingerprint:ready_message": {
+          "type": "string",
+          "default": "(Scan fingerprint to unlock)"
+        },
+        "fingerprint:present_message": {
+          "type": "string",
+          "default": "Scanning fingerprint"
+        },
+        "fingerprint:retry_delay": {
+          "type": "int",
+          "default": 250,
+          "note": "Milliseconds after an unrecognized finger before another scan is accepted."
+        }
+      }
+    },
+    "animations": {
+      "table": "animations { }",
+      "note": "hyprlock's animation keyword takes the same shape as Hyprland's (animation = NAME, ENABLED, DURATION_SECONDS, BEZIER), but the STYLE parameter is currently unused by hyprlock, and these durations are its own: they are not read from hyprland.lua and there is no global speed multiplier here.",
+      "keys": {
+        "enabled": {
+          "type": "bool",
+          "default": true
+        }
+      },
+      "repeated": {
+        "bezier": {
+          "type": "string",
+          "default": null,
+          "note": "bezier = NAME, X1, Y1, X2, Y2. Declared once per curve and referenced by name from the animation lines."
+        },
+        "animation": {
+          "type": "string",
+          "default": null,
+          "note": "animation = NAME, ENABLED, DURATION_SECONDS, BEZIER_NAME. The usable names come from hyprlock's own animation tree, recorded below."
+        }
+      },
+      "tree": {
+        "fade": [
+          "fadeIn",
+          "fadeOut"
+        ],
+        "inputField": [
+          "inputFieldColors",
+          "inputFieldFade",
+          "inputFieldWidth",
+          "inputFieldDots"
+        ]
+      },
+      "tree_note": "fadeIn fades to the lock screen and fadeOut back to the session; the inputField names cover the colour and gradient transitions, the fade_on_empty animation, the adaptive-width animation and the individual dots. Naming an animation outside this tree does nothing."
+    }
+  },
+  "widgets": {
+    "positioning": {
+      "note": "Every widget takes monitor (empty = all monitors, or a Hyprland monitor reference such as eDP-1 or desc:...), position (an offset added to the result of alignment, in pixels or %), halign, valign and zindex (larger numbers draw on top; every widget defaults to 0 except background, which defaults to -1).",
+      "keys": {
+        "monitor": {
+          "type": "string",
+          "default": null
+        },
+        "position": {
+          "type": "layoutxy",
+          "default": "0, 0"
+        },
+        "halign": {
+          "type": "string",
+          "default": "center",
+          "enum": [
+            "left",
+            "center",
+            "right",
+            "none"
+          ],
+          "enum_note": "Documented under 'General Remarks'; no named constant."
+        },
+        "valign": {
+          "type": "string",
+          "default": "center",
+          "enum": [
+            "top",
+            "center",
+            "bottom",
+            "none"
+          ],
+          "enum_note": "Documented under 'General Remarks'; no named constant."
+        },
+        "zindex": {
+          "type": "int",
+          "default": 0,
+          "note": "background defaults to -1."
+        }
+      }
+    },
+    "shadowable": {
+      "note": "Available on the widgets marked Shadowable: background, shape, input-field and label. shadow_passes = 0 disables the shadow entirely.",
+      "keys": {
+        "shadow_passes": {
+          "type": "int",
+          "default": 0
+        },
+        "shadow_size": {
+          "type": "int",
+          "default": 3
+        },
+        "shadow_color": {
+          "type": "color",
+          "default": "rgb(0,0,0)"
+        },
+        "shadow_boost": {
+          "type": "float",
+          "default": 1.2,
+          "note": "Multiplies the shadow's opacity."
+        }
+      }
+    },
+    "clickable": {
+      "note": "Available on label, image and shape only. The input field is *not* clickable, so nothing on a lock screen can be wired to a command by clicking it.",
+      "keys": {
+        "onclick": {
+          "type": "string",
+          "default": null,
+          "note": "Arbitrary command run when the widget is clicked. This project emits none: a lock screen that runs a command on click is a lock screen with an unlock bypass one misclick away."
+        }
+      }
+    },
+    "background": {
+      "table": "background { }",
+      "shadowable": true,
+      "note": "If path is empty or missing the widget fills with color; if path is the literal word screenshot, a capture of the desktop taken at launch is used. The blur options are Hyprland's own, so they take the same meaning -- and the same numbers -- as decoration:blur in hyprland.lua.",
+      "keys": {
+        "path": {
+          "type": "string",
+          "default": null,
+          "note": "An image path, the word screenshot, or empty to fill with color. png, jpg and webp; no animations."
+        },
+        "color": {
+          "type": "color",
+          "default": "rgba(17, 17, 17, 1.0)",
+          "note": "Fallback background colour."
+        },
+        "blur_passes": {
+          "type": "int",
+          "default": 0,
+          "note": "Number of passes; 0 disables blurring.",
+          "range": [
+            0,
+            10
+          ]
+        },
+        "blur_size": {
+          "type": "int",
+          "default": 7,
+          "note": "Blur size, i.e. distance.",
+          "range": [
+            0,
+            100
+          ]
+        },
+        "noise": {
+          "type": "float",
+          "default": 0.0117,
+          "range": [
+            0,
+            1
+          ]
+        },
+        "contrast": {
+          "type": "float",
+          "default": 0.8916,
+          "range": [
+            0,
+            2
+          ]
+        },
+        "brightness": {
+          "type": "float",
+          "default": 0.8172,
+          "range": [
+            0,
+            2
+          ]
+        },
+        "vibrancy": {
+          "type": "float",
+          "default": 0.1696,
+          "note": "Saturation boost applied to blurred colours.",
+          "range": [
+            0,
+            1
+          ]
+        },
+        "vibrancy_darkness": {
+          "type": "float",
+          "default": 0.05,
+          "note": "How strongly vibrancy affects dark areas. Hyprland's own blur has no equivalent leaf, so this one has no counterpart in data/design/tokens.json."
+        },
+        "reload_time": {
+          "type": "int",
+          "default": -1,
+          "note": "Seconds between background reloads; 0 reloads on SIGUSR2. Ignored when path is screenshot."
+        },
+        "reload_cmd": {
+          "type": "string",
+          "default": null,
+          "note": "Command whose output becomes the new path; empty keeps the old one."
+        },
+        "crossfade_time": {
+          "type": "float",
+          "default": -1.0,
+          "note": "Seconds of cross-fade between the old and new background on reload; a negative value means no cross-fade."
+        }
+      }
+    },
+    "shape": {
+      "table": "shape { }",
+      "shadowable": true,
+      "clickable": true,
+      "keys": {
+        "size": {
+          "type": "layoutxy",
+          "default": "100, 100"
+        },
+        "color": {
+          "type": "color",
+          "default": "rgba(17, 17, 17, 1.0)"
+        },
+        "rounding": {
+          "type": "int",
+          "default": -1,
+          "note": "Negative values give a circle."
+        },
+        "rotate": {
+          "type": "int",
+          "default": 0,
+          "note": "Degrees, counter-clockwise."
+        },
+        "border_size": {
+          "type": "int",
+          "default": 0
+        },
+        "border_color": {
+          "type": "gradient",
+          "default": "rgba(0, 207, 230, 1.0)"
+        },
+        "xray": {
+          "type": "bool",
+          "default": false,
+          "note": "Cuts a hole in the background: an unrotated rectangle of the shape's size."
+        }
+      }
+    },
+    "input-field": {
+      "table": "input-field { }",
+      "shadowable": true,
+      "note": "The password field. placeholder_text and fail_text both take the variable substitutions recorded below, and all rendered text takes pango markup (hyprlock also parses <br> as a line break).",
+      "keys": {
+        "size": {
+          "type": "layoutxy",
+          "default": "400, 90"
+        },
+        "outline_thickness": {
+          "type": "int",
+          "default": 4,
+          "note": "At 0 the inner box's colour changes instead of the outline's."
+        },
+        "dots_size": {
+          "type": "float",
+          "default": 0.25,
+          "range": [
+            0.001,
+            0.8
+          ]
+        },
+        "dots_spacing": {
+          "type": "float",
+          "default": 0.15,
+          "range": [
+            -1.0,
+            1.0
+          ]
+        },
+        "dots_center": {
+          "type": "bool",
+          "default": true,
+          "note": "Aligns the dots left when false."
+        },
+        "dots_rounding": {
+          "type": "int",
+          "default": -1
+        },
+        "dots_text_format": {
+          "type": "string",
+          "default": null,
+          "note": "Characters used as the input indicator; rounded rectangles are the default."
+        },
+        "outer_color": {
+          "type": "gradient",
+          "default": "rgba(17, 17, 17, 1.0)",
+          "note": "The border colour."
+        },
+        "inner_color": {
+          "type": "color",
+          "default": "rgba(200, 200, 200, 1.0)"
+        },
+        "font_color": {
+          "type": "color",
+          "default": "rgba(10, 10, 10, 1.0)"
+        },
+        "font_family": {
+          "type": "string",
+          "default": "Noto Sans"
+        },
+        "fade_on_empty": {
+          "type": "bool",
+          "default": true
+        },
+        "fade_timeout": {
+          "type": "int",
+          "default": 2000,
+          "note": "Milliseconds before fade_on_empty triggers."
+        },
+        "placeholder_text": {
+          "type": "string",
+          "default": "<i>Input Password...</i>"
+        },
+        "hide_input": {
+          "type": "bool",
+          "default": false,
+          "note": "Renders a swaylock-style input indicator instead of dots."
+        },
+        "hide_input_base_color": {
+          "type": "color",
+          "default": "rgba(153, 170, 187)",
+          "note": "This colour's hue is rotated at random in oklab space to produce the hide_input colours, so a fixed palette cannot predict them."
+        },
+        "rounding": {
+          "type": "int",
+          "default": -1,
+          "note": "-1 means complete rounding, i.e. a circle or oval."
+        },
+        "check_color": {
+          "type": "gradient",
+          "default": "rgba(204, 136, 34, 1.0)",
+          "note": "Accent while waiting for the authentication result."
+        },
+        "check_text": {
+          "type": "string",
+          "default": null
+        },
+        "fail_color": {
+          "type": "gradient",
+          "default": "rgba(204, 34, 34, 1.0)",
+          "note": "Accent when authentication fails."
+        },
+        "fail_text": {
+          "type": "string",
+          "default": "<i>$FAIL <b>($ATTEMPTS)</b></i>"
+        },
+        "capslock_color": {
+          "type": "gradient",
+          "default": null
+        },
+        "numlock_color": {
+          "type": "gradient",
+          "default": null
+        },
+        "bothlock_color": {
+          "type": "gradient",
+          "default": null
+        },
+        "invert_numlock": {
+          "type": "bool",
+          "default": false,
+          "note": "Changes colour when Num Lock is off instead."
+        },
+        "swap_font_color": {
+          "type": "bool",
+          "default": false,
+          "note": "Swaps the font and inner colours on colour-change events. With outline_thickness at 0 that means Caps Lock and the check state; otherwise the password check and an authentication failure. It also narrows a gradient accent to its first colour."
+        }
+      }
+    },
+    "label": {
+      "table": "label { }",
+      "shadowable": true,
+      "clickable": true,
+      "note": "text takes variable substitution and, with the cmd[update:MILLISECONDS] prefix, runs a shell command on a timer. update:<time>:1 (or :true) also refreshes on SIGUSR2. A command that never exits hangs the AsyncResourceGatherer, so the only command this project emits is date. $TIME and $TIME12 use $TZ, then the system timezone, then UTC.",
+      "keys": {
+        "text": {
+          "type": "string",
+          "default": "Sample Text"
+        },
+        "text_align": {
+          "type": "string",
+          "default": "center",
+          "note": "Multi-line alignment inside the label container: center, right, or any other value for the default left."
+        },
+        "color": {
+          "type": "color",
+          "default": "rgba(254, 254, 254, 1.0)"
+        },
+        "font_size": {
+          "type": "int",
+          "default": 16
+        },
+        "font_family": {
+          "type": "string",
+          "default": "Sans"
+        },
+        "rotate": {
+          "type": "int",
+          "default": 0,
+          "note": "Degrees, counter-clockwise."
+        }
+      }
+    },
+    "image": {
+      "table": "image { }",
+      "shadowable": true,
+      "clickable": true,
+      "not_used_note": "Recorded so a later change finds it verified instead of inventing it. This project ships no image widget: an avatar or logo on a lock screen is a path on somebody's disk that a generator cannot know, and the palette is already carried by the blurred desktop behind the field.",
+      "keys": {
+        "path": {
+          "type": "string",
+          "default": null,
+          "note": "png, jpg or webp; no animations."
+        },
+        "size": {
+          "type": "int",
+          "default": 100,
+          "note": "Both width and height; -1 keeps the aspect ratio."
+        },
+        "rounding": {
+          "type": "int",
+          "default": 0,
+          "note": "Negative values give a circle."
+        },
+        "border_size": {
+          "type": "int",
+          "default": 0
+        },
+        "border_color": {
+          "type": "gradient",
+          "default": "rgba(0, 207, 230, 1.0)"
+        },
+        "rotate": {
+          "type": "int",
+          "default": 0
+        },
+        "reload_time": {
+          "type": "int",
+          "default": -1,
+          "note": "Seconds between reloads; 0 reloads on SIGUSR2."
+        },
+        "reload_cmd": {
+          "type": "string",
+          "default": null
+        }
+      }
+    }
+  },
+  "substitutions": {
+    "note": "Available in widget text options. $ATTEMPTS[<string>] shows <string> only when there have been no failed attempts; $LAYOUT[a,b,c] replaces indexed keyboard layouts and a lone ! hides one. Variables are parsed *before* a cmd[] command runs.",
+    "names": [
+      "$USER",
+      "$DESC",
+      "$TIME",
+      "$TIME12",
+      "$LAYOUT",
+      "$ATTEMPTS",
+      "$FAIL",
+      "$PAMPROMPT",
+      "$PAMFAIL",
+      "$FPRINTPROMPT",
+      "$FPRINTFAIL"
+    ]
+  },
+  "keys_and_signals": {
+    "default_keys": {
+      "ESC": "Clears the password buffer",
+      "Ctrl + u": "Clears the password buffer",
+      "Ctrl + Backspace": "Clears the password buffer"
+    },
+    "locked_flag_note": "Hyprland's `locked` bind flag lets a keybind work while hyprlock is active -- this repo already uses it for the volume, brightness and media keys in .config/hypr/keybind.lua.",
+    "signals": {
+      "SIGUSR1": "Unlocks hyprlock. `pkill -USR1 hyprlock` from another TTY therefore unlocks the session without a password. That is hyprlock's documented behaviour, not a misconfiguration, and it is why SECURITY.md cannot call the lock screen a boundary against a local user who can already run commands as you.",
+      "SIGUSR2": "Updates labels and images."
+    }
+  },
+  "arch_linux_note": "On Arch, hyprlock integrates with pambase through pam_faillock.so, which forces a 10 minute timeout after 3 failed unlocks. Changing that means editing /etc/security/faillock.conf (unlock_time, fail_interval, deny) -- a system file this project does not write.",
+  "not_in_hyprlock": {
+    "note": "Features this project's design brief asks for that hyprlock has no setting for, recorded so nobody invents a key that silently does nothing.",
+    "items": {
+      "per-widget blur": "Only background blurs. A frosted card behind the input field has to be a semi-transparent shape colour, not a blur.",
+      "radius token": "rounding is an int in pixels (-1 for a circle); there is no percentage rounding and no shared radius scale.",
+      "global speed multiplier": "Each animation line carries its own duration in seconds, so data/design/animations/*.json cannot be applied here directly -- only read for a duration.",
+      "theme or palette file": "Colours are literals in this file, so the generator has to resolve the palette itself.",
+      "unlock command": "Authentication is PAM or fprintd. There is no password file, no hash and no 'run this to unlock'.",
+      "idle timeout": "hyprlock does not lock itself; an idle daemon does. See hypridle_fallback below."
+    }
+  },
+  "hypridle_fallback": {
+    "tool": "hypridle",
+    "path": "~/.config/hypr/hypridle.conf",
+    "required": true,
+    "note": "hypridle is Hyprland's idle daemon and refuses to run without a config file. This project ships one *unlaunched*: the shell already runs its own idle system (Noctalia's [idle.behavior.*], driven by ext_idle_notifier_v1 and respecting D-Bus and Wayland idle inhibitors), so starting a second daemon means two processes racing to lock, dim and suspend the same session. The file exists so a session with no shell has something to run; docs/glass-experience.md gives the one line that starts it.",
+    "general_keys": {
+      "lock_cmd": {
+        "type": "string",
+        "default": null,
+        "note": "Runs on a D-Bus lock event, e.g. loginctl lock-session."
+      },
+      "unlock_cmd": {
+        "type": "string",
+        "default": null
+      },
+      "on_lock_cmd": {
+        "type": "string",
+        "default": null,
+        "note": "Runs when a lock screen app locks the session."
+      },
+      "on_unlock_cmd": {
+        "type": "string",
+        "default": null
+      },
+      "before_sleep_cmd": {
+        "type": "string",
+        "default": null,
+        "note": "Runs on the D-Bus prepare_sleep event."
+      },
+      "after_sleep_cmd": {
+        "type": "string",
+        "default": null,
+        "note": "Runs after prepare_sleep."
+      },
+      "ignore_dbus_inhibit": {
+        "type": "bool",
+        "default": false
+      },
+      "ignore_systemd_inhibit": {
+        "type": "bool",
+        "default": false,
+        "note": "Ignores `systemd-inhibit --what=idle` inhibitors."
+      },
+      "ignore_wayland_inhibit": {
+        "type": "bool",
+        "default": false
+      },
+      "inhibit_sleep": {
+        "type": "int",
+        "default": 2,
+        "note": "0 disables sleep inhibition, 1 waits for before_sleep_cmd, 2 is auto, 3 waits for a lock screen app to lock the session.",
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "enum_note": "Documented inline in the general table; no named constant."
+      }
+    },
+    "listener_keys": {
+      "timeout": {
+        "type": "int",
+        "default": null,
+        "note": "Idle seconds. Must be specified; there is no default."
+      },
+      "on-timeout": {
+        "type": "string",
+        "default": null
+      },
+      "on-resume": {
+        "type": "string",
+        "default": null,
+        "note": "Runs when activity is detected after on-timeout fired."
+      },
+      "ignore_inhibit": {
+        "type": "bool",
+        "default": false,
+        "note": "Ignores idle inhibitors of every type for this listener."
+      },
+      "condition_cmd": {
+        "type": "string",
+        "default": null,
+        "note": "Run through /bin/sh -c when the timeout is reached, *before* on-timeout. Exit 0 lets on-timeout fire; non-zero defers it. Runs synchronously on hypridle's event loop, so it must be fast."
+      },
+      "condition_retry": {
+        "type": "int",
+        "default": 0,
+        "note": "Re-runs condition_cmd every N seconds while the user stays idle, firing on-timeout as soon as it succeeds. 0 disables retrying and skips the deferred on-timeout for this idle cycle. Checked on hypridle's ~5 s tick, so smaller values are effectively rounded up."
+      }
+    },
+    "listeners_note": "Any number of listener { } blocks may appear, in any order. This project's file declares none: with no listener, hypridle only runs the general commands, which is exactly the fallback role -- lock before sleep, and lock on a D-Bus lock event -- with no second set of idle timers to disagree with the shell's.",
+    "commands": {
+      "note": "The three command strings .config/hypr/hypridle.conf ships, recorded because two of them are shell syntax and one of them is Lua, and the hypridle manual alone does not show that. hypridle runs every command through /bin/sh -c (spawn(), hypridle src/core/Hypridle.cpp:286-289, the same at v0.1.8 and on main), which is what makes the || in lock_cmd and the quoting in after_sleep_cmd work at all; the six general:*_cmd values are plain Hyprlang STRINGs (hypridle src/config/ConfigManager.cpp:66-71). None of the three is built from user input, so there is no string to escape.",
+      "compositor_verified_against": "Hyprland v0.57.2",
+      "lock_cmd": {
+        "value": "pidof noctalia || hyprlock",
+        "note": "Prefer the lock surface that is already running and only start a second one when it is not -- the same `pidof x || y` shape the hypridle manual's own example uses. The shell's lock screen reads ~/.config/noctalia/config.toml; hyprlock reads the hyprlock.conf next to this file."
+      },
+      "before_sleep_cmd": {
+        "value": "loginctl lock-session",
+        "note": "Asks logind to lock the session, which the shell answers through ext_session_lock_v1 and hyprlock answers directly. Spelled this way in the hypridle manual's example."
+      },
+      "after_sleep_cmd": {
+        "value": "hyprctl dispatch \"hl.dsp.dpms({ action = 'enable' })\"",
+        "note": "The remedy for a display that needs a key press to come back after resume. The spelling is the compositor's rather than the daemon's: Hyprland v0.57.2 answers `hyprctl dispatch X` by evaluating `return hl.dispatch(X)` as Lua whenever the config provider is Lua (src/ipc/s1/Commands.cpp:1332-1350), and this session's config is Lua, so the legacy `dpms on` form reaches the Lua compiler as `hl.dispatch(dpms on)` and comes back a syntax error. hl.dsp.dpms is the dispatcher that exists (src/config/lua/bindings/LuaBindingsDispatchers.cpp:1380, one argument, a table), and its action words are enable/on, disable/off and toggle, with anything else silently toggling instead of failing (LuaBindingsInternal.cpp:317-325, field name `action` at LuaBindingsInternal.hpp:151) -- which is why the word is spelled out here rather than left to a default. A successful dispatch replies `ok`, and hyprctl exits 7 only when the reply starts with `error:` (hyprctl/src/main.cpp:283-288), so the reply has to be read rather than merely waited for.",
+        "rejected_spelling": "hyprctl dispatch dpms on",
+        "rejected_note": "What the hypridle manual's after_sleep_cmd example uses and what this file shipped until the compositor's own dispatch path was read. It cannot work on a Lua-config Hyprland v0.57.2, for the reason in the note above. `hyprctl keyword` is no way round it either: no keyword command is registered anywhere at v0.57.2 (only a plugin may register one, src/plugins/PluginAPI.cpp:357), an unregistered request answers `unknown request` (src/ipc/s1/S1.cpp:107) and hyprctl still exits 0 because that reply does not start with `error:`, and the manual says outright that keyword 'will not work if your config provider is lua (refer to eval)' (docs/hyprctl.1.rst:36-40)."
+      }
+    }
+  }
+}

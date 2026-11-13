@@ -66,19 +66,39 @@ wallpaper_position = "center"
 session_position = "center"
 polkit_position = "center"
 
-# Launcher layout and content.
+# Launcher layout and content. Its seven providers keep their built-in prefixes, so none is restated here.
 [shell.launcher]
 layout = "full"
 width = 760
 search_position = "bottom"
 default_view = "recent"
 categories = true
+category_icons_only = false
 show_navigation_labels = true
 show_settings_button = true
 show_session_button = true
 show_icons = true
+show_app_origin_indicator = true
+compact = false
+app_grid = false
+show_app_actions = false
 track_usage = true
 sort_by_usage = true
+ignore_mouse = false
+pinned = []
+fetch_exchange_rates = false
+provider_prefix = "/"
+auto_paste = "auto"
+
+# The Alt+Tab overlay, opened by `noctalia msg window-switcher hold`.
+[shell.window_switcher]
+style = "carousel"
+mru = true
+show_caption = true
+show_count = true
+show_app_icon = true
+show_all_outputs = true
+current_workspace_only = false
 
 # Bars live at the config root: order names them, [bar.<name>] configures each.
 [bar]
@@ -142,10 +162,46 @@ inactive_scale = 0.9
 magnification = true
 magnification_scale = 1.18
 
-# Control centre layout.
+# Control centre layout, its tabs and the Home shortcut row.
 [control_center]
 sidebar = "full"
+sidebar_section = "compact"
 width = 700
+show_shortcut_labels = true
+show_session_button = true
+circular_avatar = true
+show_avatar_border = true
+hidden_tabs = []
+
+# Calendar tab: the card on Home and the month view.
+[control_center.calendar]
+show_events_card = true
+show_week_numbers = false
+show_events_location = true
+hide_past_events = true
+past_events_threshold_minutes = 15
+
+# Media tab. The visualizer follows the intensity's motion switch.
+[control_center.media]
+show_visualizer = true
+
+[[control_center.shortcuts]]
+type = "wifi"
+
+[[control_center.shortcuts]]
+type = "bluetooth"
+
+[[control_center.shortcuts]]
+type = "notification"
+
+[[control_center.shortcuts]]
+type = "nightlight"
+
+[[control_center.shortcuts]]
+type = "power_profile"
+
+[[control_center.shortcuts]]
+type = "caffeine"
 
 # Notification toasts.
 [notification]
@@ -156,8 +212,10 @@ position = "top_right"
 layer = "top"
 scale = 1.0
 width = 380
-offset_x = 18
-offset_y = 12
+offset_x = 16
+offset_y = 16
+follow_focused_output = false
+monitors = []
 collapse_on_dismiss = true
 keep_dismissed_in_history = true
 max_visible = 4
@@ -176,3 +234,41 @@ enable_power_sounds = true
 enable_screenshot_sounds = true
 sound_volume = 0.38
 sound_theme = "freedesktop"
+
+# The desktop wallpaper. One named transition, and none at the Performance intensity: the shell animates a change on its own timer, so neither Hyprland's animations:enabled nor the shell's own [shell.animation] reaches it.
+[wallpaper]
+fill_color = "surface_container"
+transition = ["fade"]
+transition_duration = 100.0
+edge_smoothness = 0.3
+transition_on_startup = true
+
+# Idle behaviours. The shell watches ext_idle_notifier_v1 itself, so .config/hypr/hypridle.conf ships unlaunched rather than racing it.
+[idle]
+pre_action_fade_seconds = 2.0
+
+# Fifteen minutes idle locks the session.
+[idle.behavior.lock]
+enabled = true
+timeout = 900
+action = "lock"
+
+# One minute after that the monitors go off, and come back on their own when you return.
+[idle.behavior.screen_off]
+enabled = true
+timeout = 960
+action = "screen_off"
+
+# The shell's own lock screen: the one this session shows whenever the shell is running, so hyprlock.conf is the fallback. One transition, chosen by name, because the shell picks a random one of whatever is listed.
+[lockscreen]
+enabled = true
+lock_before_suspend = true
+grace_period_seconds = 0
+fingerprint = true
+allow_empty_password = false
+blurred_desktop = true
+transition = ["fade"]
+transition_duration = 100.0
+edge_smoothness = 0.3
+blur_intensity = 0.5
+tint_intensity = 0.34

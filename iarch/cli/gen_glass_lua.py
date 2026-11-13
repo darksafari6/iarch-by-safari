@@ -266,6 +266,46 @@ def decoration_block(tokens: Dict[str, Any], intensity_name: str,
     }
 
 
+def glow_block(tokens: Dict[str, Any], preset: Dict[str, Any],
+               intensity_name: str, warnings: List[str]) -> Dict[str, Any]:
+    """The inner glow Hyprland draws on a focused window: ``decoration:glow:*``.
+
+    This is the compositor half of the focus cue. The other half is the fade it
+    arrives with, which Hyprland drives through the ``fadeGlow`` animation leaf
+    (``src/render/decorations/CHyprInnerGlowDecoration.cpp`` calls
+    ``initializeAnimations(..., "fadeGlow", "glowangle")`` and then
+    ``onWindowFocus()``), so the glow inherits whatever duration and curve the
+    active motion preset gives ``fade`` and needs no leaf of its own. That is
+    also why an intensity that turns motion off turns the glow off too: with
+    every animated variable warped, the glow would snap on instead of fading in,
+    which reads as a flash rather than a cue.
+
+    The colour is an accent role, not a hex constant, so the glow belongs to the
+    same palette decision as the active border it sits next to.
+    """
+    glow = tokens["intensities"][intensity_name]["glow"]
+    role = glow["role"]
+    accent = preset["palette"]["accent"]
+    if role not in accent:
+        raise GlassError(f"glow references accent role {role!r}, which the preset "
+                         f"does not define")
+    for leaf in ("decoration:glow:enabled", "decoration:glow:range",
+                 "decoration:glow:render_power", "decoration:glow:color",
+                 "decoration:glow:color_inactive"):
+        if leaf not in tokens["hyprland"]["leaves"]:
+            raise GlassError(f"{leaf} is not in hyprland.leaves; the generator must "
+                             f"not emit config Hyprland does not know")
+    return {
+        "enabled": glow["enabled"],
+        "range": checked(tokens, "decoration:glow:range", glow["range"], warnings),
+        "render_power": checked(tokens, "decoration:glow:render_power",
+                                glow["render_power"], warnings),
+        "color": rgba(accent[role], glow["alpha"], f"{intensity_name}.glow.alpha"),
+        "color_inactive": rgba(accent[role], glow["alpha_inactive"],
+                               f"{intensity_name}.glow.alpha_inactive"),
+    }
+
+
 def general_block(tokens: Dict[str, Any], preset: Dict[str, Any],
                   warnings: List[str]) -> Dict[str, Any]:
     layout = tokens["layout"]
@@ -388,10 +428,14 @@ def render(tokens: Dict[str, Any], preset: Dict[str, Any],
            intensity_name: str) -> Tuple[str, List[str]]:
     """Return (lua source without the generated header, warnings)."""
     warnings: List[str] = []
+    decoration = decoration_block(tokens, intensity_name, warnings)
+    # The glow is the only decoration whose colour comes from the palette rather
+    # than from the intensity, so it is built separately and merged in.
+    decoration["glow"] = glow_block(tokens, preset, intensity_name, warnings)
     calls = [
         emit_call("hl.config", {
             "general": general_block(tokens, preset, warnings),
-            "decoration": decoration_block(tokens, intensity_name, warnings),
+            "decoration": decoration,
         }),
     ]
     calls.extend(layer_rules(tokens, intensity_name))

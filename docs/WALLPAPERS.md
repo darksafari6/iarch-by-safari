@@ -57,8 +57,13 @@ MIT-CMU licensed and credited in `THIRD_PARTY_NOTICES.md`.
 
 ## Your own wallpapers
 
-Put them in `~/Pictures/Wallpapers`. That directory is what Noctalia's wallpaper
-picker reads, and the settings this design system writes point the shell at it.
+Put them in `~/Pictures`, or wherever your `XDG_PICTURES_DIR` points. That is the
+directory the shell scans when `[wallpaper] directory` is empty, and this repository
+leaves it empty: `defaultPicturesDirectory()` resolves `XDG_PICTURES_DIR` from the
+environment, then from `~/.config/user-dirs.dirs`, then falls back to `$HOME/Pictures`
+(`src/util/file_utils.h:117-230` at v5.4.1). No `Wallpapers` subdirectory appears
+anywhere in that resolution, and the shipped `config.toml` names no path — a directory
+on somebody's disk is not repository state, so the picker's own choice decides.
 
 The relevant Noctalia v5.4.1 keys, read from `src/config/schema/config_schema.cpp`
 (`wallpaperSchema()`) and `src/config/config_types.h` at tag `v5.4.1`:
@@ -80,17 +85,35 @@ The relevant Noctalia v5.4.1 keys, read from `src/config/schema/config_schema.cp
 Two honest notes on that table. First, upstream states that `[wallpaper]` *also*
 carries app-managed state -- the currently selected wallpapers, per-monitor
 choices -- which the config service reads separately and which is **not** part of
-the schema; do not hand-write those keys, change the selection in Noctalia
-Settings instead. Second, nothing in this repository's shipped
-`.config/noctalia/config.toml` sets a wallpaper path today, and
-`hyprland.lua` sets `force_default_wallpaper = 0` to keep Hyprland's own
-placeholder off the screen; the preset's `wallpaper.path` is therefore the file
-the design system names as that preset's background, and wiring it into
-`[wallpaper]` is Task 5 work with the keys above. `docs/UNVERIFIED.md` UI-03
-tracks the one thing still unproven: that writing `wallpaper.directory` in
-`config.toml` is honoured by an installed build rather than overridden by GUI
-state (`~/.local/state/noctalia/settings.toml` wins over `config.toml`, see
-UI-01's sibling behaviour).
+the schema (`src/config/schema/config_sections.cpp:44-49` accepts `wallpaper.default`,
+`wallpaper.last`, `wallpaper.monitors` and `wallpaper.favorite` as unknown paths); do
+not hand-write those keys, change the selection in Noctalia Settings instead. A test
+asserts the rendered file carries none of them.
+
+Second, what this repository writes and what it leaves alone. `render_noctalia.py`
+emits five of the keys above -- `fill_color` as a palette role so letterboxing sits on
+the preset's own surface colour, `transition` as one named `fade` (an empty list at the
+Performance intensity), `transition_duration` derived from the motion preset's own
+`fadeIn`, `edge_smoothness`, and `transition_on_startup` as the transition list's pair.
+Every one is recorded in `data/design/noctalia.json` under `sections.wallpaper` with
+its range, its enum and the line upstream reads it at, and `tests/test_noctalia.py`
+refuses a value the record does not allow. The paths, the per-monitor overrides and the
+slideshow are recorded too and deliberately **not** emitted: a directory, an output
+name and a timer that changes the picture every half hour are not repository state, and
+a slideshow would keep doing the one animation the Performance intensity asks the
+session to stop.
+
+`hyprland.lua` still sets `force_default_wallpaper = 0` to keep Hyprland's own
+placeholder off the screen, and the preset's `wallpaper.path` is still the file the
+design system names as that preset's background -- the generated art in
+`assets/wallpapers/generated/` is what a preset ships, and getting it onto the desktop
+is the picker's job or `wallpaper.directory`, not this file's.
+`docs/UNVERIFIED.md` UI-03 tracks the one thing still unproven about that: whether
+writing `wallpaper.directory` in `config.toml` is honoured by an installed build rather
+than overridden by GUI state (`~/.local/state/noctalia/settings.toml` wins over
+`config.toml`, see UI-01's sibling behaviour). WAL-01 and WAL-02 track the two things
+no sandbox could watch: a transition that was never seen, and a first wallpaper that
+never arrived.
 
 To use your own image with a preset, copy it into `~/Pictures/Wallpapers`, then
 in Noctalia Settings pick it, or edit the preset:

@@ -19,9 +19,16 @@ the map. Read it before changing anything.
 ├── THIRD_PARTY_NOTICES.md    Generated. Third-party credit; edit branding/notices.json instead.
 │
 ├── .config/                  The v5 session payload only (see "Two payloads" below).
-│   ├── hypr/                 Compositor configuration, Lua API only.
+│   ├── hypr/                 Compositor configuration, Lua API only -- with two exceptions.
 │   │   ├── generated/glass.lua       Rendered from the design tokens; never edited.
-│   │   └── generated/animations.lua  Rendered from the motion tokens; never edited.
+│   │   ├── generated/animations.lua  Rendered from the motion tokens; never edited.
+│   │   ├── startup.lua       Rendered from data/design/startup.json: the environment, the
+│   │   │                     autostart commands, and the two lines both installers rewrite.
+│   │   ├── hyprlock.conf     Rendered lock screen. hyprlock is its own binary and searches
+│   │   │                     for this exact filename, which is why a generated file sits
+│   │   │                     beside the Lua payload instead of under generated/.
+│   │   └── hypridle.conf     Rendered idle fallback, shipped UNLAUNCHED: the shell already
+│   │                         watches ext_idle_notifier_v1. See glass-experience.md.
 │   ├── noctalia/             Shell configuration: config.toml + palettes/.
 │   ├── fastfetch/            System information layout and artwork.
 │   ├── kitty/                Terminal configuration and generated color/profile includes.
@@ -35,16 +42,31 @@ the map. Read it before changing anything.
 ├── iarch/                    The product's own code, all of it iarch-prefixed.
 │   ├── lib/configstore.py    User state: defaults merge, atomic writes, backups. The rules below.
 │   ├── lib/renderers.py      Generators. Contract shipped; renderers land in Parts 2 and 5.
-│   ├── cli/                  iarch-theme (Part 2); iarch-keybinds, iarch-anim, iarch-doctor (Part 5).
+│   ├── lib/modes.py          Mode switches: the compositor and shell calls, the modes.<name>
+│   │                         record, and the matches/differs/unverified vocabulary both share.
+│   ├── cli/                  iarch-theme (Part 2), iarch-anim, iarch-doctor, iarch-gamemode and
+│   │                         iarch-focus (Part 3); iarch-keybinds (Part 5).
 │   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
 │   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
 │   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
-│   │   ├── gen_animations_lua.py  Hyprland curves and animation leaves from the motion tokens.
+│   │   ├── gen_animations_lua.py  Hyprland curves and animation leaves from a motion preset.
+│   │   ├── gen_startup_lua.py  The compositor startup module from data/design/startup.json,
+│   │   │                      with both installers' sed anchors asserted in the render.
 │   │   ├── render_noctalia.py Shell config.toml and one palette per preset, from the same tokens.
+│   │   ├── render_hyprlock.py The lock screen and the unlaunched idle fallback, from the same
+│   │   │                      tokens: hyprlock's blur *is* the intensity's blur recipe.
 │   │   ├── render_gtk_css.py  The GTK 4 and GTK 3 glass overlays, from templates in lib/templates.
 │   │   ├── render_kvantum.py  The Qt/Kvantum glass theme, recoloured from the presets.
 │   │   ├── gen_fontconfig.py  The fontconfig file that applies the font tokens.
-│   │   └── theme.py           iarch-theme: one preset across every surface above; gates on contrast.
+│   │   ├── theme.py           iarch-theme: one preset across every surface above; gates on contrast.
+│   │   ├── iarch_anim.py      iarch-anim: switch the motion preset, speed, reduce-motion and
+│   │   │                      per-event overrides; verifies with the compositor and rolls back.
+│   │   ├── iarch_doctor.py    iarch-doctor: ask a running session whether it took the settings --
+│   │   │                      notifications in Part 3, the rest of the session in Part 5.
+│   │   ├── iarch_gamemode.py  iarch-gamemode: run iarch-theme and iarch-anim as one switch, save
+│   │   │                      the state they replaced, and read four leaves back to check.
+│   │   └── iarch_focus.py     iarch-focus: Do Not Disturb, caffeine and a runtime dim on every
+│   │                          unfocused window. Writes no file, so a reload ends it.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
 ├── data/                     Repository defaults. A user never edits these after install.
@@ -54,10 +76,15 @@ the map. Read it before changing anything.
 │   ├── design/               Glass design tokens and the six colour presets.
 │   │   ├── tokens.json     Radii, spacing, motion, blur per intensity, class groups.
 │   │   ├── noctalia.json   The shell settings that exist upstream, with their types and bounds.
+│   │   ├── hyprlock.json   The hyprlock and hypridle variables, types, defaults and enumerations.
+│   │   ├── greeter.json    The login screen: greetd, greeter.toml, sync.toml and what Sync carries.
 │   │   ├── gtk.json        The GTK 4 and GTK 3 CSS each version really parses, kept apart.
 │   │   ├── kvantum.json    The Kvantum theme keys, types and integer bounds, from the parser.
 │   │   ├── fontconfig.json The fontconfig XML elements and attributes the DTD declares.
 │   │   ├── animations.json The Hyprland animation leaves, per-leaf styles and curve shapes.
+│   │   ├── startup.json    The compositor startup surface: three bindings, the event names
+│   │   │                   hl.on accepts, and the reason beside every variable and command.
+│   │   ├── animations/     Five motion presets: named curves and per-event durations and styles.
 │   │   └── presets/        Six palettes; each must clear the WCAG gate to apply.
 │   ├── schemas/              JSON Schema for every file above; CI validates defaults against them.
 │   └── licenses.json         Generated third-party credit, read by Settings → About.
@@ -153,7 +180,7 @@ matches on is not. `tools/branding_lint.py` encodes that line.
 ```
 display manager (greetd) ──> Hyprland ──> .config/hypr/hyprland.lua
                                               ├── monitors.lua   displays and scaling
-                                              ├── startup.lua    environment, autostart, shell launch
+                                              ├── startup.lua    environment, autostart, shell launch (rendered)
                                               ├── inputs.lua     keyboard and pointer
                                               ├── keybind.lua    every shortcut, each with a description
                                               ├── windowrules.lua  per-application rules
@@ -162,10 +189,15 @@ display manager (greetd) ──> Hyprland ──> .config/hypr/hyprland.lua
                                                         │
                                                         └──> shell process (bar, dock, launcher,
                                                              Control Center, notifications, Settings,
-                                                             lock screen) driven by `noctalia msg ...`
+                                                             lock screen, idle) driven by `noctalia msg ...`
                                                                       │
                           scripts/iarch-control-center.sh ────────────┘  allowlisted IPC shortcuts
                           scripts/iarch-healthcheck.sh ─── read-only probe of shell, compositor, audio
+
+hyprlock (.config/hypr/hyprlock.conf) is the *other* session-lock client, and only one can hold
+ext_session_lock_v1 at a time. The shell wins whenever it is running, so hyprlock is the lock
+screen for a session without the shell -- which is also why hypridle.conf ships unlaunched and
+declares no listener: a second idle daemon would race the shell's [idle.behavior.*] timers.
 ```
 
 Keybind descriptions in `keybind.lua` are the data source for the shortcut overlay planned in
@@ -184,6 +216,17 @@ every file a program writes is generated.** Nothing in between is allowed.
 | User settings | `~/.config/iarch/` (`settings.json`, `keybinds.json`, `contacts.json`, `presets/`) | The settings app, or the user | Yes — this is the only configuration anyone edits |
 | Generated files | `~/.config/hypr/generated/*.lua`, Noctalia overrides, kitty includes | The generators in `iarch/cli/`, and `iarch-theme` which drives them, under the contract in `iarch/lib/renderers.py` | No — they carry the GENERATED header and are rewritten wholesale |
 | Backups | `~/.local/state/iarch/backups/` | `iarch/lib/configstore.py` | No — read them only to roll back |
+| Mode state | `~/.config/iarch/settings.json` under `modes.<name>` | `iarch/lib/modes.py`, from `iarch-gamemode` and `iarch-focus` | Yes, though `--forget` is the supported way to clear a record |
+
+A mode switch is not a fourth kind of writer. It composes values that already
+exist — an intensity, a motion preset, two decoration leaves — and adds only the
+round trip: read the state, record it, apply it, verify it, restore it. So
+`iarch-gamemode` renders nothing itself and `iarch-focus` writes no file at all,
+and the record under `modes.<name>` is the only new byte either one owns. That is
+also why the record has to be read from the user's file rather than from the
+merged document `configstore.load` returns: with the repository defaults merged
+underneath, "never switched on" and "matches the default" are the same object, and
+a mode that cannot tell them apart cannot be turned off.
 
 Rules every generator obeys, implemented once in `iarch/lib/configstore.py` and proven by
 `tests/test_config_store.py`:
@@ -203,6 +246,17 @@ Rules every generator obeys, implemented once in `iarch/lib/configstore.py` and 
    generations. `uninstall.sh` and `tools/profile_preset.py revert` read from there.
 5. **Never write inside the repository at runtime.** `IARCH_CONFIG_DIR` and `IARCH_STATE_DIR`
    relocate both roots, which is also how the tests run without touching a real home directory.
+6. **A surface record may exist with no generator behind it.** `data/design/greeter.json` records
+   the whole login screen — greetd's two tables, the greeter's declarative `greeter.toml`, the
+   mutable `sync.toml`, what Sync carries and what it cannot — and nothing is generated from it.
+   The file it describes is root-owned, wins over Sync for every key it sets, only ever warns about
+   a value it dislikes, and is mostly machine facts: a connector name, an account name, a cursor
+   theme directory. A record like that exists to make an absence checkable rather than assumed.
+7. **A withheld key says so.** When upstream really does declare a setting and this project
+   deliberately does not emit it, the section's `withheld` map carries the reason, the record that
+   covers it and the citation, so a validator can say "withheld on purpose" instead of claiming the
+   pinned release has no such setting. `[shell] polkit_agent` and `[shell.greeter_sync]` are the two
+   today, and the first version of that message was false about both.
 
 ```mermaid
 flowchart LR
@@ -299,8 +353,10 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `python3 iarch/cli/contrast_check.py --quiet` | Every preset clears 4.5:1 for text and 3:1 for non-text UI |
 | `python3 iarch/cli/gen_wallpapers.py --check` | Generated wallpapers exist, are 4K WebP and inside 600 KB; nothing orphaned |
 | `python3 iarch/cli/gen_glass_lua.py --check` | The committed `glass.lua` still matches a fresh render of the tokens |
-| `python3 iarch/cli/gen_animations_lua.py --check` | The committed `animations.lua` still matches a fresh render of the motion tokens |
+| `python3 iarch/cli/gen_animations_lua.py --check` | The committed `animations.lua` still matches a fresh render of the default intensity's motion preset |
+| `python3 iarch/cli/gen_startup_lua.py --check` | The committed `startup.lua` still matches a fresh render of the startup record, and both installers' `sed` anchors are still in it |
 | `python3 iarch/cli/render_noctalia.py --check` | The committed `config.toml` and all six palettes still match a fresh render |
+| `python3 iarch/cli/render_hyprlock.py --check` | The committed `hyprlock.conf` and `hypridle.conf` still match a fresh render |
 | `python3 iarch/cli/render_gtk_css.py --check --repo` | The committed GTK 4 and GTK 3 sheets still match a fresh render |
 | `python3 iarch/cli/render_kvantum.py --check` | The committed Kvantum pointer and theme still match a fresh render |
 | `python3 iarch/cli/gen_fontconfig.py --check` | The committed `fonts.conf` still matches a fresh render |
@@ -324,6 +380,7 @@ never touch `~/.config`, never call a package manager and never start a session.
 | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Current. This file |
 | [BRANDING.md](BRANDING.md) | Current. Naming and credit policy |
+| [MOTION.md](MOTION.md) | Current. Animation presets, hover/press/focus, reduce motion, and the QA walk-through |
 | [ROADMAP.md](ROADMAP.md) | Current. The six-part glass plan |
 | [UNVERIFIED.md](UNVERIFIED.md) | Current. Open verification items |
 | [glass-experience.md](glass-experience.md) | Current. Glass profile and recovery |

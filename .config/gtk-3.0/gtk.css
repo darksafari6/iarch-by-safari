@@ -15,8 +15,8 @@
 window.background,
 .background.csd {
   background-color: alpha(#0b0e1a, 0.88);
-  transition-property: background-color;
-  transition-duration: 220ms;
+  transition-property: background-color, box-shadow;
+  transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -29,6 +29,13 @@ decoration {
   box-shadow: 0 6px 26px alpha(#05070f, 0.36),
               0 0 0 1px alpha(#333a58, 0.18);
   margin: 12px;
+  /* GTK 3 puts the client-side hairline and the drop shadow on this node rather
+     than on window.background, and decoration:backdrop below changes both. Without
+     a transition the one focus cue every window shares would snap between two
+     alphas while everything inside the window faded. */
+  transition-property: box-shadow;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 decoration:backdrop {
@@ -55,7 +62,7 @@ headerbar,
   box-shadow: none;
   min-height: 46px;
   transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color;
-  transition-duration: 220ms;
+  transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -124,7 +131,7 @@ button {
   color: #e6e9f8;
   padding: 4px 12px;
   box-shadow: 0 1px 2px alpha(#05070f, 0.126);
-  transition-property: background-color, box-shadow;
+  transition-property: background-color, box-shadow, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -335,7 +342,7 @@ switch {
   border: 1px solid alpha(#333a58, 0.18);
   border-radius: 26px;
   color: #b3bad6;
-  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color;
+  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -367,7 +374,7 @@ radio {
   color: #b3bad6;
   min-width: 16px;
   min-height: 16px;
-  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color;
+  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -430,7 +437,7 @@ scale slider {
   box-shadow: 0 1px 3px alpha(#05070f, 0.126);
   min-width: 18px;
   min-height: 18px;
-  transition-property: background-color, box-shadow;
+  transition-property: background-color, box-shadow, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -518,7 +525,7 @@ notebook > header > tabs > tab {
   color: #b3bad6;
   margin: 4px;
   padding: 4px 8px;
-  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, color;
+  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, color, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -556,7 +563,7 @@ list {
 row {
   border-radius: 12px;
   padding: 6px 12px;
-  transition-property: background-color, box-shadow;
+  transition-property: background-color, box-shadow, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -640,7 +647,7 @@ popover menuitem {
   border-radius: 12px;
   color: #e6e9f8;
   padding: 4px 12px;
-  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, color;
+  transition-property: background-color, border-top-color, border-right-color, border-bottom-color, border-left-color, color, outline-color, outline-width;
   transition-duration: 120ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

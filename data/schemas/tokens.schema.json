@@ -15,6 +15,7 @@
     "accent",
     "default_intensity",
     "intensities",
+    "modes",
     "layout",
     "app_classes",
     "window_opacity",
@@ -72,7 +73,7 @@
 
     "motion": {
       "type": "object",
-      "required": ["fast_ms", "normal_ms", "slow_ms", "easing", "spring"],
+      "required": ["fast_ms", "normal_ms", "slow_ms", "easing", "spring", "animation"],
       "additionalProperties": false,
       "properties": {
         "_note": { "type": "string" },
@@ -94,11 +95,48 @@
           "type": "object",
           "required": ["stiffness", "damping", "mass"],
           "additionalProperties": false,
-          "description": "hl.curve(name, { type = \"spring\", ... }) rejects any of the three below 0.5.",
+          "description": "hl.curve(name, { type = \"spring\", ... }) rejects any of the three at or below 0.5: LuaBindingsConfigRules.cpp parses each with CLuaConfigFloat and calls Internal::configError when the value is <= 0.5F, so the usable bound is strictly greater than 0.5 (exclusiveMinimum), not >= 0.5.",
           "properties": {
-            "stiffness": { "type": "number", "minimum": 0.5 },
-            "damping": { "type": "number", "minimum": 0.5 },
-            "mass": { "type": "number", "minimum": 0.5 }
+            "stiffness": { "type": "number", "exclusiveMinimum": 0.5 },
+            "damping": { "type": "number", "exclusiveMinimum": 0.5 },
+            "mass": { "type": "number", "exclusiveMinimum": 0.5 }
+          }
+        },
+        "animation": {
+          "type": "object",
+          "required": ["default_preset", "presets", "speed_multiplier", "reduce_motion"],
+          "additionalProperties": false,
+          "description": "The compositor motion selection added in Part 3. The named curves and the per-event durations, curves and styles live in data/design/animations/<preset>.json (one file per preset, validated by data/schemas/animations_preset.schema.json), not here: this block only carries what every preset shares. 'presets' is the closed list iarch-anim accepts, and it must match the files on disk -- tests/test_animation_presets.py asserts the two agree, so a preset file with no name here, or a name here with no file, fails CI rather than failing in the user's session. Overshoot beziers are deliberately absent from 'easing' above: that vocabulary is shared with the GTK CSS renderer, cubic-bezier() requires every component inside [0,1] and tests/test_design_tokens.py enforces the unit square, whereas hl.curve accepts [-1, 2] per component. A preset that wants overshoot declares it in its own file.",
+          "properties": {
+            "_note": { "type": "string" },
+            "default_preset": { "enum": ["smooth", "snappy", "bouncy", "minimal", "off"] },
+            "presets": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["smooth", "snappy", "bouncy", "minimal", "off"] }
+            },
+            "speed_multiplier": {
+              "type": "object",
+              "required": ["min", "max", "default"],
+              "additionalProperties": false,
+              "description": "The bounds iarch-anim clamps a global multiplier to. Greater than 1 is FASTER: effective_ms = duration_ms / multiplier, the same direction render_noctalia.py already uses for shell.animation (MOTION_BASELINE_MS / normal_ms).",
+              "properties": {
+                "min": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+                "max": { "type": "number", "minimum": 1, "maximum": 4 },
+                "default": { "type": "number", "exclusiveMinimum": 0 }
+              }
+            },
+            "reduce_motion": {
+              "type": "object",
+              "required": ["preset", "max_duration_ms"],
+              "additionalProperties": false,
+              "description": "What 'iarch-anim reduce-motion on' resolves to: the named preset (fades only, no transform) with every duration capped at max_duration_ms.",
+              "properties": {
+                "preset": { "enum": ["smooth", "snappy", "bouncy", "minimal", "off"] },
+                "max_duration_ms": { "type": "integer", "minimum": 1, "exclusiveMaximum": 100 }
+              }
+            }
           }
         }
       }
@@ -168,6 +206,74 @@
         "frosted": { "$ref": "#/definitions/intensity" },
         "soft": { "$ref": "#/definitions/intensity" },
         "performance": { "$ref": "#/definitions/intensity" }
+      }
+    },
+
+    "modes": {
+      "type": "object",
+      "description": "The two mode switches added in Part 3: iarch-gamemode and iarch-focus. Neither invents a value. game.intensity must name one of the four intensities above, and the animation preset game mode applies is not repeated here on purpose -- it is the one intensities.<name>.motion already pairs with that intensity, read through gen_animations_lua.preset_for_intensity, so the two cannot disagree. focus.dim_strength must sit inside hyprland.ranges for the leaf it sets, and every name in focus.leaves must appear in hyprland.leaves, which is the list that makes a leaf emittable at all, whether a generator writes it or a mode sets it while the session runs. runtime records the compositor call both modes go through and the spelling of it that was rejected, with the evidence.",
+      "required": ["_note", "runtime", "game", "focus"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string", "minLength": 1 },
+        "runtime": {
+          "type": "object",
+          "description": "The four compositor calls a mode may make while the session runs, and the one it may not. Every value is a literal command shape rather than a description of one, so a test can compare what a tool actually sent against what this file says is possible. rejected_spelling is required, not optional: a mechanism this repository stopped using stays in the record with the evidence that it does not work, because the shipped manual still documents it and the next person to read that manual will otherwise write it again.",
+          "required": ["set_via", "read_via", "errors_via", "reload_via", "source",
+                       "_note", "rejected_spelling", "rejected_note"],
+          "additionalProperties": false,
+          "properties": {
+            "set_via": {
+              "type": "string", "pattern": "^hyprctl eval ",
+              "description": "Must start with `hyprctl eval `. Nothing registers a keyword or setoption command at v0.57.2 (src/ipc/s1/Commands.cpp:2084-2126 lists the 38 that are registered, and only src/plugins/PluginAPI.cpp:357 may add one), so eval is the only request that can change a leaf in a running Lua-configured session."
+            },
+            "read_via": {
+              "type": "string", "pattern": "^hyprctl getoption ",
+              "description": "The read a verification compares against. dispatchGetOption answers one JSON object under -j and the literal `no such option` for a leaf it does not know, even under -j, which is why an unreadable leaf is reported as unverified rather than as a pass or a failure (src/ipc/s1/Commands.cpp:1717-1800)."
+            },
+            "errors_via": { "type": "string", "const": "hyprctl configerrors" },
+            "reload_via": {
+              "type": "string", "const": "hyprctl reload",
+              "description": "Synchronous: reloadRequest re-parses the config and then answers ok, so a leaf read after it is the state now running rather than a state that is about to be (src/ipc/s1/Commands.cpp:1352-1370)."
+            },
+            "source": { "type": "string", "minLength": 1 },
+            "_note": { "type": "string", "minLength": 1 },
+            "rejected_spelling": { "type": "string", "minLength": 1 },
+            "rejected_note": { "type": "string", "minLength": 1 }
+          }
+        },
+        "game": {
+          "type": "object",
+          "required": ["intensity", "_note"],
+          "additionalProperties": false,
+          "properties": {
+            "intensity": { "$ref": "#/definitions/intensity_name" },
+            "_note": { "type": "string", "minLength": 1 }
+          }
+        },
+        "focus": {
+          "type": "object",
+          "required": ["dim_inactive", "dim_strength", "leaves", "leaves_note", "_note"],
+          "additionalProperties": false,
+          "properties": {
+            "dim_inactive": {
+              "const": true,
+              "description": "Focus mode without dimming would be Do Not Disturb plus caffeine, which are two control-centre tiles that already exist. The dim is the part only the compositor can do, so the switch is not optional here."
+            },
+            "dim_strength": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "The bounds hyprland.ranges records for decoration:dim_strength, which are the ones MS<Float> declares at src/config/values/ConfigValues.cpp:228 in v0.57.2. The shipped 0.5 is that leaf's own upstream default, handed back to the compositor while focusing; the four intensities lower it to 0.0-0.10."
+            },
+            "leaves": {
+              "$ref": "#/definitions/string_list",
+              "description": "The Hyprland leaves iarch-focus sets at runtime. Every entry must also be in hyprland.leaves; tests/test_focus.py asserts it, because a leaf set through runtime.eval is held to the same recorded-vocabulary rule as one a generator writes."
+            },
+            "leaves_note": { "type": "string", "minLength": 1 },
+            "_note": { "type": "string", "minLength": 1 }
+          }
+        }
       }
     },
 
@@ -360,7 +466,7 @@
     },
     "intensity": {
       "type": "object",
-      "required": ["label", "description", "blur", "glass", "shadow", "window", "terminal", "shell", "gtk", "qt", "motion"],
+      "required": ["label", "description", "blur", "glass", "shadow", "glow", "window", "terminal", "shell", "gtk", "qt", "motion"],
       "additionalProperties": false,
       "properties": {
         "label": { "type": "string", "minLength": 1 },
@@ -419,6 +525,20 @@
             },
             "scale": { "type": "number", "minimum": 0.01, "maximum": 2 },
             "sharp": { "type": "boolean" }
+          }
+        },
+        "glow": {
+          "type": "object",
+          "description": "Hyprland's inner window glow: decoration:glow:* in ConfigValues.cpp at v0.57.2. It is a focus cue, not decoration for its own sake, so the colour is an accent role rather than a fixed hex and the alphas are low enough that the glow reads as light on the edge of the window. enabled defaults to false upstream, which is why the Performance intensity sets it false: the glow is an extra render pass per window, and the fade it arrives with (the fadeGlow animation leaf) is warped to nothing when the intensity turns motion off, which would leave an instant flash instead of a cue. range and render_power carry the MS<Int> bounds Hyprland itself enforces, so a value outside them is a config error in the session rather than a clamp.",
+          "required": ["enabled", "range", "render_power", "role", "alpha", "alpha_inactive"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "range": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "render_power": { "type": "integer", "minimum": 1, "maximum": 4 },
+            "role": { "$ref": "#/definitions/accent_role_name" },
+            "alpha": { "$ref": "#/definitions/alpha" },
+            "alpha_inactive": { "$ref": "#/definitions/alpha" }
           }
         },
         "window": {
@@ -492,11 +612,12 @@
         },
         "motion": {
           "type": "object",
-          "description": "The compositor animation switch for this intensity. enabled=false makes gen_animations_lua.py emit hl.config({ animations = { enabled = false } }), which Hyprland's AnimationManager turns into a warp: every animated variable jumps straight to its final value with no per-frame bezier or spring work (AnimationManager.cpp:279, warp = !*PANIMENABLED || !PAV->enabled()). That is how the Performance intensity measurably lowers compositor work; docs/UNVERIFIED.md PERF-01 records that the frame-time saving was not measured on real hardware. When enabled=true the curves and durations come from the global motion block, never from this switch.",
-          "required": ["enabled"],
+          "description": "The compositor animation switch for this intensity. enabled=false makes gen_animations_lua.py emit hl.config({ animations = { enabled = false } }), which Hyprland's AnimationManager turns into a warp: every animated variable jumps straight to its final value with no per-frame bezier or spring work (AnimationManager.cpp:279, warp = !*PANIMENABLED || !PAV->enabled()). That is how the Performance intensity measurably lowers compositor work; docs/UNVERIFIED.md PERF-01 records that the frame-time saving was not measured on real hardware. 'preset' names the motion preset this intensity renders from -- a file in data/design/animations/ -- so the Performance profile in Part 3 switches intensity and motion in one step instead of two disagreeing switches. The two keys must agree: enabled=false only with preset 'off', enabled=true only with a preset whose own master switch is on. tests/test_animation_presets.py asserts that pairing, and asserts the 'smooth' preset's curves and durations still equal the global motion block, so an intensity never silently drifts away from the tokens the CSS and Noctalia renderers use.",
+          "required": ["enabled", "preset"],
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean" }
+            "enabled": { "type": "boolean" },
+            "preset": { "enum": ["smooth", "snappy", "bouncy", "minimal", "off"] }
           }
         }
       }

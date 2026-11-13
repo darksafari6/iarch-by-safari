@@ -51,9 +51,9 @@ except ImportError:
 
 
 def sheet(preset_id: str = "midnight-glass", intensity: str = "frosted",
-          version: str = "4") -> str:
+          version: str = "4", reduce_motion: bool = False) -> str:
     context = gtk.build_context(TOKENS, gtk.load_preset(preset_id), SURFACE,
-                                intensity, version)
+                                intensity, version, reduce_motion=reduce_motion)
     return gtk.render_sheet(version, context)
 
 
@@ -459,6 +459,202 @@ class RefusesToWriteUnlessEverythingIsValid(unittest.TestCase):
 
 
 @requires_jinja
+@requires_jinja
+class HoverPressAndFocusAnswerInsideOneBand(unittest.TestCase):
+    """Task 3: a control answers hover, press and focus in 120-180ms, or not at all.
+
+    Two upstream facts decide what is assertable here. Only properties flagged
+    GTK_STYLE_PROPERTY_ANIMATED interpolate, so a transition is worth nothing
+    unless it names them (``ValuesComeFromTokens`` and ``VerifiedSurface`` already
+    prove that). And GTK 3 has no ``media`` in its at-rule list, so it cannot hear
+    ``prefers-reduced-motion`` at all — which is why the reduce-motion story has
+    two halves, a media query for GTK 4 and a render-time zero for both.
+    """
+
+    LOW, HIGH = 120, 180
+
+    def triples(self, version: str, reduce_motion: bool = False) -> List[tuple]:
+        return declarations(sheet(version=version, reduce_motion=reduce_motion))
+
+    def durations(self, version: str, reduce_motion: bool = False) -> List[int]:
+        # Only the durations of rules that actually transition something. The
+        # reduce-motion block declares a 0ms duration on `*` with no property
+        # list, and split_at_blocks keeps the inner rules of an @media in the
+        # body, so counting it here would put a deliberate 0 in the band.
+        triples = self.triples(version, reduce_motion)
+        animated = {sel for sel, prop, _ in triples if prop == "transition-property"}
+        return [int(value[:-2]) for sel, prop, value in triples
+                if prop == "transition-duration" and sel in animated]
+
+    def test_every_duration_a_widget_wears_is_inside_the_band(self):
+        for version in gtk.VERSIONS:
+            for value in self.durations(version):
+                with self.subTest(version=version, ms=value):
+                    self.assertTrue(self.LOW <= value <= self.HIGH,
+                                    f"{value}ms is outside the {self.LOW}-{self.HIGH}ms "
+                                    f"band hover, press and focus must answer in")
+
+    def test_the_band_is_one_token_wide_and_the_template_never_chooses_a_number(self):
+        # Every transition in both sheets carries motion.fast_ms and nothing else,
+        # so the band holds or fails as one decision rather than rule by rule.
+        fast = TOKENS["motion"]["fast_ms"]
+        self.assertTrue(self.LOW <= fast <= self.HIGH,
+                        f"motion.fast_ms = {fast} is outside the band the sheets are "
+                        f"required to stay inside")
+        for version in gtk.VERSIONS:
+            with self.subTest(version=version):
+                self.assertEqual({fast}, set(self.durations(version)))
+
+    def test_the_tokens_slow_duration_belongs_to_the_compositor_not_to_a_widget(self):
+        # motion.slow_ms is a workspace-slide duration. A hover that took 380ms
+        # would feel broken rather than calm, so no sheet may reach for it.
+        slow = TOKENS["motion"]["slow_ms"]
+        self.assertGreater(slow, self.HIGH)
+        for version in gtk.VERSIONS:
+            with self.subTest(version=version):
+                self.assertNotIn(slow, self.durations(version))
+
+    def test_a_focus_ring_fades_in_instead_of_appearing(self):
+        # The ring is set by a :focus-visible rule (GTK 4) or a :focus rule
+        # (GTK 3), but a transition has to be declared on the *base* rule to
+        # animate into that state. Naming outline-color only in the ring group
+        # would leave the ring snapping while everything beside it faded.
+        for version in gtk.VERSIONS:
+            pseudo = ":focus-visible" if version == "4" else ":focus"
+            triples = self.triples(version)
+            transitioning = {sel: value for sel, prop, value in triples
+                             if prop == "transition-property"}
+            ringed = {sel for sel, prop, _ in triples
+                      if prop == "outline-color" and pseudo in sel}
+            self.assertTrue(ringed, f"GTK {version} sheet draws no focus ring at all")
+            for selector in sorted(ringed):
+                # A ring rule usually names several controls, and each one has its
+                # own base rule: `check:focus-visible, radio:focus-visible` belongs
+                # to `check, radio`, while `scale:focus-visible slider` belongs to
+                # the `scale slider` rule.
+                for part in selector.split(","):
+                    part = part.strip()
+                    if pseudo not in part:
+                        continue
+                    base = " ".join(part.replace(pseudo, "").split())
+                    owners = [sel for sel in transitioning
+                              if base in [p.strip() for p in sel.split(",")]]
+                    with self.subTest(version=version, ring=part, base=base):
+                        self.assertTrue(
+                            owners,
+                            f"{base} wears a focus ring but no rule transitions it")
+                        for owner in owners:
+                            props = [p.strip() for p in transitioning[owner].split(",")]
+                            self.assertIn("outline-color", props,
+                                          f"{owner} does not transition the ring colour")
+                            self.assertIn("outline-width", props,
+                                          f"{owner} does not transition the ring width")
+
+    def test_the_window_focus_hairline_fades_rather_than_snapping(self):
+        # Focus moves an inset hairline between two alphas, and that hairline is a
+        # box-shadow. GTK 4 draws it on window.background; GTK 3 puts the whole
+        # client-side decoration -- hairline and drop shadow -- on the decoration
+        # node instead. Transitioning only background-color left the one focus cue
+        # every window in the session shares jumping between the two.
+        cue = {"4": ("window.background:backdrop", "window.background"),
+               "3": ("decoration:backdrop", "decoration")}
+        for version in gtk.VERSIONS:
+            backdrop_selector, owner_part = cue[version]
+            triples = self.triples(version)
+            backdrop = {value for sel, prop, value in triples
+                        if sel == backdrop_selector and prop == "box-shadow"}
+            transitioning = {sel: value for sel, prop, value in triples
+                             if prop == "transition-property"}
+            owners = [sel for sel in transitioning
+                      if owner_part in [p.strip() for p in sel.split(",")]]
+            with self.subTest(version=version):
+                self.assertTrue(backdrop,
+                                f"GTK {version} has no {backdrop_selector} hairline")
+                self.assertTrue(owners,
+                                f"no rule transitions {owner_part}, which is where "
+                                f"GTK {version} draws the focus hairline")
+                for owner in owners:
+                    self.assertIn("box-shadow",
+                                  [p.strip() for p in transitioning[owner].split(",")],
+                                  f"{owner} transitions its fill but not the hairline "
+                                  f"that actually changes on focus")
+
+    def test_gtk_4_answers_the_desktop_preference_with_a_universal_selector(self):
+        # An enumerated list of controls silently misses whatever is added next,
+        # and this one already had: spinbutton, .titlebar, listview > row and the
+        # three menu-item selectors all transitioned while none of them was named
+        # in the reduce-motion block, so a user who asked for less motion still
+        # got a fading menu.
+        text = sheet(version="4")
+        block = re.search(r"@media \(prefers-reduced-motion: reduce\)\s*\{(.*?)\n\}",
+                          gtk.strip_comments(text), re.S)
+        self.assertIsNotNone(block, "the GTK 4 sheet dropped its reduce-motion block")
+        inner = block.group(1)
+        self.assertRegex(inner, r"\*\s*\{")
+        self.assertIn("transition-duration: 0ms", inner)
+        self.assertIn("transition-delay: 0ms", inner)
+        # A delayed transition is motion the user still waits for.
+        self.assertNotRegex(inner, r"\b(window|button|entry)\b",
+                            "the reduce-motion block went back to naming controls")
+
+    def test_the_reduce_motion_block_leaves_application_animations_alone(self):
+        # This sheet emits no keyframe animation at all, so every animation in a
+        # session belongs to the application's own theme -- usually a spinner.
+        # Zeroing animation-duration would not reduce motion so much as hide the
+        # fact that something is still working.
+        inner = re.search(r"@media \(prefers-reduced-motion: reduce\)\s*\{(.*?)\n\}",
+                          gtk.strip_comments(sheet(version="4")), re.S).group(1)
+        self.assertNotIn("animation-", inner)
+        for version in gtk.VERSIONS:
+            with self.subTest(version=version):
+                self.assertNotIn("animation-duration",
+                                 [prop for _, prop, _ in self.triples(version)])
+
+    def test_gtk_3_has_no_media_query_because_it_cannot_parse_one(self):
+        self.assertNotIn("media", SURFACE["gtk3"]["at_rules"])
+        self.assertIn("media", SURFACE["gtk4"]["at_rules"])
+        self.assertNotIn("@media", sheet(version="3"))
+
+    def test_a_reduce_motion_render_zeroes_every_duration_in_both_sheets(self):
+        # The only lever GTK 3 has, and the one the iArch setting pulls for both.
+        for version in gtk.VERSIONS:
+            values = self.durations(version, reduce_motion=True)
+            with self.subTest(version=version):
+                self.assertTrue(values)
+                self.assertEqual({0}, set(values))
+
+    def test_a_reduce_motion_render_changes_nothing_but_the_durations(self):
+        # Same selectors, same properties, same colours: a user who asks for less
+        # motion must not lose the focus ring or the glass along with it.
+        for version in gtk.VERSIONS:
+            plain = [(s, p) for s, p, _ in self.triples(version)]
+            quiet = [(s, p) for s, p, _ in self.triples(version, reduce_motion=True)]
+            with self.subTest(version=version):
+                self.assertEqual(plain, quiet)
+
+    def test_the_reduce_motion_flag_refuses_to_become_the_shipped_payload(self):
+        # The shipped payload is the state a fresh install starts in; a
+        # reduce-motion sheet written there would make every later --check --repo
+        # report drift for a file nobody asked to change.
+        with tempfile.TemporaryDirectory() as tmp:
+            env = dict(os.environ, HOME=tmp)
+            with unittest.mock.patch.dict(os.environ, env, clear=True):
+                code = gtk.main(["--reduce-motion", "--write-repo-default"])
+            self.assertEqual(2, code)
+
+    def test_the_reduce_motion_flag_renders_when_writing_to_a_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code = gtk.main(["--reduce-motion", "--output-dir", tmp])
+            self.assertEqual(0, code)
+            for version in gtk.VERSIONS:
+                text = (Path(tmp) / f"gtk-{version}.0" / "gtk.css").read_text()
+                values = [int(v) for v in
+                          re.findall(r"transition-duration:\s*(\d+)ms", text)]
+                with self.subTest(version=version):
+                    self.assertTrue(values)
+                    self.assertEqual({0}, set(values))
+
+
 class ShippedPayload(unittest.TestCase):
     def test_both_sheets_ship_and_validate(self):
         for version in gtk.VERSIONS:

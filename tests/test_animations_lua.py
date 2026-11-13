@@ -1,12 +1,16 @@
-"""Prove the generated Hyprland animation set is the one the tokens describe.
+"""Prove the generated Hyprland animation set is the one the presets describe.
 
 The generator drives compositor animation, which Hyprland validates loudly: an
 unknown leaf, an unregistered curve or a style a leaf does not accept is a config
 error that stops the session. So these tests assert the render against
 ``data/design/animations.json`` -- the animation API read out of Hyprland v0.57.2
--- the same way test_glass_lua.py asserts against ``hyprland.leaves``.
+-- the same way test_glass_lua.py asserts against ``hyprland.leaves``. Since Part
+3 the plan lives in data/design/animations/<preset>.json rather than in a table in
+the generator, so the refusal tests hand the renderer a mutated preset document
+instead of monkeypatching a module global: same guarantees, checked against the
+thing a person actually edits.
 
-Four things are checked:
+Six things are checked:
 
 * the render is Lua at all (``luac -p`` / ``luaparser`` when the host has them,
   plus the structural fallback that needs no interpreter);
@@ -14,10 +18,20 @@ Four things are checked:
   and every ``speed`` equals ``duration_ms / 100`` (the hyprutils
   ``AnimatedVariable::getPercent`` relationship), inside the binding's
   ``(0, 100]``;
-* the Performance intensity turns the master switch off and emits no curve or
-  leaf -- the warp path that lowers compositor work;
-* an invented leaf, a bad style, a spring value at or below 0.5 or an
-  out-of-range speed is refused before anything is written.
+* every curve number is inside the band the binding parses it against -- bezier
+  components in ``[-1, 2]``, spring values strictly above 0.5 -- and the edges of
+  the band are accepted, so the check is the real range and not a narrower guess;
+* the global multiplier divides the duration (above 1 is faster), clamps to the
+  token bounds and says so when it clamps, and reduce-motion renders one forced
+  preset with every duration capped, at any multiplier;
+* the Performance intensity and the ``off`` preset turn the master switch off and
+  emit no curve and no leaf -- the warp path that lowers compositor work -- while
+  a disabled event in any other preset is emitted as an explicit ``enabled =
+  false``, because an absent leaf keeps inheriting its parent;
+* an invented leaf, a bad style, an unregistered curve, a spring value at or below
+  0.5, an out-of-range speed or duration, dead data on a disabled event, or an
+  override asking for motion reduce-motion removes is refused or reported before
+  anything is written.
 """
 from __future__ import annotations
 
@@ -87,6 +101,22 @@ def mutate(base: Dict[str, Any], path: str, value: Any) -> Dict[str, Any]:
     return clone
 
 
+def drop(base: Dict[str, Any], path: str) -> Dict[str, Any]:
+    """A deep copy of ``base`` with ``path`` (dotted) removed.
+
+    Needed because half of what a preset must not do is *omit* something: a leaf
+    Hyprland gives no styles to must carry no style key at all, and a disabled
+    event must carry no duration, curve or style.
+    """
+    clone = json.loads(json.dumps(base))
+    node = clone
+    keys = path.split('.')
+    for key in keys[:-1]:
+        node = node[int(key)] if isinstance(node, list) else node[key]
+    del node[keys[-1]]
+    return clone
+
+
 def render(tk: Optional[Dict[str, Any]] = None, sf: Optional[Dict[str, Any]] = None,
            intensity: str = 'frosted') -> str:
     """The full generated text (header + body) for one intensity."""
@@ -97,6 +127,30 @@ def body_only(tk: Optional[Dict[str, Any]] = None, sf: Optional[Dict[str, Any]] 
               intensity: str = 'frosted') -> str:
     """The Lua body without the generated header, as anim.render returns it."""
     body, _warnings = anim.render(tk or tokens(), sf or surface(), intensity)
+    return body
+
+
+def preset(name: str = 'smooth') -> Dict[str, Any]:
+    """One preset document as a dict, so a test can break it on purpose.
+
+    Part 3 moved the animation plan out of this module's LEAF_PLAN and into
+    data/design/animations/, so the refusal tests that used to monkeypatch a plan
+    now hand the renderer a mutated preset instead -- the same guarantees, checked
+    against the thing a person actually edits.
+    """
+    return anim.load_preset(name)
+
+
+def render_preset(ps: Optional[Dict[str, Any]] = None, tk: Optional[Dict[str, Any]] = None,
+                  sf: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
+    """The full generated text (header + body) for one preset document."""
+    return anim.build_preset(tk or tokens(), sf or surface(), ps or preset(), **kwargs)
+
+
+def body_preset(ps: Optional[Dict[str, Any]] = None, tk: Optional[Dict[str, Any]] = None,
+                sf: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
+    """The Lua body without the generated header, for one preset document."""
+    body, _warnings = anim.render_preset(tk or tokens(), sf or surface(), ps or preset(), **kwargs)
     return body
 
 
@@ -213,25 +267,50 @@ class HeaderAndCheck(unittest.TestCase):
             code = anim.main(['--check'])
         self.assertEqual(0, code, err.getvalue())
 
-    def test_check_fails_when_the_tokens_move(self):
-        # A different duration token changes every speed, so a file rendered from
-        # the old tokens no longer matches; --check must report it rather than pass
-        # silently. ROOT is fixed at import, so the two paths the CLI reads are
-        # pointed at temp copies in-process instead of via a subprocess cwd.
+    def test_check_fails_when_the_preset_moves(self):
+        # A different duration changes every speed, so a file rendered from the old
+        # preset no longer matches; --check must report it rather than pass
+        # silently. ROOT is fixed at import, so the directory the CLI reads and the
+        # file it compares against are pointed at temp copies in-process instead of
+        # via a subprocess cwd.
         with tempfile.TemporaryDirectory() as tmp:
-            moved_tokens = Path(tmp) / 'tokens.json'
-            moved_tokens.write_text(json.dumps(mutate(tokens(), 'motion.normal_ms', 999)),
-                                    encoding='utf-8')
+            presets = Path(tmp) / 'animations'
+            presets.mkdir()
+            # The whole family has to be there: preset_names refuses a name the
+            # tokens list with no file behind it, which is the check that would
+            # otherwise turn this into an exit 2 for the wrong reason.
+            for path in sorted(anim.PRESET_DIR.glob('*.json')):
+                shutil.copy(path, presets / path.name)
+            moved = mutate(preset(), 'events.windows.duration_ms', 999)
+            (presets / 'smooth.json').write_text(json.dumps(moved), encoding='utf-8')
             stale = Path(tmp) / 'animations.lua'
-            shutil.copy(SHIPPED, stale)  # rendered from the real tokens
-            original = (anim.TOKENS_PATH, anim.REPO_DEFAULT)
-            anim.TOKENS_PATH, anim.REPO_DEFAULT = moved_tokens, stale
-            self.addCleanup(setattr, anim, 'TOKENS_PATH', original[0])
+            shutil.copy(SHIPPED, stale)  # rendered from the real preset
+            original = (anim.PRESET_DIR, anim.REPO_DEFAULT)
+            anim.PRESET_DIR, anim.REPO_DEFAULT = presets, stale
+            self.addCleanup(setattr, anim, 'PRESET_DIR', original[0])
             self.addCleanup(setattr, anim, 'REPO_DEFAULT', original[1])
             err = StringIO()
             with redirect_stdout(StringIO()), redirect_stderr(err):
                 code = anim.main(['--check'])
             self.assertEqual(1, code, err.getvalue())
+
+    def test_check_still_passes_when_an_unused_token_moves(self):
+        # The render reads durations out of the preset, not out of motion.fast_ms,
+        # so moving a token the compositor no longer consumes must not make --check
+        # fail -- and must not make it pass for the wrong reason either. The GTK
+        # and Noctalia renderers still read those tokens; tests/test_animation_presets.py
+        # is what keeps smooth and the tokens telling the same story.
+        with tempfile.TemporaryDirectory() as tmp:
+            moved_tokens = Path(tmp) / 'tokens.json'
+            moved_tokens.write_text(json.dumps(mutate(tokens(), 'motion.normal_ms', 999)),
+                                    encoding='utf-8')
+            original = anim.TOKENS_PATH
+            anim.TOKENS_PATH = moved_tokens
+            self.addCleanup(setattr, anim, 'TOKENS_PATH', original)
+            out, err = StringIO(), StringIO()
+            with redirect_stdout(out), redirect_stderr(err):
+                code = anim.main(['--check'])
+            self.assertEqual(0, code, err.getvalue())
 
 
 class MasterSwitch(unittest.TestCase):
@@ -312,10 +391,25 @@ class EveryLeafIsOneHyprlandKnows(unittest.TestCase):
             with self.subTest(leaf=call['leaf']):
                 self.assertIn(call['leaf'], self.leaves)
 
-    def test_the_plan_covers_exactly_the_leaves_that_are_emitted(self):
-        planned = {leaf for leaf, _c, _d, _s in anim.LEAF_PLAN}
+    def test_the_preset_covers_exactly_the_leaves_that_are_emitted(self):
+        declared = set(preset()['events'])
         emitted = {call['leaf'] for call in hl_animation_calls(body_only())}
-        self.assertEqual(planned, emitted)
+        self.assertEqual(declared, emitted)
+
+    def test_every_preset_covers_exactly_the_leaves_it_emits(self):
+        # Including the presets that turn events off: a disabled event is still
+        # emitted, as an explicit enabled = false, because an absent leaf would
+        # keep inheriting its parent's animation. A preset with the master switch
+        # off is the exception and is asserted separately -- it emits nothing at
+        # all, which is the whole point of the warp path.
+        for name in anim.preset_names(tokens()):
+            ps = preset(name)
+            if not ps['master']:
+                continue
+            with self.subTest(preset=name):
+                declared = set(ps['events'])
+                emitted = {c['leaf'] for c in hl_animation_calls(body_preset(ps))}
+                self.assertEqual(declared, emitted)
 
     def test_no_duplicate_leaf_is_emitted(self):
         emitted = [call['leaf'] for call in hl_animation_calls(body_only())]
@@ -339,48 +433,69 @@ class EveryLeafIsOneHyprlandKnows(unittest.TestCase):
             if self.leaves[call['leaf']]['styles'] == []:
                 self.assertNotIn('style', call, call['leaf'])
 
-    def test_an_unknown_leaf_in_the_plan_is_refused(self):
-        plan = anim.LEAF_PLAN
-        anim.LEAF_PLAN = (('notARealLeaf', ('bezier', 'standard'), 'normal_ms', None),)
-        self.addCleanup(setattr, anim, 'LEAF_PLAN', plan)
+    def test_an_unknown_leaf_in_a_preset_is_refused(self):
+        broken = mutate(preset(), 'events.notARealLeaf',
+                        {'enabled': True, 'duration_ms': 220, 'curve': 'standard'})
         with self.assertRaises(anim.AnimationError):
-            render()
+            render_preset(broken)
 
-    def test_a_bad_style_in_the_plan_is_refused(self):
-        plan = anim.LEAF_PLAN
-        # 'fade' takes no style upstream, so naming one must be refused.
-        anim.LEAF_PLAN = (('fade', ('bezier', 'standard'), 'fast_ms', 'slide'),)
-        self.addCleanup(setattr, anim, 'LEAF_PLAN', plan)
+    def test_an_unknown_leaf_is_refused_even_when_the_event_is_disabled(self):
+        # A typo is a typo whether or not the event does anything: hl.animation
+        # answers "no such animation leaf" before it ever looks at enabled.
+        broken = mutate(preset('minimal'), 'events.notARealLeaf', {'enabled': False})
         with self.assertRaises(anim.AnimationError):
-            render()
+            render_preset(broken)
+
+    def test_a_style_on_a_leaf_that_takes_none_is_refused(self):
+        # 'fade' takes no style upstream, so naming one must be refused.
+        broken = mutate(preset(), 'events.fade.style', 'slide')
+        with self.assertRaises(anim.AnimationError):
+            render_preset(broken)
 
     def test_a_style_the_leaf_does_not_accept_is_refused(self):
-        plan = anim.LEAF_PLAN
         # windows accepts slide/gnome/gnomed/popin, never 'fade'.
-        anim.LEAF_PLAN = (('windows', ('bezier', 'standard'), 'normal_ms', 'fade'),)
-        self.addCleanup(setattr, anim, 'LEAF_PLAN', plan)
+        broken = mutate(preset(), 'events.windows.style', 'fade')
         with self.assertRaises(anim.AnimationError):
-            render()
+            render_preset(broken)
+
+    def test_the_style_the_brief_suggests_for_workspaces_is_refused(self):
+        # 'slidefade 20%' reads like a plausible Hyprland style and is not one:
+        # workspaces takes slide, slidevert or fade, and only 'slide' accepts a
+        # ' NN%' suffix. This is the exact invention the surface file exists to
+        # stop, so it is asserted rather than left to a reviewer to notice.
+        broken = mutate(preset(), 'events.workspaces.style', 'slidefade 20%')
+        with self.assertRaises(anim.AnimationError):
+            render_preset(broken)
 
     def test_omitting_a_required_style_is_refused(self):
-        plan = anim.LEAF_PLAN
-        # windows accepts styles, so the plan must name one.
-        anim.LEAF_PLAN = (('windows', ('bezier', 'standard'), 'normal_ms', None),)
-        self.addCleanup(setattr, anim, 'LEAF_PLAN', plan)
+        # windows accepts styles, so the preset must name one.
+        broken = drop(preset(), 'events.windows.style')
         with self.assertRaises(anim.AnimationError):
-            render()
+            render_preset(broken)
 
 
 class SpeedsAreDurationsOverOneHundred(unittest.TestCase):
     def setUp(self):
-        self.motion = tokens()['motion']
+        self.preset = preset()
+        self.events = self.preset['events']
         self.calls = {c['leaf']: c for c in hl_animation_calls(body_only())}
 
-    def test_every_speed_equals_its_duration_token_over_one_hundred(self):
-        for leaf, curve, duration_token, _style in anim.LEAF_PLAN:
+    def test_every_speed_equals_its_preset_duration_over_one_hundred(self):
+        for leaf, call in self.calls.items():
             with self.subTest(leaf=leaf):
-                expected = round(self.motion[duration_token] / 100.0, 4)
-                self.assertAlmostEqual(expected, self.calls[leaf]['speed'], places=4)
+                expected = round(self.events[leaf]['duration_ms'] / 100.0, 4)
+                self.assertAlmostEqual(expected, call['speed'], places=4)
+
+    def test_every_preset_derives_every_speed_the_same_way(self):
+        for name in anim.preset_names(tokens()):
+            ps = preset(name)
+            calls = {c['leaf']: c for c in hl_animation_calls(body_preset(ps))}
+            for leaf, event in ps['events'].items():
+                if not event['enabled']:
+                    continue
+                with self.subTest(preset=name, leaf=leaf):
+                    expected = round(event['duration_ms'] / 100.0, 4)
+                    self.assertAlmostEqual(expected, calls[leaf]['speed'], places=4)
 
     def test_the_three_durations_map_to_the_three_speeds(self):
         self.assertAlmostEqual(1.2, self.calls['fade']['speed'], places=4)   # fast_ms 120
@@ -395,15 +510,152 @@ class SpeedsAreDurationsOverOneHundred(unittest.TestCase):
                 self.assertLessEqual(call['speed'], 100.0)
 
     def test_a_zero_duration_is_refused_before_it_is_written(self):
-        tk = mutate(tokens(), 'motion.fast_ms', 0)
+        broken = mutate(self.preset, 'events.fade.duration_ms', 0)
         with self.assertRaises(anim.AnimationError):
-            render(tk)
+            render_preset(broken)
 
     def test_a_duration_above_the_binding_ceiling_is_refused(self):
-        # 10001ms -> speed 100.01, above the 100 the binding clamps to.
-        tk = mutate(tokens(), 'motion.slow_ms', 10001)
+        # 10001ms -> speed 100.01, above the 100 the binding parses speed against.
+        # CLuaConfigFloat returns PARSE_ERROR_OUT_OF_RANGE rather than clamping, so
+        # this would stop the session, not quietly shorten the animation.
+        broken = mutate(self.preset, 'events.workspaces.duration_ms', 10001)
         with self.assertRaises(anim.AnimationError):
-            render(tk)
+            render_preset(broken)
+
+    def test_the_longest_duration_any_preset_declares_is_inside_the_ceiling(self):
+        ceiling = surface()['speed_formula']['speed_max'] * 100
+        for name in anim.preset_names(tokens()):
+            for leaf, event in preset(name)['events'].items():
+                if not event['enabled']:
+                    continue
+                with self.subTest(preset=name, leaf=leaf):
+                    self.assertLessEqual(event['duration_ms'], ceiling)
+
+
+class TheGlobalMultiplierIsClampedNotTrusted(unittest.TestCase):
+    """``iarch-anim speed`` divides the duration and clamps to the token bounds."""
+
+    def setUp(self):
+        self.tokens = tokens()
+        self.low, self.high, self.default = anim.multiplier_bounds(self.tokens)
+
+    def calls(self, **kwargs):
+        return {c['leaf']: c for c in hl_animation_calls(body_preset(preset(), **kwargs))}
+
+    def test_the_bounds_are_the_documented_ones(self):
+        self.assertEqual(0.5, self.low)
+        self.assertEqual(2.0, self.high)
+        self.assertEqual(1.0, self.default)
+
+    def test_a_multiplier_above_one_shortens_the_animation(self):
+        # 220ms at 2.0 is 110ms, i.e. speed 1.1: faster means less time, the
+        # direction render_noctalia.py already uses for shell.animation.
+        self.assertAlmostEqual(1.1, self.calls(multiplier=2.0)['windows']['speed'], places=4)
+
+    def test_a_multiplier_below_one_lengthens_the_animation(self):
+        self.assertAlmostEqual(4.4, self.calls(multiplier=0.5)['windows']['speed'], places=4)
+
+    def test_one_changes_nothing(self):
+        self.assertEqual(hl_animation_calls(body_preset(preset())),
+                         hl_animation_calls(body_preset(preset(), multiplier=1.0)))
+
+    def test_every_event_is_scaled_not_just_the_first(self):
+        slow = self.calls(multiplier=0.5)
+        fast = self.calls(multiplier=2.0)
+        for leaf in slow:
+            with self.subTest(leaf=leaf):
+                self.assertAlmostEqual(slow[leaf]['speed'] / 4.0, fast[leaf]['speed'], places=3)
+
+    def test_a_multiplier_past_the_ceiling_is_clamped_and_reported(self):
+        value, clamped = anim.clamp_multiplier(self.tokens, 99.0)
+        self.assertEqual(self.high, value)
+        self.assertTrue(clamped)
+        _body, warnings = anim.render_preset(self.tokens, surface(), preset(), multiplier=99.0)
+        self.assertTrue(any('outside' in w for w in warnings), warnings)
+        self.assertAlmostEqual(1.1, self.calls(multiplier=99.0)['windows']['speed'], places=4)
+
+    def test_a_multiplier_below_the_floor_is_clamped_and_reported(self):
+        value, clamped = anim.clamp_multiplier(self.tokens, 0.01)
+        self.assertEqual(self.low, value)
+        self.assertTrue(clamped)
+        _body, warnings = anim.render_preset(self.tokens, surface(), preset(), multiplier=0.01)
+        self.assertTrue(any('outside' in w for w in warnings), warnings)
+
+    def test_a_multiplier_inside_the_bounds_is_not_reported_as_clamped(self):
+        value, clamped = anim.clamp_multiplier(self.tokens, 1.25)
+        self.assertEqual(1.25, value)
+        self.assertFalse(clamped)
+
+    def test_the_slowest_setting_stays_inside_the_binding_range(self):
+        # 3000ms borderangle at 0.5 is 6000ms -> speed 60, still inside (0, 100].
+        for leaf, call in self.calls(multiplier=self.low).items():
+            with self.subTest(leaf=leaf):
+                self.assertGreater(call['speed'], 0.0)
+                self.assertLessEqual(call['speed'], surface()['speed_formula']['speed_max'])
+
+    def test_a_non_numeric_multiplier_is_refused(self):
+        with self.assertRaises(anim.AnimationError):
+            anim.clamp_multiplier(self.tokens, 'fast')
+
+    def test_a_multiplier_cannot_round_a_duration_away_to_nothing(self):
+        # A hand-edited preset with a 1ms event at the slowest multiplier would
+        # round to 2ms, but a preset that small at the fastest setting has to be
+        # refused rather than emitted as speed 0, which the binding rejects.
+        broken = mutate(preset(), 'events.fade.duration_ms', 1)
+        with self.assertRaises(anim.AnimationError):
+            render_preset(broken, multiplier=2.0)
+
+
+class ReduceMotionIsDeterministic(unittest.TestCase):
+    """Reduce-motion forces one preset and caps every duration."""
+
+    def setUp(self):
+        self.tokens = tokens()
+        self.forced = anim.reduce_motion_preset(self.tokens)
+        self.cap = anim.reduce_motion_cap_ms(self.tokens)
+
+    def test_the_tokens_name_minimal_and_a_cap_under_a_hundred_milliseconds(self):
+        self.assertEqual('minimal', self.forced)
+        self.assertLess(self.cap, 100)
+
+    def test_it_renders_the_forced_preset_whatever_was_selected(self):
+        body = body_preset(preset(self.forced), reduce_motion=True)
+        self.assertTrue(master_enabled(body))
+        emitted = {c['leaf'] for c in hl_animation_calls(body) if c['enabled']}
+        self.assertTrue(emitted, 'reduce-motion must still fade something')
+
+    def test_it_caps_every_duration(self):
+        for call in hl_animation_calls(body_preset(preset(self.forced), reduce_motion=True)):
+            if not call['enabled']:
+                continue
+            with self.subTest(leaf=call['leaf']):
+                self.assertLessEqual(call['speed'] * 100, self.cap)
+
+    def test_the_cap_holds_at_the_slowest_multiplier_too(self):
+        # The cap is applied after the multiplier, so slowing everything down
+        # cannot push a fade back over the reduce-motion ceiling.
+        body = body_preset(preset(self.forced), reduce_motion=True, multiplier=0.5)
+        for call in hl_animation_calls(body):
+            if call['enabled']:
+                self.assertLessEqual(call['speed'] * 100, self.cap)
+
+    def test_rendering_reduce_motion_from_another_preset_is_refused(self):
+        # The guarantee lives in the renderer, not in the caller, so no tool can
+        # render a reduce-motion session that still slides windows.
+        with self.assertRaises(anim.AnimationError):
+            render_preset(preset('smooth'), reduce_motion=True)
+
+    def test_an_override_that_would_add_motion_back_is_ignored_and_reported(self):
+        _body, warnings = anim.render_preset(self.tokens, surface(), preset(self.forced),
+                                             reduce_motion=True, overrides={'windows': True})
+        self.assertTrue(any('reduce-motion removes' in w for w in warnings), warnings)
+        calls = {c['leaf']: c for c in hl_animation_calls(_body)}
+        self.assertFalse(calls['windows']['enabled'])
+
+    def test_an_override_that_removes_motion_is_still_honoured(self):
+        body = body_preset(preset(self.forced), reduce_motion=True, overrides={'fade': False})
+        calls = {c['leaf']: c for c in hl_animation_calls(body)}
+        self.assertFalse(calls['fade']['enabled'])
 
     def test_the_formula_matches_the_recorded_surface(self):
         self.assertEqual('duration_ms = 100 * speed', surface()['speed_formula']['equation'])
@@ -434,37 +686,162 @@ class EveryLeafNamesACurveThatExists(unittest.TestCase):
                 self.assertEqual(1, ('bezier' in call) + ('spring' in call),
                                  'hl.animation requires exactly one curve reference')
 
-    def test_an_unregistered_easing_in_the_plan_is_refused(self):
-        plan = anim.LEAF_PLAN
-        anim.LEAF_PLAN = (('windows', ('bezier', 'noSuchEasing'), 'normal_ms', 'slide'),)
-        self.addCleanup(setattr, anim, 'LEAF_PLAN', plan)
-        # The curve name would be iarch-noSuchEasing, which render_curves never
-        # registers; the leaf then references a curve that does not exist.
+    def test_an_event_naming_a_curve_the_preset_does_not_declare_is_refused(self):
+        # The name would be registered as iarch-noSuchCurve by nobody; hl.animation
+        # looks it up with bezierExists/springExists and errors on a miss.
+        broken = mutate(preset(), 'events.windows.curve', 'noSuchCurve')
         with self.assertRaises(anim.AnimationError):
-            render()
+            render_preset(broken)
+
+    def test_a_curve_of_an_unknown_type_is_refused(self):
+        # hl.curve accepts exactly 'bezier' and 'spring'; anything else is a config
+        # error, and a preset that invented a third kind must not reach the file.
+        broken = mutate(preset(), 'curves.standard.type', 'easeInOut')
+        with self.assertRaises(anim.AnimationError):
+            render_preset(broken)
 
 
-class SpringsAreInsideTheBindingBounds(unittest.TestCase):
-    def test_the_token_spring_is_above_the_strict_half_bound(self):
-        # hl.curve rejects stiffness/damping/mass <= 0.5 with a config error.
-        for key, value in tokens()['motion']['spring'].items():
-            with self.subTest(key=key):
-                self.assertGreater(value, 0.5)
+class CurvesAreInsideTheBindingBounds(unittest.TestCase):
+    """Every number a curve carries is one hl.curve will accept.
+
+    The bounds are read out of data/design/animations.json rather than repeated
+    here, so this class fails if the recorded surface and the generator ever
+    disagree about what Hyprland enforces.
+    """
+
+    def setUp(self):
+        self.surface = surface()
+        self.bezier_limits = self.surface['curve_types']['bezier']
+        self.spring_floor = self.surface['curve_types']['spring']['value_min_exclusive']
+
+    def test_the_surface_records_the_bounds_as_numbers(self):
+        self.assertEqual(-1.0, self.bezier_limits['component_min'])
+        self.assertEqual(2.0, self.bezier_limits['component_max'])
+        self.assertEqual(0.5, self.spring_floor)
+
+    def test_every_declared_spring_is_above_the_strict_half_bound(self):
+        for name in anim.preset_names(tokens()):
+            for curve_name, curve in preset(name)['curves'].items():
+                if curve.get('type') != 'spring':
+                    continue
+                for key, value in curve.items():
+                    if key in ('stiffness', 'damping', 'mass'):
+                        with self.subTest(preset=name, curve=curve_name, key=key):
+                            self.assertGreater(value, self.spring_floor)
+
+    def test_every_declared_bezier_component_is_inside_the_recorded_band(self):
+        low, high = self.bezier_limits['component_min'], self.bezier_limits['component_max']
+        for name in anim.preset_names(tokens()):
+            for curve_name, curve in preset(name)['curves'].items():
+                if curve.get('type') != 'bezier':
+                    continue
+                for point in curve['points']:
+                    for component in point:
+                        with self.subTest(preset=name, curve=curve_name):
+                            self.assertGreaterEqual(component, low)
+                            self.assertLessEqual(component, high)
+
+    def test_the_bouncy_preset_really_does_overshoot(self):
+        # The point of the wider band: a y above 1 arrives past the target and
+        # comes back. If no curve in bouncy exceeds 1 the preset is misnamed.
+        curves = preset('bouncy')['curves']
+        peaks = [max(y for _x, y in c['points']) for c in curves.values()
+                 if c['type'] == 'bezier']
+        self.assertTrue(any(peak > 1.0 for peak in peaks), peaks)
+
+    def test_no_shared_easing_token_overshoots(self):
+        # tokens.motion.easing is shared with the GTK CSS renderer, where
+        # cubic-bezier() requires the unit square, so the overshoot lives in the
+        # compositor-only preset files and never in the tokens.
+        for name, curve in tokens()['motion']['easing'].items():
+            for point in curve['points']:
+                for component in point:
+                    with self.subTest(easing=name):
+                        self.assertGreaterEqual(component, 0.0)
+                        self.assertLessEqual(component, 1.0)
 
     def test_a_spring_value_at_half_is_refused(self):
-        tk = mutate(tokens(), 'motion.spring.damping', 0.5)
+        broken = mutate(preset(), 'curves.spring.damping', self.spring_floor)
         with self.assertRaises(anim.AnimationError):
-            render(tk)
+            render_preset(broken)
 
     def test_a_spring_value_below_half_is_refused(self):
-        tk = mutate(tokens(), 'motion.spring.mass', 0.2)
+        broken = mutate(preset(), 'curves.spring.mass', 0.2)
         with self.assertRaises(anim.AnimationError):
-            render(tk)
+            render_preset(broken)
 
     def test_a_bezier_without_two_points_is_refused(self):
-        tk = mutate(tokens(), 'motion.easing.standard.points', [[0.4, 0.0]])
+        broken = mutate(preset(), 'curves.standard.points', [[0.4, 0.0]])
         with self.assertRaises(anim.AnimationError):
-            render(tk)
+            render_preset(broken)
+
+    def test_a_bezier_component_above_the_band_is_refused(self):
+        # 2.1 is past the CLuaConfigFloat(0, -1, 2) maximum, which returns
+        # PARSE_ERROR_OUT_OF_RANGE instead of clamping, so it has to fail here.
+        broken = mutate(preset(), 'curves.standard.points', [[0.4, 0.0], [2.1, 1.0]])
+        with self.assertRaises(anim.AnimationError):
+            render_preset(broken)
+
+    def test_a_bezier_component_below_the_band_is_refused(self):
+        broken = mutate(preset(), 'curves.standard.points', [[-1.5, 0.0], [0.2, 1.0]])
+        with self.assertRaises(anim.AnimationError):
+            render_preset(broken)
+
+    def test_the_band_edges_themselves_are_accepted(self):
+        # -1 and 2 are inside the range the parser allows, so the check is a band
+        # and not a smaller guess at one.
+        edge = mutate(preset(), 'curves.standard.points', [[-1.0, 0.0], [2.0, 1.0]])
+        self.assertIn('iarch-standard', hl_curve_calls(body_preset(edge)))
+
+
+class DisabledEventsSayOnlyThatTheyAreOff(unittest.TestCase):
+    def test_a_disabled_event_is_emitted_with_no_speed_curve_or_style(self):
+        body = body_preset(preset('minimal'))
+        for call in hl_animation_calls(body):
+            if call['enabled']:
+                continue
+            with self.subTest(leaf=call['leaf']):
+                self.assertEqual({'leaf', 'enabled'}, set(call))
+
+    def test_a_preset_that_declares_an_event_off_may_not_give_it_a_duration(self):
+        # Dead data: hl.animation returns early on enabled = false, so a duration,
+        # curve or style on a disabled event is never read and only misleads.
+        broken = mutate(preset('minimal'), 'events.windows.duration_ms', 220)
+        with self.assertRaises(anim.AnimationError):
+            render_preset(broken)
+
+    def test_an_override_turning_an_event_off_leaves_the_preset_data_alone(self):
+        # The other direction is not dead data: smooth declares borderangle with a
+        # duration and curve, and a person toggling it off should be able to
+        # toggle it back on without editing the preset.
+        body = body_preset(preset(), overrides={'borderangle': False})
+        calls = {c['leaf']: c for c in hl_animation_calls(body)}
+        self.assertEqual({'leaf', 'enabled'}, set(calls['borderangle']))
+        self.assertTrue(calls['windows']['enabled'])
+
+    def test_an_override_can_turn_a_live_event_back_on(self):
+        body = body_preset(preset(), overrides={'borderangle': False})
+        self.assertFalse({c['leaf']: c for c in hl_animation_calls(body)}['borderangle']['enabled'])
+        body = body_preset(preset(), overrides={'borderangle': True})
+        self.assertTrue({c['leaf']: c for c in hl_animation_calls(body)}['borderangle']['enabled'])
+
+    def test_an_override_cannot_turn_on_an_event_the_preset_declares_off(self):
+        # minimal gives 'windows' no duration or curve, so there is nothing to
+        # turn it on with; the refusal has to say that instead of failing on a
+        # missing style or duration deep in the render.
+        with self.assertRaises(anim.AnimationError) as caught:
+            render_preset(preset('minimal'), overrides={'windows': True})
+        self.assertIn('switch to a preset', str(caught.exception))
+
+    def test_an_override_naming_an_event_the_preset_does_not_declare_is_refused(self):
+        with self.assertRaises(anim.AnimationError):
+            render_preset(preset(), overrides={'fadePopups': False})
+
+    def test_the_master_switch_off_emits_no_curve_and_no_event(self):
+        body = body_preset(preset('off'))
+        self.assertIs(False, master_enabled(body))
+        self.assertEqual({}, hl_curve_calls(body))
+        self.assertEqual([], hl_animation_calls(body))
 
 
 class LoadGraph(unittest.TestCase):

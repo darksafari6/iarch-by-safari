@@ -63,7 +63,7 @@
 | `SUPER + right` | Focus right |
 | `SUPER + up` | Focus up |
 | `SUPER + down` | Focus down |
-| `ALT + tab` | Cycle windows |
+| `ALT + tab` | Window switcher overlay — runs `noctalia msg window-switcher hold` |
 | `SUPER + SHIFT + right` | Resize window right |
 | `SUPER + SHIFT + left` | Resize window left |
 | `SUPER + SHIFT + up` | Resize window up |

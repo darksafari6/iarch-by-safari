@@ -50,6 +50,7 @@ from iarch.lib import configstore  # noqa: E402  (repo-root import by design)
 TOKENS_PATH = ROOT / "data" / "design" / "tokens.json"
 SURFACE_PATH = ROOT / "data" / "design" / "noctalia.json"
 PRESET_DIR = ROOT / "data" / "design" / "presets"
+ANIMATION_DIR = ROOT / "data" / "design" / "animations"
 REPO_CONFIG = ROOT / ".config" / "noctalia" / "config.toml"
 REPO_PALETTES = ROOT / ".config" / "noctalia" / "palettes"
 
@@ -107,8 +108,65 @@ PROFILE: Dict[str, Any] = OrderedDict(
     open_near_click_control_center=True,
     launcher=OrderedDict(
         layout="full", width=760, search_position="bottom", default_view="recent",
-        categories=True, show_navigation_labels=True, show_settings_button=True,
-        show_session_button=True, show_icons=True, track_usage=True, sort_by_usage=True,
+        categories=True, category_icons_only=False,
+        show_navigation_labels=True, show_settings_button=True, show_session_button=True,
+        show_icons=True, show_app_origin_indicator=True, compact=False, app_grid=False,
+        show_app_actions=False, track_usage=True, sort_by_usage=True, ignore_mouse=False,
+        # Nobody's launchers are pinned for them; the Recent view is the landing one.
+        pinned=[],
+        # The calculator can refresh currency rates from libqalculate's online
+        # sources. That is a network call to a third party nobody asked for, so it
+        # stays off: arithmetic, functions, units and number bases all work offline,
+        # and a currency conversion uses whatever rates are already cached.
+        fetch_exchange_rates=False,
+        provider_prefix="/", auto_paste="auto",
+    ),
+    # The Alt+Tab overlay. It is opened over IPC, so there is nothing to bind here --
+    # .config/hypr/keybind.lua binds `noctalia msg window-switcher hold`, the form
+    # docs/user/ipc/shell.mdx gives for a held-modifier keybind. mru is the one value
+    # that differs from upstream's default: Alt+Tab means most-recently-used to most
+    # people, and workspace order is what the workspace switcher is for.
+    # The lock screen. The two security keys are emitted explicitly at their
+    # restrictive values rather than left to a default: grace_period_seconds > 0
+    # lets any keypress, or a mouse move beyond 5 px, unlock the session with no
+    # password at all, and allow_empty_password accepts an empty one. Neither is
+    # a glass effect, and a test asserts both stay where they are.
+    #
+    # transition is a single effect on purpose. The shell picks one of the listed
+    # transitions at random for every lock and unlock, and randomizes its
+    # parameters too, so upstream's default list of all eleven means a lock is
+    # now a melt, now a vortex, now a honeycomb. A design system that promises
+    # calm, predictable motion cannot also promise that.
+    lockscreen_grace_period_seconds=0,
+    lockscreen_fingerprint=True,
+    lockscreen=OrderedDict(
+        transition=["fade"],
+        # blur_intensity is a 0-1 dial the code turns into a radius by
+        # multiplying (blur_intensity * 40 px), which is not Hyprland's
+        # decoration:blur:size scale and has no verified conversion to it, so it
+        # stays at the documented midpoint. tint_intensity *is* convertible: it
+        # is the alpha of a ColorRole::Surface overlay, which is exactly what the
+        # intensity's glass.tint_alpha means everywhere else in this project.
+        blur_intensity=0.5,
+        edge_smoothness=0.3,
+    ),
+    # Idle: fifteen minutes to a locked session, one minute more to dark monitors.
+    # The shape is the manual's -- docs/user/services/idle.mdx and example.toml
+    # both ship exactly these two behaviors, a lock and a screen-off, in that
+    # order, both disabled -- and the 60-second gap between them is theirs too.
+    # The values are 900 and 960 rather than the documented 600 and 660 because a
+    # desktop that locks ten minutes after you stop typing takes the screen away
+    # from somebody reading a long page or watching a video that holds no idle
+    # inhibitor; fifteen minutes is the same design with more room. Timeouts are
+    # the real order: behavior_order is write-only upstream.
+    idle_pre_action_fade_seconds=2.0,
+    idle_behaviors=OrderedDict(
+        lock=OrderedDict(enabled=True, timeout=900, action="lock"),
+        screen_off=OrderedDict(enabled=True, timeout=960, action="screen_off"),
+    ),
+    window_switcher=OrderedDict(
+        style="carousel", mru=True, show_caption=True, show_count=True,
+        show_app_icon=True, show_all_outputs=True, current_workspace_only=False,
     ),
     bar_order=["default"],
     bar_position="top",
@@ -131,11 +189,46 @@ PROFILE: Dict[str, Any] = OrderedDict(
         # a scale on hover, no blur and no framebuffer pass.
         magnification=True, magnification_scale=1.18,
     ),
-    control_center=OrderedDict(sidebar="full", width=700),
+    # Six is the most the Home tab shows, so this list is the entire visible set.
+    # `notification` is Do Not Disturb, `power_profile` cycles the system power
+    # profile, and `caffeine` holds idle and sleep off. Four tiles the design brief
+    # asks for have no type upstream -- airplane, game mode, focus mode and
+    # screenshot -- and `screen_recorder` stays permanently disabled without the
+    # official plugin, so none of them is emitted as a button that does nothing.
+    # docs/glass-experience.md says where each of those lands instead.
+    control_center_shortcuts=["wifi", "bluetooth", "notification", "nightlight",
+                              "power_profile", "caffeine"],
+    control_center=OrderedDict(
+        sidebar="full", sidebar_section="compact", width=700,
+        show_shortcut_labels=True, show_session_button=True,
+        circular_avatar=True, show_avatar_border=True,
+        # Every tab stays reachable. A hidden tab also drops out of keyboard
+        # navigation and out of the launcher's Panels provider, so hiding one is a
+        # person's choice rather than a default this project should pick.
+        hidden_tabs=[],
+        calendar=OrderedDict(
+            show_events_card=True, show_week_numbers=False, show_events_location=True,
+            # A panel opened for a glance should say what happens next, not what
+            # already did; fifteen minutes keeps an event that has just started.
+            hide_past_events=True, past_events_threshold_minutes=15,
+        ),
+    ),
     notification=OrderedDict(
         enable_daemon=True, show_app_name=True, show_actions=True,
         position="top_right", layer="top", scale=1.0, width=380,
-        offset_x=18, offset_y=12, collapse_on_dismiss=True,
+        # One margin on both axes, and it is a real edge distance on both: offset_x is split
+        # by shell::surface_edge_inset::resolve() into a layer margin plus the card's own
+        # inner padding, so the painted card edge lands 16 px out either way, while offset_y
+        # is used verbatim as the layer surface's top margin. Whether that 16 px is measured
+        # from the screen edge or from the bar that reserves its exclusive zone above it is
+        # NOT-01 in docs/UNVERIFIED.md -- it needs a live session to answer.
+        offset_x=16, offset_y=16,
+        # Toasts stay on the output they appeared on: follow_focused_output would move each
+        # new one to wherever the pointer is, which reads as flicker on a multi-monitor desk.
+        # An empty monitors list is "every monitor", and Noctalia falls back to every monitor
+        # anyway if the listed ones are all disconnected, so there is nothing to pin here.
+        follow_focused_output=False, monitors=[],
+        collapse_on_dismiss=True,
         keep_dismissed_in_history=True, max_visible=4, history_retention_hours=168,
     ),
     audio=OrderedDict(
@@ -145,6 +238,39 @@ PROFILE: Dict[str, Any] = OrderedDict(
         enable_notification_sounds=False,
         enable_volume_sounds=True, enable_power_sounds=True,
         enable_screenshot_sounds=True, sound_volume=0.38, sound_theme="freedesktop",
+    ),
+    # The desktop wallpaper. transition names one effect for the reason the lock
+    # screen's does: the shell picks one of whatever is listed at random for every
+    # change and randomizes that effect's parameters too
+    # (src/shell/wallpaper/wallpaper.cpp:1486-1490), so upstream's default list of
+    # all eleven means a wallpaper change is now a melt, now a vortex.
+    #
+    # This one is not reachable from either motion switch. Hyprland's
+    # animations:enabled governs the compositor's own animated config values and
+    # nothing inside another process, and the shell's [shell.animation] is ignored
+    # here on purpose: upstream says so in terms, animateTimer takes neither the
+    # animation-speed multiplier nor the animations-enabled toggle because
+    # "disabling animations must not skip the crossfade" (wallpaper.cpp:1516-1518).
+    # So a Performance intensity that only turned off animation would still
+    # crossfade every change, and the switch that actually turns this off is an
+    # empty transition list (wallpaper.cpp:1474-1479). That is what
+    # wallpaper_section emits when motion is off.
+    #
+    # transition_on_startup goes with it, because the reader requires a non-empty
+    # list as well: with transition = [] the flag does nothing at all
+    # (wallpaper.cpp:1418), and a true beside an empty list would be a setting that
+    # looks like an effect and is not one.
+    #
+    # edge_smoothness is upstream's default and cannot change a fade, which has no
+    # edge; it is emitted for the reason the lock screen's copy is, so the file
+    # states the value instead of leaving it to change upstream. The directories,
+    # the monitor overrides and the slideshow are all recorded in
+    # data/design/noctalia.json and none is emitted: a path on somebody's disk, an
+    # output name and a preference for changing the picture every half hour are not
+    # repository state.
+    wallpaper=OrderedDict(
+        transition=["fade"],
+        edge_smoothness=0.3,
     ),
 )
 
@@ -158,12 +284,29 @@ SECTION_COMMENTS: Dict[str, str] = {
     "shell.animation": "Speed is motion.normal_ms measured against a 220 ms baseline.",
     "shell.shadow": "Panel shadow: the intensity's shadow alpha, or nothing when shadows are off.",
     "shell.panel": "Floating panels: launcher, control centre, session, polkit, wallpaper picker.",
-    "shell.launcher": "Launcher layout and content.",
+    "shell.launcher": "Launcher layout and content. Its seven providers keep their built-in "
+                      "prefixes, so none is restated here.",
+    "shell.window_switcher": "The Alt+Tab overlay, opened by `noctalia msg window-switcher hold`.",
     "bar": "Bars live at the config root: order names them, [bar.<name>] configures each.",
     "dock": "Dock geometry and magnification.",
-    "control_center": "Control centre layout.",
+    "control_center": "Control centre layout, its tabs and the Home shortcut row.",
+    "control_center.calendar": "Calendar tab: the card on Home and the month view.",
+    "control_center.media": "Media tab. The visualizer follows the intensity's motion switch.",
     "notification": "Notification toasts.",
     "audio": "Shell sounds. Notification sounds are off by design.",
+    "wallpaper": "The desktop wallpaper. One named transition, and none at the "
+                 "Performance intensity: the shell animates a change on its own "
+                 "timer, so neither Hyprland's animations:enabled nor the shell's "
+                 "own [shell.animation] reaches it.",
+    "lockscreen": "The shell's own lock screen: the one this session shows whenever the "
+                  "shell is running, so hyprlock.conf is the fallback. One transition, "
+                  "chosen by name, because the shell picks a random one of whatever is "
+                  "listed.",
+    "idle": "Idle behaviours. The shell watches ext_idle_notifier_v1 itself, so "
+            ".config/hypr/hypridle.conf ships unlaunched rather than racing it.",
+    "idle.behavior.lock": "Fifteen minutes idle locks the session.",
+    "idle.behavior.screen_off": "One minute after that the monitors go off, and come back "
+                                "on their own when you return.",
 }
 
 
@@ -263,7 +406,14 @@ def shell_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> Dict[str
         clipboard_confirm_clear_history=PROFILE["clipboard_confirm_clear_history"],
     )
     section["animation"] = OrderedDict(
-        enabled=tokens["motion"]["normal_ms"] > 0,
+        # The intensity is the coarse motion switch, and it is repository state
+        # rather than user state, so the committed payload stays reproducible from
+        # a clean clone: Performance turns the shell's own animations off the same
+        # way it turns the compositor's off, through intensity.motion. Comparing
+        # motion.normal_ms against zero instead -- which is what this said before
+        # -- was a constant true for every intensity the tokens ship, so the key
+        # existed and never did anything.
+        enabled=bool(intensity["motion"]["enabled"]),
         speed=animation_speed(tokens),
     )
     section["shadow"] = OrderedDict(
@@ -287,6 +437,7 @@ def shell_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> Dict[str
         panel[f"{name}_position"] = value
     section["panel"] = panel
     section["launcher"] = OrderedDict(PROFILE["launcher"])
+    section["window_switcher"] = OrderedDict(PROFILE["window_switcher"])
     return section
 
 
@@ -363,6 +514,22 @@ def dock_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> Dict[str,
     )
 
 
+def control_center_section(intensity: Dict[str, Any]) -> Dict[str, Any]:
+    """The control centre: fixed layout, plus the two keys that follow a switch.
+
+    ``media.show_visualizer`` is the one element in the panel that moves
+    continuously rather than in answer to something, so it follows the same
+    ``motion.enabled`` that decides whether the shell animates at all -- off in the
+    performance intensity, on everywhere else. The shortcut row is an array of
+    one-key tables, which is the shape ``[[control_center.shortcuts]]`` needs.
+    """
+    section = OrderedDict(PROFILE["control_center"])
+    section["media"] = OrderedDict(show_visualizer=bool(intensity["motion"]["enabled"]))
+    section["shortcuts"] = [OrderedDict(type=name)
+                            for name in PROFILE["control_center_shortcuts"]]
+    return section
+
+
 def notification_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> Dict[str, Any]:
     notification = OrderedDict(PROFILE["notification"])
     notification["background_opacity"] = float(intensity["shell"]["notification_opacity"])
@@ -370,6 +537,48 @@ def notification_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> D
     notification["border_color"] = BORDER_ROLE
     notification["border_width"] = float(tokens["layout"]["border_size"])
     return notification
+
+
+def wallpaper_section(tokens: Dict[str, Any], intensity: Dict[str, Any],
+                       intensity_name: str) -> Dict[str, Any]:
+    """The desktop wallpaper: how an image fills an output, and how a change looks.
+
+    This is the surface neither motion switch reaches. Hyprland's
+    ``animations:enabled`` governs the compositor's own animated config values and
+    nothing inside another process; and the shell's own ``[shell.animation]`` is
+    ignored by this animation on purpose -- ``animateTimer`` takes neither the
+    animation-speed multiplier nor the animations-enabled toggle, because
+    "disabling animations must not skip the crossfade"
+    (src/shell/wallpaper/wallpaper.cpp:1516-1518). So ``iarch-anim set off``, the
+    Performance intensity and Game mode all leave this animation running unless this
+    section stops it, and the way to stop it is an empty ``transition`` list, which
+    the reader honours by finishing the change immediately
+    (wallpaper.cpp:1474-1479).
+
+    ``transition_on_startup`` is emitted as its pair. The reader requires a non-empty
+    list before it will animate the first wallpaper of a session
+    (wallpaper.cpp:1418), so with motion off both go off together: a true beside an
+    empty list is a setting that looks like an effect and is not one. With motion on
+    it is what makes the desktop fade in at login rather than appear -- the startup
+    half of this surface, and the reason ``.config/hypr/startup.lua`` needs no reload
+    of its own to make the session look finished.
+
+    ``fill_color`` is a palette role, not a hex value, so letterboxing behind an
+    image that does not cover the output sits on the preset's own surface colour.
+    The directories, the per-monitor overrides and the slideshow are recorded in
+    ``data/design/noctalia.json`` and deliberately not emitted: a path on somebody's
+    disk, an output name and a timer that changes the picture are not repository
+    state, and a slideshow would keep doing the one animation the Performance
+    intensity is asking the session to stop.
+    """
+    motion = intensity["motion"]
+    return OrderedDict(
+        fill_color=FILL_ROLE,
+        transition=list(PROFILE["wallpaper"]["transition"]) if motion["enabled"] else [],
+        transition_duration=wallpaper_transition_ms(tokens, intensity_name),
+        edge_smoothness=PROFILE["wallpaper"]["edge_smoothness"],
+        transition_on_startup=bool(motion["enabled"]),
+    )
 
 
 def render_config(tokens: Dict[str, Any], preset: Dict[str, Any],
@@ -380,9 +589,152 @@ def render_config(tokens: Dict[str, Any], preset: Dict[str, Any],
         shell=shell_section(tokens, intensity),
         bar=bar_section(tokens, intensity),
         dock=dock_section(tokens, intensity),
-        control_center=OrderedDict(PROFILE["control_center"]),
+        control_center=control_center_section(intensity),
         notification=notification_section(tokens, intensity),
         audio=OrderedDict(PROFILE["audio"]),
+        wallpaper=wallpaper_section(tokens, intensity, intensity_name),
+        idle=idle_section(intensity),
+        lockscreen=lockscreen_section(tokens, intensity, intensity_name),
+    )
+
+
+def fade_duration_ms(tokens: Dict[str, Any], intensity_name: str,
+                     low: float, high: float, step: float) -> float:
+    """The motion preset's own fadeIn duration, snapped to a key's range and step.
+
+    Two of the shell's transition keys want a duration and both bound it the same
+    way -- ``kLockscreenTransitionDurationRange`` and
+    ``kWallpaperTransitionDurationRange`` are each {100, 30000, 100}
+    (src/config/schema/ranges.h:49) -- so a duration has to be a multiple of 100 ms
+    and cannot go below it. The motion preset's ``fadeIn`` is the honest source:
+    120 ms for smooth, 90 ms for minimal, and neither is a multiple of 100, so both
+    land on the floor. That is stated rather than hidden -- the surface fades at the
+    fastest duration upstream allows, which is the nearest thing to the session's own
+    fade that these keys can express -- and deriving it here is what keeps the lock
+    screen and the wallpaper fading at the same speed instead of at two numbers
+    somebody picked.
+    """
+    motion = tokens["intensities"][intensity_name]["motion"]
+    path = ANIMATION_DIR / f"{motion['preset']}.json"
+    if not path.is_file():
+        raise NoctaliaError(f"no animation preset {motion['preset']!r} in {label(ANIMATION_DIR)}")
+    events = load_json(path)["events"]
+    fade = events.get("fadeIn")
+    if not isinstance(fade, dict) or not fade.get("enabled"):
+        # Motion off is not a duration: the transition list is what disables the
+        # animation, and the caller emits an empty one.
+        return low
+    duration = float(fade.get("duration_ms", 0))
+    snapped = round(duration / step) * step
+    return float(min(high, max(low, snapped)))
+
+
+def lockscreen_transition_ms(tokens: Dict[str, Any], intensity_name: str) -> float:
+    """The lock transition in milliseconds; see ``fade_duration_ms``."""
+    return fade_duration_ms(tokens, intensity_name, 100.0, 30000.0, 100.0)
+
+
+def wallpaper_transition_ms(tokens: Dict[str, Any], intensity_name: str) -> float:
+    """The wallpaper transition in milliseconds; see ``fade_duration_ms``.
+
+    The key is named ``transition_duration`` and is documented in milliseconds, but
+    the reader multiplies it: an animation runs for ``|toTime - fromTime| *
+    transition_duration`` (src/shell/wallpaper/wallpaper.cpp:1509), so a full
+    0-to-1 fade lasts exactly this long and a redirected one proportionally less.
+    Upstream's default is 1500 (config_types.h:567); this session fades a wallpaper
+    in its own fade time instead, which is four times shorter and matches the lock
+    screen, the windows and the panels.
+    """
+    return fade_duration_ms(tokens, intensity_name, 100.0, 30000.0, 100.0)
+
+
+def lockscreen_section(tokens: Dict[str, Any], intensity: Dict[str, Any],
+                       intensity_name: str) -> Dict[str, Any]:
+    """The shell's own lock screen -- the one this session actually shows.
+
+    It wins ``ext_session_lock_v1`` whenever the shell is running, so
+    ``.config/hypr/hyprlock.conf`` is the fallback for a session without it, and
+    both are rendered from the same tokens: the card behind hyprlock's field is
+    the palette's surface at the intensity's tint alpha, which is what
+    ``tint_intensity`` does here (``colorForRole(ColorRole::Surface, …)``).
+
+    ``transition`` names exactly one effect. The shell picks one of the listed
+    transitions at random for every lock and unlock, and randomizes that effect's
+    own parameters too (``lock_screen.cpp:1152-1176``), so upstream's default list
+    of all eleven means a lock is now a melt, now a vortex, now a honeycomb. A
+    design system that promises calm, predictable motion cannot also promise a
+    random vortex, and one named effect is the only way to get a repeatable one.
+
+    ``transition_duration`` is motion, so it follows the switch the rest of the
+    session follows: with motion off the transition list is empty, which is how
+    upstream disables the lock and unlock animation entirely.
+    """
+    motion = intensity["motion"]
+    blurred = bool(intensity["blur"]["enabled"])
+    section = OrderedDict(
+        enabled=True,
+        # Lock on logind's PrepareForSleep, so a lid close cannot suspend an
+        # unlocked session. This is the shell's own version of the hypridle
+        # fallback's before_sleep_cmd, and it is why that file needs no listener.
+        lock_before_suspend=True,
+        grace_period_seconds=PROFILE["lockscreen_grace_period_seconds"],
+        fingerprint=PROFILE["lockscreen_fingerprint"],
+        allow_empty_password=False,
+        # A blurred snapshot of the desktop as the background. It needs
+        # zwlr_screencopy_manager_v1, which Hyprland v0.57.2 still ships, and a
+        # capture that fails is warned about and skipped rather than fatal. With
+        # blur off there is nothing to blur, so the wallpaper is shown as it is.
+        blurred_desktop=blurred,
+        transition=list(PROFILE["lockscreen"]["transition"]) if motion["enabled"] else [],
+        transition_duration=lockscreen_transition_ms(tokens, intensity_name),
+        # Feathering of a transition's edge. A fade has no edge, so at
+        # transition = ["fade"] this is stored and read and cannot change what is
+        # on screen; it is emitted at upstream's default so the file states the
+        # value instead of leaving it to change upstream.
+        edge_smoothness=PROFILE["lockscreen"]["edge_smoothness"],
+        blur_intensity=PROFILE["lockscreen"]["blur_intensity"] if blurred else 0.0,
+        tint_intensity=float(intensity["glass"]["tint_alpha"]) if blurred else 0.0,
+    )
+    return section
+
+
+def idle_section(intensity: Dict[str, Any]) -> Dict[str, Any]:
+    """The shell's own idle system: lock, then turn the monitors off.
+
+    This is the surface ``.config/hypr/hypridle.conf`` deliberately does *not*
+    duplicate. Noctalia v5.4.1 watches ``ext_idle_notifier_v1`` itself and
+    respects D-Bus and Wayland idle inhibitors, so a second idle daemon would
+    race this one to lock and suspend the same session; the fallback file ships
+    unlaunched and declares no listener.
+
+    Every action here is native. ``action = "command"`` exists upstream and takes
+    a shell string, but an idle timer is the wrong place to invent a command line
+    for somebody else's machine -- the same rule that keeps
+    ``[[shell.session.actions]]`` and ``[shell.launcher.dmenu.entry.*]`` out of
+    the payload. Suspend is left out entirely: which backend suspends this
+    machine is not knowable from a repository, and a wrong guess takes somebody's
+    session away while they are reading.
+
+    The two behaviors, their order and the 60-second gap between them come from
+    [Idle](https://docs.noctalia.dev/noctalia/services/idle/) -- upstream's own
+    ``docs/user/services/idle.mdx`` and ``example.toml`` both ship a disabled lock
+    and a disabled screen-off, and nothing else. The 900/960 values are this
+    project's, and PROFILE says why: ten minutes takes the screen away from
+    somebody reading a long page. The same page publishes the vocabulary for
+    ``action``; upstream does not enum-validate it and quietly falls back to
+    running ``command``, so the record in ``data/design/noctalia.json`` carries
+    the list and this renderer refuses a typo the shell would swallow.
+    """
+    return OrderedDict(
+        # The pre-action overlay is a fullscreen fade in the surface colour, so
+        # it is motion, and it follows the same switch as everything else: a
+        # Performance session gets the action immediately instead of a two second
+        # fade it has asked not to see.
+        pre_action_fade_seconds=PROFILE["idle_pre_action_fade_seconds"]
+        if intensity["motion"]["enabled"] else 0.0,
+        behavior=OrderedDict(
+            (name, OrderedDict(values)) for name, values in PROFILE["idle_behaviors"].items()
+        ),
     )
 
 
@@ -412,8 +764,17 @@ def validate(doc: Dict[str, Any], surface: Dict[str, Any]) -> List[str]:
             problems.append(f"{path}: {value!r} is not a string")
         elif kind == "array" and not isinstance(value, list):
             problems.append(f"{path}: {value!r} is not an array")
-        if "enum" in spec and value not in spec["enum"]:
-            problems.append(f"{path}: {value!r} is not one of {spec['enum']}")
+        if "enum" in spec:
+            if isinstance(value, list):
+                # An enumArrayField (lockscreen.transition): the enumeration
+                # constrains each entry, and the list itself may be empty, which
+                # is how upstream disables the animation. Checking the list
+                # against the enum would refuse every legal value it can hold.
+                for item in value:
+                    if item not in spec["enum"]:
+                        problems.append(f"{path}: {item!r} is not one of {spec['enum']}")
+            elif value not in spec["enum"]:
+                problems.append(f"{path}: {value!r} is not one of {spec['enum']}")
         if "range" in spec and isinstance(value, (int, float)) and not isinstance(value, bool):
             low, high = spec["range"][0], spec["range"][1]
             if not low <= value <= high:
@@ -432,17 +793,47 @@ def validate(doc: Dict[str, Any], surface: Dict[str, Any]) -> List[str]:
             if key not in keys:
                 if allow_container and key in container_keys:
                     continue
-                problems.append(f"{here}: Noctalia {surface['verified_against']} has no such "
-                                f"setting; it would warn 'unknown setting' and ignore it")
+                withheld = spec.get("withheld", {}).get(key)
+                if withheld is not None:
+                    # Upstream really does declare this one; this project refuses
+                    # to emit it. Saying "has no such setting" here would be a
+                    # lie about the pinned release, and the lie would point a
+                    # reader at the wrong fix -- there is nothing to rename.
+                    problems.append(
+                        f"{here}: Noctalia {surface['verified_against']} declares this setting "
+                        f"and this project withholds it on purpose ({withheld['reason']}); "
+                        f"the surface is recorded in {withheld['recorded_in']} "
+                        f"({withheld['where']})")
+                else:
+                    problems.append(f"{here}: Noctalia {surface['verified_against']} has no such "
+                                    f"setting; it would warn 'unknown setting' and ignore it")
                 continue
             entry = keys[key]
             if isinstance(value, dict):
                 if "keys" not in entry:
                     problems.append(f"{here}: is a table but the setting is not")
+                elif entry.get("named_map"):
+                    # A named map: the table's own keys are instance names the user
+                    # chose ([shell.launcher.providers.<name>]), so each *value* is
+                    # what has to match the sub-schema.
+                    for name, item in value.items():
+                        if isinstance(item, dict):
+                            walk(item, entry, f"{here}.{name}")
+                        else:
+                            problems.append(f"{here}.{name}: is not a table")
                 else:
                     walk(value, entry, here)
                 continue
             check_value(here, entry, value)
+            if isinstance(value, list) and "keys" in entry:
+                # An array of tables, written [[section.key]]. Each entry is checked
+                # because upstream would not: an unknown shortcut type renders no
+                # button at all and never warns.
+                for index, item in enumerate(value):
+                    if isinstance(item, dict):
+                        walk(item, entry, f"{here}[{index}]")
+                    else:
+                        problems.append(f"{here}[{index}]: {item!r} is not a table")
 
     for name, values in doc.items():
         if name == "bar":
@@ -500,21 +891,52 @@ def toml_scalar(value: Any) -> str:
     raise NoctaliaError(f"cannot render {value!r} as TOML")
 
 
+def is_table_array(value: Any) -> bool:
+    """A non-empty list of tables, which TOML writes as repeated ``[[path]]`` blocks.
+
+    An empty list is deliberately *not* one: ``shortcuts = []`` and
+    ``hidden_tabs = []`` are meaningful settings upstream, and the only way to
+    write either is the inline form.
+    """
+    return isinstance(value, list) and bool(value) and all(isinstance(i, dict) for i in value)
+
+
+def is_named_map(value: Any) -> bool:
+    """A map whose *keys* are instance names and whose values are all tables.
+
+    Upstream spells several settings this way -- ``[idle.behavior.<name>]``,
+    ``[notification.filter.<name>]``, ``[shell.launcher.providers.<name>]`` --
+    where the name is chosen by the user and the sub-table's keys are the ones
+    the schema declares. It is not a sub-table: emitting ``[idle.behavior]`` with
+    ``[idle.behavior.lock]`` under it would add a table upstream never reads.
+    """
+    return (isinstance(value, dict) and bool(value)
+            and all(isinstance(item, dict) for item in value.values()))
+
+
 def emit_toml(doc: Dict[str, Any], header: str) -> str:
     lines: List[str] = [header.rstrip("\n"), ""]
 
-    def table(values: Dict[str, Any], path: str) -> None:
+    def table(values: Dict[str, Any], path: str, array: bool = False) -> None:
         comment = SECTION_COMMENTS.get(path)
         if comment:
             lines.append(f"# {comment}")
-        lines.append(f"[{path}]")
+        lines.append(f"[[{path}]]" if array else f"[{path}]")
+        # Every key of this table comes before any header below it, or TOML would
+        # read the later keys as belonging to the sub-table instead.
         for key, value in values.items():
-            if not isinstance(value, dict):
+            if not isinstance(value, dict) and not is_table_array(value):
                 lines.append(f"{key} = {toml_scalar(value)}")
         lines.append("")
         for key, value in values.items():
-            if isinstance(value, dict):
+            if is_named_map(value):
+                for name, item in value.items():
+                    table(item, f"{path}.{key}.{name}")
+            elif isinstance(value, dict):
                 table(value, f"{path}.{key}")
+            elif is_table_array(value):
+                for item in value:
+                    table(item, f"{path}.{key}", array=True)
 
     for name, values in doc.items():
         table(values, name)

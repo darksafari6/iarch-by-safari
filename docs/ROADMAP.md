@@ -6,8 +6,17 @@ fonts and icons, a complete shortcut system behind `Super+H`, a Contact/Portfoli
 installer that is safe to run twice.
 
 Each part is specified by its own work order. This file records the intended sequence, what has
-landed, and how each part is accepted. Parts 2 to 6 are provisional until their work order arrives;
+landed, and how each part is accepted. Parts 4 to 7 are provisional until their work order arrives;
 when it does, this file is updated in the same commit.
+
+The sequence below is not the one this file first guessed. Part 3's work order turned out to be the
+deep-glass and session-surfaces work rather than the shortcut system, and the parts after it moved to
+match: the settings app is Part 4, the in-session overlays Part 5, installer safety Part 6 and the
+shortcut system Part 7. Those are the numbers the code already cites -- `iarch/settings-app/README.md`
+reserves itself for Part 4, `iarch/README.md` schedules the rest of `iarch-doctor` for Part 5,
+`docs/UNVERIFIED.md` defers DDC brightness to Part 6, and `data/keybinds.default.json` reserves
+`Super+H` for Part 7 -- so a reader who follows a citation out of a source file lands on the part that
+file meant.
 
 Global rules that apply to every part:
 
@@ -94,46 +103,112 @@ animation set, all switchable.
   icon-theme runtime gap is `TP-19`, all in [UNVERIFIED.md](UNVERIFIED.md).
 
 **Explicitly not done in Part 2:** the settings application that reconciles the coarse
-`preset`/`effects` switches with `theme.intensity` is Part 5; the cursor is applied statically by
+`preset`/`effects` switches with `theme.intensity` is Part 4; the cursor is applied statically by
 `themes/theme.lua` (a verified no-op, every preset shipping the same one) and the icon theme is
 reported, not applied (`TP-19`); and no installer behaviour changed (`INS-01` to `INS-06`, Part 6).
 
-## Part 3 — Shortcut system
+## Part 3 — Deep glass: motion, session surfaces, lock, login and the two modes ✅ landed
 
-**Goal:** `Super+H` shows every shortcut, searchable, in glass.
+**Goal:** everything the session does that is not a decoration -- how it moves, how it notifies, how it
+locks, how it logs in, and the two switches that trade glass for performance and for focus -- built on
+surfaces read out of a pinned upstream release rather than out of documentation that may be ahead of it.
 
-Planned scope: a single source of shortcut truth derived from the `description` fields already in
-`.config/hypr/keybind.lua`, a renderer for the overlay, and the keybind itself. Acceptance: the
-overlay lists every bind that has a description; a bind without a description fails a test; the
-overlay opens and closes with animation; the surface is chosen from a verified API rather than a
-guessed one (`UI-02`).
+| Deliverable | Where | Proof |
+| --- | --- | --- |
+| The compositor's animation surface recorded, and five motion presets a person can switch | `data/design/animations.json`, `data/design/animations/{smooth,snappy,bouncy,minimal,off}.json` | `data/schemas/animations.schema.json`, `data/schemas/animations_preset.schema.json`, `tests/test_animation_presets.py` |
+| One command switches the preset, verifies the reload against the compositor's own error list, and rolls the file back when the reload reports anything new | `iarch/cli/iarch_anim.py` | `tests/test_iarch_anim.py` |
+| Motion QA that can be run on a real machine, and the document that says what it still cannot check | `iarch/cli/qa_motion.sh`, `docs/MOTION.md` | `bash -n`, MOT-01 to MOT-05 |
+| The notification surface recorded, and a doctor that asks a running session instead of assuming one | `data/design/noctalia.json` (`sections.notification`, `sections.notification.filter`), `iarch/cli/iarch_doctor.py` | `tests/test_iarch_doctor.py`, NOT-01 to NOT-05 |
+| The control-centre and session surfaces recorded, with an IPC wrapper that only sends commands from a fixed allowlist | `data/design/noctalia.json` (`sections.control_center`), `scripts/iarch-control-center.sh` | `tests/test_noctalia.py`, SES-02 |
+| The launcher and the Alt+Tab window switcher recorded — including the two providers that do not exist upstream and are therefore not faked | `data/design/noctalia.json` (`sections.shell.keys.launcher`, `.window_switcher`) | `tests/test_noctalia.py`, UI-04 to UI-08 |
+| Both lock screens and the idle fallback, rendered from one set of tokens, with the security-relevant keys emitted explicitly at their restrictive values | `.config/hypr/hyprlock.conf`, `.config/hypr/hypridle.conf`, `iarch/cli/render_hyprlock.py`, `data/design/hyprlock.json` | `tests/test_hyprlock.py`, LOCK-01 to LOCK-05 |
+| The login screen recorded — and deliberately not rendered, because a greeter file this repository cannot verify is a login screen nobody can log into | `data/design/greeter.json`, `data/schemas/greeter.schema.json`, both installers | `tests/test_greeter.py`, GRE-01 to GRE-05 |
+| Game mode and focus mode: compose values that already exist, then read the session back and restore what this run found | `iarch/lib/modes.py`, `iarch/cli/iarch_gamemode.py`, `iarch/cli/iarch_focus.py`, `data/design/tokens.json` (`modes`) | `tests/test_gamemode.py`, `tests/test_focus.py`, MODE-01 to MODE-04 |
+| The startup module rendered from a record of what it may run, with both installers' `sed` anchors asserted in the render | `data/design/startup.json`, `iarch/cli/gen_startup_lua.py`, `.config/hypr/startup.lua` | `tests/test_startup_lua.py`, START-01 and START-02 |
+| The wallpaper surface recorded, including the one animation in the session that neither motion switch reaches | `data/design/noctalia.json` (`sections.wallpaper`), `iarch/cli/render_noctalia.py` | `tests/test_noctalia.py`, WAL-01 and WAL-02 |
 
-## Part 4 — Notifications and Control Center
+**Acceptance**, proven mechanically by `tests/test_part3_acceptance.py`:
 
-**Goal:** animated notification cards and a glass control center.
+- *Every emitted key exists in the pinned release's surface record.* Hyprland v0.57.2 for the
+  compositor's leaves, animation tree, Lua bindings and lock screen; Noctalia v5.4.1 for the shell's
+  settings; noctalia-greeter v1.7.0 for the login screen, pinned to a tag because its `main` already
+  carries keys the tag does not. Where upstream publishes no tagged manual — hyprlock — the record cites
+  the wiki's `main` with the date it was fetched, and LOCK-04 says what that costs. A key upstream
+  declares but whose reader discards is recorded `write_only` and never emitted; a key this project
+  refuses on principle is recorded `withheld`, so the validator says "withheld on purpose, and here is
+  why" instead of claiming upstream has no such setting.
+- *Generated files are committed and CI-checked.* Eleven text payloads carry a GENERATED header naming
+  the record they came from, the six palettes carry the same sentence as their `_generated` key, and
+  every tool that can check itself is checked in `.github/workflows/iarch-checks.yml`,
+  and both mode switches get a dry-run smoke line there, so a payload cannot drift from the record that
+  justifies it without a workflow failing.
+- *A missing binary is unverified, never a failure and never a pass.* Run any report subcommand with
+  nothing on `PATH` and it exits 0 with the verdict `unverified`, every check carrying `actual: null`
+  and the name of the binary that was not there; `iarch-doctor` answers `unknown` rather than guessing.
+  A session that was asked and disagreed exits 1 and leaves the files and the record alone, because
+  rolling back would put the disk in a third state.
+- *Documentation states what a surface cannot do as plainly as what it can.* Every limitation is a row
+  in [UNVERIFIED.md](UNVERIFIED.md) with the evidence that does exist and the claim it blocks, and the
+  documents that a reader would otherwise take the wrong way from say so where they are: `docs/MOTION.md`
+  names the switch the wallpaper crossfade ignores, `docs/WALLPAPERS.md` no longer sends anybody to a
+  directory the shell does not scan, `SECURITY.md` says a startup command's failure is silent by
+  construction, and `README.md` says plainly that the two modes are commands with no key bound and no
+  measured saving.
 
-Planned scope: notification geometry, urgency styles, dismiss and history animation, control-center
-panel styling, and the allowlisted IPC shortcuts in `scripts/iarch-control-center.sh`. Acceptance:
-no second notification daemon; DND, replacement and history behaviour verified on a live session or
-left open in [UNVERIFIED.md](UNVERIFIED.md).
+**Explicitly not done in Part 3:** no key binds either mode — `Super+H` and the overlay behind it are
+Part 7, and until then both modes are commands you run (`python3 iarch/cli/iarch_gamemode.py toggle`).
+There is still no settings GUI, which is Part 4, so the coarse `preset` and `effects` switches in
+`data/settings.default.json` are read by no renderer and Part 4 has to reconcile them. No greeter file
+is emitted. `.config/hypr/hypridle.conf` ships unlaunched, because the shell owns
+`ext_idle_notifier_v1` and a second daemon would race it. No installer behaviour changed beyond the
+greeter staging, so INS-01 to INS-06 are still Part 6. And nothing in this part was observed on a live
+session: the frame-timing and latency measurement is still PERF-01, and MODE-01 to MODE-04, START-01
+and START-02, WAL-01 and WAL-02 are the specific claims that a sandbox could not reach.
 
-## Part 5 — Settings app, About page and Contact/Portfolio
+## Part 4 — Settings app, About page and Contact/Portfolio
 
-**Goal:** the glass settings app, including About → Open-source licenses rendered from
-`branding/notices.json`, plus the Contact/Portfolio page.
+**Goal:** the glass settings application: every switch introduced in Parts 1 to 3 reachable from it,
+About → Open-source licenses rendered from the same JSON as `THIRD_PARTY_NOTICES.md`, and the
+Contact/Portfolio page.
 
-Planned scope: settings surfaces for every switch introduced in Parts 1 to 4, a Performance preset
-selector, the About page, and the Contact/Portfolio page. Acceptance: the About page and
-`THIRD_PARTY_NOTICES.md` come from the same JSON; every visual switch in the product is reachable
-from settings; nothing in the settings UI names an upstream project.
+Provisional scope, and the reason it is provisional is that its work order has not arrived: a GTK4 +
+libadwaita application (`dev.safari.iarch`, reserved in `iarch/settings-app/README.md`) that edits
+`~/.config/iarch/settings.json`, calls the generators in `iarch/cli/`, reconciles the coarse
+`preset`/`effects` switches with `theme.intensity`, renders the licenses page from
+`data/licenses.json` and the contact page from `data/contacts.default.json`. Acceptance will have to
+include: nothing in the settings UI names an upstream project; every visual switch in the product is
+reachable; and the About page and `THIRD_PARTY_NOTICES.md` come from one source.
+
+## Part 5 — Notifications, control center and the in-session overlays
+
+**Goal:** animated notification cards, a glass control center, and the in-session overlays the CLIs
+already report into — `iarch-keybinds`, and the rest of `iarch-doctor`.
+
+Provisional scope: notification geometry, urgency styles, dismiss and history animation, control-center
+panel styling, the overlays `iarch/cli/iarch_anim.py` and `iarch/cli/iarch_doctor.py` reserve, and the
+allowlisted IPC shortcuts in `scripts/iarch-control-center.sh`. Acceptance will have to include: no
+second notification daemon; and DND, replacement and history behaviour either verified on a live session
+or still open in [UNVERIFIED.md](UNVERIFIED.md) as NOT-01 to NOT-05 are today.
 
 ## Part 6 — Installer safety and release readiness
 
 **Goal:** an installer that is safe to run twice and honest about what it changed.
 
-Planned scope: adopt `lib/iarch-common.sh` across `install.sh` and `fedora_install.sh`, replace
+Provisional scope: adopt `lib/iarch-common.sh` across `install.sh` and `fedora_install.sh`, replace
 blanket `--noconfirm` use with reviewed confirmation (`INS-01`), narrow ownership changes
 (`INS-02`), make the display-manager switch reversible and logged (`INS-03`), record every system
-change in a manifest, and finish fonts and icon theming. Acceptance: a second run changes nothing;
-a failed run reports exactly what it touched and where the backups are; `tools/preflight.py` runs
-before any privileged step; every `INS-` item is either closed with evidence or still listed.
+change in a manifest, and finish fonts and icon theming (`TP-19`). Acceptance will have to include: a
+second run changes nothing; a failed run reports exactly what it touched and where the backups are;
+`tools/preflight.py` runs before any privileged step; and every `INS-` item is either closed with
+evidence or still listed.
+
+## Part 7 — Shortcut system
+
+**Goal:** `Super+H` shows every shortcut, searchable, in glass.
+
+Provisional scope: a single source of shortcut truth derived from the `description` fields already in
+`.config/hypr/keybind.lua` and mirrored into `data/keybinds.default.json`, a renderer for the overlay,
+and the three keys `docs/SHORTCUTS.md` already reserves so they are not reassigned by accident —
+`Super+H`, `Super+Shift+H` and `Super+K`. Acceptance will have to include: the overlay lists every bind
+that has a description; a bind without a description fails a test; the overlay opens and closes with
+animation; and the surface is chosen from a verified API rather than a guessed one (`UI-02`).

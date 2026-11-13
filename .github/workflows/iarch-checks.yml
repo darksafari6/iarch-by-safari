@@ -103,11 +103,15 @@ jobs:
           python iarch/cli/gen_wallpapers.py --check  # shipped 4K WebP art matches its presets
           python iarch/cli/gen_glass_lua.py --check    # shipped glass.lua matches the tokens
           python iarch/cli/gen_animations_lua.py --check  # shipped animations.lua matches the motion tokens
+          python iarch/cli/gen_startup_lua.py --check  # shipped startup.lua matches the startup record, installers' sed anchors intact
           python iarch/cli/render_noctalia.py --check  # shipped config.toml + palettes match the presets
+          python iarch/cli/render_hyprlock.py --check  # shipped hyprlock.conf + hypridle.conf match a fresh render
           python iarch/cli/render_gtk_css.py --check --repo  # shipped GTK sheets match the tokens
           python iarch/cli/render_kvantum.py --check  # shipped Kvantum theme matches the tokens
           python iarch/cli/gen_fontconfig.py --check  # shipped fonts.conf matches the tokens
           python iarch/cli/theme.py apply midnight-glass --dry-run  # the capstone renders every surface together, gates on contrast, writes nothing
+          python iarch/cli/iarch_gamemode.py on --dry-run  # composes theme + anim, reads the tokens, writes nothing (no compositor in CI, so the checks report unverified)
+          python iarch/cli/iarch_focus.py on --dry-run     # names the exact IPC and eval vectors it would send, writes nothing
 
       - name: Validate every JSON file in data/ against its schema
         run: |
@@ -125,15 +129,25 @@ jobs:
               "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
               "data/design/tokens.json": "data/schemas/tokens.schema.json",
               "data/design/noctalia.json": "data/schemas/noctalia.schema.json",
+              "data/design/hyprlock.json": "data/schemas/hyprlock.schema.json",
+              "data/design/greeter.json": "data/schemas/greeter.schema.json",
               "data/design/gtk.json": "data/schemas/gtk.schema.json",
               "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
               "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",
               "data/design/animations.json": "data/schemas/animations.schema.json",
+              "data/design/startup.json": "data/schemas/startup.schema.json",
               "data/licenses.json": "data/schemas/licenses.schema.json",
               # Colour presets are a family under one schema.
               **{
                   p.as_posix(): "data/schemas/preset.schema.json"
                   for p in sorted(Path("data/design/presets").glob("*.json"))
+              },
+              # Animation presets are a family the same way (Part 3): one JSON per
+              # motion preset. The singular data/design/animations.json listed above
+              # is the Hyprland API surface and keeps its own schema.
+              **{
+                  p.as_posix(): "data/schemas/animations_preset.schema.json"
+                  for p in sorted(Path("data/design/animations").glob("*.json"))
               },
           }
 

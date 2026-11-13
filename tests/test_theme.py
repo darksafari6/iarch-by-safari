@@ -13,10 +13,12 @@ import contextlib
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import List
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,7 +43,10 @@ except ImportError:
 requires_jinja = unittest.skipUnless(HAVE_JINJA, "Jinja2 is not installed")
 requires_jsonschema = unittest.skipUnless(HAVE_JSONSCHEMA, "jsonschema is not installed")
 
-# The nine surfaces one apply renders, relative to --config-home.
+# The eleven surfaces one apply renders, relative to --config-home. The last two
+# sit in hypr/ itself rather than hypr/generated/, because hyprlock and hypridle
+# each search for their own fixed filename ($XDG_CONFIG_HOME/hypr/<tool>.conf) and
+# have no include mechanism to point at a generated directory.
 EXPECTED_TARGETS = (
     "hypr/generated/glass.lua",
     "hypr/generated/animations.lua",
@@ -52,6 +57,8 @@ EXPECTED_TARGETS = (
     "fontconfig/fonts.conf",
     "noctalia/config.toml",
     "noctalia/palettes/iarch-midnight.json",
+    "hypr/hyprlock.conf",
+    "hypr/hypridle.conf",
 )
 
 
@@ -229,6 +236,164 @@ class CurrentCommand(ThemeBase):
 
 
 @requires_jinja
+class ReduceMotionReachesEverySurfaceItGoverns(unittest.TestCase):
+    """One accessibility switch, two renderers, and no silent disagreement.
+
+    ``iarch-anim`` owns the switch and the compositor half of it. ``iarch-theme``
+    renders the other half, because GTK 3 cannot parse an @media query at all and
+    so has no way to hear the desktop's preference: the only lever is the sheet
+    itself. These tests are about the seam between the two commands.
+    """
+
+    def setUp(self):
+        self.base = ThemeBase()
+        self.base.setUp()
+        self.addCleanup(self.base._clean)
+        for name in ("home", "env", "tmp"):
+            setattr(self, name, getattr(self.base, name))
+
+    def run_cli(self, argv):
+        return self.base.run_cli(argv)
+
+    def apply(self, *extra):
+        return self.run_cli(self.base.apply_argv("--no-reload", *extra))
+
+    def durations(self, version: str) -> List[int]:
+        text = (self.home / f"gtk-{version}.0" / "gtk.css").read_text(encoding="utf-8")
+        return [int(value) for value in
+                re.findall(r"transition-duration:\s*(\d+)ms", text)]
+
+    def animations(self) -> str:
+        return (self.home / "hypr" / "generated" / "animations.lua").read_text(encoding="utf-8")
+
+    def test_the_flag_zeroes_both_gtk_sheets(self):
+        code, _out, _err = self.apply("--reduce-motion", "on")
+        self.assertEqual(theme.EXIT_OK, code)
+        for version in ("4", "3"):
+            values = self.durations(version)
+            with self.subTest(version=version):
+                self.assertTrue(values, "the sheet stopped transitioning anything at all")
+                self.assertEqual({0}, set(values))
+
+    def test_the_flag_renders_the_forced_preset_on_the_compositor_side_too(self):
+        # A theme apply that zeroed the GTK sheets while restoring 380ms workspace
+        # slides in the compositor would be worse than either half alone.
+        code, _out, _err = self.apply("--reduce-motion", "on")
+        self.assertEqual(theme.EXIT_OK, code)
+        body = self.animations()
+        self.assertIn("animations/minimal.json", body)
+        speeds = [float(v) for v in re.findall(r"speed = ([\d.]+)", body)]
+        self.assertTrue(speeds)
+        # speed = duration_ms / 100, so the 90ms cap is a speed of 0.9.
+        self.assertLessEqual(max(speeds), 0.9)
+
+    def test_apply_follows_the_switch_iarch_anim_recorded(self):
+        self.base.write_user_settings({"animation": {"reduce_motion": True}})
+        code, out, _err = self.apply()
+        self.assertEqual(theme.EXIT_OK, code)
+        self.assertIn("reduce motion:   on", out)
+        self.assertEqual({0}, set(self.durations("3")))
+        self.assertIn("animations/minimal.json", self.animations())
+
+    def test_the_flag_overrides_what_was_recorded(self):
+        self.base.write_user_settings({"animation": {"reduce_motion": True}})
+        code, out, _err = self.apply("--reduce-motion", "off")
+        self.assertEqual(theme.EXIT_OK, code)
+        self.assertNotIn("reduce motion:", out)
+        self.assertNotIn(0, self.durations("3"))
+        # The recorded switch is the user's; overriding it for one render must not
+        # rewrite it behind their back.
+        self.assertTrue(self.base.read_user_settings()["animation"]["reduce_motion"])
+
+    def test_motion_stays_on_when_nothing_was_recorded(self):
+        code, _out, _err = self.apply()
+        self.assertEqual(theme.EXIT_OK, code)
+        fast = theme.gen_animations_lua.load_tokens()["motion"]["fast_ms"]
+        self.assertIn(fast, self.durations("4"))
+        self.assertNotIn("animations/minimal.json", self.animations())
+
+    def test_reduce_motion_changes_nothing_it_does_not_govern(self):
+        # The glass, the shell config and the palette are colour and blur
+        # decisions. An accessibility switch must not quietly re-decorate them.
+        # Keyed by relative path, not file name: both sheets are called gtk.css.
+        def snapshot():
+            return {str(path.relative_to(self.home)): path.read_bytes()
+                    for path in sorted(self.home.rglob("*")) if path.is_file()}
+
+        self.apply()
+        before = snapshot()
+        self.apply("--reduce-motion", "on")
+        after = snapshot()
+        self.assertEqual(sorted(before), sorted(after),
+                         "reduce-motion added or removed a file")
+        changed = sorted(name for name in before if before[name] != after[name])
+        self.assertEqual(sorted(["hypr/generated/animations.lua",
+                                 "gtk-3.0/gtk.css", "gtk-4.0/gtk.css"]), changed,
+                         f"reduce-motion rewrote {changed}")
+
+    def test_a_recorded_animation_block_survives_a_theme_apply(self):
+        recorded = {"preset": "bouncy", "speed": 1.5, "reduce_motion": True,
+                    "event_overrides": {"borderangle": False}}
+        self.base.write_user_settings({"animation": recorded})
+        code, _out, _err = self.apply()
+        self.assertEqual(theme.EXIT_OK, code)
+        self.assertEqual(recorded, self.base.read_user_settings()["animation"])
+
+    def test_apply_names_the_animation_state_it_is_about_to_overwrite(self):
+        self.base.write_user_settings({"animation": {
+            "preset": "bouncy", "speed": 1.5,
+            "event_overrides": {"borderangle": False, "fadeDim": False}}})
+        code, _out, err = self.apply()
+        self.assertEqual(theme.EXIT_OK, code)
+        self.assertIn("animation.preset='bouncy'", err)
+        self.assertIn("animation.speed=1.5", err)
+        self.assertIn("2 per-event override(s)", err)
+        self.assertIn("iarch-anim", err, "the warning must name the command that owns it")
+
+    def test_no_divergence_is_reported_when_the_states_agree(self):
+        self.base.write_user_settings({"animation": {"preset": "smooth", "speed": 1.0,
+                                                     "event_overrides": {}}})
+        code, _out, err = self.apply()
+        self.assertEqual(theme.EXIT_OK, code)
+        self.assertNotIn("iarch-anim recorded", err)
+
+    def test_no_divergence_is_reported_when_nothing_was_recorded(self):
+        code, _out, err = self.apply()
+        self.assertEqual(theme.EXIT_OK, code)
+        self.assertNotIn("iarch-anim recorded", err)
+
+    def test_a_malformed_settings_file_is_reported_not_traced(self):
+        # The settings file is hand-editable by design, so a stray comma is an
+        # expected event: it has to name the file and say what to do, and it must
+        # not escape as a JSONDecodeError traceback out of main().
+        path = self.base.write_user_settings({})
+        path.write_text("{not json", encoding="utf-8")
+        code, _out, err = self.apply()
+        self.assertEqual(theme.EXIT_USAGE, code)
+        self.assertIn(str(path), err)
+        self.assertIn("not valid JSON", err)
+        self.assertIn("repository defaults", err)
+        self.assertNotIn("Traceback", err)
+        # Nothing was written on the strength of a file nobody could read.
+        self.assertFalse((self.home / "gtk-4.0" / "gtk.css").exists())
+
+    def test_current_says_where_the_switch_came_from(self):
+        code, out, _err = self.run_cli(["current", "--config-home", str(self.home)])
+        self.assertEqual(theme.EXIT_OK, code)
+        self.assertIn("reduce motion: off", out)
+        self.assertIn("no animation.reduce_motion recorded", out)
+        # "repository default" is what current says about a theme value nobody
+        # chose; reusing it here would leave that line ambiguous.
+        self.assertNotIn("reduce motion: off   (repository default)", out)
+
+        self.base.write_user_settings({"animation": {"reduce_motion": True}})
+        code, out, _err = self.run_cli(["current", "--config-home", str(self.home)])
+        self.assertEqual(theme.EXIT_OK, code)
+        self.assertIn("reduce motion: on", out)
+        self.assertIn("settings.json animation.reduce_motion", out)
+
+
+@requires_jinja
 class ApplyDryRun(ThemeBase):
     def test_dry_run_renders_but_writes_nothing(self):
         code, out, _err = self.run_cli(self.apply_argv("midnight-glass", "--dry-run"))
@@ -277,7 +442,9 @@ class ApplyWrites(ThemeBase):
         self.run_cli(self.apply_argv("midnight-glass", "--no-reload"))
         code, out, _err = self.run_cli(self.apply_argv("midnight-glass", "--no-reload"))
         self.assertEqual(code, theme.EXIT_OK)
-        self.assertIn("wrote 0, unchanged 9", out)
+        # Counted from EXPECTED_TARGETS rather than spelled out, so adding a
+        # surface cannot leave a stale number asserting the old one.
+        self.assertIn(f"wrote 0, unchanged {len(EXPECTED_TARGETS)}", out)
         self.assertNotIn("  write  ", out)
 
     def test_apply_records_the_theme_in_settings(self):

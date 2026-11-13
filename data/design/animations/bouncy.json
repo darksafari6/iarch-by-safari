@@ -1,0 +1,54 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "name": "bouncy",
+  "label": "Bouncy",
+  "description": "Playful, with a visible overshoot on the two events where an overshoot reads as physics: a window arriving (300 ms, about six percent past its resting place before it settles) and a workspace switch (420 ms, a gentler three percent so a full screen of content does not lurch). Everything that leaves the screen still accelerates away, because an exit that overshoots looks like a hesitation. Durations are longer than smooth's on purpose — an overshoot needs room to happen and settle, and compressing it into 120 ms reads as a jitter instead of a bounce.",
+  "source": "Hyprland v0.57.2, read out into data/design/animations.json: leaf names and their parents from src/config/shared/animation/AnimationTree.cpp, the per-leaf style lists from AnimationManager::styleValidInConfigVar, and the numeric bounds from src/config/lua/bindings/LuaBindingsConfigRules.cpp with src/config/lua/types/LuaConfigFloat.cpp — bezier components in [-1, 2], spring values strictly above 0.5, speed in (0, 100] where duration_ms = 100 * speed, every one of them a config error rather than a clamp.",
+  "master": true,
+
+  "curves": {
+    "overshoot": {
+      "type": "bezier",
+      "points": [[0.34, 1.3], [0.64, 1.0]],
+      "_note": "y1 = 1.3 pushes the interpolated value about six percent past its endpoint before the curve comes back to 1.0. Legal because hl.curve parses each component with CLuaConfigFloat(0, -1, 2): 1.3 is inside the band. It is also wider than tokens.json motion.easing allows — that vocabulary is confined to the [0, 1] unit square because the GTK CSS renderer shares it and cubic-bezier() requires it — which is exactly why an overshoot curve is declared here, in a compositor-only preset, and never added to the shared easing tokens."
+    },
+    "overshoot_soft": {
+      "type": "bezier",
+      "points": [[0.2, 1.15], [0.45, 1.0]],
+      "_note": "The gentler of the two, for moving a whole workspace: about three percent past, arriving earlier in the curve so the overshoot is felt rather than seen."
+    },
+    "standard":   { "type": "bezier", "points": [[0.4, 0.0], [0.2, 1.0]] },
+    "decelerate": { "type": "bezier", "points": [[0.0, 0.0], [0.2, 1.0]] },
+    "accelerate": { "type": "bezier", "points": [[0.4, 0.0], [1.0, 1.0]] },
+    "spring": {
+      "type": "spring",
+      "stiffness": 180.0,
+      "damping": 18.0,
+      "mass": 1.0,
+      "_note": "zeta = 18 / (2 * sqrt(180)) = 0.67, which implies exp(-pi * zeta / sqrt(1 - zeta^2)) = 5.8 percent overshoot — a real, visible bounce that still settles inside about half a second. Lowering damping further would keep it legal (the floor is strictly above 0.5) but would ring; six percent is where a bounce stops being a wobble."
+    }
+  },
+
+  "events": {
+    "windows":          { "enabled": true, "duration_ms": 300, "curve": "overshoot",      "style": "slide" },
+    "windowsIn":        { "enabled": true, "duration_ms": 300, "curve": "spring",         "style": "slide", "_note": "The spring, not the overshoot bezier, drives the arrival: two curves on one leaf is not a thing hl.animation accepts (it checks the bezier field first and the spring field second, and uses exactly one). duration_ms is inert for a spring and is emitted only because the binding requires a speed above 0." },
+    "windowsOut":       { "enabled": true, "duration_ms": 160, "curve": "accelerate",     "style": "slide" },
+    "windowsMove":      { "enabled": true, "duration_ms": 240, "curve": "standard",       "style": "slide", "_note": "No overshoot while dragging or moving a window: it is following a pointer, and a value that lags past the target and comes back fights the hand." },
+    "workspaces":       { "enabled": true, "duration_ms": 420, "curve": "overshoot_soft", "style": "slide" },
+    "specialWorkspace": { "enabled": true, "duration_ms": 420, "curve": "overshoot_soft", "style": "slide" },
+    "layers":           { "enabled": true, "duration_ms": 240, "curve": "decelerate",     "style": "fade" },
+    "layersIn":         { "enabled": true, "duration_ms": 240, "curve": "decelerate",     "style": "fade" },
+    "layersOut":        { "enabled": true, "duration_ms": 160, "curve": "accelerate",     "style": "fade" },
+    "fade":             { "enabled": true, "duration_ms": 160, "curve": "standard" },
+    "fadeIn":           { "enabled": true, "duration_ms": 160, "curve": "standard" },
+    "fadeOut":          { "enabled": true, "duration_ms": 160, "curve": "accelerate" },
+    "fadeSwitch":       { "enabled": true, "duration_ms": 160, "curve": "standard" },
+    "fadeShadow":       { "enabled": true, "duration_ms": 160, "curve": "standard" },
+    "fadeDim":          { "enabled": true, "duration_ms": 240, "curve": "standard" },
+    "fadeLayers":       { "enabled": true, "duration_ms": 160, "curve": "decelerate" },
+    "border":           { "enabled": true, "duration_ms": 160, "curve": "standard" },
+    "borderangle":      { "enabled": true, "duration_ms": 3000, "curve": "standard", "style": "loop" }
+  },
+
+  "_note": "The overshoot curves are used on exactly the events the design brief names — a window opening and a workspace switching — and on nothing else. That restraint is deliberate and not merely taste: an overshooting bezier drives the interpolated value past its endpoint, which for a slide or a popin is a position past the target and then back (the intended look), but for the fade family it is an alpha above 1 and for border a colour channel outside its range. Whether Hyprland clamps those before compositing was not read out of this release, so nothing here depends on it — TODO(verify) MOT-04 in docs/UNVERIFIED.md records the question and the reason it was avoided rather than answered. tests/test_animation_presets.py enforces the rule mechanically: in this preset, no event whose leaf has no styles (the fade family and border) and no layers event may name an overshoot curve, and every bezier component in the file must be inside [-1, 2]."
+}

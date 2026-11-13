@@ -24,10 +24,13 @@ PAIRS = {
     "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
     "data/design/tokens.json": "data/schemas/tokens.schema.json",
     "data/design/noctalia.json": "data/schemas/noctalia.schema.json",
+    "data/design/hyprlock.json": "data/schemas/hyprlock.schema.json",
+    "data/design/greeter.json": "data/schemas/greeter.schema.json",
     "data/design/gtk.json": "data/schemas/gtk.schema.json",
     "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
     "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",
     "data/design/animations.json": "data/schemas/animations.schema.json",
+    "data/design/startup.json": "data/schemas/startup.schema.json",
     "data/licenses.json": "data/schemas/licenses.schema.json",
     # Colour presets are a family under one schema; expanding the directory keeps
     # a newly added preset mapped automatically, while a JSON file anywhere else
@@ -35,6 +38,14 @@ PAIRS = {
     **{
         f"data/design/presets/{path.name}": "data/schemas/preset.schema.json"
         for path in sorted((ROOT / "data" / "design" / "presets").glob("*.json"))
+    },
+    # Animation presets are a family the same way, added in Part 3: one JSON per
+    # motion preset under data/design/animations/, all validated by one schema.
+    # Note the singular data/design/animations.json above is a different document
+    # -- the Hyprland animation API surface -- and keeps its own schema.
+    **{
+        f"data/design/animations/{path.name}": "data/schemas/animations_preset.schema.json"
+        for path in sorted((ROOT / "data" / "design" / "animations").glob("*.json"))
     },
 }
 

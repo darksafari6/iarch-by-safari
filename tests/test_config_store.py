@@ -38,6 +38,44 @@ class ConfigStore(unittest.TestCase):
         self.assertEqual(again["effects"], shipped["effects"], "unset keys fall back to repo defaults")
         self.assertTrue(str(own).startswith(str(self.tmp)), "user state never lands in the repository")
 
+    def test_a_malformed_user_file_is_a_config_error_that_names_it(self):
+        # This file is hand-editable by design, so a stray comma is an expected
+        # event. It has to arrive as a ConfigError the CLIs already catch and
+        # print, not as a JSONDecodeError escaping to a traceback -- and it has to
+        # say which file, where in it, and what to do.
+        own = configstore.user_path("settings", self.env)
+        own.parent.mkdir(parents=True, exist_ok=True)
+        own.write_text('{"preset": "glass",,}\n', encoding="utf-8")
+        with self.assertRaises(configstore.ConfigError) as caught:
+            configstore.load("settings", ROOT, self.env)
+        message = str(caught.exception)
+        self.assertIn(str(own), message)
+        self.assertIn("not valid JSON", message)
+        self.assertRegex(message, r"line 1 column \d+",
+                         "the position has to be in there")
+        self.assertEqual(20, caught.exception.__cause__.colno,
+                         "and it has to be the position the parser actually found")
+        self.assertIn("delete the file", message)
+        self.assertIn(str(ROOT / "data" / "settings.default.json"), message)
+        self.assertIsInstance(caught.exception.__cause__, json.JSONDecodeError,
+                              "the original parse error is chained, not swallowed")
+
+    def test_an_empty_user_file_is_reported_rather_than_merged_as_nothing(self):
+        # json.loads("") raises too, and silently treating an empty file as an
+        # empty overlay would hide a truncated write from the person reading it.
+        own = configstore.user_path("settings", self.env)
+        own.parent.mkdir(parents=True, exist_ok=True)
+        own.write_text("", encoding="utf-8")
+        with self.assertRaises(configstore.ConfigError):
+            configstore.load("settings", ROOT, self.env)
+
+    def test_a_valid_user_file_still_merges_on_top_of_the_defaults(self):
+        # The guard above must not have made the happy path stricter.
+        merged = configstore.load("settings", ROOT, self.env)
+        configstore.save("settings", {**merged, "preset": "performance"}, self.env)
+        again = configstore.load("settings", ROOT, self.env)
+        self.assertEqual("performance", again["preset"])
+
     def test_save_rotates_to_five_backups(self):
         for round_number in range(7):
             configstore.save("settings", {"version": 1, "preset": "glass",

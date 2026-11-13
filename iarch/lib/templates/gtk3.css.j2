@@ -52,7 +52,7 @@
 window.background,
 .background.csd {
   background-color: {{ alpha(c.background, o.window) }};
-  {{ transition(t.fill, m.normal, m.standard) }};
+  {{ transition(t.window, m.fast, m.standard) }};
 }
 
 window.background.solid-csd {
@@ -64,6 +64,11 @@ decoration {
   box-shadow: {{ shadow(sh.y, sh.blur, sh.alpha) }},
               0 0 0 {{ border }}px {{ alpha(c.outline_variant, g.border_alpha) }};
   margin: {{ sh.margin }}px;
+  /* GTK 3 puts the client-side hairline and the drop shadow on this node rather
+     than on window.background, and decoration:backdrop below changes both. Without
+     a transition the one focus cue every window shares would snap between two
+     alphas while everything inside the window faded. */
+  {{ transition('box-shadow', m.fast, m.standard) }};
 }
 
 decoration:backdrop {
@@ -89,7 +94,7 @@ headerbar,
   border-radius: {{ r.window }}px {{ r.window }}px 0 0;
   box-shadow: none;
   min-height: {{ sh.headerbar_min_height }}px;
-  {{ transition(t.fill_border, m.normal, m.standard) }};
+  {{ transition(t.fill_border, m.fast, m.standard) }};
 }
 
 headerbar:backdrop,

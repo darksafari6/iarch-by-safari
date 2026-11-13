@@ -1,0 +1,261 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "_note": "The compositor startup surface: the three Lua bindings .config/hypr/startup.lua is allowed to use, the event names hl.on accepts, how a command is actually spawned, and every environment variable and command this session starts -- each with the reason it is there. Hyprland refuses an unknown event name with a config error that lists the known ones, so a typo there is loud; a command is the opposite, because every command runs with its output discarded, so one that fails is indistinguishable from one that was never needed. That is why this file records the reason beside the command rather than only the command: gen_startup_lua.py emits what is recorded here and nothing else, and a test asserts the two lines both installers rewrite still exist in the render.",
+  "verified_against": "v0.57.2",
+  "source": "src/config/lua/bindings/LuaBindingsConfigRules.cpp (hl.env), src/config/lua/bindings/LuaBindingsToplevel.cpp (hl.exec_cmd, hl.on), src/config/lua/LuaEventHandler.cpp (the known event names and where hyprland.start is dispatched), src/config/supplementary/executor/Executor.cpp (how a command is spawned)",
+  "fetched": "2026-11-09",
+  "entry_point": {
+    "file": ".config/hypr/startup.lua",
+    "required_by": ".config/hypr/hyprland.lua:14",
+    "module_name": "startup",
+    "cache_cleared_on_reload": false,
+    "note": "hyprland.lua clears package.loaded for the modules whose binds and rules have to re-register on a reload (.config/hypr/hyprland.lua:9). startup is deliberately not one of them: the environment is already exported, hyprland.start will not fire again in this process, and a second registration would be a second handler for an event that is dispatched once."
+  },
+  "bindings": {
+    "hl.env": {
+      "registered_at": "src/config/lua/bindings/LuaBindingsConfigRules.cpp:1374",
+      "implemented_at": "src/config/lua/bindings/LuaBindingsConfigRules.cpp:488-545",
+      "arguments": ["name", "value", "dbus"],
+      "returns": "nothing",
+      "note": "name and value must both be strings and name must not be empty, or the call is a config error (:491-510). The third argument is optional and must be a boolean (:521-529). On a parse that is not the first, a variable whose value already equals the one given is left alone and the call returns early (:512-516); otherwise setenv(name, value, 1) (:518).",
+      "dbus_flag": {
+        "behaviour": "With dbus true, upstream builds one command -- systemctl --user import-environment '<name>' followed by `hash dbus-update-activation-environment 2>/dev/null &&` and then dbus-update-activation-environment --systemd '<name>' -- where the systemctl half exists only in a build with USES_SYSTEMD. On the first parse it is queued as an exec-once, and on a later parse it is spawned immediately.",
+        "source": "src/config/lua/bindings/LuaBindingsConfigRules.cpp:531-541",
+        "first_launch": "CConfigManager::m_isFirstLaunch starts true (src/config/lua/ConfigManager.hpp:155) and is cleared at the end of the first parse (src/config/lua/ConfigManager.cpp:614), so every hl.env in a startup module takes the queued path.",
+        "why_it_matters": "It is the replacement for the two hand-rolled shell commands the v4 session carried in its commented-out NVIDIA block (legacy/config/hypr/startup.conf:20-21). Exporting a variable the config itself sets is one call with a boolean, and the command upstream builds is the command this project would otherwise have to keep in sync by hand."
+      }
+    },
+    "hl.exec_cmd": {
+      "registered_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:479",
+      "implemented_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:297-311",
+      "arguments": ["command", "rule"],
+      "note": "An empty command is a config error (:300-301). The optional second argument is a table that becomes a window rule for the spawned process (:303-308); without one the command goes through spawnWithRules, which also honours a legacy [rule] prefix written into the command string itself (src/config/supplementary/executor/Executor.cpp:101-129). Neither form is used here: no startup command needs a window rule, and a string that began with '[' would be parsed as one.",
+      "returns": "nothing"
+    },
+    "hl.on": {
+      "registered_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:471",
+      "implemented_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:347-368",
+      "arguments": ["event", "handler"],
+      "note": "The handler must be a function (:352). An event name outside the known list is a config error whose message lists every known name (:355-364), so a misspelled event fails the whole config rather than silently never firing.",
+      "returns": "a subscription object"
+    }
+  },
+  "events": {
+    "source": "src/config/lua/LuaEventHandler.cpp:251-292 (CLuaEventHandler::knownEvents, plus every plugin-registered event)",
+    "used": ["hyprland.start"],
+    "used_note": "Dispatched from the event bus's start listener (src/config/lua/LuaEventHandler.cpp:157), so it fires once per compositor launch and not on a config reload -- which is what makes it safe to spawn session services from. Spawning from the module body instead would run at parse time, before the compositor has necessarily finished bringing up its own display.",
+    "known": [
+      "window.open",
+      "window.open_early",
+      "window.close",
+      "window.destroy",
+      "window.kill",
+      "window.active",
+      "window.urgent",
+      "window.title",
+      "window.class",
+      "window.pin",
+      "window.fullscreen",
+      "window.update_state",
+      "window.update_rules",
+      "window.move_to_workspace",
+      "window.bell",
+      "window.minimize",
+      "layer.opened",
+      "layer.closed",
+      "monitor.added",
+      "monitor.removed",
+      "monitor.focused",
+      "monitor.layout_changed",
+      "workspace.active",
+      "workspace.special_active",
+      "workspace.created",
+      "workspace.created_early",
+      "workspace.removed",
+      "workspace.move_to_monitor",
+      "config.reloaded",
+      "config.props_refreshed",
+      "config.unload",
+      "keybinds.submap",
+      "screenshare.state",
+      "hyprland.start",
+      "hyprland.shutdown",
+      "input.keyboard.key"
+    ]
+  },
+  "executor": {
+    "shell": "/bin/sh -c",
+    "source": "src/config/supplementary/executor/Executor.cpp:173-213 (the execl at :205)",
+    "note": "Every command is forked and run as /bin/sh -c <command> in a child whose stdout and stderr are redirected to /dev/null (:198-203) and whose environment carries WAYLAND_DISPLAY plus Hyprland's own launch variables (:190-195).",
+    "consequences": [
+      "Shell operators are available, so `a || b` and `a && b` work without an extra wrapper. The v4 file's `sh -c 'sleep 3 && …'` was a shell inside a shell; the record keeps the sequence and drops the wrapper.",
+      "A command's output is discarded and its exit status is not reported anywhere, so a command that fails looks exactly like a command that was never needed. Nothing here may be load-bearing in a way that has to be seen: the session's own diagnostics are scripts/iarch-healthcheck.sh.",
+      "WAYLAND_DISPLAY is set in the child, never in the compositor's own environment at parse time, so it is the one session variable no hl.env call can export -- it has to be imported from inside a spawned command."
+    ]
+  },
+  "env": [
+    {
+      "name": "XDG_CURRENT_DESKTOP",
+      "value": "Hyprland",
+      "dbus": true,
+      "why": "Toolkits, portals and clipboard managers branch on this. It is exported into the systemd user environment and the dbus activation environment as well, because a portal or a systemd user unit started later reads it from there and not from the compositor's environment."
+    },
+    {
+      "name": "XDG_SESSION_TYPE",
+      "value": "wayland",
+      "dbus": true,
+      "why": "The other half of what a toolkit asks before choosing a backend. Exported for the same reason: a dbus-activated helper inherits the activation environment, not this process's."
+    },
+    {
+      "name": "QT_QPA_PLATFORMTHEME",
+      "value": "qt6ct",
+      "why": "Qt 6 reads its platform theme from here, and qt6ct is what points it at the Kvantum theme this repository renders (.config/Kvantum/). Installed by install.sh:467."
+    },
+    {
+      "name": "QT_AUTO_SCREEN_SCALE_FACTOR",
+      "value": "1",
+      "why": "Lets Qt follow the monitor scale the compositor reports instead of rounding to an integer, which is what keeps a Qt window the same size as a GTK one on a fractional-scale display."
+    },
+    {
+      "name": "QT_WAYLAND_DISABLE_WINDOWDECORATION",
+      "value": "1",
+      "why": "Client-side decorations off: Hyprland draws the border, the rounding and the shadow this design system specifies, so a Qt window that also drew its own title bar would carry two frames."
+    },
+    {
+      "name": "ELECTRON_OZONE_PLATFORM_HINT",
+      "value": "wayland",
+      "why": "Electron's own hint for which Ozone platform to pick. Without it an Electron app may start under XWayland, where the compositor's blur and rounding rules for a native window do not apply to it."
+    }
+  ],
+  "exec_once": [
+    {
+      "command": "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 || /usr/libexec/polkit-gnome-authentication-agent-1",
+      "why": "The polkit authentication agent. Without one, a privilege prompt has nowhere to appear: the greeter's Sync action (org.noctalia.greeter.sync-appearance) and every pkexec in the session would hang instead of asking. Two paths because Arch and Fedora install the binary in different places, and `||` is available since the executor runs a shell. The shell's own agent ([shell] polkit_agent) stays off so two agents do not compete for one request -- see data/design/noctalia.json sections.shell.withheld.polkit_agent.",
+      "installer_rewritten_by": "fedora_install.sh:834"
+    },
+    {
+      "command": "gnome-keyring-daemon --start --components=secrets",
+      "why": "The Secret Service provider browsers and password managers ask for. Only the secrets component: the ssh and pkcs11 components are not used by this session, and starting them would hold an agent nobody asked for.",
+      "installer": "install.sh:398"
+    },
+    {
+      "command": "systemctl --user start --ignore-dependencies xdg-desktop-portal-hyprland.service xdg-desktop-portal.service",
+      "why": "The portal implementation Hyprland needs for screen sharing and for a file picker in a sandboxed app. --ignore-dependencies because the units' own ordering wants a display manager session that a direct Hyprland launch does not provide, and without the flag the start fails and the portal is simply absent.",
+      "note": "This is a command whose failure is invisible: the executor discards output and status. A session with no portal shows up as a screen share that finds nothing, which is what scripts/iarch-healthcheck.sh reports on rather than what this file can."
+    },
+    {
+      "command": "noctalia",
+      "why": "The shell itself: the bar, the launcher, the control center, the notification daemon, the wallpaper and the idle and lock behaviour. Everything in .config/noctalia/config.toml is read by this process, and the lock screen that actually wins ext_session_lock_v1 is its own.",
+      "provenance": "Replaces the v4 startup line at legacy/config/hypr/startup.conf:3, which started the shell through quickshell's own binary and a -c flag rather than the packaged command."
+    },
+    {
+      "command": "wl-clip-persist --clipboard regular",
+      "why": "Keeps a copied image or a selection alive after the application that owned it exits. Only the regular clipboard: the primary selection is deliberately left alone, because persisting it changes what a middle-click pastes long after the source window is gone."
+    },
+    {
+      "command": "sleep 3 && easyeffects --gapplication-service",
+      "why": "EasyEffects as a background service, so the audio pipeline it owns survives its window being closed. The delay is upstream's own recommendation for a service that has to appear on the session bus after the shell has taken its name; the wrapper the v4 file used (`sh -c '…'`) is gone because the executor already runs /bin/sh -c.",
+      "installer": "install.sh:486-488 (only when the audio mode is easyeffects)"
+    },
+    {
+      "command": "systemctl --user import-environment WAYLAND_DISPLAY && hash dbus-update-activation-environment 2>/dev/null && dbus-update-activation-environment --systemd WAYLAND_DISPLAY",
+      "why": "WAYLAND_DISPLAY is the one session variable hl.env cannot export: the compositor sets it in each spawned child (Executor.cpp:194) rather than in its own environment at parse time, so there is no value for the binding to read. A dbus-activated helper that cannot see it cannot connect. The chain is the shape upstream itself builds for hl.env's dbus flag (LuaBindingsConfigRules.cpp:534-537), minus the two names that flag now exports.",
+      "provenance": "Moved out of a list it did not belong in: the v5 file kept this pair inside a list gated by an NVIDIA flag, next to the vendor variables, so a default install never ran it. It has nothing to do with a GPU: it is what makes a dbus-activated application able to find the display."
+    }
+  ],
+  "optional_groups": [
+    {
+      "name": "nvidia",
+      "flag": "enable_nvidia_optional",
+      "enabled_by_default": false,
+      "why": "NVIDIA needs these four vendor variables to get hardware cursors and VA-API decoding right, and they are wrong on every other GPU: WLR_NO_HARDWARE_CURSORS in particular costs a software cursor path. So they stay behind a flag rather than in the environment of every install.",
+      "installer_flips_the_flag": ["install.sh:1047-1049", "fedora_install.sh:845-847"],
+      "env": [
+        {
+          "name": "WLR_NO_HARDWARE_CURSORS",
+          "value": "1",
+          "why": "Software cursors, because NVIDIA's hardware cursor path is what turns a dragged window into a smear on many driver versions."
+        },
+        {
+          "name": "LIBVA_DRIVER_NAME",
+          "value": "nvidia",
+          "why": "Points VA-API at the NVIDIA backend so a video is decoded on the GPU instead of the CPU."
+        },
+        {
+          "name": "GBM_BACKEND",
+          "value": "nvidia-drm",
+          "why": "The GBM backend a Wayland compositor allocates its buffers through."
+        },
+        {
+          "name": "__GLX_VENDOR_LIBRARY_NAME",
+          "value": "nvidia",
+          "why": "GLX vendor selection for the rare XWayland application that still asks for GLX."
+        },
+        {
+          "name": "NVD_BACKEND",
+          "value": "direct",
+          "why": "NVIDIA's own direct-rendering backend hint."
+        }
+      ]
+    }
+  ],
+  "installer_anchors": [
+    {
+      "file": "install.sh",
+      "lines": "1047-1049",
+      "anchor": "local enable_nvidia_optional = false",
+      "replacement": "local enable_nvidia_optional = true",
+      "match": "a whole line, anchored with ^ and $ in the sed expression",
+      "whole_line": true,
+      "why": "The Arch installer flips the NVIDIA group on when it was asked to install the vendor stack. The rendered file has to keep that line verbatim and alone, or the installer warns and silently installs a session without it."
+    },
+    {
+      "file": "fedora_install.sh",
+      "lines": "845-847",
+      "anchor": "local enable_nvidia_optional = false",
+      "replacement": "local enable_nvidia_optional = true",
+      "match": "a whole line, anchored with ^ and $ in the sed expression",
+      "whole_line": true,
+      "why": "The same flag on Fedora, rewritten by the same expression, so the rendered line has to satisfy two installers rather than one: verbatim, alone on its line, and spelled with the spaces the anchors show."
+    },
+    {
+      "file": "fedora_install.sh",
+      "lines": "834",
+      "anchor": "polkit-gnome-authentication-agent-1",
+      "replacement": "    \"sleep 1 && /usr/libexec/xfce-polkit\",",
+      "match": "any line containing the string, replaced whole by sed's c command",
+      "whole_line": false,
+      "why": "Fedora ships xfce-polkit instead of polkit-gnome. Two constraints follow, and both are asserted by tests/test_startup_lua.py: the replacement is a quoted table entry with a trailing comma, so the command has to stay an entry in a Lua table rather than a call; and the match is a substring of any line, so the string polkit-gnome-authentication-agent-1 may appear on exactly one line of the rendered file -- a comment naming it would be replaced too, and the result would not parse."
+    }
+  ],
+  "removed": [
+    {
+      "what": "hl.exec_cmd([[bash -lc 'sleep 2; hyprctl reload']]) at the end of the hyprland.start handler",
+      "legacy": "legacy/config/hypr/startup.conf:4 (`exec-once = hyprctl reload &`)",
+      "why": "A second parse of the whole configuration two seconds after the first one, inherited from the v4 session, where it was a workaround for a config that had not finished being written. Under v5 the config is parsed completely before hyprland.start is dispatched, so there is nothing left to pick up -- and the reload is not free. It re-registers every bind and every window rule, and it discards runtime state that no file records: a focus mode switched on by an autostart command would have its dim undone two seconds later, because the generated glass.lua carries the intensity's own decoration:dim_inactive and decoration:blur:size. It also depended on bash and hyprctl both being reachable from a login shell, inside a command whose failure the executor discards.",
+      "what_replaces_it": "Nothing, and that is the point. A change to the payload is applied by the tool that made it: iarch-theme apply, iarch-anim set and iarch-gamemode on each reload the compositor themselves and verify the result, and a session start needs no reload at all."
+    }
+  ],
+  "not_shipped": {
+    "hypridle": {
+      "why": "The v4 session started hypridle here (legacy/config/hypr/startup.conf:37). This one does not: Noctalia owns ext_idle_notifier_v1 and runs its own idle behaviour from [idle.behavior.*], so a second daemon would race the shell's own subsystem for the same timers. .config/hypr/hypridle.conf still ships, unlaunched, as the fallback for a session without the shell -- see data/design/hyprlock.json hypridle_fallback.",
+      "recorded_in": "data/design/hyprlock.json",
+      "where": "hypridle_fallback"
+    },
+    "hyprlock": {
+      "why": "Not started, and not started on a timer either: the shell locks the session itself, and hyprlock is what appears when there is no shell to answer ext_session_lock_v1. Launching it at startup would put a lock client on the seat for the whole session.",
+      "recorded_in": "data/design/hyprlock.json",
+      "where": "hypridle_fallback"
+    },
+    "notification_daemon": {
+      "why": "No second notification daemon (mako, dunst, swaync). Noctalia's [notification] enable_daemon is the one this session runs, and two daemons on org.freedesktop.Notifications means whichever claimed the name first silently owns every notification.",
+      "recorded_in": "data/design/noctalia.json",
+      "where": "sections.notification.keys.enable_daemon"
+    },
+    "welcome_wizard": {
+      "why": "The v4 session ran a first-login setup wizard from a path inside a user's home directory (legacy/config/hypr/startup.conf:6). This repository ships no wizard, and a startup command pointing at a checkout path would fail for every install that is not that checkout.",
+      "recorded_in": "data/design/startup.json",
+      "where": "removed"
+    }
+  }
+}

@@ -107,12 +107,20 @@ class VerifiedSurface(unittest.TestCase):
                     self.assertIn(spec["type"], ("bool", "integer", "float", "string", "array"))
                     if "enum" in spec:
                         self.assertTrue(spec["enum"])
-                        # A custom parser has no kEnum constant; it must say so.
-                        self.assertTrue(spec.get("enum_constant") or spec.get("parser"),
-                                        f"{path} lists an enum with no upstream constant")
+                        # A custom parser has no kEnum constant, and a vocabulary this project
+                        # enforces because upstream silently ignores an unknown value has
+                        # neither -- but both have to say which of those they are.
+                        self.assertTrue(spec.get("enum_constant") or spec.get("parser")
+                                        or spec.get("enum_note"),
+                                        f"{path} lists an enum with no upstream constant "
+                                        f"and no note explaining where it came from")
                     if "range" in spec:
                         self.assertLessEqual(spec["range"][0], spec["range"][1])
-                        self.assertIn("range_constant", spec)
+                        # An inline Range<...>{lo, hi} passed straight to field() has no named
+                        # constant, so a note citing the expression counts as the citation --
+                        # the same escape hatch `parser` gives an enum with no kEnum constant.
+                        self.assertTrue(spec.get("range_constant") or spec.get("range_note"),
+                                        f"{path} lists a range with no upstream citation")
 
         for name, section in SURFACE["sections"].items():
             walk(section["keys"], name)
@@ -236,6 +244,29 @@ class ValuesAreDerivedFromTokens(unittest.TestCase):
         expected = round(noctalia.MOTION_BASELINE_MS / TOKENS["motion"]["normal_ms"], 2)
         self.assertEqual(expected, self.doc["shell"]["animation"]["speed"])
 
+    def test_the_shell_animation_switch_follows_the_intensity(self):
+        # The intensity is the coarse motion switch and it is repository state, so
+        # the committed payload stays reproducible from a clean clone while still
+        # meaning something: Performance stops the shell's own panels animating for
+        # the same reason it stops the compositor's windows.
+        for name in INTENSITIES:
+            with self.subTest(intensity=name):
+                self.assertEqual(TOKENS["intensities"][name]["motion"]["enabled"],
+                                 render("midnight-glass", name)["shell"]["animation"]["enabled"])
+
+    def test_performance_turns_the_shell_animations_off(self):
+        self.assertTrue(self.doc["shell"]["animation"]["enabled"],
+                        "the default intensity animates")
+        self.assertFalse(render("midnight-glass", "performance")["shell"]["animation"]["enabled"])
+
+    def test_the_switch_actually_varies_rather_than_being_a_constant(self):
+        # It used to be `motion.normal_ms > 0`, which is true for every intensity
+        # the tokens ship: the key existed and never did anything. If a future edit
+        # makes it constant again, this is what catches it.
+        rendered = {render("midnight-glass", name)["shell"]["animation"]["enabled"]
+                    for name in INTENSITIES}
+        self.assertEqual({True, False}, rendered)
+
     def test_opacities_come_from_the_intensity(self):
         self.assertEqual(self.shell["bar_opacity"], self.doc["bar"]["default"]["background_opacity"])
         self.assertEqual(self.shell["capsule_opacity"],
@@ -302,6 +333,10 @@ class ValuesAreDerivedFromTokens(unittest.TestCase):
                 doc = render(preset, intensity)
                 self.assertFalse(doc["shell"]["telemetry_enabled"])
                 self.assertFalse(doc["audio"]["enable_notification_sounds"])
+                # The launcher's calculator can refresh currency rates from
+                # libqalculate's online sources. That is a network call to a third
+                # party nobody asked for, so it stays off everywhere.
+                self.assertFalse(doc["shell"]["launcher"]["fetch_exchange_rates"])
 
     def test_theme_selects_the_presets_own_palette(self):
         for preset_id in PRESET_IDS:
@@ -633,6 +668,971 @@ class CommandLine(unittest.TestCase):
             self.assertIn(flag, result.stdout)
 
 
+
+class NotificationSurface(unittest.TestCase):
+    """The toast settings: what the payload picks, and what the record knows.
+
+    iArch never runs a second notification daemon, so the whole of Part 3's
+    notification work is these keys plus the shell's own IPC verbs. The record in
+    ``data/design/noctalia.json`` has to be complete even where the payload is
+    deliberately silent: filter tables, the legacy blacklist shim and the
+    section-level urgency list all exist at v5.4.1, and a later change that
+    reaches for one of them must find it already verified rather than invent it.
+    """
+
+    # config_schema.cpp:292-372 notificationSchema(), in declaration order,
+    # including the three customs and the section-level allowed_urgencies.
+    UPSTREAM_KEYS = [
+        "enable_daemon", "show_app_name", "show_actions", "position", "layer",
+        "scale", "width", "background_opacity", "border", "border_color",
+        "border_width", "follow_focused_output", "offset_x", "offset_y",
+        "monitors", "collapse_on_dismiss", "keep_dismissed_in_history",
+        "history_retention_hours", "max_visible", "blacklist",
+        "blacklist_allow_critical", "filter_order", "filter", "allowed_urgencies",
+    ]
+
+    # config_schema.cpp:247-291 notificationFilterSchema(), same rule.
+    UPSTREAM_FILTER_KEYS = [
+        "enabled", "matches", "match", "match_content", "show_toast",
+        "save_history", "play_sound", "bypass_dnd", "allow_permanent",
+        "override_duration", "allowed_urgencies", "allow_critical",
+    ]
+
+    def setUp(self):
+        self.keys = SURFACE["sections"]["notification"]["keys"]
+        self.filter_section = SURFACE["sections"]["notification.filter"]
+        self.doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.notification = self.doc["notification"]
+
+    def test_the_record_covers_every_setting_upstream_declares(self):
+        self.assertEqual(sorted(self.UPSTREAM_KEYS), sorted(self.keys))
+
+    def test_the_filter_table_is_recorded_as_a_table_and_as_its_own_section(self):
+        self.assertEqual("notificationFilterSchema", self.keys["filter"]["table"])
+        self.assertEqual("notificationFilterSchema", self.filter_section["schema"])
+        # One definition, two ways in: a sub-table of [notification] and a
+        # section of its own, so either spelling validates the same keys.
+        self.assertEqual(self.keys["filter"]["keys"], self.filter_section["keys"])
+        self.assertEqual(sorted(self.UPSTREAM_FILTER_KEYS),
+                         sorted(self.filter_section["keys"]))
+
+    def test_the_two_keys_upstream_accepts_and_ignores_say_so(self):
+        for key in ("blacklist_allow_critical", "allow_critical"):
+            spec = (self.keys if key == "blacklist_allow_critical"
+                    else self.filter_section["keys"])[key]
+            with self.subTest(setting=key):
+                self.assertIn("ignored", spec["note"],
+                              "a no-op key has to be recorded as one, or someone "
+                              "will wire a setting to it")
+
+    def test_the_payload_emits_no_filter_tables(self):
+        # A filter needs a real sender to match. Inventing one would ship a rule
+        # that silently swallows somebody's notifications.
+        self.assertNotIn("filter", self.notification)
+        for key, value in self.notification.items():
+            with self.subTest(setting=key):
+                self.assertNotIsInstance(value, dict, f"{key} would render a sub-table")
+
+    def test_the_keys_left_unemitted_are_still_recorded(self):
+        unused = [key for key in self.UPSTREAM_KEYS if key not in self.notification]
+        self.assertEqual(
+            sorted(["blacklist", "blacklist_allow_critical", "filter_order",
+                    "filter", "allowed_urgencies"]), sorted(unused))
+        for key in unused:
+            with self.subTest(setting=key):
+                self.assertIn("note", self.keys[key],
+                              "a key we choose not to emit still needs its reason recorded")
+
+    def test_the_margin_is_one_number_on_both_axes(self):
+        self.assertEqual(16, self.notification["offset_x"])
+        self.assertEqual(self.notification["offset_x"], self.notification["offset_y"])
+        for key in ("offset_x", "offset_y"):
+            with self.subTest(setting=key):
+                self.assertIsInstance(self.notification[key], int)
+                self.assertGreaterEqual(self.notification[key], 0)
+                self.assertIn("note", self.keys[key],
+                              "offset_x and offset_y are not applied the same way "
+                              "upstream, and the difference has to be written down")
+
+    def test_toasts_stay_on_the_output_they_appeared_on(self):
+        self.assertIs(False, self.notification["follow_focused_output"])
+        self.assertEqual([], self.notification["monitors"])
+
+    def test_the_stack_is_capped_and_history_is_kept_for_a_week(self):
+        self.assertIs(True, self.notification["collapse_on_dismiss"])
+        self.assertIs(True, self.notification["keep_dismissed_in_history"])
+        self.assertEqual(4, self.notification["max_visible"])
+        self.assertEqual(168, self.notification["history_retention_hours"])
+        for key in ("max_visible", "history_retention_hours"):
+            with self.subTest(setting=key):
+                low, high = self.keys[key]["range"][:2]
+                self.assertLessEqual(low, self.notification[key])
+                self.assertLessEqual(self.notification[key], high)
+
+    def test_the_corner_it_sits_in_and_the_layer_it_sits_on(self):
+        self.assertEqual("top_right", self.notification["position"])
+        self.assertEqual("top", self.notification["layer"])
+        self.assertIs(True, self.notification["enable_daemon"],
+                      "the shell's own daemon is the only one iArch allows")
+
+    def test_the_recorded_position_values_are_the_documented_six(self):
+        note = self.keys["position"]["note"]
+        for value in ("top_right", "top_left", "top_center",
+                      "bottom_right", "bottom_left", "bottom_center"):
+            with self.subTest(position=value):
+                self.assertIn(value, note)
+        # It is a plain string field upstream, so the record must not claim an
+        # enum that notificationSchema() does not enforce.
+        self.assertNotIn("enum", self.keys["position"])
+        self.assertNotIn("enum", self.keys["layer"])
+
+    def test_every_combination_keeps_the_toast_settings_inside_their_bounds(self):
+        for preset_id, intensity in COMBINATIONS:
+            with self.subTest(preset=preset_id, intensity=intensity):
+                doc = render(preset_id, intensity)
+                problems = [line for line in noctalia.validate(doc, SURFACE)
+                            if line.startswith("notification")]
+                self.assertEqual([], problems)
+
+
+class ControlCenterPanel(unittest.TestCase):
+    """The Super+I panel: what it can hold, and what it cannot.
+
+    Noctalia's control centre is a fixed set of tabs and a row of at most six
+    shortcut buttons drawn from a closed vocabulary. There is no custom tile and no
+    custom slider in v5.4.1, so the honest work is to fill the six slots with the
+    types that really exist, to refuse a type that would render no button at all,
+    and to record the one place a config file *can* add a button that runs a
+    command of ours -- ``[[shell.session.actions]]`` -- without emitting a command
+    line this project has no business inventing.
+    """
+
+    # config_schema.cpp:551-569 controlCenterSchema(), in declaration order.
+    UPSTREAM_KEYS = [
+        "sidebar", "sidebar_section", "width", "show_shortcut_labels",
+        "show_session_button", "circular_avatar", "show_avatar_border",
+        "hidden_tabs", "calendar", "media", "shortcuts",
+    ]
+
+    # config_schema.cpp:1772-1784 shellSessionSchema() and :1674-1746
+    # sessionActionSchema(), cross-checked against docs/user/configuration/shell.mdx.
+    SESSION_KEYS = ["grid", "grid_columns", "show_shortcuts", "actions", "power"]
+    ACTION_KEYS = ["action", "enabled", "command", "label", "glyph", "shortcut",
+                   "lockscreen_shortcut", "countdown_seconds", "variant"]
+
+    def setUp(self):
+        self.keys = SURFACE["sections"]["control_center"]["keys"]
+        self.session = SURFACE["sections"]["shell"]["keys"]["session"]
+        self.doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.panel = self.doc["control_center"]
+
+    def test_the_record_covers_every_setting_upstream_declares(self):
+        self.assertEqual(sorted(self.UPSTREAM_KEYS), sorted(self.keys))
+
+    def test_the_session_panel_command_hook_is_recorded(self):
+        self.assertEqual("shellSessionSchema", self.session["table"])
+        self.assertEqual(sorted(self.SESSION_KEYS), sorted(self.session["keys"]))
+        actions = self.session["keys"]["actions"]
+        self.assertEqual("sessionActionSchema", actions["table"])
+        self.assertEqual(sorted(self.ACTION_KEYS), sorted(actions["keys"]))
+        self.assertIn("/bin/sh -c", actions["keys"]["command"]["note"])
+        self.assertEqual("array", actions["type"], "it is [[shell.session.actions]]")
+
+    def test_the_variant_enum_carries_six_values_and_says_the_docs_list_five(self):
+        variant = self.session["keys"]["actions"]["keys"]["variant"]
+        self.assertEqual(6, len(variant["enum"]))
+        self.assertEqual("kSessionActionButtonVariants", variant["enum_constant"])
+        self.assertIn("ghost", variant["enum_note"])
+
+    def test_no_session_action_is_emitted_because_no_command_is_ours_to_invent(self):
+        self.assertNotIn("session", self.doc["shell"])
+        self.assertIn("no business inventing", self.session["keys"]["power"]["note"])
+
+    def test_the_shortcut_row_fills_the_six_slots_the_home_tab_shows(self):
+        types = [entry["type"] for entry in self.panel["shortcuts"]]
+        self.assertEqual(6, len(types), "Home shows at most six")
+        self.assertEqual(len(types), len(set(types)), "a repeated tile wastes a slot")
+        allowed = self.keys["shortcuts"]["keys"]["type"]["enum"]
+        for name in types:
+            with self.subTest(shortcut=name):
+                self.assertIn(name, allowed)
+
+    def test_the_tiles_the_brief_asks_for_and_upstream_has_are_present(self):
+        types = [entry["type"] for entry in self.panel["shortcuts"]]
+        for wanted in ("wifi", "bluetooth", "notification", "nightlight"):
+            with self.subTest(shortcut=wanted):
+                self.assertIn(wanted, types)
+
+    def test_no_tile_is_emitted_for_something_that_would_render_nothing(self):
+        types = [entry["type"] for entry in self.panel["shortcuts"]]
+        # Airplane mode, game mode, focus mode and a screenshot button have no
+        # type at all; screen_recorder exists but stays disabled without the
+        # official plugin, which is a dead button by another name.
+        for absent in ("airplane", "game", "focus", "screenshot", "screen_recorder"):
+            with self.subTest(shortcut=absent):
+                self.assertNotIn(absent, types)
+
+    def test_an_invented_tile_is_refused_rather_than_shipped_as_a_dead_button(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["control_center"]["shortcuts"] = [{"type": "airplane"}]
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("airplane", problems[0])
+        self.assertIn("is not one of", problems[0])
+
+    def test_a_shortcut_entry_carries_the_one_field_it_has(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["control_center"]["shortcuts"] = [{"type": "wifi", "label": "Wireless"}]
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("no such setting", problems[0])
+
+    def test_the_visualizer_follows_the_motion_switch_and_actually_varies(self):
+        seen = set()
+        for intensity in INTENSITIES:
+            with self.subTest(intensity=intensity):
+                doc = render(noctalia.DEFAULT_PRESET, intensity)
+                expected = bool(TOKENS["intensities"][intensity]["motion"]["enabled"])
+                self.assertEqual(expected, doc["control_center"]["media"]["show_visualizer"])
+                seen.add(expected)
+        self.assertEqual({True, False}, seen,
+                         "a key that never changes is a key that does nothing")
+
+    def test_the_calendar_card_shows_what_is_next_not_what_already_happened(self):
+        calendar = self.panel["calendar"]
+        self.assertIs(True, calendar["show_events_card"])
+        self.assertIs(True, calendar["hide_past_events"])
+        threshold = calendar["past_events_threshold_minutes"]
+        low, high, step = self.keys["calendar"]["keys"]["past_events_threshold_minutes"]["range"]
+        self.assertLessEqual(low, threshold)
+        self.assertLessEqual(threshold, high)
+        self.assertEqual(0, threshold % step)
+        self.assertGreater(threshold, 0, "zero would hide an event that just started")
+
+    def test_the_panel_is_wide_enough_and_every_tab_stays_reachable(self):
+        low, high, step = self.keys["width"]["range"]
+        width = self.panel["width"]
+        self.assertLessEqual(low, width)
+        self.assertLessEqual(width, high)
+        self.assertEqual(0, (width - low) % step)
+        self.assertEqual([], self.panel["hidden_tabs"])
+        self.assertEqual("full", self.panel["sidebar"])
+        self.assertEqual("compact", self.panel["sidebar_section"])
+
+    def test_an_array_of_tables_renders_as_repeated_double_bracket_blocks(self):
+        text = noctalia.emit_toml(self.doc, "# header")
+        self.assertEqual(6, text.count("[[control_center.shortcuts]]"))
+        self.assertIn('type = "wifi"', text)
+        # An empty list is a setting of its own upstream, so it stays inline
+        # rather than becoming a table with no entries.
+        self.assertIn("hidden_tabs = []", text)
+        self.assertNotIn("[[control_center.hidden_tabs]]", text)
+
+    def test_a_plain_array_and_a_table_array_are_not_confused(self):
+        self.assertTrue(noctalia.is_table_array([{"type": "wifi"}]))
+        self.assertFalse(noctalia.is_table_array([]))
+        self.assertFalse(noctalia.is_table_array(["monitor"]))
+        self.assertFalse(noctalia.is_table_array([{"a": 1}, "b"]))
+
+
+class LauncherAndSwitcher(unittest.TestCase):
+    """Super+D and Alt+Tab: what the shell already provides, and what it does not.
+
+    Both surfaces turned out to exist upstream, so neither needs a plugin, a second
+    application or a compositor-side substitute. The launcher has seven built-in
+    providers (apps, calculator, emoji, panels, wallpaper, session, windows) and no
+    clipboard or web-search provider at all; the window switcher is an Alt+Tab
+    overlay opened over IPC and configured by ``[shell.window_switcher]``.
+    """
+
+    # config_schema.cpp:1541-1582 shellLauncherSchema(), in declaration order.
+    LAUNCHER_KEYS = [
+        "layout", "width", "search_position", "default_view", "categories",
+        "category_icons_only", "show_navigation_labels", "show_settings_button",
+        "show_session_button", "show_icons", "show_app_origin_indicator", "compact",
+        "app_grid", "show_app_actions", "track_usage", "sort_by_usage",
+        "ignore_mouse", "pinned", "fetch_exchange_rates", "provider_prefix",
+        "auto_paste", "dmenu", "panels", "providers",
+    ]
+
+    # config_schema.cpp:1584-1594 shellWindowSwitcherSchema().
+    SWITCHER_KEYS = ["style", "mru", "show_caption", "show_count", "show_app_icon",
+                     "show_all_outputs", "current_workspace_only"]
+
+    # docs/user/launcher/index.mdx, "Providers": the closed set the shell knows.
+    PROVIDERS = ["apps", "calculator", "emoji", "panels", "wallpaper", "session",
+                 "windows"]
+
+    def setUp(self):
+        self.launcher_spec = SURFACE["sections"]["shell"]["keys"]["launcher"]
+        self.switcher_spec = SURFACE["sections"]["shell"]["keys"]["window_switcher"]
+        self.doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.launcher = self.doc["shell"]["launcher"]
+        self.switcher = self.doc["shell"]["window_switcher"]
+
+    def test_the_record_covers_every_launcher_and_switcher_setting(self):
+        self.assertEqual(sorted(self.LAUNCHER_KEYS), sorted(self.launcher_spec["keys"]))
+        self.assertEqual(sorted(self.SWITCHER_KEYS), sorted(self.switcher_spec["keys"]))
+        self.assertEqual("shellLauncherSchema", self.launcher_spec["table"])
+        self.assertEqual("shellWindowSwitcherSchema", self.switcher_spec["table"])
+
+    def test_the_width_range_is_the_constant_and_not_the_comment(self):
+        width = self.launcher_spec["keys"]["width"]
+        self.assertEqual([560, 1100, 10], width["range"])
+        self.assertEqual("kLauncherWidthRange", width["range_constant"])
+        # example.toml says 560-1200 in a comment; ranges.h:24 says 560-1100 and is
+        # what the shell clamps to. The record has to say which one it believed.
+        self.assertIn("1200", width["note"])
+        low, high, step = width["range"]
+        self.assertLessEqual(low, self.launcher["width"])
+        self.assertLessEqual(self.launcher["width"], high)
+        self.assertEqual(0, (self.launcher["width"] - low) % step)
+
+    def test_the_switcher_is_ordered_by_recency_because_that_is_what_alt_tab_means(self):
+        self.assertIs(True, self.switcher["mru"])
+        self.assertEqual("carousel", self.switcher["style"])
+        self.assertEqual(sorted(self.SWITCHER_KEYS), sorted(self.switcher))
+
+    def test_no_provider_is_emitted_because_every_one_would_restate_a_default(self):
+        self.assertNotIn("providers", self.launcher)
+        self.assertNotIn("dmenu", self.launcher)
+        self.assertNotIn("panels", self.launcher)
+        note = self.launcher_spec["keys"]["providers"]["note"]
+        for provider in self.PROVIDERS:
+            with self.subTest(provider=provider):
+                self.assertIn(provider, note)
+
+    def test_the_record_says_which_providers_do_not_exist(self):
+        note = self.launcher_spec["keys"]["providers"]["note"]
+        self.assertIn("no clipboard provider", note)
+        self.assertIn("no web-search provider", note)
+
+    def test_a_dmenu_entry_records_why_this_project_ships_none(self):
+        entry = self.launcher_spec["keys"]["dmenu"]["keys"]["entry"]
+        self.assertTrue(entry["named_map"])
+        self.assertEqual("dmenuEntrySchema", entry["table"])
+        self.assertIn("/bin/sh -lc", entry["keys"]["command"]["note"])
+        self.assertIn("{selection}", entry["keys"]["exec"]["note"])
+
+    def test_a_named_map_is_walked_by_its_values_and_not_by_its_names(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["shell"]["launcher"]["providers"] = {"calculator": {"prefix": "calc",
+                                                                "global": True}}
+        self.assertEqual([], noctalia.validate(doc, SURFACE))
+
+        doc["shell"]["launcher"]["providers"] = {"calculator": {"prefix": "calc",
+                                                                "bogus": 1}}
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("providers.calculator.bogus", problems[0])
+
+        doc["shell"]["launcher"]["providers"] = {"calculator": "calc"}
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("is not a table", problems[0])
+
+    def test_an_invented_provider_prefix_value_is_refused(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["shell"]["launcher"]["providers"] = {"calculator": {"prefix": 7}}
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("is not a string", problems[0])
+
+    def test_the_auto_paste_vocabulary_is_recorded(self):
+        spec = self.launcher_spec["keys"]["auto_paste"]
+        self.assertEqual(["off", "auto", "ctrl_v", "ctrl_shift_v", "shift_insert"],
+                         spec["enum"])
+        self.assertEqual("kClipboardAutoPasteModes", spec["enum_constant"])
+        self.assertIn(spec["enum"].index(self.launcher["auto_paste"]),
+                      range(len(spec["enum"])))
+
+    def test_every_emitted_launcher_key_is_one_upstream_declares(self):
+        for key in self.launcher:
+            with self.subTest(setting=key):
+                self.assertIn(key, self.launcher_spec["keys"])
+
+
+class IdleService(unittest.TestCase):
+    """Idle: the surface that decides whether hypridle may run at all.
+
+    Noctalia v5.4.1 watches ``ext_idle_notifier_v1`` itself and respects D-Bus and
+    Wayland idle inhibitors, so ``.config/hypr/hypridle.conf`` ships unlaunched --
+    two idle daemons would race to lock, dim and suspend the same session. These
+    tests hold both halves of that decision: the shell's idle behaviours are real
+    and enabled, and the shell's own vocabulary is enforced here even though
+    upstream would swallow a typo and run an empty command instead.
+    """
+
+    # config_schema.cpp:1064-1086 idleSchema(), plus the named behaviour map.
+    IDLE_KEYS = ["pre_action_fade_seconds", "behavior_order", "behavior"]
+
+    # config_schema.cpp:1021-1062 idleBehaviorSchema(), in declaration order.
+    BEHAVIOR_KEYS = ["enabled", "timeout", "locked_timeout", "action", "command",
+                     "resume_command", "lock_before_suspend"]
+
+    ACTIONS = ["lock", "screen_off", "suspend", "lock_and_suspend", "command"]
+
+    def setUp(self):
+        self.spec = SURFACE["sections"]["idle"]
+        self.behavior = self.spec["keys"]["behavior"]
+
+    def test_the_record_covers_the_whole_idle_surface(self):
+        self.assertEqual("idleSchema", self.spec["schema"])
+        self.assertEqual(sorted(self.IDLE_KEYS), sorted(self.spec["keys"]))
+        self.assertEqual(sorted(self.BEHAVIOR_KEYS), sorted(self.behavior["keys"]))
+        self.assertEqual("idleBehaviorSchema", self.behavior["table"])
+
+    def test_the_section_says_which_other_daemon_it_replaces(self):
+        self.assertIn("ext_idle_notifier_v1", self.spec["note"])
+        self.assertIn("hypridle", self.spec["note"])
+        self.assertIn("unlaunched", self.spec["note"])
+
+    def test_behaviors_are_a_named_map_and_not_an_array_of_tables(self):
+        self.assertTrue(self.behavior["named_map"])
+        self.assertIn("[idle.behavior.<name>]", self.behavior["note"])
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.assertIsInstance(doc["idle"]["behavior"], dict)
+        self.assertTrue(all(isinstance(item, dict)
+                            for item in doc["idle"]["behavior"].values()))
+
+    def test_the_emitted_file_gives_each_behavior_its_own_table(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        text = noctalia.emit_toml(doc, "# test")
+        for name in doc["idle"]["behavior"]:
+            with self.subTest(behavior=name):
+                self.assertIn(f"[idle.behavior.{name}]", text)
+        # A named map has no table of its own: [idle.behavior] would be a table
+        # upstream never reads, sitting above the two that it does.
+        self.assertNotIn("[idle.behavior]\n", text)
+
+    def test_the_action_vocabulary_is_enforced_here_though_upstream_would_not(self):
+        action = self.behavior["keys"]["action"]
+        self.assertEqual(self.ACTIONS, action["enum"])
+        self.assertIn("enum_note", action)
+        # The note has to say *what* upstream does with a typo, or the enum looks
+        # like decoration rather than the guard it is.
+        self.assertIn("commandIdleAction", action["enum_note"])
+        self.assertIn("silently", action["enum_note"])
+
+    def test_a_typo_that_upstream_would_swallow_is_refused_here(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["idle"]["behavior"]["lock"]["action"] = "screeen_off"
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("idle.behavior.lock.action", problems[0])
+        self.assertIn("is not one of", problems[0])
+
+    def test_an_unknown_key_inside_a_behavior_is_refused(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["idle"]["behavior"]["lock"]["time_out"] = 900
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("idle.behavior.lock.time_out", problems[0])
+
+    def test_the_pre_action_fade_is_ranged_and_cited(self):
+        fade = self.spec["keys"]["pre_action_fade_seconds"]
+        self.assertEqual([0.0, 120.0], fade["range"])
+        # An inline Range<float> has no named constant, so the note is the citation.
+        self.assertIn("range_note", fade)
+        self.assertIn("config_schema.cpp", fade["range_note"])
+        self.assertIn("click-through", fade["note"])
+
+    def test_the_fade_follows_the_motion_switch(self):
+        """The overlay is a fullscreen fade, so it is motion."""
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                doc = render(preset, intensity)
+                enabled = TOKENS["intensities"][intensity]["motion"]["enabled"]
+                self.assertEqual(2.0 if enabled else 0.0,
+                                 doc["idle"]["pre_action_fade_seconds"])
+
+    def test_lock_comes_before_the_monitors_go_off(self):
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                behaviors = render(preset, intensity)["idle"]["behavior"]
+                self.assertEqual({"lock", "screen_off"}, set(behaviors))
+                self.assertLess(behaviors["lock"]["timeout"],
+                                behaviors["screen_off"]["timeout"])
+                self.assertTrue(all(item["enabled"] for item in behaviors.values()))
+                self.assertEqual("lock", behaviors["lock"]["action"])
+                self.assertEqual("screen_off", behaviors["screen_off"]["action"])
+
+    def test_the_timeouts_are_the_documented_ones_and_not_invented(self):
+        self.assertEqual(900, noctalia.PROFILE["idle_behaviors"]["lock"]["timeout"])
+        self.assertEqual(960, noctalia.PROFILE["idle_behaviors"]["screen_off"]["timeout"])
+        self.assertIn("docs/user/services/idle.mdx",
+                      noctalia.idle_section.__doc__ or "")
+
+    def test_no_command_action_is_ever_emitted(self):
+        """An idle timer is the wrong place to invent a command line."""
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                behaviors = render(preset, intensity)["idle"]["behavior"]
+                for name, item in behaviors.items():
+                    self.assertNotIn("command", item, name)
+                    self.assertNotIn("resume_command", item, name)
+                    self.assertNotEqual("command", item["action"], name)
+
+    def test_suspend_is_left_out_because_the_backend_is_not_knowable(self):
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                behaviors = render(preset, intensity)["idle"]["behavior"]
+                for name, item in behaviors.items():
+                    self.assertNotIn("suspend", item["action"], name)
+                    self.assertNotIn("lock_before_suspend", item, name)
+        self.assertIn("not knowable from a repository", noctalia.idle_section.__doc__)
+
+    def test_lock_before_suspend_is_recorded_as_a_rewrite_not_a_choice(self):
+        note = self.behavior["keys"]["lock_before_suspend"]["note"]
+        self.assertIn("normalizeIdleBehaviorAction", note)
+        self.assertIn("lock_and_suspend", note)
+
+    def test_a_write_only_key_is_recorded_as_one_and_never_emitted(self):
+        """behavior_order is real upstream and useless: the reader discards it."""
+        order = self.spec["keys"]["behavior_order"]
+        self.assertTrue(order["write_only"])
+        self.assertNotIn("not_in_upstream_schema", order)
+        self.assertIn("discards", order["note"])
+        offenders = []
+        for name, section in SURFACE["sections"].items():
+            for key, spec in section["keys"].items():
+                if spec.get("write_only"):
+                    for preset, intensity in COMBINATIONS:
+                        if key in flat(render(preset, intensity)).get(f"{name}.{key}", {}) \
+                                or any(path.endswith(f".{key}") or path == f"{name}.{key}"
+                                       for path in flat(render(preset, intensity))):
+                            offenders.append(f"{name}.{key}")
+        self.assertEqual([], offenders, "a write-only key was emitted")
+
+    def test_a_command_action_is_still_recorded_so_it_is_not_re_discovered(self):
+        self.assertIn("command", self.behavior["keys"])
+        self.assertIn("resume_command", self.behavior["keys"])
+        self.assertIn("Not emitted by this project", self.behavior["keys"]["command"]["note"])
+
+    def test_every_intensity_round_trips_through_a_toml_parser(self):
+        for intensity in sorted(TOKENS["intensities"]):
+            with self.subTest(intensity=intensity):
+                doc = render(noctalia.DEFAULT_PRESET, intensity)
+                self.assertEqual([], noctalia.validate(doc, SURFACE))
+                parsed = tomllib.loads(noctalia.emit_toml(doc, "# test"))
+                self.assertEqual(doc["idle"]["pre_action_fade_seconds"],
+                                 parsed["idle"]["pre_action_fade_seconds"])
+                self.assertEqual({name: dict(item) for name, item in
+                                  doc["idle"]["behavior"].items()},
+                                 parsed["idle"]["behavior"])
+
+
+class LockScreen(unittest.TestCase):
+    """The shell's own lock screen: the one this session actually shows.
+
+    Two findings drove these tests. The shell picks one of the *listed*
+    transitions at random for every lock and unlock -- and randomizes that
+    effect's own parameters too -- so upstream's default list of all eleven means
+    a lock is now a melt, now a vortex, now a honeycomb. And two of the keys are
+    security settings rather than appearance: ``grace_period_seconds`` above zero
+    lets any keypress, or a mouse move beyond 5 px, end a lock with no password,
+    and ``allow_empty_password`` accepts an empty one.
+    """
+
+    # config_schema.cpp:130-146 lockscreenSchema(), in declaration order.
+    KEYS = ["enabled", "lock_before_suspend", "grace_period_seconds", "fingerprint",
+            "allow_empty_password", "blurred_desktop", "transition", "transition_duration",
+            "edge_smoothness", "blur_intensity", "tint_intensity", "wallpaper", "monitors"]
+
+    # config_types.h:1049-1061 kLockscreenTransitions, alphabetically as declared.
+    TRANSITIONS = ["diamond", "disc", "fade", "golden", "honeycomb", "melt", "pixel",
+                   "stripes", "vortex", "wipe", "zoom"]
+
+    def setUp(self):
+        self.spec = SURFACE["sections"]["lockscreen"]
+        self.doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.lock = self.doc["lockscreen"]
+
+    def test_the_record_covers_every_setting_upstream_declares(self):
+        self.assertEqual("lockscreenSchema", self.spec["schema"])
+        self.assertEqual(sorted(self.KEYS), sorted(self.spec["keys"]))
+
+    def test_every_emitted_key_is_one_upstream_declares(self):
+        for key in self.lock:
+            with self.subTest(setting=key):
+                self.assertIn(key, self.KEYS)
+
+    def test_the_transition_vocabulary_is_the_upstream_constant(self):
+        self.assertEqual(self.TRANSITIONS, self.spec["keys"]["transition"]["enum"])
+        self.assertEqual("kLockscreenTransitions",
+                         self.spec["keys"]["transition"]["enum_constant"])
+
+    def test_the_record_says_the_shell_picks_one_transition_at_random(self):
+        """Without this note, `transition` looks like a list that all play."""
+        note = self.spec["keys"]["transition"]["note"]
+        self.assertIn("AT RANDOM", note)
+        self.assertIn("lock_screen.cpp:1152", note)
+        # The effect's own parameters are randomized too, so naming one effect is
+        # the strongest determinism this key can express.
+        self.assertIn("direction 0-3", note)
+
+    def test_one_transition_is_emitted_because_eleven_would_be_a_random_one(self):
+        self.assertEqual(["fade"], self.lock["transition"])
+        # The reason lives in the record, where the renderer has to read it, and
+        # in the docstring of the function that emits it -- not only in a comment
+        # above a constant, which no test can reach.
+        self.assertIn("random", noctalia.lockscreen_section.__doc__)
+        self.assertIn("calm, predictable motion", noctalia.lockscreen_section.__doc__)
+
+    def test_an_invented_transition_is_refused(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["lockscreen"]["transition"] = ["fade", "sparkle"]
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("'sparkle' is not one of", problems[0])
+
+    def test_an_empty_transition_list_is_allowed_because_that_disables_the_animation(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["lockscreen"]["transition"] = []
+        self.assertEqual([], noctalia.validate(doc, SURFACE))
+        self.assertIn("empty", self.spec["keys"]["transition"]["note"])
+
+    def test_motion_off_empties_the_list_instead_of_shortening_a_duration(self):
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                lock = render(preset, intensity)["lockscreen"]
+                enabled = TOKENS["intensities"][intensity]["motion"]["enabled"]
+                self.assertEqual(["fade"] if enabled else [], lock["transition"])
+                # A blurred snapshot needs blur, and blur off means there is
+                # nothing to blur.
+                self.assertIs(TOKENS["intensities"][intensity]["blur"]["enabled"],
+                              lock["blurred_desktop"])
+
+    def test_the_duration_is_snapped_to_the_range_s_own_step(self):
+        low, high, step = self.spec["keys"]["transition_duration"]["range"]
+        self.assertEqual([100.0, 30000.0, 100.0], [low, high, step])
+        self.assertEqual("kLockscreenTransitionDurationRange",
+                         self.spec["keys"]["transition_duration"]["range_constant"])
+        for intensity in sorted(TOKENS["intensities"]):
+            duration = noctalia.lockscreen_transition_ms(TOKENS, intensity)
+            with self.subTest(intensity=intensity):
+                self.assertEqual(0.0, duration % step)
+                self.assertLessEqual(low, duration)
+                self.assertLessEqual(duration, high)
+
+    def test_the_snap_is_documented_as_losing_the_preset_s_own_number(self):
+        """120 ms and 90 ms are both legal motion and neither is a multiple of 100."""
+        note = self.spec["keys"]["transition_duration"]["note"]
+        self.assertIn("120 ms", note)
+        self.assertIn("90 ms", note)
+        preset = json.loads((noctalia.ANIMATION_DIR / "smooth.json").read_text(encoding="utf-8"))
+        self.assertEqual(120, preset["events"]["fadeIn"]["duration_ms"])
+        self.assertEqual(100.0, noctalia.lockscreen_transition_ms(TOKENS, "frosted"))
+        minimal = json.loads((noctalia.ANIMATION_DIR / "minimal.json").read_text(encoding="utf-8"))
+        self.assertEqual(90, minimal["events"]["fadeIn"]["duration_ms"])
+
+    def test_a_duration_outside_the_range_is_refused(self):
+        for duration in (50.0, 31000.0):
+            doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+            doc["lockscreen"]["transition_duration"] = duration
+            with self.subTest(duration=duration):
+                problems = noctalia.validate(doc, SURFACE)
+                self.assertEqual(1, len(problems))
+                self.assertIn("outside", problems[0])
+
+    def test_the_tint_is_the_intensity_s_own_glass_alpha(self):
+        """lock_surface.cpp:1321 tints with colorForRole(ColorRole::Surface, tint)."""
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                glass = TOKENS["intensities"][intensity]["glass"]
+                blurred = TOKENS["intensities"][intensity]["blur"]["enabled"]
+                lock = render(preset, intensity)["lockscreen"]
+                self.assertEqual(float(glass["tint_alpha"]) if blurred else 0.0,
+                                 lock["tint_intensity"])
+
+    def test_the_record_says_what_blur_intensity_cannot_be_derived_from(self):
+        note = self.spec["keys"]["blur_intensity"]["note"]
+        self.assertIn("40.0 px", note)
+        self.assertIn("no verified way to convert", note)
+        self.assertEqual(0.5, self.lock["blur_intensity"])
+
+    def test_the_two_security_keys_stay_at_their_restrictive_values(self):
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                lock = render(preset, intensity)["lockscreen"]
+                self.assertEqual(0, lock["grace_period_seconds"])
+                self.assertIs(False, lock["allow_empty_password"])
+                self.assertIs(True, lock["enabled"])
+                self.assertIs(True, lock["lock_before_suspend"])
+
+    def test_the_record_says_what_the_grace_period_would_do(self):
+        note = self.spec["keys"]["grace_period_seconds"]["note"]
+        self.assertIn("WITHOUT a password", note)
+        self.assertIn("5 px", note)
+        self.assertIn("defense in depth", note)
+
+    def test_a_grace_period_above_the_range_is_refused(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["lockscreen"]["grace_period_seconds"] = 61
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("outside [0, 60]", problems[0])
+
+    def test_the_screencopy_dependency_is_recorded_with_the_protocol_it_binds(self):
+        note = self.spec["keys"]["blurred_desktop"]["note"]
+        self.assertIn("zwlr_screencopy_manager_v1", note)
+        self.assertIn("wayland_connection.cpp", note)
+        self.assertIn("Hyprland v0.57.2 still ships the protocol", note)
+
+    def test_lock_before_suspend_is_recorded_as_distinct_from_the_idle_action(self):
+        note = self.spec["keys"]["lock_before_suspend"]["note"]
+        self.assertIn("PrepareForSleep", note)
+        self.assertIn("lock_and_suspend", note)
+
+    def test_the_machine_specific_keys_are_recorded_but_never_emitted(self):
+        for key in ("wallpaper", "monitors"):
+            with self.subTest(setting=key):
+                self.assertIn(key, self.spec["keys"])
+                self.assertNotIn(key, self.lock)
+                self.assertIn("Not emitted", self.spec["keys"][key]["note"])
+
+    def test_edge_smoothness_is_recorded_as_inert_for_a_fade_and_still_emitted(self):
+        note = self.spec["keys"]["edge_smoothness"]["note"]
+        self.assertIn("cannot change what is on screen", note)
+        self.assertEqual(0.3, self.lock["edge_smoothness"])
+
+    def test_every_intensity_round_trips_through_a_toml_parser(self):
+        for intensity in sorted(TOKENS["intensities"]):
+            with self.subTest(intensity=intensity):
+                doc = render(noctalia.DEFAULT_PRESET, intensity)
+                self.assertEqual([], noctalia.validate(doc, SURFACE))
+                parsed = tomllib.loads(noctalia.emit_toml(doc, "# test"))
+                self.assertEqual(doc["lockscreen"], parsed["lockscreen"])
+
+
+class Wallpaper(unittest.TestCase):
+    """The desktop wallpaper: the one animation the compositor's switch cannot reach.
+
+    Three findings drove these tests, and all three are read out of Noctalia v5.4.1
+    rather than assumed:
+
+    * the shell picks one of the *listed* transitions at random for every change and
+      randomizes that effect's own parameters too
+      (``src/shell/wallpaper/wallpaper.cpp:1486-1490``), so upstream's default list
+      of all eleven means a wallpaper change is now a melt, now a vortex;
+    * the transition runs on the shell's own timer and neither motion switch reaches
+      it: Hyprland's ``animations:enabled`` governs the compositor's own animated
+      values, and the shell's ``[shell.animation]`` is ignored here on purpose --
+      upstream's own comment says "disabling animations must not skip the crossfade"
+      (``wallpaper.cpp:1516-1518``). So ``iarch-anim set off``, the Performance
+      intensity and Game mode all leave this animation running unless *this* section
+      stops it, and the way to stop it is an empty ``transition`` list
+      (``wallpaper.cpp:1474-1479``);
+    * ``transition_duration`` is a scale, not a duration: the animation runs for
+      ``|toTime - fromTime| * transition_duration`` (``wallpaper.cpp:1509``).
+
+    ``[wallpaper]`` also carries app-managed state -- ``wallpaper.default``,
+    ``wallpaper.last``, ``wallpaper.monitors`` and ``wallpaper.favorite`` are
+    accepted as unknown paths so the shell can remember what somebody picked
+    (``src/config/schema/config_sections.cpp:44-49``) -- and none of it is written
+    here, because a chosen wallpaper is not repository state.
+    """
+
+    # config_schema.cpp:1863-1886 wallpaperSchema(), in declaration order.
+    KEYS = ["enabled", "fill_mode", "fill_color", "transition", "transition_duration",
+            "edge_smoothness", "transition_on_startup", "directory", "directory_light",
+            "directory_dark", "per_monitor_directories", "automation", "monitor"]
+
+    # config_types.h:1035-1046 kWallpaperTransitions, alphabetically as declared.
+    TRANSITIONS = ["diamond", "disc", "fade", "golden", "honeycomb", "melt", "pixel",
+                   "stripes", "vortex", "wipe", "zoom"]
+
+    # What the renderer emits. Everything else in KEYS is recorded and left alone.
+    EMITTED = ["fill_color", "transition", "transition_duration", "edge_smoothness",
+               "transition_on_startup"]
+
+    def setUp(self):
+        self.spec = SURFACE["sections"]["wallpaper"]
+        self.doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        self.wallpaper = self.doc["wallpaper"]
+
+    def test_the_record_covers_every_setting_upstream_declares(self):
+        self.assertEqual("wallpaperSchema", self.spec["schema"])
+        self.assertEqual(sorted(self.KEYS), sorted(self.spec["keys"]))
+
+    def test_every_emitted_key_is_one_upstream_declares(self):
+        for key in self.wallpaper:
+            with self.subTest(setting=key):
+                self.assertIn(key, self.KEYS)
+
+    def test_the_emitted_keys_are_exactly_the_ones_this_project_chose(self):
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                self.assertEqual(self.EMITTED, list(render(preset, intensity)["wallpaper"]))
+
+    def test_the_transition_vocabulary_is_the_upstream_constant(self):
+        self.assertEqual(self.TRANSITIONS, self.spec["keys"]["transition"]["enum"])
+        self.assertEqual("kWallpaperTransitions",
+                         self.spec["keys"]["transition"]["enum_constant"])
+
+    def test_the_record_says_the_shell_picks_one_transition_at_random(self):
+        note = self.spec["keys"]["transition"]["note"]
+        self.assertIn("AT RANDOM", note)
+        self.assertIn("wallpaper.cpp:1486-1490", note)
+        # The effect's parameters are randomized too, so naming one effect is the
+        # strongest determinism this key can express -- and the record says the
+        # empty list is how the animation is disabled rather than shortened.
+        self.assertIn("wallpaper.cpp:1474-1479", note)
+
+    def test_one_transition_is_emitted_because_eleven_would_be_a_random_one(self):
+        self.assertEqual(["fade"], self.wallpaper["transition"])
+
+    def test_the_record_says_the_master_animation_switch_cannot_reach_this_one(self):
+        """The sentence that stops a reader assuming animations:enabled covers it."""
+        note = self.spec["note"]
+        self.assertIn("wallpaper.cpp:1516-1518", note)
+        self.assertIn("animations-enabled", note)
+        self.assertIn("[shell.animation]", note)
+        self.assertIn("Performance", note)
+        comment = noctalia.SECTION_COMMENTS["wallpaper"]
+        self.assertIn("neither Hyprland's animations:enabled nor the shell's", comment)
+        self.assertIn("[shell.animation]", comment)
+        # And the shipped file carries that comment, not only the record.
+        self.assertIn(comment, (noctalia.REPO_CONFIG).read_text(encoding="utf-8"))
+
+    def test_motion_off_empties_the_list_rather_than_trusting_a_switch_that_cannot_see_it(self):
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                enabled = TOKENS["intensities"][intensity]["motion"]["enabled"]
+                self.assertEqual(["fade"] if enabled else [],
+                                 render(preset, intensity)["wallpaper"]["transition"])
+
+    def test_the_startup_transition_is_emitted_as_the_list_s_pair(self):
+        """wallpaper.cpp:1418 animates the first wallpaper only if the list is non-empty."""
+        self.assertIn("wallpaper.cpp:1418", self.spec["keys"]["transition_on_startup"]["note"])
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                section = render(preset, intensity)["wallpaper"]
+                enabled = TOKENS["intensities"][intensity]["motion"]["enabled"]
+                self.assertIs(enabled, section["transition_on_startup"])
+                # The pairing is the point: a true beside an empty list is a setting
+                # that looks like an effect and is not one.
+                self.assertEqual(bool(section["transition"]), section["transition_on_startup"])
+
+    def test_the_duration_is_the_preset_s_own_fade_snapped_to_the_range(self):
+        low, high, step = self.spec["keys"]["transition_duration"]["range"]
+        self.assertEqual([100.0, 30000.0, 100.0], [low, high, step])
+        self.assertEqual("kWallpaperTransitionDurationRange",
+                         self.spec["keys"]["transition_duration"]["range_constant"])
+        for intensity in sorted(TOKENS["intensities"]):
+            duration = noctalia.wallpaper_transition_ms(TOKENS, intensity)
+            with self.subTest(intensity=intensity):
+                self.assertEqual(0.0, duration % step)
+                self.assertLessEqual(low, duration)
+                self.assertLessEqual(duration, high)
+
+    def test_the_lock_screen_and_the_wallpaper_fade_at_the_same_speed(self):
+        """Two keys, one derivation: neither surface gets a number somebody picked."""
+        for intensity in sorted(TOKENS["intensities"]):
+            with self.subTest(intensity=intensity):
+                self.assertEqual(noctalia.lockscreen_transition_ms(TOKENS, intensity),
+                                 noctalia.wallpaper_transition_ms(TOKENS, intensity))
+        self.assertEqual(100.0, noctalia.wallpaper_transition_ms(TOKENS, "frosted"))
+
+    def test_the_record_says_the_duration_is_a_scale_rather_than_a_duration(self):
+        note = self.spec["keys"]["transition_duration"]["note"]
+        self.assertIn("|toTime - fromTime|", note)
+        self.assertIn("wallpaper.cpp:1509", note)
+        self.assertIn("1500.0", note, "upstream's default, so the difference is visible")
+
+    def test_the_fill_colour_is_a_palette_role_and_not_a_hex_value(self):
+        self.assertEqual(noctalia.FILL_ROLE, self.wallpaper["fill_color"])
+        self.assertIn(self.wallpaper["fill_color"], SURFACE["color_roles"])
+        self.assertNotRegex(self.wallpaper["fill_color"], HEX)
+        color_note = self.spec["keys"]["fill_color"]["color_note"]
+        self.assertIn("palette role token or a hex colour", color_note)
+        self.assertIn("color_spec.h:8", color_note)
+
+    def test_edge_smoothness_is_recorded_as_inert_for_a_fade_and_still_emitted(self):
+        note = self.spec["keys"]["edge_smoothness"]["note"]
+        self.assertIn("cannot change what is on screen", note)
+        self.assertEqual(0.3, self.wallpaper["edge_smoothness"])
+        low, high, step = self.spec["keys"]["edge_smoothness"]["range"]
+        self.assertEqual([0.0, 1.0, 0.01], [low, high, step])
+        self.assertEqual("kUnitRange", self.spec["keys"]["edge_smoothness"]["range_constant"])
+
+    def test_the_machine_specific_keys_are_recorded_but_never_emitted(self):
+        for key in ("enabled", "fill_mode", "directory", "directory_light", "directory_dark",
+                    "per_monitor_directories", "automation", "monitor"):
+            with self.subTest(setting=key):
+                self.assertIn(key, self.spec["keys"])
+                self.assertIn("Not emitted", self.spec["keys"][key]["note"])
+        for preset, intensity in COMBINATIONS:
+            section = render(preset, intensity)["wallpaper"]
+            for key in ("directory", "directory_light", "directory_dark",
+                        "per_monitor_directories", "automation", "monitor"):
+                with self.subTest(preset=preset, intensity=intensity, setting=key):
+                    self.assertNotIn(key, section)
+
+    def test_the_slideshow_is_recorded_with_the_range_upstream_bounds_it_by(self):
+        automation = self.spec["keys"]["automation"]
+        self.assertEqual("wallpaperAutomationSchema", automation["table"])
+        self.assertEqual(sorted(["enabled", "interval_seconds", "order", "recursive",
+                                 "pause_on_fullscreen"]), sorted(automation["keys"]))
+        low, high, step = automation["keys"]["interval_seconds"]["range"]
+        self.assertEqual([1, 86400, 1], [low, high, step])
+        self.assertEqual("kWallpaperAutomationIntervalRange",
+                         automation["keys"]["interval_seconds"]["range_constant"])
+        self.assertEqual(["random", "alphabetical"], automation["keys"]["order"]["enum"])
+        # A slideshow is a timer that keeps doing the one animation the Performance
+        # intensity is asking the session to stop, and the record says so.
+        self.assertIn("transition", automation["note"])
+
+    def test_the_monitor_override_table_is_recorded_as_a_named_map(self):
+        monitor = self.spec["keys"]["monitor"]
+        self.assertTrue(monitor["named_map"])
+        self.assertEqual("wallpaperMonitorSchema", monitor["table"])
+        self.assertEqual(["directory", "directory_dark", "directory_light", "enabled",
+                          "fill_color", "match"], sorted(monitor["keys"]))
+
+    def test_the_app_managed_state_is_never_written(self):
+        text = noctalia.emit_toml(self.doc, "# test")
+        for key in ("wallpaper.default", "wallpaper.last", "wallpaper.monitors",
+                    "wallpaper.favorite"):
+            with self.subTest(state=key):
+                self.assertNotIn(key, text)
+        self.assertIn("config_sections.cpp:44-49", self.spec["note"])
+
+    def test_an_invented_transition_is_refused(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["wallpaper"]["transition"] = ["dissolve"]
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("dissolve", problems[0])
+
+    def test_a_number_outside_its_range_is_refused_rather_than_clamped(self):
+        for key, value in (("transition_duration", 50.0), ("transition_duration", 31000.0),
+                           ("edge_smoothness", 1.5), ("edge_smoothness", -0.1)):
+            doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+            doc["wallpaper"][key] = value
+            with self.subTest(setting=key, value=value):
+                problems = noctalia.validate(doc, SURFACE)
+                self.assertEqual(1, len(problems))
+                self.assertIn("outside", problems[0])
+
+    def test_a_wrong_type_is_refused(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["wallpaper"]["transition_on_startup"] = "yes"
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("not a boolean", problems[0])
+
+    def test_the_section_round_trips_through_a_toml_parser(self):
+        for intensity in sorted(TOKENS["intensities"]):
+            with self.subTest(intensity=intensity):
+                doc = render(noctalia.DEFAULT_PRESET, intensity)
+                self.assertEqual([], noctalia.validate(doc, SURFACE))
+                parsed = tomllib.loads(noctalia.emit_toml(doc, "# test"))
+                self.assertEqual(doc["wallpaper"], parsed["wallpaper"])
+
+    def test_the_shipped_payload_carries_the_section(self):
+        parsed = tomllib.loads(noctalia.REPO_CONFIG.read_text(encoding="utf-8"))
+        self.assertEqual(self.wallpaper, parsed["wallpaper"])
 
 if __name__ == "__main__":
     unittest.main()

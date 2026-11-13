@@ -345,19 +345,50 @@
           "table": "shellLauncherSchema",
           "keys": {
             "layout": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "full",
+                "simple"
+              ],
+              "enum_constant": "kLauncherLayouts",
+              "note": "simple is search, optional category chips and results at 560x500."
             },
             "width": {
-              "type": "integer"
+              "type": "integer",
+              "range": [
+                560,
+                1100,
+                10
+              ],
+              "range_constant": "kLauncherWidthRange",
+              "note": "Full layout only. example.toml's comment says 560-1200; the constant in src/config/schema/ranges.h:24 says 560-1100 and is what the shell clamps to, so the constant is what is recorded."
             },
             "search_position": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom"
+              ],
+              "enum_constant": "kLauncherSearchPositions",
+              "note": "Full layout: the position of the whole launcher toolbar."
             },
             "default_view": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "recent",
+                "pinned",
+                "all",
+                "categories"
+              ],
+              "enum_constant": "kLauncherDefaultViews"
             },
             "categories": {
-              "type": "bool"
+              "type": "bool",
+              "note": "Simple layout only: the category chip row under the search field."
+            },
+            "category_icons_only": {
+              "type": "bool",
+              "note": "Hide app category labels; the names stay in the hover tooltips."
             },
             "show_navigation_labels": {
               "type": "bool"
@@ -371,13 +402,267 @@
             "show_icons": {
               "type": "bool"
             },
+            "show_app_origin_indicator": {
+              "type": "bool",
+              "note": "Marks Flatpak, Snap, Nix and AppImage results."
+            },
+            "compact": {
+              "type": "bool",
+              "note": "Smaller icons and tighter result rows."
+            },
+            "app_grid": {
+              "type": "bool",
+              "note": "Icon grids for the grid-capable providers and the provider overview."
+            },
+            "show_app_actions": {
+              "type": "bool",
+              "note": "Search and launch .desktop actions alongside applications. Off by default upstream; they stay on an app's right-click menu."
+            },
             "track_usage": {
-              "type": "bool"
+              "type": "bool",
+              "note": "Records launcher history for the Recent view and for usage-based sorting."
             },
             "sort_by_usage": {
               "type": "bool"
+            },
+            "ignore_mouse": {
+              "type": "bool",
+              "note": "Ignore hover and clicks inside the launcher."
+            },
+            "pinned": {
+              "type": "array",
+              "note": "Desktop entry ids, in the manual order the Pinned view shows them."
+            },
+            "fetch_exchange_rates": {
+              "type": "bool",
+              "note": "Refreshes currency rates from libqalculate's online sources. This is a network call to a third party, which is why the shipped payload turns it off."
+            },
+            "provider_prefix": {
+              "type": "string",
+              "note": "The trigger character every provider prefix is combined with."
+            },
+            "auto_paste": {
+              "type": "string",
+              "enum": [
+                "off",
+                "auto",
+                "ctrl_v",
+                "ctrl_shift_v",
+                "shift_insert"
+              ],
+              "enum_constant": "kClipboardAutoPasteModes",
+              "note": "The paste shortcut sent after a copy-style activation (calculator, emoji)."
+            },
+            "dmenu": {
+              "table": "shellLauncherDmenuSchema",
+              "keys": {
+                "entry": {
+                  "type": "array",
+                  "table": "dmenuEntrySchema",
+                  "named_map": true,
+                  "note": "A named map, written [shell.launcher.dmenu.entry.<id>]; the id becomes the provider suffix dmenu.<id> and the usage-tracking key.",
+                  "keys": {
+                    "command": {
+                      "type": "string",
+                      "note": "Run with /bin/sh -lc; each stdout line becomes a candidate, and a tab in a line splits it into title and description."
+                    },
+                    "exec": {
+                      "type": "string",
+                      "note": "When set, the activated line is substituted into {selection} and run detached. When unset the selection is copied to the clipboard instead. Substituting typed text into a shell string is why this project ships no entry of its own."
+                    },
+                    "prefix": {
+                      "type": "string",
+                      "note": "Trigger word, combined with provider_prefix. Empty leaves the entry reachable only through global = true, and upstream warns that it is otherwise unreachable."
+                    },
+                    "label": {
+                      "type": "string",
+                      "note": "Provider overview title; defaults to the entry's id."
+                    },
+                    "glyph": {
+                      "type": "string",
+                      "note": "A Tabler glyph name; defaults to terminal."
+                    },
+                    "global": {
+                      "type": "bool",
+                      "note": "Include the entry's results in unprefixed search."
+                    },
+                    "freeform": {
+                      "type": "bool",
+                      "note": "Let the typed query itself become an activatable result."
+                    }
+                  }
+                }
+              }
+            },
+            "panels": {
+              "table": "shellLauncherPanelsSchema",
+              "keys": {
+                "ignored": {
+                  "type": "array",
+                  "note": "Panel ids excluded from the /pan provider. Upstream defaults to polkit, setup-wizard, test and launcher."
+                }
+              }
+            },
+            "providers": {
+              "type": "array",
+              "table": "launcherProviderSchema",
+              "named_map": true,
+              "note": "A named map, written [shell.launcher.providers.<name>]. The provider names are fixed by the shell, not by this file: apps, calculator, emoji, panels, wallpaper, session, windows (docs/user/launcher/index.mdx). There is no clipboard provider and no web-search provider in v5.4.1.",
+              "keys": {
+                "prefix": {
+                  "type": "string",
+                  "note": "Trigger word; empty falls back to the provider's built-in default."
+                },
+                "global": {
+                  "type": "bool",
+                  "note": "Optional: also surface this provider in unprefixed search."
+                }
+              }
             }
           }
+        },
+        "session": {
+          "table": "shellSessionSchema",
+          "keys": {
+            "grid": {
+              "type": "bool",
+              "note": "Lay the actions out over rows of grid_columns instead of fitting them on one row."
+            },
+            "grid_columns": {
+              "type": "integer",
+              "range": [
+                1,
+                5,
+                1
+              ],
+              "range_constant": "kSessionGridColumnsRange",
+              "note": "Actions per row when grid is true; ignored otherwise."
+            },
+            "show_shortcuts": {
+              "type": "bool",
+              "note": "Show each action's keyboard shortcut at the top right of its button."
+            },
+            "actions": {
+              "type": "array",
+              "table": "sessionActionSchema",
+              "note": "An array of tables, written [[shell.session.actions]]. Omitting it keeps the default five actions, whose shortcuts are the keys 1 to 5; an explicit empty array hides every session button. This is the one place v5.4.1 lets a config file add a button that runs a command of yours.",
+              "keys": {
+                "action": {
+                  "type": "string",
+                  "note": "lock, logout, suspend, lock_and_suspend, reboot, reboot_uefi, shutdown, or command for a custom entry. Lowercased and trimmed on read, and not enum-validated, so an unknown word yields a button that does nothing."
+                },
+                "enabled": {
+                  "type": "bool",
+                  "note": "False hides the button."
+                },
+                "command": {
+                  "type": "string",
+                  "note": "Run with /bin/sh -c instead of the built-in handler. Required when action is command. Noctalia runs the string, so it is as privileged as the session."
+                },
+                "label": {
+                  "type": "string",
+                  "note": "Button label; otherwise the translated default for the action."
+                },
+                "glyph": {
+                  "type": "string",
+                  "note": "A bar-style icon id; otherwise the action's default. The id vocabulary is not published in the schema, so an unknown glyph is a guess."
+                },
+                "shortcut": {
+                  "type": "string",
+                  "note": "Any XKB key name (1, F1, Escape) or modifier combo (Ctrl+1), active while the session panel is open. Empty disables it."
+                },
+                "lockscreen_shortcut": {
+                  "type": "string",
+                  "note": "Triggers the action from the lock screen. Keys that type text are rejected because the password field owns them."
+                },
+                "countdown_seconds": {
+                  "type": "integer",
+                  "note": "Above zero, the first activation starts a countdown on the button badge; a second activation runs it at once. Zero runs immediately."
+                },
+                "variant": {
+                  "type": "string",
+                  "enum": [
+                    "default",
+                    "primary",
+                    "secondary",
+                    "destructive",
+                    "outline",
+                    "ghost"
+                  ],
+                  "enum_constant": "kSessionActionButtonVariants",
+                  "enum_note": "The enum constant carries six variants; the user documentation lists five and does not mention ghost."
+                }
+              }
+            },
+            "power": {
+              "table": "shellSessionPowerSchema",
+              "note": "Command overrides for the built-in suspend, reboot and shutdown, used by the session panel, the launcher, IPC and idle. Each is run with /bin/sh -lc. Left unset, Noctalia tries its own prioritized backend list (systemd, logind, privileged helpers), which is why this project emits nothing here: it has no business inventing a sudo command line.",
+              "keys": {
+                "suspend": {
+                  "type": "string"
+                },
+                "reboot": {
+                  "type": "string"
+                },
+                "shutdown": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "window_switcher": {
+          "table": "shellWindowSwitcherSchema",
+          "note": "The Alt+Tab overlay. It is opened over IPC -- `noctalia msg window-switcher hold` is the form docs/user/ipc/shell.mdx gives for a held-modifier keybind -- so there is no key to bind here, only keys that say what the overlay looks like.",
+          "keys": {
+            "style": {
+              "type": "string",
+              "enum": [
+                "carousel",
+                "compact"
+              ],
+              "enum_constant": "kWindowSwitcherStyles",
+              "note": "carousel is the freestanding depth layout; compact is a boxed strip of equal-sized cards."
+            },
+            "mru": {
+              "type": "bool",
+              "note": "Order windows by most recent use instead of workspace layout, which is what Alt+Tab means to most people."
+            },
+            "show_caption": {
+              "type": "bool",
+              "note": "Window titles and application names below the previews."
+            },
+            "show_count": {
+              "type": "bool",
+              "note": "The current and total window count above the previews."
+            },
+            "show_app_icon": {
+              "type": "bool",
+              "note": "Application icons over the previews, and the whole card on a compositor without foreign-toplevel image capture."
+            },
+            "show_all_outputs": {
+              "type": "bool",
+              "note": "Every monitor, or only the one showing the switcher."
+            },
+            "current_workspace_only": {
+              "type": "bool",
+              "note": "Keep the list to the workspace shown on each monitor. An open Hyprland special workspace takes over from the regular one it covers."
+            }
+          }
+        }
+      },
+      "withheld": {
+        "polkit_agent": {
+          "reason": "the session already starts an authentication agent of its own in .config/hypr/startup.lua:22, the exec_once entry recorded in data/design/startup.json -- polkit-gnome-authentication-agent-1 on Arch, rewritten to xfce-polkit on Fedora -- and two agents on one seat compete for the same request; the key is also at its upstream default of false, so emitting it would restate a default and buy nothing",
+          "recorded_in": "data/design/greeter.json",
+          "where": "not_shipped.shell_polkit_agent",
+          "source": "src/config/config_types.h:1364 and src/config/schema/config_schema.cpp:1824 in Noctalia v5.4.1"
+        },
+        "greeter_sync": {
+          "reason": "auto_sync would raise an administrator authentication dialog on every wallpaper, palette, theme mode or font change, because the packaged polkit action org.noctalia.greeter.sync-appearance is auth_admin in all three states and passwordless sync is a per-account opt-in this repository never performs; privilege_command is worse than a setting, being a privilege escalator prefix the shell appends --sync to and runs as root",
+          "recorded_in": "data/design/greeter.json",
+          "where": "not_shipped.shell_greeter_sync",
+          "source": "src/config/schema/config_schema.cpp:1750-1770 and src/config/config_types.h:276-285 in Noctalia v5.4.1"
         }
       }
     },
@@ -718,7 +1003,8 @@
             "compact",
             "none"
           ],
-          "enum_constant": "kControlCenterSidebarModes"
+          "enum_constant": "kControlCenterSidebarModes",
+          "note": "Tab navigation when the panel opens on Home. full = icons and labels, compact = icons only, none = no sidebar."
         },
         "width": {
           "type": "integer",
@@ -727,7 +1013,106 @@
             1200.0,
             10.0
           ],
-          "range_constant": "kControlCenterWidthRange"
+          "range_constant": "kControlCenterWidthRange",
+          "note": "Panel width in logical pixels."
+        },
+        "sidebar_section": {
+          "type": "string",
+          "enum": [
+            "full",
+            "compact",
+            "none"
+          ],
+          "enum_constant": "kControlCenterSidebarModes",
+          "note": "Sidebar used when an open jumps straight to a tab (a bar volume, network or media widget, or `panel-toggle control-center <context>`). Defaults to compact."
+        },
+        "show_shortcut_labels": {
+          "type": "bool",
+          "note": "Text under each Home shortcut icon. Off, the icons scale with the cell, which helps at narrow widths."
+        },
+        "show_session_button": {
+          "type": "bool",
+          "note": "The session-actions button in the Home tab header. Independent of a type = \"session\" shortcut and of the bar's session widget."
+        },
+        "circular_avatar": {
+          "type": "bool",
+          "note": "Off, the avatar follows the shell's corner roundness."
+        },
+        "show_avatar_border": {
+          "type": "bool",
+          "note": "The accent ring around the Home avatar, including on hover and keyboard focus."
+        },
+        "hidden_tabs": {
+          "type": "array",
+          "note": "Tab context ids to hide: home, media, audio, monitor, system, network, bluetooth, weather, calendar, notifications, screen-time, power. Empty shows every available tab, and Home cannot be hidden. Hidden tabs also drop out of keyboard navigation and the launcher's Panels provider."
+        },
+        "calendar": {
+          "table": "calendarTabSchema",
+          "keys": {
+            "show_events_card": {
+              "type": "bool"
+            },
+            "show_week_numbers": {
+              "type": "bool",
+              "note": "ISO 8601 week numbers in the month grid."
+            },
+            "show_events_location": {
+              "type": "bool"
+            },
+            "hide_past_events": {
+              "type": "bool"
+            },
+            "past_events_threshold_minutes": {
+              "type": "integer",
+              "range": [
+                0,
+                1440,
+                5
+              ],
+              "range_constant": "kPastEventsThresholdMinutesRange"
+            }
+          }
+        },
+        "media": {
+          "table": "mediaTabSchema",
+          "keys": {
+            "show_visualizer": {
+              "type": "bool",
+              "note": "The PipeWire visualizer beside the playback controls; also toggled from the tab header."
+            }
+          }
+        },
+        "shortcuts": {
+          "type": "array",
+          "table": "shortcutSchema",
+          "note": "An array of tables, written [[control_center.shortcuts]]. Up to six are shown on Home. Omitting the array entirely gives the default set (wifi, bluetooth, caffeine, nightlight, notification, power_profile); an explicit empty array hides every shortcut button.",
+          "keys": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "wifi",
+                "bluetooth",
+                "nightlight",
+                "notification",
+                "dark_mode",
+                "caffeine",
+                "audio",
+                "mic_mute",
+                "power_profile",
+                "media",
+                "weather",
+                "system",
+                "screen_time",
+                "keyboard_layout",
+                "screen_recorder",
+                "wallpaper",
+                "session",
+                "clipboard"
+              ],
+              "enum_note": "Not an upstream enum. shortcutSchema() declares a plain string field, so an unknown type is not warned about or rejected -- it simply renders no button. The eighteen documented types are recorded here, from docs/user/control-center/shortcuts.mdx, so the renderer refuses a tile that would never appear instead of shipping a dead one.",
+              "note": "The only field a shortcut entry has. weather, system and screen_time need their service enabled to appear; screen_recorder needs the official plugin enabled or the shortcut stays disabled."
+            }
+          }
         }
       }
     },
@@ -744,10 +1129,12 @@
           "type": "bool"
         },
         "position": {
-          "type": "string"
+          "type": "string",
+          "note": "Documented values: top_right, top_left, top_center, bottom_right, bottom_left, bottom_center. This is a plain string field, not an enum: notification_toast.cpp only tests starts_with(\"bottom_\") and ends_with(\"_left\"/\"_center\"), so any other value lands on the top-right branch instead of being rejected."
         },
         "layer": {
-          "type": "string"
+          "type": "string",
+          "note": "top keeps toasts above normal windows; overlay puts them above fullscreen apps. Plain string field: an unrecognised value is not rejected by the schema."
         },
         "scale": {
           "type": "float",
@@ -768,10 +1155,12 @@
           "range_constant": "kNotificationWidthRange"
         },
         "offset_x": {
-          "type": "integer"
+          "type": "integer",
+          "note": "Absolute margin from the screen edge. It is split by shell::surface_edge_inset::resolve() into a layer margin plus the card's own inner padding, so the painted card edge sits exactly offset_x from the edge either way."
         },
         "offset_y": {
-          "type": "integer"
+          "type": "integer",
+          "note": "Absolute margin from the screen edge, used verbatim as the layer surface's top (and bottom) margin: no inset compensation like offset_x gets."
         },
         "collapse_on_dismiss": {
           "type": "bool"
@@ -780,10 +1169,22 @@
           "type": "bool"
         },
         "max_visible": {
-          "type": "integer"
+          "type": "integer",
+          "range": [
+            0,
+            20
+          ],
+          "range_note": "inline Range<std::int64_t>{0, 20} passed to field() in notificationSchema(); no named constant upstream",
+          "note": "0 = fill the available space; otherwise at most this many toasts."
         },
         "history_retention_hours": {
-          "type": "integer"
+          "type": "integer",
+          "range": [
+            0,
+            8760
+          ],
+          "range_note": "inline Range<std::int64_t>{0, 8760} passed to field() in notificationSchema(); no named constant upstream",
+          "note": "0 keeps history indefinitely; the sweep runs every 60 s."
         },
         "background_opacity": {
           "type": "float",
@@ -810,6 +1211,82 @@
             0.5
           ],
           "range_constant": "kNotificationToastBorderWidthRange"
+        },
+        "follow_focused_output": {
+          "type": "bool",
+          "note": "New toasts appear on the focused output; toasts already on screen stay put and each output keeps its own stack. Takes precedence over monitors."
+        },
+        "monitors": {
+          "type": "array",
+          "note": "Empty = every monitor. Otherwise exact connector names (eDP-1) or word-boundary tokens from the monitor description. If none of the listed monitors is connected Noctalia falls back to all of them rather than dropping toasts."
+        },
+        "blacklist": {
+          "type": "array",
+          "note": "Legacy shim. Read only while no [notification.filter.*] table exists; each token becomes a filter with show_toast, save_history and play_sound all false. Never written back out."
+        },
+        "blacklist_allow_critical": {
+          "type": "bool",
+          "note": "Accepted and ignored: the read callback is empty, so this key can no longer change anything. Recorded so the validator does not call it unknown."
+        },
+        "filter_order": {
+          "type": "array",
+          "note": "Write-only. The writer emits the filter names in table order; a value read from disk is ignored because ordering comes from the tables themselves."
+        },
+        "filter": {
+          "type": "array",
+          "table": "notificationFilterSchema",
+          "note": "A named map, not an array: [notification.filter.<name>] where <name> becomes the filter's name. Recorded with type array because the C++ member is std::vector<NotificationFilterConfig>; the on-disk shape is the named map.",
+          "keys": {
+            "enabled": {
+              "type": "bool"
+            },
+            "matches": {
+              "type": "array",
+              "note": "Custom reader: the first non-blank token becomes match. Ignored entirely when match is set."
+            },
+            "match": {
+              "type": "string",
+              "note": "Case-insensitive token matched against the app name (exact or substring), the desktop entry or the category; normalized on read."
+            },
+            "match_content": {
+              "type": "string",
+              "note": "Optional regular expression matched against the summary or the body."
+            },
+            "show_toast": {
+              "type": "bool"
+            },
+            "save_history": {
+              "type": "bool"
+            },
+            "play_sound": {
+              "type": "bool"
+            },
+            "bypass_dnd": {
+              "type": "bool",
+              "note": "Default false. When play_sound is also true the sound bypasses Do Not Disturb too."
+            },
+            "allow_permanent": {
+              "type": "bool",
+              "note": "Default true. False forces a sender's persistent (0-timeout) toasts back to the standard timeout."
+            },
+            "override_duration": {
+              "type": "integer",
+              "note": "Milliseconds. Replaces both the server default and whatever timeout the sender asked for."
+            },
+            "allowed_urgencies": {
+              "type": "array",
+              "note": "low, normal, critical. Empty or all three = every level passes."
+            },
+            "allow_critical": {
+              "type": "bool",
+              "note": "Accepted and ignored: empty read callback, superseded by allowed_urgencies."
+            }
+          },
+          "named_map": true
+        },
+        "allowed_urgencies": {
+          "type": "array",
+          "note": "Section level, not a filter key: it fills in every filter whose own allowed_urgencies is empty. Read only; never written back out."
         }
       }
     },
@@ -842,6 +1319,387 @@
         },
         "sound_theme": {
           "type": "string"
+        }
+      }
+    },
+    "notification.filter": {
+      "schema": "notificationFilterSchema",
+      "keys": {
+        "enabled": {
+          "type": "bool"
+        },
+        "matches": {
+          "type": "array",
+          "note": "Custom reader: the first non-blank token becomes match. Ignored entirely when match is set."
+        },
+        "match": {
+          "type": "string",
+          "note": "Case-insensitive token matched against the app name (exact or substring), the desktop entry or the category; normalized on read."
+        },
+        "match_content": {
+          "type": "string",
+          "note": "Optional regular expression matched against the summary or the body."
+        },
+        "show_toast": {
+          "type": "bool"
+        },
+        "save_history": {
+          "type": "bool"
+        },
+        "play_sound": {
+          "type": "bool"
+        },
+        "bypass_dnd": {
+          "type": "bool",
+          "note": "Default false. When play_sound is also true the sound bypasses Do Not Disturb too."
+        },
+        "allow_permanent": {
+          "type": "bool",
+          "note": "Default true. False forces a sender's persistent (0-timeout) toasts back to the standard timeout."
+        },
+        "override_duration": {
+          "type": "integer",
+          "note": "Milliseconds. Replaces both the server default and whatever timeout the sender asked for."
+        },
+        "allowed_urgencies": {
+          "type": "array",
+          "note": "low, normal, critical. Empty or all three = every level passes."
+        },
+        "allow_critical": {
+          "type": "bool",
+          "note": "Accepted and ignored: empty read callback, superseded by allowed_urgencies."
+        }
+      }
+    },
+    "wallpaper":     {
+      "schema": "wallpaperSchema",
+      "note": "The desktop wallpaper: what the shell scans, how an image fills an output, and the transition between two images. Two things set this section apart from the appearance ones. First, [wallpaper] also carries app-managed state -- wallpaper.default, wallpaper.last, wallpaper.monitors and wallpaper.favorite are accepted as unknown paths so the shell can remember what somebody picked (src/config/schema/config_sections.cpp:44-49) -- and this repository writes none of them, because a chosen wallpaper is not repository state. Second, the transition is the one animation in the session that neither motion switch reaches. Hyprland's animations:enabled governs the compositor's own animated config values and nothing inside another process; and the shell's own [shell.animation] is ignored by this one on purpose -- animateTimer takes neither the animation-speed multiplier nor the animations-enabled toggle, in upstream's words because 'disabling animations must not skip the crossfade' (src/shell/wallpaper/wallpaper.cpp:1516-1518). A Performance intensity that only turned off animation would therefore still crossfade every wallpaper change, which is why transition is emitted as an empty list at that intensity instead of being left to a switch that cannot see it.",
+      "keys": {
+        "enabled": {
+          "type": "bool",
+          "note": "Upstream's struct default is true (src/config/config_types.h:558). Not emitted: the wallpaper is the desktop's background, and turning it off leaves the fill colour on every output, which is a preference rather than a design decision."
+        },
+        "fill_mode": {
+          "type": "string",
+          "enum": [
+            "center",
+            "crop",
+            "fit",
+            "stretch",
+            "repeat",
+            "span"
+          ],
+          "enum_constant": "kWallpaperFillModes",
+          "enum_note": "src/config/config_types.h:1021-1028. The struct default is Crop (:559), and span is special-cased: it makes one image cover every output rather than filling each one (src/shell/wallpaper/wallpaper.cpp:506, :1627).",
+          "note": "How an image is fitted to an output. Not emitted: crop is upstream's default and the right one for the 4K 16:9 art in assets/wallpapers/generated/, and a key that restates a default is a key that can only drift. The reader is wallpaperTextureCoverage (wallpaper.cpp:1335) and the node's own setFillMode (:1624)."
+        },
+        "fill_color": {
+          "type": "string",
+          "color": true,
+          "color_note": "A palette role token or a hex colour: ColorSpec parses either (src/config/color_spec.h:8). Declared with alwaysEmit at src/config/schema/config_schema.cpp:1867, so upstream's own export always writes one.",
+          "note": "The colour behind an image that does not cover the output -- visible in center or fit mode, or at the edge of an image with alpha. A per-monitor override wins over it (wallpaper.cpp:248-258). Emitted as the palette's own surface-container role so that letterboxing sits on the preset's colour rather than on a default nobody chose; the same role the bar and dock fills use."
+        },
+        "transition": {
+          "type": "array",
+          "enum": [
+            "diamond",
+            "disc",
+            "fade",
+            "golden",
+            "honeycomb",
+            "melt",
+            "pixel",
+            "stripes",
+            "vortex",
+            "wipe",
+            "zoom"
+          ],
+          "enum_constant": "kWallpaperTransitions",
+          "enum_note": "src/config/config_types.h:1035-1046; the enum itself is at :503-515. An enumArrayField (config_schema.cpp:1868-1870), so each entry is constrained and the list may be empty.",
+          "note": "The transitions a wallpaper change may use. Upstream's default is all eleven (config_types.h:561-566) and it picks one AT RANDOM for every change, then randomizes that effect's own parameters too (wallpaper.cpp:1486-1490), so a wallpaper change is now a melt, now a vortex, now a honeycomb. An empty list is how the animation is disabled: the transition is marked finished immediately (wallpaper.cpp:1474-1479). This project names one effect, for the same reason the lock screen does -- a design system that promises calm, predictable motion cannot also promise a random vortex -- and emits an empty list when motion is off, because Hyprland's animations:enabled cannot reach this one."
+        },
+        "transition_duration": {
+          "type": "float",
+          "range": [
+            100.0,
+            30000.0,
+            100.0
+          ],
+          "range_constant": "kWallpaperTransitionDurationRange",
+          "range_note": "src/config/schema/ranges.h:49.",
+          "note": "Nominally milliseconds, and upstream's default is 1500.0 (config_types.h:567), but it is a scale rather than a duration: the animation runs for |toTime - fromTime| * transition_duration, where the two times are the normalized positions the transition is between (wallpaper.cpp:1509). A full 0-to-1 fade therefore lasts exactly this many milliseconds and a redirected one lasts proportionally less. It is derived from the motion preset's own fadeIn duration, snapped to this range's 100 ms step, so a wallpaper fades in the session's own fade time rather than in a number picked here."
+        },
+        "edge_smoothness": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0,
+            0.01
+          ],
+          "range_constant": "kUnitRange",
+          "range_note": "src/config/schema/ranges.h:13.",
+          "note": "Feathering of a transition's edge, fed to randomizeParams along with the output's aspect ratio (wallpaper.cpp:1490). Upstream's default is 0.3 (config_types.h:568). A fade has no edge, so at transition = ['fade'] this is stored and read and cannot change what is on screen; it is emitted at that default for the reason the lock screen's copy is -- the file states the value instead of leaving it to change upstream."
+        },
+        "transition_on_startup": {
+          "type": "bool",
+          "note": "Animate the first wallpaper of a session instead of letting it appear. Upstream's default is false (config_types.h:569) and the reader requires a non-empty transition list as well: with transition = [] the flag does nothing at all (wallpaper.cpp:1418). So the two are emitted as a pair and a test asserts the pairing -- a true beside an empty list would be a setting that looks like an effect and is not one. This is the startup half of the wallpaper surface, and it is why .config/hypr/startup.lua needs no reload to make the desktop appear: the shell animates its own first frame."
+        },
+        "directory": {
+          "type": "string",
+          "parser": "pathStringField",
+          "note": "Where the shell scans for images; empty means XDG_PICTURES_DIR (config_types.h:570, config_schema.cpp:1874). Not emitted: a path on somebody's disk is not repository state, and the same reason keeps .config/hypr/hyprlock.conf from naming a lock-screen image."
+        },
+        "directory_light": {
+          "type": "string",
+          "parser": "pathStringField",
+          "note": "A directory used in light theme mode; empty falls back to directory (config_types.h:571). Not emitted, for the reason directory is not."
+        },
+        "directory_dark": {
+          "type": "string",
+          "parser": "pathStringField",
+          "note": "The same for dark theme mode; empty falls back to directory (config_types.h:572). Not emitted, for the reason directory is not."
+        },
+        "per_monitor_directories": {
+          "type": "bool",
+          "note": "Reads a per-monitor directory out of the monitor override table instead of one directory for every output (config_types.h:573; readers at wallpaper.cpp:955, :1057, :1200). Not emitted: it only means something beside monitor overrides, which name outputs, and an output name is not repository state."
+        },
+        "automation": {
+          "table": "wallpaperAutomationSchema",
+          "note": "The slideshow: switch the wallpaper on a timer, from the same directories, in a chosen order (config_schema.cpp:899-930). Not emitted, and upstream's defaults are left in place, because a slideshow is a preference and because every switch it makes is a transition -- the one animation Hyprland's master switch cannot reach. With transition = [] at the Performance intensity a switch would be instant, but the decode and upload of a 4K image every interval is work a performance profile is asking not to do.",
+          "keys": {
+            "enabled": {
+              "type": "bool",
+              "note": "Upstream's struct default is false (config_types.h:548)."
+            },
+            "interval_seconds": {
+              "type": "integer",
+              "range": [
+                1,
+                86400,
+                1
+              ],
+              "range_constant": "kWallpaperAutomationIntervalRange",
+              "range_note": "src/config/schema/ranges.h:50.",
+              "note": "Seconds between switches; upstream's default is 1800 (config_types.h:549). Read twice: once to arm the timer (wallpaper.cpp:621-631) and once to refuse a switch that came too soon after the last (:1044-1049)."
+            },
+            "order": {
+              "type": "string",
+              "enum": [
+                "random",
+                "alphabetical"
+              ],
+              "enum_constant": "kWallpaperAutomationOrders",
+              "enum_note": "src/config/config_types.h:1030-1033. Parsed case-insensitively, and a value outside the two is a warning that leaves the default rather than an error (config_schema.cpp:903-917).",
+              "note": "Upstream's default is random (config_types.h:550; reader :937)."
+            },
+            "recursive": {
+              "type": "bool",
+              "note": "Scans subdirectories as well (config_types.h:551; passed to collectWallpaperCandidates at wallpaper.cpp:967, :1001, :1074)."
+            },
+            "pause_on_fullscreen": {
+              "type": "bool",
+              "note": "Holds the slideshow while an output has a fullscreen window (config_types.h:552), through the same automationAllowed() gate that decides whether a switch happens at all (wallpaper.cpp:621, :945, :1044)."
+            }
+          }
+        },
+        "monitor": {
+          "type": "array",
+          "table": "wallpaperMonitorSchema",
+          "named_map": true,
+          "note": "A named map, written [[wallpaper.monitor.<name>]], where the name is an output selector matched against a connector name or a word-boundary token of the output's description (config_schema.cpp:932-942, config_types.h:531-540, outputMatchesSelector at :490-492). Not emitted: the name is a monitor somebody has plugged in, which is not repository state, and a selector that matches nothing is indistinguishable from one that was never written.",
+          "keys": {
+            "match": {
+              "type": "string",
+              "note": "The selector itself, filled from the table's name (config_schema.cpp:934)."
+            },
+            "enabled": {
+              "type": "bool",
+              "note": "Optional: whether this output shows a wallpaper at all (config_types.h:533)."
+            },
+            "fill_color": {
+              "type": "string",
+              "color": true,
+              "color_note": "A palette role token or a hex colour, as above.",
+              "note": "Optional, and wins over the section-level fill_color (wallpaper.cpp:248-252)."
+            },
+            "directory": {
+              "type": "string",
+              "parser": "optionalPathStringField",
+              "note": "Optional per-output directory (config_types.h:535)."
+            },
+            "directory_light": {
+              "type": "string",
+              "parser": "optionalPathStringField",
+              "note": "Optional per-output light-mode directory (config_types.h:536)."
+            },
+            "directory_dark": {
+              "type": "string",
+              "parser": "optionalPathStringField",
+              "note": "Optional per-output dark-mode directory (config_types.h:537)."
+            }
+          }
+        }
+      }
+    },
+    "idle": {
+      "schema": "idleSchema",
+      "note": "The shell's own idle system, driven by the Wayland ext_idle_notifier_v1 protocol and respecting D-Bus (org.freedesktop.ScreenSaver, which is how a browser holds idle off during playback) and Wayland idle inhibitors. When the resolved config defines no behavior at all, Noctalia seeds built-in Lock and Monitor off behaviors, both disabled. This is why .config/hypr/hypridle.conf ships unlaunched: a second idle daemon watching the same protocol would race this one to lock, dim and suspend.",
+      "keys": {
+        "pre_action_fade_seconds": {
+          "type": "float",
+          "range": [
+            0.0,
+            120.0
+          ],
+          "range_note": "Inline Range<float>{0.0F, 120.0F} passed straight to field() at src/config/config_schema.cpp:1066, so there is no named constant to cite. The in-app Settings stepper only offers whole seconds 0-30, which is narrower than the parser.",
+          "note": "After the compositor reports idle, the shell fades a fullscreen layer-shell overlay in the surface colour from transparent to opaque over this many seconds and only then runs the behavior. The overlay covers the whole monitor including the bar, and stays click-through so pointer and keyboard activity still reaches the compositor: becoming active during the fade cancels the pending action. 0 disables the overlay and the action runs as soon as the compositor reports idle."
+        },
+        "behavior_order": {
+          "type": "array",
+          "write_only": true,
+          "note": "Write-only. config_schema.cpp:1069-1080 installs a reader that discards the array and a writer that emits it from the order the behaviors ended up in, so the only thing setting it can do is be ignored: names not listed are appended after the listed ones and unknown names are dropped. Recorded so nobody 'fixes' the order with it. The order that matters is the timeouts themselves."
+        },
+        "behavior": {
+          "type": "array",
+          "table": "idleBehaviorSchema",
+          "named_map": true,
+          "note": "A named map, written [idle.behavior.<name>]. The name is the identity: it is what Settings lists, what behavior_order refers to and what the shell keys its timers by. A behavior whose timeout does not change keeps its existing timer across a config reload rather than restarting.",
+          "keys": {
+            "enabled": {
+              "type": "bool",
+              "note": "Upstream's struct default is true (src/config/config_types.h:289), but the two behaviors Noctalia seeds when a config defines none are both disabled, and example.toml:377-385 ships them disabled too. So an idle action is opt-in, and this project opts in explicitly rather than relying on a default that differs by path."
+            },
+            "timeout": {
+              "type": "float",
+              "note": "Seconds before the behavior triggers; fractional values are allowed. 0 disables the behavior while the session is unlocked."
+            },
+            "locked_timeout": {
+              "type": "float",
+              "note": "Alternate timeout while the session is locked; 0 uses timeout. With timeout = 0 a positive value here enables the behavior *only* while locked."
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "lock",
+                "screen_off",
+                "suspend",
+                "lock_and_suspend",
+                "command"
+              ],
+              "enum_note": "Not enum-validated upstream. The custom reader at config_schema.cpp:1028-1038 takes any string and trims it, and resolveIdleBehaviorActions (config_types.cpp:224-262) falls through to commandIdleAction(behavior.command) for anything it does not recognize -- so a typo'd action becomes a behavior that silently runs an empty shell command and never locks, dims or suspends. The vocabulary is the struct comment at config_types.h:291 and the table in docs/user/services/idle.mdx. This project records it as an enum so its own renderer refuses the typo upstream would swallow."
+            },
+            "command": {
+              "type": "string",
+              "note": "Only for action = \"command\": a shell command run when idle. Normal shell, so `noctalia msg ...` is how a command calls back into the shell's own IPC. Not emitted by this project: every action it wants is native, and an idle timer is the wrong place to invent a command line for somebody else's machine."
+            },
+            "resume_command": {
+              "type": "string",
+              "note": "Optional shell command run when activity resumes. For screen_off the shell restores monitor power first and then runs it, and it runs even if restoring monitor power reported a failure."
+            },
+            "lock_before_suspend": {
+              "type": "bool",
+              "note": "For action = \"suspend\" only, and only emitted then. normalizeIdleBehaviorAction (config_types.cpp:218-222) rewrites suspend with this true into lock_and_suspend, so the two spellings are the same behavior and this project writes the explicit one."
+            }
+          }
+        }
+      }
+    },
+    "lockscreen": {
+      "schema": "lockscreenSchema",
+      "note": "The shell's own lock screen, and the one this session actually shows: it wins ext_session_lock_v1 whenever the shell is running, so .config/hypr/hyprlock.conf is the fallback for a session without it. Two of these keys are security settings rather than appearance (grace_period_seconds, allow_empty_password), and one decides whether a snapshot of the desktop is taken at all (blurred_desktop).",
+      "keys": {
+        "enabled": {
+          "type": "bool",
+          "note": "Upstream's struct default is true (src/config/config_types.h:589)."
+        },
+        "lock_before_suspend": {
+          "type": "bool",
+          "note": "Locks on logind's PrepareForSleep (a lid close or `systemctl suspend`) through a sleep-delay inhibit. Distinct from an idle behavior's action = \"lock_and_suspend\" and from the idle behavior key of the same name, which is about the idle timer (config_types.h:590-592)."
+        },
+        "grace_period_seconds": {
+          "type": "integer",
+          "range": [
+            0,
+            60
+          ],
+          "range_note": "Inline Range<std::int64_t>{0, 60} passed straight to field() at src/config/config_schema.cpp:133, so there is no named constant to cite.",
+          "note": "A convenience window in which any keypress, or mouse movement beyond 5 px, unlocks the session WITHOUT a password. 0 disables it, which is the struct default, and it is additionally revoked on sleep transitions and on logind resume as defense in depth (config_types.h:593-598). This project emits 0 and a test asserts it: a glass desktop is not a reason to let a nudge of the mouse end a lock."
+        },
+        "fingerprint": {
+          "type": "bool",
+          "note": "Fingerprint authentication through fprintd, in parallel with the password. Upstream's default is true; with no fprintd and no scanner there is nothing for it to talk to."
+        },
+        "allow_empty_password": {
+          "type": "bool",
+          "note": "Accepts an empty password. Upstream's default is false (config_types.h:600) and this project emits false, so an account with no password still has to press Enter rather than being waved through."
+        },
+        "blurred_desktop": {
+          "type": "bool",
+          "note": "Uses a snapshot of the desktop as the lock screen background, blurred by blur_intensity and tinted by tint_intensity. example.toml:257 says it requires wlr-screencopy, and the code agrees: WaylandConnection binds zwlr_screencopy_manager_v1 at version 3 (src/wayland/wayland_connection.cpp:35, :84, :1706-1709) and hasScreencopy() is what gates the capture (:1106, lock_screen.cpp:981-985). A capture that fails is warned about and skipped, not fatal. Hyprland v0.57.2 still ships the protocol (src/protocols/Screencopy.cpp and protocols/wlr-screencopy-unstable-v1.xml in its own tree), so this is on."
+        },
+        "transition": {
+          "type": "array",
+          "enum": [
+            "diamond",
+            "disc",
+            "fade",
+            "golden",
+            "honeycomb",
+            "melt",
+            "pixel",
+            "stripes",
+            "vortex",
+            "wipe",
+            "zoom"
+          ],
+          "enum_constant": "kLockscreenTransitions",
+          "note": "A list of allowed transitions, and the shell picks ONE OF THEM AT RANDOM for each lock and unlock: std::floor(Random::randomFloat(0, transitions.size())) at src/shell/lockscreen/lock_screen.cpp:1152, with the effect's own parameters randomized too -- direction 0-3, centre 0.2-0.8, stripe count 4-24, angle 0-360, cell size 0.02-0.06 (:1159-1176). The struct default lists all eleven (config_types.h:602-607), so out of the box a lock is a random one of melt, vortex, honeycomb, pixel and the rest. An empty list disables the lock and unlock animation. This project emits [\"fade\"] alone: a design system that promises calm, predictable motion cannot also promise a random vortex, and one named effect is the only way to get a repeatable one."
+        },
+        "transition_duration": {
+          "type": "float",
+          "range": [
+            100.0,
+            30000.0,
+            100.0
+          ],
+          "range_constant": "kLockscreenTransitionDurationRange",
+          "note": "Milliseconds, in a 100 ms step (src/config/schema/ranges.h:35). The step is why this cannot simply be the motion preset's own fadeIn: smooth asks for 120 ms and minimal for 90 ms, and neither is a multiple of 100, so the renderer rounds to the nearest legal value and the result is the range's floor. The struct default is 1500 (config_types.h:608), a second and a half, which is ten times the session's own fade."
+        },
+        "edge_smoothness": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "range_constant": "kUnitRange",
+          "note": "Feathering of a transition's edge: 0.0 is sharp, 1.0 is soft. Only the effects that have an edge -- wipe, disc, stripes, diamond and the rest -- can show it; a fade has no edge to feather, so at transition = [\"fade\"] this key is stored and read and cannot change what is on screen. It is emitted at upstream's default rather than left out, so the file states the value instead of leaving it to change upstream."
+        },
+        "blur_intensity": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "range_constant": "kUnitRange",
+          "note": "A 0-1 dial, and the code turns it into a radius by multiplying: blurRadius = blur_intensity * 40.0 px (src/shell/lockscreen/lock_surface.cpp:2007, :2104), so 1.0 is a 40 px radius and 0 is no blur at all. That is not the same scale as Hyprland's decoration:blur:size, which is a distance in pixels run for blur:passes passes, and there is no verified way to convert one into the other -- so this project emits the documented midpoint and records the gap rather than inventing a mapping."
+        },
+        "tint_intensity": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "range_constant": "kUnitRange",
+          "note": "The alpha of a surface-colour overlay over the background, and it is the palette's own role: colorForRole(ColorRole::Surface, tintIntensity) at lock_surface.cpp:1321, hidden entirely at 0.0 (:1316). That is the same pairing this project's hyprlock card uses -- the palette's surface at the intensity's glass.tint_alpha -- and the login panel's border is ColorRole::OutlineVariant (:1329), the same role render_noctalia.py already writes for every panel border. So this key is written from the intensity rather than chosen."
+        },
+        "wallpaper": {
+          "type": "string",
+          "parser": "pathStringField",
+          "note": "An optional image path for the lock screen background; empty uses the desktop wallpaper. Not emitted: a path on somebody's disk is not repository state, and the desktop wallpaper is the right default for a session whose wallpaper this project already generates."
+        },
+        "monitors": {
+          "type": "array",
+          "note": "Connector names that show the lock screen; empty shows it on every monitor and leaves the others black. Not emitted: a connector name is machine state, and 'every monitor' is the only answer that is right on a machine this repository has never seen."
         }
       }
     }

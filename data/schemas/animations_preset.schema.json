@@ -1,0 +1,126 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/animations_preset.schema.json",
+  "title": "iArch by Safari animation preset",
+  "description": "Schema for data/design/animations/*.json, one file per motion preset (smooth, snappy, bouncy, minimal, off). A preset owns the named curves and the per-event settings; iarch/cli/gen_animations_lua.py renders it to ~/.config/hypr/generated/animations.lua and iarch-anim switches between them. This schema checks shape and the numeric bounds Hyprland itself enforces. It cannot check the vocabulary -- whether a leaf exists, whether that leaf accepts the style named for it, or whether a curve an event names is declared in this file -- because that lives in data/design/animations.json, a second document. The generator refuses those, and tests/test_animation_presets.py asserts every preset against the recorded surface, so an invented leaf fails in CI instead of as a config error in the user's session.",
+  "type": "object",
+  "required": [
+    "_copyright", "name", "label", "description", "source",
+    "master", "curves", "events"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string", "minLength": 20 },
+    "name": {
+      "enum": ["smooth", "snappy", "bouncy", "minimal", "off"],
+      "description": "Must equal the file's own basename, and must be one of the names in tokens.json motion.animation.presets. Both agreements are asserted by tests/test_animation_presets.py."
+    },
+    "label": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 20 },
+    "source": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Where the leaves, styles and curve shapes in this file were verified, at which Hyprland release. A preset is not allowed to name anything this string does not cover."
+    },
+    "master": {
+      "type": "boolean",
+      "description": "The animations:enabled master switch, emitted as hl.config({ animations = { enabled = <bool> } }). false makes Hyprland's AnimationManager warp every animated variable straight to its final value (AnimationManager.cpp:279, warp = !*PANIMENABLED || !PAV->enabled()), so no bezier or spring is stepped per frame; when it is false the renderer emits no curve and no leaf at all, and the events below are kept only so iarch-anim can still report what the preset would do. Only 'off' sets it false, and tokens.json pairs it with intensities.performance.motion.enabled = false."
+    },
+    "curves": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/curve" },
+      "description": "The curves this preset registers, by preset-local name. The renderer prefixes every name with iarch- before calling hl.curve, so a preset curve cannot collide with the static animations/default.lua names (wind, winIn, winOut, liner) or with Hyprland's built-in 'default' and 'linear'. Registration order follows the key order in this file, and every curve is registered before any event refers to it: hl.animation looks the name up with bezierExists/springExists and errors on a miss. An empty object is legal and is what 'off' declares: with the master switch false Hyprland warps every animated variable, so registering a curve nothing can use would be noise. Every other preset must declare at least one curve, and must declare every curve its events name -- tests/test_animation_presets.py asserts both, since a schema cannot compare two keys of the same document."
+    },
+    "events": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/definitions/event" },
+      "description": "Per-event settings, keyed by Hyprland animation leaf name. A leaf is a node in Hyprland's animation tree and inherits from its parent unless it is set here: fadeIn's parent is fade, windowsIn's parent is windows, specialWorkspace's parent is workspaces. That is why turning one event off emits an explicit enabled = false rather than dropping the entry -- an absent leaf would keep inheriting the parent's animation. hl.animation returns early on enabled = false after setConfigForNode(leaf, false, 1, \"default\"), so a disabled event needs no duration, curve or style."
+    }
+  },
+  "definitions": {
+    "curve": {
+      "oneOf": [
+        { "$ref": "#/definitions/bezier_curve" },
+        { "$ref": "#/definitions/spring_curve" }
+      ]
+    },
+    "bezier_curve": {
+      "type": "object",
+      "required": ["type", "points"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "bezier" },
+        "_note": {
+          "type": "string",
+          "description": "What the curve is for and why these four numbers, which is where the reason an overshoot stays inside [-1, 2] gets written down."
+        },
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Exactly two control points, each a pair of numbers. hl.curve requires the table shape { type = \"bezier\", points = { {x1,y1}, {x2,y2} } }.",
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 2,
+              "description": "LuaBindingsConfigRules.cpp parses every bezier component with CLuaConfigFloat(0, -1, 2), and CLuaConfigFloat::parse returns PARSE_ERROR_OUT_OF_RANGE rather than clamping (src/config/lua/types/LuaConfigFloat.cpp:30-48). So [-1, 2] is a hard bound: a component outside it is a config error that stops the session. Y above 1 overshoots the target and y below 0 undershoots it, both legal inside the band, which is how a spring-like bezier is expressed -- the static animations/default.lua shipped with this repo already uses {0.1, 1.1} and {0.3, -0.3}. Note this is wider than tokens.json motion.easing, whose components are confined to the [0, 1] unit square because the GTK CSS renderer shares that vocabulary and cubic-bezier() requires it."
+            }
+          }
+        }
+      }
+    },
+    "spring_curve": {
+      "type": "object",
+      "required": ["type", "stiffness", "damping", "mass"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "spring" },
+        "stiffness": { "type": "number", "exclusiveMinimum": 0.5 },
+        "damping": { "type": "number", "exclusiveMinimum": 0.5 },
+        "mass": { "type": "number", "exclusiveMinimum": 0.5 },
+        "_note": {
+          "type": "string",
+          "description": "What the three numbers do to the feel, and the damping ratio they imply."
+        }
+      },
+      "description": "hl.curve(name, { type = \"spring\", stiffness, damping, mass }) rejects any of the three at or below 0.5 with a config error (LuaBindingsConfigRules.cpp:356, 375, 389), so the usable bound is strictly greater than 0.5. A spring's duration is not a number anyone sets: getCurveStep advances it by wall-clock DT through advanceSpring until it rests, so the event's duration_ms is inert for a spring curve. The binding still requires a speed greater than 0, so the renderer emits one; the value it emits is the event's duration_ms / 100 like any other, and the comment in the generated file says it is inert."
+    },
+    "event": {
+      "type": "object",
+      "required": ["enabled"],
+      "additionalProperties": false,
+      "if": {
+        "properties": { "enabled": { "const": true } },
+        "required": ["enabled"]
+      },
+      "then": { "required": ["duration_ms", "curve"] },
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "How long the animation takes, in milliseconds. Hyprland's own field is called 'speed' but it is a duration in centiseconds: from hyprutils AnimatedVariable::getPercent the animation finishes when (elapsed_ms / 100) / speed reaches 1, i.e. after 100 * speed milliseconds, so the renderer emits speed = duration_ms / 100. The binding parses speed with CLuaConfigFloat(0, 0, 100) and separately rejects speed <= 0, which makes (0, 10000] ms the usable range and every value here legal. iarch-anim's global multiplier divides this number (greater than 1 is faster) and re-checks the result against the same bounds."
+        },
+        "curve": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The preset-local name of a curve declared in this file's 'curves'. Bezier and spring are mutually exclusive in hl.animation -- it checks the bezier field first and only then the spring field -- so one name here covers both, and the renderer emits whichever kind that curve declares. Naming a curve this file does not declare is refused by the generator, because Hyprland would reject it as an unregistered curve."
+        },
+        "style": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional, and only for a leaf Hyprland gives styles to: leaves starting with 'window' take slide, gnome, gnomed or popin; 'workspaces' and 'specialWorkspace' take slide, slidevert or fade; a leaf ending in 'angle' takes loop or once; leaves starting with 'layers' take fade, slide or popin, and may also omit the style. Any other leaf has no styles at all and styleValidInConfigVar answers 'animation has no styles', so fade, fadeIn, border and the rest must leave this key out. 'slide' and 'popin' also accept a ' NN%' suffix. The per-leaf list is recorded in data/design/animations.json and the generator checks this value against it."
+        },
+        "_note": { "type": "string" }
+      }
+    }
+  }
+}

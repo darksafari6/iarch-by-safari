@@ -93,7 +93,15 @@ hl.bind(KEY.FOCUS_RIGHT, hl.dsp.focus({ direction = "right" }), { description = 
 hl.bind(KEY.FOCUS_UP, hl.dsp.focus({ direction = "up" }), { description = "Focus up" })
 hl.bind(KEY.FOCUS_DOWN, hl.dsp.focus({ direction = "down" }), { description = "Focus down" })
 
-hl.bind("ALT + tab", hl.dsp.window.cycle_next(), { description = "Cycle windows" })
+-- Alt+Tab opens the shell's glass overlay instead of moving focus invisibly.
+-- `hold` is the form docs/user/ipc/shell.mdx gives for a held-modifier bind: a
+-- quick tap activates the previous window, Tab and the arrow keys cycle the cards
+-- while the overlay has focus, and releasing Alt confirms the selected one. The
+-- overlay is configured by [shell.window_switcher] in the generated config.toml.
+-- Trade-off: with no shell running this bind does nothing at all, where
+-- hl.dsp.window.cycle_next() always worked. docs/glass-experience.md records the
+-- one-line fallback.
+hl.bind("ALT + tab", hl.dsp.exec_cmd("noctalia msg window-switcher hold"), { description = "Window switcher overlay" })
 
 hl.bind(KEY.RESIZE_RIGHT, function() hl.exec_cmd("hyprctl dispatch resizeactive 30 0") end, { description = "Resize window right" })
 hl.bind(KEY.RESIZE_LEFT, function() hl.exec_cmd("hyprctl dispatch resizeactive -30 0") end, { description = "Resize window left" })

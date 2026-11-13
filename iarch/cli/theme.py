@@ -82,6 +82,7 @@ from iarch.cli import (  # noqa: E402  (repo-root import by design)
     render_gtk_css,
     render_kvantum,
     render_noctalia,
+    render_hyprlock,
 )
 
 DEFAULT_PRESET = "midnight-glass"
@@ -122,6 +123,7 @@ RENDER_ERRORS = (
     render_kvantum.KvantumError,
     gen_fontconfig.FontconfigError,
     render_noctalia.NoctaliaError,
+    render_hyprlock.HyprlockError,
 )
 
 
@@ -186,6 +188,85 @@ def _user_theme(env: Optional[Dict[str, str]]) -> Tuple[Optional[str], Optional[
         colour if isinstance(colour, str) and colour else None,
         intensity if isinstance(intensity, str) and intensity else None,
     )
+
+
+def _user_animation(env: Optional[Dict[str, str]]) -> Dict[str, Any]:
+    """The raw ``animation`` block ``iarch-anim`` owns, or {} when there is none.
+
+    Read from the user's own file rather than through ``configstore.load``, which
+    merges the repository defaults underneath: a value the person never chose has
+    to stay indistinguishable from a value they did, or this command would report
+    a divergence that does not exist.
+    """
+    path = configstore.user_path("settings", env)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    animation = data.get("animation") if isinstance(data, dict) else None
+    return animation if isinstance(animation, dict) else {}
+
+
+def _user_reduce_motion(env: Optional[Dict[str, str]]) -> bool:
+    """The ``animation.reduce_motion`` switch ``iarch-anim`` records.
+
+    A missing or malformed file means motion stays on, which is the state a fresh
+    install is in and the state every generated payload in this repository was
+    rendered in.
+    """
+    return bool(_user_animation(env).get("reduce_motion"))
+
+
+def _animation_divergence(tokens: Dict[str, Any], intensity: str,
+                          env: Optional[Dict[str, str]]) -> List[str]:
+    """What ``iarch-theme apply`` is about to overwrite that ``iarch-anim`` set.
+
+    The two commands own different halves of one file on purpose: a theme apply
+    renders the preset the intensity is paired with, and ``iarch-anim`` renders
+    the preset, speed and per-event toggles a person chose. That separation is
+    only safe if it is audible, because the alternative is a colour change that
+    silently puts 380ms workspace slides back.
+    """
+    recorded = _user_animation(env)
+    if not recorded:
+        return []
+    paired = gen_animations_lua.preset_for_intensity(tokens, intensity)
+    notes: List[str] = []
+    preset = recorded.get("preset")
+    if isinstance(preset, str) and preset and preset != paired:
+        notes.append(f"animation.preset={preset!r}, which this apply replaces with the "
+                     f"{paired!r} preset the {intensity} intensity is paired with")
+    speed = recorded.get("speed")
+    if isinstance(speed, (int, float)) and not isinstance(speed, bool) and float(speed) != 1.0:
+        notes.append(f"animation.speed={speed}, which this apply resets to 1.0")
+    overrides = recorded.get("event_overrides")
+    if isinstance(overrides, dict) and overrides:
+        notes.append(f"{len(overrides)} per-event override(s) in animation.event_overrides, "
+                     f"which this apply drops")
+    return notes
+
+
+def _resolve_reduce_motion(choice: Optional[str],
+                           env: Optional[Dict[str, str]]) -> Tuple[bool, str]:
+    """Settle whether the GTK sheets render with their durations zeroed.
+
+    Returns the flag and where it came from, because the difference matters when
+    reporting: ``auto`` means the compositor-side switch decided, and that switch
+    belongs to ``iarch-anim``, not to this command.
+    """
+    if choice == "on":
+        return True, "--reduce-motion on"
+    if choice == "off":
+        return False, "--reduce-motion off"
+    recorded = _user_reduce_motion(env)
+    # Not called a repository default, even though false is what
+    # data/settings.default.json carries: `current` reports "repository default"
+    # for a theme value nobody chose, and blurring the two would make that line
+    # ambiguous about which setting is unset.
+    return recorded, ("settings.json animation.reduce_motion" if recorded
+                      else "no animation.reduce_motion recorded")
 
 
 def _resolve(colour_arg: Optional[str], intensity_arg: Optional[str],
@@ -291,7 +372,7 @@ def _rendered(path: Path, body: str) -> str:
 
 
 def _plan(tokens: Dict[str, Any], preset: Dict[str, Any], intensity: str,
-          config_home: Path) -> List[Tuple[Path, str, str]]:
+          config_home: Path, reduce_motion: bool = False) -> List[Tuple[Path, str, str]]:
     """Render every surface under ``config_home``; return (path, body, rendered).
 
     The Hyprland files go where hyprland.lua reads them (``$HOME/.config/hypr``),
@@ -310,13 +391,18 @@ def _plan(tokens: Dict[str, Any], preset: Dict[str, Any], intensity: str,
     add(config_home / "hypr" / "generated" / "glass.lua",
         gen_glass_lua.build(tokens, preset, intensity))
     add(config_home / "hypr" / "generated" / "animations.lua",
-        gen_animations_lua.build(tokens, gen_animations_lua.load_surface(), intensity))
+        gen_animations_lua.build(tokens, gen_animations_lua.load_surface(), intensity,
+                                 reduce_motion=reduce_motion))
 
-    # GTK 4 and GTK 3, each under its own gtk-<v>.0 directory.
+    # GTK 4 and GTK 3, each under its own gtk-<v>.0 directory. reduce_motion is
+    # passed down rather than left to GTK 4's prefers-reduced-motion media query,
+    # because GTK 3 cannot parse @media at all and would otherwise keep fading
+    # whatever the compositor side had already been told to stop moving.
     gtk_surface = render_gtk_css.load_surface()
     for version in render_gtk_css.VERSIONS:
         path, body = render_gtk_css.targets_for(
-            version, tokens, preset, gtk_surface, intensity, config_home / f"gtk-{version}.0")
+            version, tokens, preset, gtk_surface, intensity, config_home / f"gtk-{version}.0",
+            reduce_motion=reduce_motion)
         add(path, body)
 
     # Kvantum: the pointer file and the theme it names.
@@ -333,6 +419,15 @@ def _plan(tokens: Dict[str, Any], preset: Dict[str, Any], intensity: str,
     targets.extend(
         (p, b, _rendered(p, b)) for p, b in render_noctalia.user_targets(
             tokens, render_noctalia.load_surface(), preset, intensity, config_home / "noctalia"))
+
+    # hyprlock: the session-lock surface, and the hypridle fallback that ships
+    # unlaunched. Both live next to hyprland.lua because that is where hyprlock
+    # and hypridle look for them, not in iarch's own config dir. The lock screen
+    # is intensity-dependent -- its blur *is* the intensity's blur recipe -- so it
+    # has to be re-rendered here rather than left to a one-off command.
+    targets.extend(
+        (p, b, _rendered(p, b)) for p, b in render_hyprlock.user_targets(
+            tokens, preset, intensity, config_home / "hypr"))
 
     return targets
 
@@ -426,13 +521,23 @@ def _config_home(raw: str) -> Path:
 
 def cmd_apply(args: argparse.Namespace, env: Dict[str, str]) -> int:
     config_home = _config_home(args.config_home)
+    # Fail before touching the desktop. A settings file nobody can parse is
+    # knowable right now, and this command writes eleven generated files before it
+    # records anything, so discovering it at the end would leave a session
+    # re-rendered under a state that was never saved.
+    configstore.load("settings", ROOT, env)
     tokens, preset, colour, intensity = _resolve(args.preset, args.intensity, env)
+    reduce_motion, reduce_from = _resolve_reduce_motion(args.reduce_motion, env)
 
     _say(f"iArch by Safari — apply {colour!r} at {intensity!r} intensity")
     gated, lowest = _contrast_gate(colour, preset)
     _say(f"contrast gate: {gated} gated pair(s), lowest {lowest:.2f}:1 — pass")
+    if reduce_motion:
+        _say(f"reduce motion:   on ({reduce_from}) — GTK transitions render at 0ms")
+    for note in _animation_divergence(tokens, intensity, env):
+        _warn(f"iarch-anim recorded {note}; `iarch-anim current` shows the state it owns")
 
-    targets = _plan(tokens, preset, intensity, config_home)
+    targets = _plan(tokens, preset, intensity, config_home, reduce_motion=reduce_motion)
     _report_cursor(preset)
     _report_icon(preset)
 
@@ -473,10 +578,12 @@ def cmd_current(args: argparse.Namespace, env: Dict[str, str]) -> int:
     config_home = _config_home(args.config_home)
     _tokens, preset, colour, intensity = _resolve(None, None, env)
     user_colour, user_intensity = _user_theme(env)
+    reduce_motion, reduce_from = _resolve_reduce_motion(None, env)
 
     _say("iArch by Safari — current theme")
     _say(f"  colour preset: {colour}" + ("" if user_colour else "   (repository default)"))
     _say(f"  intensity:     {intensity}" + ("" if user_intensity else "   (preset default)"))
+    _say(f"  reduce motion: {'on' if reduce_motion else 'off'}   ({reduce_from})")
     _say(f"  config home:   {display(config_home)}")
     cursor = preset.get("cursor") or {}
     _say(f"  cursor:        {cursor.get('theme')} {cursor.get('size')}px "
@@ -503,6 +610,10 @@ def build_parser() -> argparse.ArgumentParser:
     apply_p.add_argument("--intensity",
                          help="crystal, frosted, soft or performance (default: settings "
                               "theme.intensity, else the preset's own default_intensity)")
+    apply_p.add_argument("--reduce-motion", choices=("on", "off", "auto"), default="auto",
+                         help="render the GTK sheets with every transition at 0ms. 'auto' "
+                              "(the default) follows animation.reduce_motion in settings.json, "
+                              "which is the switch `iarch-anim reduce-motion` owns")
     apply_p.add_argument("--config-home", default=default_home,
                          help=f"live config root to write under (default {default_home})")
     apply_p.add_argument("--no-reload", action="store_true",

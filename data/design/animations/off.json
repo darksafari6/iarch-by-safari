@@ -1,0 +1,33 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "name": "off",
+  "label": "Off",
+  "description": "No animation at all. The master switch goes off and Hyprland warps every animated variable straight to its final value, so windows appear and disappear instantly, workspaces cut, and nothing fades. This is what the Performance intensity, game mode and 'iarch-anim set off' all resolve to, and it is the honest answer for a machine that would rather spend its frame budget on the application.",
+  "source": "Hyprland v0.57.2, read out into data/design/animations.json: the master switch is src/config/values/ConfigValues.cpp:348 MS<Bool>(\"animations:enabled\", \"enable animations\", true), set through hl.config({ animations = { enabled = false } }), and the warp it causes is src/animation/AnimationManager.cpp:279 (warp = !*PANIMENABLED || !PAV->enabled()). Leaf names and parents from src/config/shared/animation/AnimationTree.cpp.",
+  "master": false,
+
+  "curves": {},
+
+  "events": {
+    "windows":          { "enabled": false },
+    "windowsIn":        { "enabled": false },
+    "windowsOut":       { "enabled": false },
+    "windowsMove":      { "enabled": false },
+    "workspaces":       { "enabled": false },
+    "specialWorkspace": { "enabled": false },
+    "layers":           { "enabled": false },
+    "layersIn":         { "enabled": false },
+    "layersOut":        { "enabled": false },
+    "fade":             { "enabled": false },
+    "fadeIn":           { "enabled": false },
+    "fadeOut":          { "enabled": false },
+    "fadeSwitch":       { "enabled": false },
+    "fadeShadow":       { "enabled": false },
+    "fadeDim":          { "enabled": false },
+    "fadeLayers":       { "enabled": false },
+    "border":           { "enabled": false, "_note": "The focus border colour changes with no transition. Focus itself is still reported — the border still recolours and the active window rule still applies — it just does not animate, so turning animation off never costs a person the focus cue." },
+    "borderangle":      { "enabled": false }
+  },
+
+  "_note": "The renderer emits only the master switch for this preset: no hl.curve call and no hl.animation call, which is what Part 2 already did for the Performance intensity and what tests/test_animations_lua.py asserts. With animations:enabled false, AnimationManager warps every animated variable regardless of the per-leaf flags, so emitting eighteen disabled leaves would be eighteen config lines that cannot change anything. The events are listed anyway, for two reasons: iarch-anim current and list report the same eighteen events whatever preset is active, so a caller in Part 4 or Part 5 never has to special-case off; and the list documents that this preset means every event, not merely the ones the other presets happen to set. Note the distinction from minimal, which keeps the master switch on and turns off only the events that move — off is the compositor doing no animation work at all, minimal is the compositor doing the least animation that still explains itself."
+}

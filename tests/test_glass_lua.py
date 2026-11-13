@@ -114,9 +114,14 @@ def emitted_config(tk: Optional[Dict[str, Any]] = None, preset_id: str = 'midnig
     tk = tk or tokens()
     preset = glass.load_preset(tk, preset_id)
     warnings: List[str] = []
+    decoration = glass.decoration_block(tk, intensity, warnings)
+    # Mirror glass.render: the glow is the one decoration whose colour comes from
+    # the palette rather than the intensity, so it is built separately. Leaving it
+    # out here would keep the leaf whitelist below from ever seeing a glow key.
+    decoration['glow'] = glass.glow_block(tk, preset, intensity, warnings)
     return {
         'general': glass.general_block(tk, preset, warnings),
-        'decoration': glass.decoration_block(tk, intensity, warnings),
+        'decoration': decoration,
     }
 
 
@@ -287,17 +292,27 @@ class IntegersStayIntegers(unittest.TestCase):
     def setUp(self):
         self.tk = tokens()
         self.source = SHIPPED.read_text(encoding='utf-8')
-        self.last_segment = {leaf.rsplit(':', 1)[-1]: leaf
-                             for leaf in self.tk['hyprland']['integer_leaves']}
+        # Several integer leaves share a last segment -- shadow:range and
+        # glow:range both render as `range =`, and likewise render_power. Keying
+        # a plain segment -> leaf dict would silently drop one of them from this
+        # test's report, so each segment keeps every leaf that renders under it.
+        # number_after() collects every literal assigned to the segment anywhere
+        # in the file, so the fraction assertion covers all of them.
+        self.segments: Dict[str, List[str]] = {}
+        for leaf in self.tk['hyprland']['integer_leaves']:
+            self.segments.setdefault(leaf.rsplit(':', 1)[-1], []).append(leaf)
 
     def test_the_integer_leaves_are_the_ones_upstream_declares_ms_int(self):
-        # Grounded in ConfigValues.cpp at the verified version: these seven are
+        # Grounded in ConfigValues.cpp at the verified version: these nine are
         # MS<Int>. rounding_power looks integral but is MS<Float>, and the gaps
-        # are MS<CssGap>, so none of them belong in this list.
+        # are MS<CssGap>, so none of them belong in this list. The two glow
+        # entries are MS<Int> with their own bounds (range 0..100, render_power
+        # 1..4) recorded in hyprland.ranges.
         self.assertEqual({
             'decoration:rounding', 'decoration:blur:variant', 'decoration:blur:size',
             'decoration:blur:passes', 'decoration:shadow:range',
-            'decoration:shadow:render_power', 'general:border_size',
+            'decoration:shadow:render_power', 'decoration:glow:range',
+            'decoration:glow:render_power', 'general:border_size',
         }, set(self.tk['hyprland']['integer_leaves']))
 
     def test_every_integer_leaf_is_a_declared_leaf(self):
@@ -306,15 +321,22 @@ class IntegersStayIntegers(unittest.TestCase):
                 self.assertIn(leaf, self.tk['hyprland']['leaves'])
 
     def test_no_integer_leaf_is_rendered_with_a_fraction(self):
-        for key, leaf in self.last_segment.items():
+        for key, leaves in self.segments.items():
             if key == 'variant':
                 continue  # an enum: rendered as its string key, not a number
             literals = number_after(self.source, key)
-            with self.subTest(leaf=leaf):
+            with self.subTest(leaves=leaves):
                 self.assertTrue(literals, f'{key} was not rendered at all')
+                # A shared segment renders one literal per leaf that uses it, so
+                # `range` appears twice: once for the shadow, once for the glow.
+                if len(leaves) > 1:
+                    self.assertEqual(len(leaves), len(literals),
+                                     f'{key} is rendered by {leaves} but the file '
+                                     f'assigns it {len(literals)} time(s)')
                 for literal in literals:
                     self.assertNotIn('.', literal,
-                                     f'{leaf} rendered as {literal}; Hyprland wants an integer')
+                                     f'{"/".join(leaves)} rendered as {literal}; '
+                                     f'Hyprland wants an integer')
 
     def test_the_blur_variant_is_rendered_as_a_known_string_key(self):
         # MS<Int> with an OptionMap, so LuaConfigInt accepts the name as a string.
@@ -658,6 +680,155 @@ class ThePerformanceIntensityCostsNothing(unittest.TestCase):
             animated = intensity['blur']['variant'] in self.tk['hyprland']['animated_blur_variants']
             with self.subTest(intensity=name):
                 self.assertEqual(animated, any('animates' in w for w in warnings))
+
+
+class TheFocusGlowIsAFocusCue(unittest.TestCase):
+    """``decoration:glow:*`` — the compositor half of a focused window's cue.
+
+    Two upstream facts shape every assertion here. The glow animates through the
+    ``fadeGlow`` leaf (CHyprInnerGlowDecoration.cpp calls
+    ``initializeAnimations(..., "fadeGlow", "glowangle")`` then ``onWindowFocus``),
+    so it needs no animation leaf of its own and inherits whatever the motion
+    preset gives ``fade``. And ``enabled`` defaults to false upstream, so this is
+    a deliberate opt-in per intensity rather than something a preset inherits by
+    accident.
+    """
+
+    LEAVES = ('decoration:glow:enabled', 'decoration:glow:range',
+              'decoration:glow:render_power', 'decoration:glow:color',
+              'decoration:glow:color_inactive')
+
+    def setUp(self):
+        self.tk = tokens()
+        self.preset = glass.load_preset(self.tk, None)
+        self.source = SHIPPED.read_text(encoding='utf-8')
+
+    def block(self, intensity: str, tk: Optional[Dict[str, Any]] = None,
+              preset: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        warnings: List[str] = []
+        return glass.glow_block(tk or self.tk, preset or self.preset,
+                                intensity, warnings)
+
+    def test_every_glow_leaf_is_recorded_in_the_verified_surface(self):
+        for leaf in self.LEAVES:
+            with self.subTest(leaf=leaf):
+                self.assertIn(leaf, self.tk['hyprland']['leaves'])
+
+    def test_the_two_numeric_leaves_are_declared_integers_with_upstream_bounds(self):
+        # MS<Int> range 0..100 default 10, MS<Int> render_power 1..4 default 3.
+        self.assertEqual([0, 100], self.tk['hyprland']['ranges']['decoration:glow:range'])
+        self.assertEqual([1, 4],
+                         self.tk['hyprland']['ranges']['decoration:glow:render_power'])
+        for leaf in ('decoration:glow:range', 'decoration:glow:render_power'):
+            self.assertIn(leaf, self.tk['hyprland']['integer_leaves'])
+
+    def test_no_intensity_asks_for_a_value_hyprland_would_reject(self):
+        for name, intensity in self.tk['intensities'].items():
+            glow = intensity['glow']
+            with self.subTest(intensity=name):
+                self.assertIn(glow['range'], range(0, 101))
+                self.assertIn(glow['render_power'], range(1, 5))
+                self.assertIsInstance(glow['range'], int)
+                self.assertIsInstance(glow['render_power'], int)
+
+    def test_the_glow_colour_is_the_accent_role_not_a_hex_constant(self):
+        # The glow sits next to the active border, so it belongs to the same
+        # palette decision. A hard-coded hex here would survive a preset change
+        # and glow in the previous palette's colour.
+        for preset_path in sorted(PRESET_DIR.glob('*.json')):
+            preset = glass.load_preset(self.tk, preset_path.stem)
+            glow = self.tk['intensities']['frosted']['glow']
+            block = self.block('frosted', preset=preset)
+            expected = glass.parse_hex(preset['palette']['accent'][glow['role']],
+                                       'test')
+            for key, alpha in (('color', glow['alpha']),
+                               ('color_inactive', glow['alpha_inactive'])):
+                with self.subTest(preset=preset_path.stem, key=key):
+                    self.assertEqual('rgba(%d, %d, %d, %s)' % (*expected, round(alpha, 3)),
+                                     block[key])
+
+    def test_an_invented_accent_role_is_refused(self):
+        tk = mutate(self.tk, 'intensities.frosted.glow.role', 'neon')
+        with self.assertRaises(glass.GlassError) as caught:
+            self.block('frosted', tk=tk)
+        self.assertIn('accent role', str(caught.exception))
+
+    def test_an_alpha_above_one_is_refused_before_it_reaches_the_session(self):
+        tk = mutate(self.tk, 'intensities.frosted.glow.alpha', 1.5)
+        with self.assertRaises(glass.GlassError) as caught:
+            self.block('frosted', tk=tk)
+        self.assertIn('alpha', str(caught.exception))
+
+    def test_a_range_outside_upstream_bounds_is_refused(self):
+        tk = mutate(self.tk, 'intensities.frosted.glow.range', 999)
+        with self.assertRaises(glass.GlassError) as caught:
+            self.block('frosted', tk=tk)
+        self.assertIn('range', str(caught.exception))
+
+    def test_a_fractional_range_is_refused_because_the_leaf_is_an_integer(self):
+        tk = mutate(self.tk, 'intensities.frosted.glow.range', 14.5)
+        with self.assertRaises(glass.GlassError) as caught:
+            self.block('frosted', tk=tk)
+        self.assertIn('integer', str(caught.exception))
+
+    def test_a_glow_leaf_missing_from_the_surface_stops_the_render(self):
+        # The generator must not emit config Hyprland does not know, even if the
+        # tokens ask it to.
+        tk = json.loads(json.dumps(self.tk))
+        tk['hyprland']['leaves'].remove('decoration:glow:color_inactive')
+        with self.assertRaises(glass.GlassError) as caught:
+            self.block('frosted', tk=tk)
+        self.assertIn('hyprland.leaves', str(caught.exception))
+
+    def test_performance_turns_the_glow_off_and_gives_it_no_reach(self):
+        # An intensity with motion off would warp fadeGlow, so the glow would
+        # snap on instead of arriving: a flash, not a cue.
+        block = self.block('performance')
+        self.assertFalse(block['enabled'])
+        self.assertEqual(0, block['range'])
+        self.assertTrue(block['color'].endswith(', 0.0)'))
+        self.assertTrue(block['color_inactive'].endswith(', 0.0)'))
+
+    def test_the_three_glass_intensities_do_glow(self):
+        for name in ('crystal', 'frosted', 'soft'):
+            with self.subTest(intensity=name):
+                block = self.block(name)
+                self.assertTrue(block['enabled'])
+                self.assertGreater(block['range'], 0)
+
+    def test_the_glow_reach_shrinks_as_the_intensity_gets_cheaper(self):
+        ranges = [self.block(name)['range'] for name in ('crystal', 'frosted', 'soft')]
+        self.assertEqual(sorted(ranges, reverse=True), ranges,
+                         'a cheaper intensity should not glow further than a richer one')
+
+    def test_the_glow_is_quieter_than_the_border_it_sits_beside(self):
+        # The border is the cue a user looks at; the glow is the light it throws.
+        border = self.tk['layout']['border']['active']
+        glow = self.tk['intensities']['frosted']['glow']
+        self.assertLess(glow['alpha'], border['from_alpha'])
+        self.assertLess(glow['alpha_inactive'], border['to_alpha'])
+
+    def test_the_shipped_file_carries_a_resolved_glow_block(self):
+        self.assertIn('glow = {', self.source)
+        for key in ('enabled', 'range', 'render_power', 'color', 'color_inactive'):
+            with self.subTest(key=key):
+                self.assertRegex(self.source, rf'\n\s+{key} = ')
+
+    def test_the_glow_fade_comes_from_a_leaf_every_preset_actually_sets(self):
+        # fadeGlow's parent is fade, and a leaf inherits from its parent unless it
+        # sets its own value. So the guarantee that the glow fades rather than
+        # snapping is really a guarantee that every motion preset sets `fade`.
+        surface = read_json(ROOT / 'data' / 'design' / 'animations.json')
+        self.assertEqual('fade', surface['leaves']['fadeGlow']['parent'])
+        self.assertEqual('global', surface['leaves']['glowangle']['parent'])
+        animation_dir = ROOT / 'data' / 'design' / 'animations'
+        for preset_path in sorted(animation_dir.glob('*.json')):
+            preset = read_json(preset_path)
+            if not preset.get('master', True):
+                continue  # `off` disables everything at the master switch
+            with self.subTest(preset=preset_path.stem):
+                self.assertIn('fade', preset['events'])
+                self.assertTrue(preset['events']['fade']['enabled'])
 
 
 class TheShippedFileMatchesItsSource(unittest.TestCase):

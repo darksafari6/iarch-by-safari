@@ -73,6 +73,145 @@
         }
       }
     },
+    "animation": {
+      "type": "object",
+      "description": "The motion state iarch-anim renders from, added in Part 3. It is deliberately separate from 'theme': a theme is a look (colour preset plus intensity) and this is how that look moves, so a person can be on frosted glass and bouncy motion, or on the Performance intensity — which pairs with the 'off' preset — without either choice overwriting the other. 'preset' names a file in data/design/animations/, 'speed' is the global multiplier where a number above 1 is FASTER because it divides every duration, 'reduce_motion' forces the minimal preset with every duration capped, and 'event_overrides' maps an animation leaf to whether the user turned it on or off on top of whatever the preset declares. The overrides are keyed by leaf name, which is an open set the compositor defines rather than one this schema can enumerate, so the values are constrained to booleans here and the names are checked against data/design/animations.json at render time. Not in the top-level 'required' list on purpose: configstore.load merges these defaults under a settings.json written before this block existed, so an older user file still resolves and still validates. The 0.5 and 2.0 bounds duplicate tokens.json motion.animation.speed_multiplier because a schema cannot read another file; tests/test_animation_presets.py asserts the two agree.",
+      "additionalProperties": false,
+      "required": [
+        "preset",
+        "speed",
+        "reduce_motion",
+        "event_overrides"
+      ],
+      "properties": {
+        "preset": {
+          "enum": [
+            "smooth",
+            "snappy",
+            "bouncy",
+            "minimal",
+            "off"
+          ]
+        },
+        "speed": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 2
+        },
+        "reduce_motion": {
+          "type": "boolean"
+        },
+        "event_overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "modes": {
+      "type": "object",
+      "description": "The two mode switches added in Part 3: iarch-gamemode and iarch-focus. A mode records whether it is on and, while it is, the state it replaced -- which is what makes it reversible instead of merely another way to change a setting. Game mode's restore point is a theme and a motion preset, so it survives a relogin and only `iarch-gamemode off` ends it; focus mode's is the Do Not Disturb flag and two compositor leaves, which are runtime state and die with the session, so `iarch-focus status` compares the record with what the shell and the compositor actually answer rather than trusting it. Not in the top-level required list, for the same reason as theme and animation: configstore.load merges these defaults under a settings.json written before the block existed. The two enums duplicate theme.intensity and animation.preset above because a schema cannot read another key, and tests/test_gamemode.py asserts the three lists agree.",
+      "additionalProperties": false,
+      "required": [
+        "game",
+        "focus"
+      ],
+      "properties": {
+        "game": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "active"
+          ],
+          "properties": {
+            "active": {
+              "type": "boolean"
+            },
+            "previous": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "colour_preset",
+                "intensity",
+                "animation_preset",
+                "reduce_motion"
+              ],
+              "properties": {
+                "colour_preset": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "intensity": {
+                  "enum": [
+                    "crystal",
+                    "frosted",
+                    "soft",
+                    "performance"
+                  ]
+                },
+                "animation_preset": {
+                  "enum": [
+                    "smooth",
+                    "snappy",
+                    "bouncy",
+                    "minimal",
+                    "off"
+                  ]
+                },
+                "reduce_motion": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "focus": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "active"
+          ],
+          "properties": {
+            "active": {
+              "type": "boolean"
+            },
+            "no_caffeine": {
+              "type": "boolean"
+            },
+            "previous": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "do_not_disturb",
+                "leaves"
+              ],
+              "properties": {
+                "do_not_disturb": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "What notification-dnd-status answered before focus mode was switched on. Null means the shell could not be asked, and `off` then says so instead of claiming it restored a state it never read."
+                },
+                "leaves": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": {
+                    "type": [
+                      "boolean",
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "description": "The compositor leaves focus mode replaced, keyed by leaf name, each with the value it had before. A null is a leaf that could not be read, which also means it could not be set."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "notes": {
       "type": "string"
     }

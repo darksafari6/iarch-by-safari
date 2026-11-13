@@ -1,0 +1,37 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "name": "minimal",
+  "label": "Minimal",
+  "description": "Fades only, and short ones. Nothing slides, nothing scales, nothing sweeps: a window appears and disappears by opacity alone over 90 ms, a layer fades in over 120 ms, and the focus border still changes colour in 90 ms so focus stays visible. This is the preset reduce-motion resolves to, and it is the accessibility floor of the motion system — the least motion that still tells a person what changed.",
+  "source": "Hyprland v0.57.2, read out into data/design/animations.json: leaf names and their parents from src/config/shared/animation/AnimationTree.cpp, the per-leaf style lists from AnimationManager::styleValidInConfigVar, and the numeric bounds from src/config/lua/bindings/LuaBindingsConfigRules.cpp with src/config/lua/types/LuaConfigFloat.cpp — bezier components in [-1, 2], spring values strictly above 0.5, speed in (0, 100] where duration_ms = 100 * speed, every one of them a config error rather than a clamp.",
+  "master": true,
+
+  "curves": {
+    "standard":   { "type": "bezier", "points": [[0.4, 0.0], [0.2, 1.0]] },
+    "decelerate": { "type": "bezier", "points": [[0.0, 0.0], [0.2, 1.0]] },
+    "accelerate": { "type": "bezier", "points": [[0.4, 0.0], [1.0, 1.0]] }
+  },
+
+  "events": {
+    "windows":          { "enabled": false, "_note": "Disabled, not merely given a fade: the window leaves only accept slide, gnome, gnomed and popin — there is no fade style for them — so 'fades only' means the transform is off and the opacity fade below does the work. Window opacity is a sibling branch of the tree (fade's parent is global, windows' parent is global), so turning windows off leaves fadeIn and fadeOut animating." },
+    "windowsIn":        { "enabled": false },
+    "windowsOut":       { "enabled": false },
+    "windowsMove":      { "enabled": false },
+    "workspaces":       { "enabled": false, "_note": "A workspace switch becomes an instant cut. slidevert and fade are the alternatives this leaf accepts, but a full-screen slide is the single largest motion on the desktop and the one reduce-motion exists to remove; the fade style here would cross-fade two workspaces, which costs a full-screen composite per frame for no clarity." },
+    "specialWorkspace": { "enabled": false },
+    "borderangle":      { "enabled": false, "_note": "The looping gradient sweep is off. It is continuous per-frame compositor work that reports no interaction, which makes it the first thing to remove in a minimal or reduce-motion mode and a real part of what game mode gains." },
+    "layers":           { "enabled": true, "duration_ms": 120, "curve": "decelerate", "style": "fade" },
+    "layersIn":         { "enabled": true, "duration_ms": 120, "curve": "decelerate", "style": "fade" },
+    "layersOut":        { "enabled": true, "duration_ms": 90,  "curve": "accelerate", "style": "fade" },
+    "fade":             { "enabled": true, "duration_ms": 90,  "curve": "standard" },
+    "fadeIn":           { "enabled": true, "duration_ms": 90,  "curve": "standard" },
+    "fadeOut":          { "enabled": true, "duration_ms": 90,  "curve": "accelerate" },
+    "fadeSwitch":       { "enabled": true, "duration_ms": 90,  "curve": "standard" },
+    "fadeShadow":       { "enabled": true, "duration_ms": 90,  "curve": "standard" },
+    "fadeDim":          { "enabled": true, "duration_ms": 90,  "curve": "standard" },
+    "fadeLayers":       { "enabled": true, "duration_ms": 90,  "curve": "decelerate" },
+    "border":           { "enabled": true, "duration_ms": 90,  "curve": "standard", "_note": "Kept, and kept short. The focus border is how a person knows which window has the keyboard, so removing it would trade a motion problem for an orientation problem; 90 ms is a colour change that reads as immediate." }
+  },
+
+  "_note": "No curve in this file overshoots and no spring is declared: every component is inside the [0, 1] unit square, so this preset would also be renderable as CSS if a toolkit surface ever needed the same feel. Enabled durations are 90 or 120 ms, and reduce-motion caps them at tokens.json motion.animation.reduce_motion.max_duration_ms (90), which is what brings the two 120 ms layer fades down to the ceiling -- the cap exists for every preset, and minimal is close enough to it that turning reduce-motion on barely changes anything. Seven events are disabled with an explicit enabled = false rather than being left out of the file: an absent leaf keeps inheriting its parent's animation (windowsIn from windows, specialWorkspace from workspaces), so omitting an entry would not turn anything off. hl.animation returns early on enabled = false after setConfigForNode(leaf, false, 1, \"default\"), which is why a disabled event carries no duration, curve or style."
+}
