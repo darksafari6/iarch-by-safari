@@ -208,7 +208,9 @@
       "description": "Toggle night light schedule",
       "arguments": [],
       "evidence": "src/cli/schema_msg.h:619",
-      "used_by": []
+      "used_by": [
+        "iarch/settings-app: the Features page's night light button, and the Home page's, which is the same verb reached from two places"
+      ]
     },
     {
       "verb": "nightlight-force-toggle",
@@ -381,7 +383,9 @@
       "description": "Disconnect the active network, or reconnect when nothing is connected",
       "arguments": [],
       "evidence": "src/cli/schema_msg.h:601-603",
-      "used_by": []
+      "used_by": [
+        "iarch/settings-app: the Sound page's one networking button, because a person who wants wireless off should not have to choose which of the two radios to turn off first"
+      ]
     },
     {
       "verb": "panel-open",
