@@ -242,6 +242,18 @@
       "evidence": "GNOME/libadwaita@1.7.12:src/adw-breakpoint.h"
     },
     {
+      "name": "Gtk.Orientation",
+      "since": "4.0",
+      "used_for": "an enumeration, not a widget: the scale a 'scale' row draws is horizontal, and GtkScale.new_with_range takes the orientation as its first argument",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkenums.h:374-376 (GTK_ORIENTATION_HORIZONTAL, GTK_ORIENTATION_VERTICAL)"
+    },
+    {
+      "name": "Gtk.SelectionMode",
+      "since": "4.0",
+      "used_for": "an enumeration, not a widget: a flow row selects one tile at a time, because it chooses a value and a setting holds one",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkenums.h:492-496 (GTK_SELECTION_NONE, SINGLE, BROWSE, MULTIPLE)"
+    },
+    {
       "name": "Gtk.FlowBox",
       "since": "3.12",
       "used_for": "the preset grid and the wallpaper grid on the Appearance page",
