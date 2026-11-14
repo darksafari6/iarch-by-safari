@@ -121,7 +121,14 @@ three things and keeps one:
 The compositor and the toolkits get there by different routes, because they can:
 
 * **GTK 4** answers the desktop's own `prefers-reduced-motion` media query, so it
-  follows the system preference even when this project's switch is off. That block is
+  follows the system preference even when this project's switch is off — **from 4.20
+  onwards**, which is where GTK's own property document puts CSS Media Queries. Below
+  that the at-rule is a parse error: `gtkcssprovider.c` documents that parsing errors
+  are never fatal and parsing resumes, so the sheet still loads and the block still
+  does nothing, and a session on GTK 4.10 to 4.18 gets reduce-motion from this
+  project's own switch rather than from the desktop's. That is SET-07 in
+  `docs/UNVERIFIED.md`. The settings application's own sheet does not use the query at
+  all for that reason, and adds an `iarch-reduce-motion` class instead. That block is
   a universal selector rather than a list of controls. It used to name twelve, and
   silently missed `spinbutton`, `.titlebar`, `listview > row` and all three menu-item
   selectors, so a person who asked for less motion still got a fading menu. A list

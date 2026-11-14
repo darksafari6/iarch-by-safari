@@ -630,9 +630,10 @@
       "iarch-glass-hero",
       "iarch-glass-tile",
       "iarch-glass-preview",
-      "iarch-highlight"
+      "iarch-highlight",
+      "iarch-reduce-motion"
     ],
-    "_note": "Every name up to 'indicator' is libadwaita's own. The six iarch-* classes at the end are defined by iarch/settings-app/iarch_settings/style/glass.css and by nothing else; they are listed here so that tests/test_settings_surface.py can prove a class the stylesheet defines is a class the code uses and the other way round."
+    "_note": "Every name up to 'indicator' is libadwaita's own. The seven iarch-* classes at the end are defined by iarch/settings-app/iarch_settings/style/glass.css and by nothing else; they are listed here so that tests/test_settings_surface.py can prove a class the stylesheet defines is a class the code uses and the other way round."
   },
   "named_colors": {
     "evidence": "GNOME/libadwaita@1.7.12:src/stylesheet/_defaults.scss, which is where the @define-color lines live for both the light and the dark variant",
@@ -693,6 +694,7 @@
       "transition-property",
       "transition-duration",
       "transition-timing-function",
+      "transition-delay",
       "transform",
       "caret-color",
       "-gtk-icon-size",
@@ -828,6 +830,11 @@
     }
   ],
   "rejected": [
+    {
+      "spelling": "@media (prefers-reduced-motion: reduce) in the application's own CSS",
+      "why": "GTK's own property document puts CSS Media Queries at 'Since GTK 4.20', and the floor this record argues for is GTK 4.10 because that is where GtkFileDialog appears. On 4.10 to 4.18 the at-rule is a parse error: gtkcssprovider.c documents that parsing errors are never fatal and parsing resumes, so the sheet still loads, but the block does nothing and a person who asked their desktop for less motion gets every fade this window has. The lever that works on the floor is a style class the window adds itself, from animation.reduce_motion and from Gtk.Settings:gtk-enable-animations, which the application can read on any supported release. iarch-reduce-motion is that class.",
+      "evidence": "GNOME/gtk@main:docs/reference/gtk/css-properties.md, the Media Queries section ('Since GTK 4.20 CSS Media Queries are supported'), and GNOME/gtk@4.10.0:gtk/gtkcssprovider.c on the GtkCssProvider::parsing-error signal ('Parsing errors are never fatal, so the parsing will resume after the error')"
+    },
     {
       "spelling": "Adw.AboutDialog.add_other_app(appid, name, summary)",
       "why": "It is marked ADW_AVAILABLE_IN_1_7 while every other call in this record is 1.5, and the floor this record argues for is libadwaita 1.6 because that is what Fedora 41 ships. Using it would make the About dialog the one place the application fails to start on a supported distribution, for a row that adds nothing the acknowledgement section does not.",

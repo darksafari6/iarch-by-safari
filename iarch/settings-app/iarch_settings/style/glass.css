@@ -9,8 +9,8 @@
 
    What this file is for, and what it deliberately is not:
 
-   * It defines exactly six style classes, all of them prefixed `iarch-`, and they
-     are the six data/design/adwaita.json lists as project-owned. Every other class
+   * It defines exactly seven style classes, all of them prefixed `iarch-`, and they
+     are the seven data/design/adwaita.json lists as project-owned. Every other class
      in the application is libadwaita's own and is styled by libadwaita or by the
      session sheet; restyling `card` or `boxed-list` here would change a widget the
      application does not own, in a way that survives a change of intensity.
@@ -147,17 +147,28 @@
 }
 
 /* ---- reduce motion ---------------------------------------------------------
-   GTK 4 parses @media (GTK 3 does not, and this sheet is GTK 4 only because the
-   application is). Zeroing the durations here is what makes the tiles answer the
-   desktop's own reduce-motion preference even when this project's
-   animation.reduce_motion is off: the two switches are separate, and a person who
-   asked their desktop for no motion gets no motion from this window regardless of
-   what the settings file says. docs/MOTION.md records the same rule for the
-   session sheet. */
-@media (prefers-reduced-motion: reduce) {
-  .iarch-glass-card,
-  .iarch-glass-tile {
-    transition-duration: 0ms;
-    transition-delay: 0ms;
-  }
+   This is a class, not an @media query, and the reason is a version number.
+   GTK's own property document puts CSS Media Queries at "Since GTK 4.20", while
+   the floor this application argues for is GTK 4.10, because that is where
+   GtkFileDialog appears (data/design/adwaita.json:minimum_versions.gtk). On 4.10
+   to 4.18 an @media block is a parse error, and gtkcssprovider.c documents that
+   parsing errors are never fatal and parsing resumes -- so the sheet would still
+   load, the block would still do nothing, and a person who asked their desktop
+   for less motion would get every fade this window has. A rejection with that
+   evidence is recorded in data/design/adwaita.json:rejected.
+
+   The window adds this class itself, from two readings rather than one:
+   animation.reduce_motion in ~/.config/iarch/settings.json, and
+   Gtk.Settings:gtk-enable-animations, which is the desktop's own preference and
+   is readable on every supported release. The two switches stay separate, so a
+   person who asked their desktop for no motion gets no motion from this window
+   regardless of what the settings file says. docs/MOTION.md records the same rule
+   for the session sheet, which is where an @media query is still used and still
+   carries that version caveat. */
+.iarch-reduce-motion .iarch-glass-card,
+.iarch-reduce-motion .iarch-glass-tile,
+.iarch-reduce-motion .iarch-glass-hero,
+.iarch-reduce-motion .iarch-glass-preview {
+  transition-duration: 0ms;
+  transition-delay: 0ms;
 }

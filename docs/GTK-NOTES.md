@@ -56,7 +56,7 @@ selector source; the GTK 3 Adwaita theme uses it 60 times.
 | :--- | :--- | :--- |
 | `backdrop-filter`, `filter` | yes, so a popover can blur what is behind it | **absent**; `gtkcssfiltervalue.c` does not exist at this tag |
 | `transform` | yes; a pressed button sinks by 2% | absent; a pressed button gets a darker fill |
-| `@media` | yes, so the sheet answers `prefers-reduced-motion` | absent, so it cannot |
+| `@media` | yes at 4.24.1 — and only from **4.20**, per GTK's own property document, so a session on 4.10 to 4.18 parses it as an error and skips the block | absent, so it cannot |
 | focus ring | `:focus-visible` | `:focus` |
 | hover / disabled | `:hover`, `:disabled` | both, plus the older `:prelight`, `:insensitive` |
 | menus | `popover`, `modelbutton` | `menu`, `menuitem`, `toolbar`, `toolbutton` |
