@@ -380,8 +380,10 @@ never touch `~/.config`, never call a package manager and never start a session.
 | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Current. This file |
 | [BRANDING.md](BRANDING.md) | Current. Naming and credit policy |
+| [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) | Current. Tokens, roles, the four intensities, the seven glass classes, and the toolkit contract |
 | [MOTION.md](MOTION.md) | Current. Animation presets, hover/press/focus, reduce motion, and the QA walk-through |
 | [ROADMAP.md](ROADMAP.md) | Current. The six-part glass plan |
+| [SETTINGS-APP.md](SETTINGS-APP.md) | Current. The settings window: its five layers, the rules each one enforces, and how to start it |
 | [UNVERIFIED.md](UNVERIFIED.md) | Current. Open verification items |
 | [glass-experience.md](glass-experience.md) | Current. Glass profile and recovery |
 | [V4-SESSION.md](../legacy/docs/V4-SESSION.md), [V4-INSTALL-NOTES.md](../legacy/docs/V4-INSTALL-NOTES.md) | Historical. Legacy isolated session |
