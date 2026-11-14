@@ -519,6 +519,30 @@ def _config_home(raw: str) -> Path:
     return home
 
 
+def planned_paths(preset: Optional[str] = None, intensity: Optional[str] = None, *,
+                  config_home: Optional[Path] = None, env: Optional[Dict[str, str]] = None,
+                  reduce_motion: str = "auto") -> List[Path]:
+    """Every file ``apply`` would write, without writing any of them.
+
+    The settings application needs this list before it runs ``apply``, because the
+    apply pipeline backs up every file a change touches and reads each one back
+    afterwards: a change that could not name its own files is a change with no
+    restore point. Asking the tool is the only way the list can be right, since it is
+    the tool that decides which surfaces a preset reaches -- a copy of it here would
+    be a second opinion that drifts the first time a surface is added.
+
+    Resolution is the same one ``apply`` does (command line, then the user's
+    settings, then the preset's own default, then the tokens'), so the list is the
+    one the run that follows will produce.
+    """
+    environ = dict(os.environ if env is None else env)
+    home = Path(config_home) if config_home else _config_home(str(Path.home() / ".config"))
+    tokens, resolved, _colour, resolved_intensity = _resolve(preset, intensity, environ)
+    reduced, _from = _resolve_reduce_motion(reduce_motion, environ)
+    return [path for path, _body, _rendered
+            in _plan(tokens, resolved, resolved_intensity, home, reduce_motion=reduced)]
+
+
 def cmd_apply(args: argparse.Namespace, env: Dict[str, str]) -> int:
     config_home = _config_home(args.config_home)
     # Fail before touching the desktop. A settings file nobody can parse is

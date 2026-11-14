@@ -176,6 +176,40 @@ def bool_value(value: Any) -> str:
     return "1" if value else "0"
 
 
+#: Which ``fonts.*`` setting becomes which GtkSettings key. Written down as a table
+#: rather than left implicit in :func:`values_from_settings` because three callers
+#: need it and only one of them is the projection: the Fonts page needs it to say
+#: what a row writes, :mod:`iarch_settings.services.control` needs it to check one
+#: value before building a change, and a test needs it to assert that every key in
+#: the table is one ``data/design/gtk-settings.json`` says is writable.
+#:
+#: ``ui_family`` and ``size_pt`` are both absent on purpose: they are the two halves
+#: of the single ``gtk-font-name`` string, so neither maps to a key on its own and
+#: :func:`values_from_settings` builds the pair.
+KEY_BY_SETTING: Dict[str, str] = {
+    "antialias": "gtk-xft-antialias",
+    "hinting": "gtk-xft-hinting",
+    "hint_style": "gtk-xft-hintstyle",
+    "subpixel": "gtk-xft-rgba",
+    "icon_theme": "gtk-icon-theme-name",
+    "cursor_theme": "gtk-cursor-theme-name",
+    "cursor_size": "gtk-cursor-theme-size",
+}
+
+#: The two halves of ``gtk-font-name``, which is one string of the form "Family Size".
+FONT_NAME_SETTINGS = ("ui_family", "size_pt")
+
+
+def key_for_setting(setting: str) -> str:
+    """The GtkSettings key a ``fonts.*`` setting becomes, or ``""``.
+
+    ``""`` is the answer for ``ui_family`` and ``size_pt``, and for anything that is
+    not a fonts setting at all: the caller then knows there is no single key to check
+    a value against, which is not the same as knowing the value is fine.
+    """
+    return KEY_BY_SETTING.get(str(setting).rpartition(".")[2], "")
+
+
 def values_from_settings(fonts: Mapping[str, Any],
                          colour_mode: str = "dark",
                          root: Optional[Path] = None) -> Dict[str, str]:

@@ -268,6 +268,36 @@ def apply_theme(preset_id: str, intensity: Optional[str] = None, *,
     return runner.python_tool(paths.cli_module_path(THEME_TOOL), argv)
 
 
+def apply_targets(preset_id: Optional[str] = None, intensity: Optional[str] = None, *,
+                  reduce_motion: str = "auto", config_home: Optional[Path] = None,
+                  env: Optional[Mapping[str, str]] = None,
+                  root: Optional[Path] = None) -> List[Path]:
+    """Every file ``iarch-theme apply`` would write, asked of the tool itself.
+
+    Read in-process rather than through a ``--dry-run`` whose stdout would have to be
+    parsed: the list is what the apply pipeline backs up and reads back, so it has to
+    be the tool's own answer and not a transcription of a sentence. ``root`` is
+    accepted for symmetry with the rest of this module and passed to
+    :func:`iarch_settings.paths.add_repo_to_path`, which is what makes the sibling
+    importable at all.
+
+    An empty list is a real answer -- it means the tool could not be asked, because
+    the checkout has no ``theme.py`` -- and the caller treats it as "no targets to
+    back up" rather than as a failure, the same three-way habit the runner has.
+    """
+    paths.add_repo_to_path(root)
+    try:
+        from iarch.cli import theme as theme_tool  # noqa: PLC0415
+    except ImportError:
+        return []
+    try:
+        return [Path(item) for item in theme_tool.planned_paths(
+            preset_id, intensity, config_home=config_home,
+            env=dict(env) if env else None, reduce_motion=reduce_motion)]
+    except Exception:  # noqa: BLE001 - an unaskable tool is an empty list, not a crash
+        return []
+
+
 def current_theme(config_home: Optional[Path] = None) -> runner.Outcome:
     """``iarch-theme current``: what apply would use, without applying anything."""
     argv = ["current"] + (["--config-home", str(config_home)] if config_home else [])

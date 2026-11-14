@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -754,13 +755,27 @@ def check_values(values: Mapping[str, Any], root: Optional[Path] = None) -> List
     if problems:
         return problems
 
+    exec_value = values.get("Exec")
+    if isinstance(exec_value, (list, tuple)):
+        problems.extend(check_command([str(word) for word in exec_value], root))
+    elif isinstance(exec_value, str):
+        problems.extend(check_command_text(exec_value, root))
+    else:
+        problems.append("an entry without Exec is skipped by the session, so it would "
+                        "never start")
+
     for key, value in values.items():
+        if key == "Exec":
+            continue  # checked above, where the argument rules live
         text = "" if value is None else str(value)
         if "\n" in text or "\r" in text:
             problems.append(f"{key} contains a line break")
-        if "\\" in text or '"' in text:
-            problems.append(f"{key} contains a character that would need an escape the "
-                            f"session does not accept")
+        if "\\" in text:
+            # A backslash is the one character that can cost the whole file: the parser
+            # accepts six escapes and treats any other one as a hard error, after which
+            # the file is read as hidden and still masks a system entry of its name.
+            problems.append(f"{key} contains a backslash, and the only escapes the session "
+                            f"accepts are \\s \\n \\t \\r \\\\ and \\;")
         row = table[key]
         if row.get("type") == "boolean" and bool_value(text) is None:
             problems.append(f"{key}={text} is not a boolean the session accepts; use "
@@ -768,9 +783,6 @@ def check_values(values: Mapping[str, Any], root: Optional[Path] = None) -> List
         choices = row.get("values")
         if choices and text not in choices:
             problems.append(f"{key}={text} is not one of {', '.join(choices)}")
-    if "Exec" not in values:
-        problems.append("an entry without Exec is skipped by the session, so it would "
-                        "never start")
     return problems
 
 
@@ -1009,6 +1021,171 @@ def remove(entry: Entry, *, env: Optional[Mapping[str, str]] = None,
     backup = configstore.backup_of(entry.path, env)
     entry.path.unlink()
     return backup
+
+
+# ------------------------------------------------- the settings.json projection
+
+#: ``data/schemas/settings.schema.json`` restricts an entry's name to characters
+#: that are safe in a file name on every filesystem this project supports, so the
+#: stem needs no slug and no escaping: the name in the file is the name the user
+#: typed, and a person looking for it in ~/.config/autostart finds it.
+SETTINGS_NAME_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+
+SETTINGS_ENTRY_KEYS = ("name", "command", "enabled", "comment")
+
+
+def entry_file_name(name: str, root: Optional[Path] = None) -> str:
+    """The file a settings entry becomes: ``iarch-<name>.desktop``."""
+    return f"{ownership_prefix(root)}{name}{SUFFIX}"
+
+
+def check_entry(entry: Mapping[str, Any], root: Optional[Path] = None) -> List[str]:
+    """Every reason one ``startup.autostart`` entry may not be projected.
+
+    The list is checked before any file is written, so an invalid entry costs a
+    refusal and not a half-written directory: :func:`project` answers FAILED without
+    touching anything, which is the only way the apply pipeline's rollback has
+    nothing to undo.
+    """
+    problems: List[str] = []
+    if not isinstance(entry, Mapping):
+        return ["a startup entry is an object with a name and a command"]
+    name = entry.get("name")
+    if not isinstance(name, str) or not re.fullmatch(SETTINGS_NAME_PATTERN, name):
+        problems.append(f"{name!r} is not a name this project can make a file out of: "
+                        f"it starts with a letter or a digit and holds at most 64 "
+                        f"letters, digits, dots, underscores and dashes")
+    command = entry.get("command")
+    if not isinstance(command, str) or not command.strip():
+        problems.append("a startup entry needs a command")
+    else:
+        problems.extend(check_command_text(command, root))
+    enabled = entry.get("enabled", True)
+    if not isinstance(enabled, bool):
+        problems.append(f"enabled={enabled!r} is not true or false")
+    comment = entry.get("comment", "")
+    if not isinstance(comment, str):
+        problems.append(f"comment={comment!r} is not text")
+    elif "\n" in comment or "\r" in comment:
+        problems.append("a comment cannot contain a line break")
+    unknown = sorted(set(entry) - set(SETTINGS_ENTRY_KEYS))
+    if unknown:
+        problems.append(f"{', '.join(unknown)} is not a key a startup entry has")
+    return problems
+
+
+def check_command_text(text: str, root: Optional[Path] = None) -> List[str]:
+    """Check an ``Exec`` line as text, which is how settings.json stores one.
+
+    The line is split the way the session splits it and each argument is then
+    checked, so a command that would run is a command that can be written. One check
+    belongs to the file rather than to the arguments: a backslash anywhere in the
+    line, because the file parser accepts six escapes and any other one is a hard
+    error that makes the session drop the whole file -- and still let its name mask a
+    system entry of the same name.
+    """
+    if "\\" in text:
+        return ["a startup command cannot contain a backslash: the session accepts only "
+                "the escapes \\s \\n \\t \\r \\\\ and \\;, and any other one makes it drop "
+                "the whole file"]
+    try:
+        words = shlex.split(text, posix=True, comments=False)
+    except ValueError as exc:
+        return [f"the command cannot be read as a quoted argument list: {exc}"]
+    return check_command(words, root)
+
+
+def entry_values(entry: Mapping[str, Any]) -> Dict[str, Any]:
+    """One settings entry as the desktop-entry values to write."""
+    values: Dict[str, Any] = {
+        "Name": str(entry.get("name", "")),
+        "Type": "Application",
+        "Exec": str(entry.get("command", "")),
+        # enabled is optional and means true, so an entry written before the key
+        # existed still starts: a default of false would silently switch off every
+        # program somebody had added by hand.
+        "Hidden": not bool(entry.get("enabled", True)),
+    }
+    comment = str(entry.get("comment", "")).strip()
+    if comment:
+        values["Comment"] = comment
+    return values
+
+
+def projection_problems(entries: Sequence[Any],
+                        root: Optional[Path] = None) -> List[str]:
+    """Every way a settings list cannot be projected, as sentences.
+
+    The same pass :func:`project` runs before it writes anything, published on its own
+    so a caller can refuse *before* building a change rather than after: an entry with
+    no command is a mistake somebody made in a row, and the place to say so is the
+    dialog that was about to be confirmed, not the report of a change that has already
+    backed up three files.
+    """
+    problems: List[str] = []
+    for index, entry in enumerate(entries, start=1):
+        if not isinstance(entry, Mapping):
+            problems.append(f"entry {index}: a startup entry is an object with a name "
+                            f"and a command")
+            continue
+        for problem in check_entry(entry, root):
+            problems.append(f"entry {index}: {problem}")
+    names = [str(entry.get("name")) for entry in entries if isinstance(entry, Mapping)]
+    for name in sorted({name for name in names if names.count(name) > 1}):
+        problems.append(f"two entries are both named {name}, and one file cannot be both")
+    return problems
+
+
+def project(entries: Sequence[Mapping[str, Any]], *, config_home: Optional[Path] = None,
+            env: Optional[Mapping[str, str]] = None,
+            root: Optional[Path] = None) -> runner.Outcome:
+    """Make ``~/.config/autostart`` match a settings list. Returns an outcome.
+
+    This is the callable an :class:`iarch_settings.services.apply.Change` carries:
+    the settings document is the source of truth for the entries this project owns,
+    and projecting it is what turns a list of rows into files a session reads. Every
+    entry is checked first, then every file is written, then any owned file the list
+    no longer names is backed up and removed -- so a program the user deleted from
+    the page stops starting, and a file this project wrote is never left behind.
+
+    Files this project does not own are not touched, listed or removed, whatever the
+    settings document says: the ownership rule in the record is the reason the
+    projection can be run twice without eating somebody else's entry.
+    """
+    argv = ["iarch-settings", "autostart", "project", f"{len(entries)} entries"]
+    rows = [dict(entry) if isinstance(entry, Mapping) else entry for entry in entries]
+
+    problems = projection_problems(rows, root)
+    if problems:
+        return runner.Outcome(argv, runner.FAILED, reason="; ".join(problems[:6]))
+
+    target = directory(config_home, env)
+    lines: List[str] = []
+    wanted: Dict[str, Path] = {}
+    try:
+        for entry in rows:
+            name = entry_file_name(str(entry["name"]), root)
+            path = target / name
+            wanted[name] = path
+            existed = path.is_file()
+            write(path, entry_values(entry), root=root, env=env)
+            lines.append(f"{'updated' if existed else 'wrote'} {name}"
+                         + ("" if entry.get("enabled", True) else " (Hidden=true)"))
+
+        prefix = ownership_prefix(root)
+        for path in sorted(target.iterdir(), key=lambda item: item.name) if target.is_dir() else []:
+            if not path.is_file() or not path.name.startswith(prefix):
+                continue
+            if path.name in wanted:
+                continue
+            entry = read_entry(path, root=root)
+            backup = remove(entry, env=env, root=root)
+            lines.append(f"removed {path.name}"
+                         + (f" (kept as {backup.name})" if backup else ""))
+    except (AutostartError, OSError) as exc:
+        return runner.Outcome(argv, runner.FAILED, stdout="\n".join(lines),
+                              reason=str(exc))
+    return runner.Outcome(argv, runner.OK, stdout="\n".join(lines) or "nothing to write")
 
 
 # ------------------------------------------------------------------ activation
