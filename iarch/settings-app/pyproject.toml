@@ -1,0 +1,63 @@
+# Copyright (C) 2026 Safari — GPL-3.0-or-later
+#
+# Packaging metadata for the settings application, and the only pyproject.toml in this
+# repository. Nothing else here is packaged: the CLI tools under iarch/cli are run as
+# `python3 iarch/cli/<tool>.py` and the session configuration is rendered into ~/.config
+# by those tools, so neither is an installable distribution and neither gets one.
+#
+# This file exists because the window is the one component a person starts by name rather
+# than by path, and a console script is what puts that name on PATH. The launcher in
+# scripts/iarch-settings.sh is the same entry point reached without installing anything:
+# both end at iarch_settings.widgets.app.main, and
+# tests/test_settings_packaging.py asserts the two agree about the name, so an installed
+# `iarch-settings` and a repository-local one cannot become different programs.
+#
+# The version below is a copy of the VERSION file at the repository root, because
+# setuptools will not read a dynamic version from a path outside the project directory and
+# the root is two levels up from here. The same test asserts the two agree, so the copy
+# cannot drift unnoticed -- which is the honest alternative to a number nobody checks.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iarch-settings"
+version = "0.4.0"
+description = "Glass settings window for the iArch by Safari Hyprland session"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Safari" }]
+keywords = ["hyprland", "settings", "gtk4", "libadwaita", "wayland"]
+
+# No dependency is listed, and that is not an omission. Everything this package imports is
+# either in the standard library or is PyGObject, which is not installable from an index:
+# it is python-gobject on Arch and python3-gobject on Fedora, built against the
+# distribution's own GTK 4 and libadwaita, and a wheel of it would be a binding for a
+# toolkit version this project did not choose. iarch_settings.gtkenv reports which typelib
+# is missing and which package provides it, which is the answer a dependency line cannot
+# give. data/design/adwaita.json:minimum_versions records the toolkit floor (GTK 4.10,
+# libadwaita 1.6) and docs/UNVERIFIED.md SET-06 records that the binding itself is not
+# pinned, and why not.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/darksafari6/iarch-by-safari"
+Repository = "https://github.com/darksafari6/iarch-by-safari"
+Issues = "https://github.com/darksafari6/iarch-by-safari/issues"
+
+[project.scripts]
+iarch-settings = "iarch_settings.widgets.app:main"
+
+[tool.setuptools]
+# The package is this directory's iarch_settings and nothing else: iarch/lib and iarch/cli
+# are part of the repository, not part of this distribution.
+packages = ["iarch_settings", "iarch_settings.pages", "iarch_settings.services",
+            "iarch_settings.widgets"]
+
+[tool.setuptools.package-data]
+# glass.css is loaded from the installed package by paths.style_file(), so it has to travel
+# with it. A wheel without the stylesheet would draw an unstyled window and report nothing,
+# because GTK's CSS parsing errors are never fatal -- the sheet simply would not be there.
+iarch_settings = ["style/*.css"]

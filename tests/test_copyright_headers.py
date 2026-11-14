@@ -89,6 +89,7 @@ SETTINGS_TEST_FILES = (
     "tests/test_settings_gtk_keys.py",
     "tests/test_settings_ipc.py",
     "tests/test_settings_links.py",
+    "tests/test_settings_packaging.py",
     "tests/test_settings_pages.py",
     "tests/test_settings_startup.py",
     "tests/test_settings_surface.py",
