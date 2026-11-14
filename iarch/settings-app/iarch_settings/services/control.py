@@ -721,11 +721,18 @@ def _monitor_list(document: Mapping[str, Any], dotted: str, value: Any) -> List[
         raise ControlError(
             "a monitor row names one monitor; '*' is how a plan points at the shape "
             "of an entry, not how a change names the one to write")
-    if not index.isdigit() or int(index) >= len(entries):
-        # A new monitor: the row's value is the entry itself.
-        entry = dict(value) if isinstance(value, Mapping) else {"output": str(value)}
-        entries.append(entry)
-        return entries
+    if not index.isdigit():
+        raise ControlError(f"{dotted} names no monitor: {index!r} is not a position")
+    count = len(entries)
+    if int(index) >= count:
+        if len(parts) == 3 and isinstance(value, Mapping):
+            # A new monitor, added whole: the row's value is the entry itself.
+            entries.append(dict(value))
+            return entries
+        raise ControlError(
+            f"{dotted} names monitor {index}, and the list has {count}: a new monitor is "
+            f"added whole rather than field by field, because the list is validated as a "
+            f"list and one field of a new entry is a half entry that would be refused")
     entry = dict(entries[int(index)])
     if len(parts) == 3:
         entry = dict(value) if isinstance(value, Mapping) else entry
@@ -804,9 +811,17 @@ def _opacity_list(document: Mapping[str, Any], dotted: str, value: Any) -> List[
     index = parts[2]
     if index == "*":
         raise ControlError("an opacity row names one window class, not '*'")
-    if not index.isdigit() or int(index) >= len(entries):
-        entries.append(dict(value) if isinstance(value, Mapping) else {"class": str(value)})
-        return entries
+    if not index.isdigit():
+        raise ControlError(f"{dotted} names no window rule: {index!r} is not a position")
+    count = len(entries)
+    if int(index) >= count:
+        if len(parts) == 3 and isinstance(value, Mapping):
+            entries.append(dict(value))
+            return entries
+        raise ControlError(
+            f"{dotted} names rule {index}, and the list has {count}: a new rule is added "
+            f"whole rather than field by field, because a class without an opacity is a "
+            f"rule gen_glass_lua.py refuses to render")
     entry = dict(entries[int(index)])
     if len(parts) == 3:
         entry = dict(value) if isinstance(value, Mapping) else entry
@@ -834,9 +849,17 @@ def _autostart_list(document: Mapping[str, Any], dotted: str, value: Any) -> Lis
     index = parts[2]
     if index == "*":
         raise ControlError("a startup row names one entry, not '*'")
-    if not index.isdigit() or int(index) >= len(entries):
-        entries.append(dict(value) if isinstance(value, Mapping) else {"command": str(value)})
-        return entries
+    if not index.isdigit():
+        raise ControlError(f"{dotted} names no entry: {index!r} is not a position")
+    count = len(entries)
+    if int(index) >= count:
+        if len(parts) == 3 and isinstance(value, Mapping):
+            entries.append(dict(value))
+            return entries
+        raise ControlError(
+            f"{dotted} names entry {index}, and the list has {count}: a new entry is added "
+            f"whole rather than field by field, because the list is validated as a list and "
+            f"a name without a command is an entry the session would never start")
     entry = dict(entries[int(index)])
     if len(parts) == 3:
         entry = dict(value) if isinstance(value, Mapping) else entry
