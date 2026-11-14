@@ -92,9 +92,16 @@ jobs:
           set -uo pipefail
           # A failure in this step otherwise says "Process completed with exit code 1" on the
           # run page, and the names of the tests that failed live only in the raw log. Write
-          # them, and the assertion each one died on, into the job summary, so the run page
-          # answers the only question anyone has at that point: which test, and what did it
-          # say. The full output still goes to the log unchanged.
+          # them, and the assertion each one died on, into the job summary and into the
+          # annotations, so the run page and the pull request's own checks list answer the
+          # only question anyone has at that point: which test, and what did it say. The full
+          # output still goes to the log unchanged.
+          #
+          # errexit has to be off for the run itself. The runner starts this block with -e, and
+          # with it on the step ends at the failing pipeline -- before any of the reporting
+          # below can run, which is how the first version of this step managed to add a
+          # summary nobody ever saw. The exit status at the bottom is the step's verdict.
+          set +e
           output=$(mktemp)
           python -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tee "$output"
           status=${PIPESTATUS[0]}
