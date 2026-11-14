@@ -105,6 +105,97 @@ def defaults_path(env: Optional[Mapping[str, str]] = None,
     return paths.data_file(f"{NAME}.default.json", root)
 
 
+BACKUP_SUFFIX = ".bak"
+"""What :func:`iarch.lib.configstore.backup_of` names a backup."""
+
+BACKUP_LIMIT = 5
+"""How many backups per file the shared library keeps, so the page can say so."""
+
+
+def backup_prefix(env: Optional[Mapping[str, str]] = None) -> str:
+    """The name prefix this settings file's backups have.
+
+    ``configstore.backup_of`` flattens the path it copies -- ``/home/x/.config/iarch/
+    settings.json`` becomes ``home_x_.config_iarch_settings.json`` -- and the flattening
+    cannot be inverted, because an underscore in a name and an underscore that was a
+    separator are the same character afterwards. So a backup is recognised by the prefix
+    of the file it came from rather than by having its path recovered from its name, and
+    :func:`restore` only ever restores onto the path it computed itself.
+    """
+    return str(user_path(env)).strip("/").replace("/", "_") + "."
+
+
+def backups(env: Optional[Mapping[str, str]] = None) -> List[Path]:
+    """This settings file's backups, newest first.
+
+    Name order is age order, because the shared library puts a sortable timestamp at the
+    front of every backup name and then a nanosecond and a pid, so two backups written
+    inside the same clock second still sort correctly.
+    """
+    directory = paths.backup_dir(env)
+    prefix = backup_prefix(env)
+    try:
+        found = [path for path in directory.iterdir()
+                 if path.name.startswith(prefix) and path.name.endswith(BACKUP_SUFFIX)]
+    except OSError:
+        return []
+    return sorted(found, key=lambda path: path.name, reverse=True)
+
+
+def restore(backup: Path, env: Optional[Mapping[str, str]] = None) -> Tuple[bool, str]:
+    """Put one backup back over the settings file, and say what happened.
+
+    Four refusals, each checked before anything is written:
+
+    * the path has to be a file inside the backup directory -- nothing outside it is
+      opened for writing, which is the same rule the autostart projection follows;
+    * its name has to carry this settings file's prefix, so a backup of some other file
+      cannot be restored over the settings;
+    * it has to parse as JSON and carry a version this application reads, because
+      restoring a document the loader would quarantine is a way of turning one bad file
+      into two;
+    * and the current file is copied aside first, so a restore is itself reversible: a
+      person who restores the wrong backup has not lost the state they had.
+    """
+    paths.add_repo_to_path()
+    from iarch.lib import configstore  # noqa: PLC0415
+
+    backup = Path(backup)
+    directory = paths.backup_dir(env)
+    try:
+        inside = backup.resolve().parent == directory.resolve()
+    except OSError:
+        inside = False
+    if not inside:
+        return False, (f"{backup} is not in {directory}, and nothing outside the backup "
+                       f"directory is restored from")
+    if not backup.is_file():
+        return False, f"{backup.name} is not a file, so there is nothing to restore"
+    if not backup.name.startswith(backup_prefix(env)):
+        return False, (f"{backup.name} is not a backup of {user_path(env)}, so it is not "
+                       f"restored over it")
+    try:
+        payload = json.loads(backup.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return False, f"{backup.name} does not parse as JSON ({exc}), so it is not restored"
+    if not isinstance(payload, dict):
+        return False, f"{backup.name} holds no document, so it is not restored"
+    version = payload.get("version")
+    if version not in ACCEPTED_VERSIONS:
+        return False, (f"{backup.name} is version {version!r}, and this application reads "
+                       f"{', '.join(str(item) for item in ACCEPTED_VERSIONS)}")
+
+    target = user_path(env)
+    if target.is_file():
+        if configstore.backup_of(target, env) is None:
+            return False, (f"{target} exists but could not be copied aside, so the restore "
+                           f"is refused: there would be no way back")
+    configstore.atomic_write(target, json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+    os.chmod(target, SETTINGS_MODE)
+    return True, (f"{backup.name} is now {target.name}, and the file it replaced was "
+                  f"copied aside first")
+
+
 def _timestamp() -> str:
     """A sortable, filesystem-safe timestamp, matching configstore's backup names."""
     return time.strftime("%Y%m%dT%H%M%S", time.gmtime())
