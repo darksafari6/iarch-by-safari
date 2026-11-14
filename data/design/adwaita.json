@@ -1,0 +1,864 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "name": "iarch-settings-app",
+  "description": "The GTK 4, libadwaita, GLib and icon-theme surface the settings application in iarch/settings-app/ is allowed to use. A widget, a style class, a named colour, a CSS property, a pseudo-class, an icon name or an API call that is not listed here is not used, and tests/test_settings_surface.py fails the build if the application code names one.",
+  "_note": "This record exists because a GTK application cannot be run in this repository's CI: there is no display, no GTK and no libadwaita in the sandbox, so a widget that does not exist would not fail here, it would fail on somebody's desktop. Everything below was read out of upstream source at a pinned ref rather than out of memory or out of a search result, and the ref each block cites is the one it was read from. What cannot be read out of source — that a window really renders translucent, that a page really loads without an exception, that a toast really slides — is recorded in docs/UNVERIFIED.md as SET-01 to SET-06 instead of being claimed.",
+  "verified_against": {
+    "gtk": {
+      "project": "GNOME/gtk",
+      "refs": {
+        "4.10.0": "the release this project's floor is argued from: gtk/gtkfiledialog.h is absent at 4.8.0 and present at 4.10.0, and gtk/gtkcssprovider.h at this ref is the older of the two signatures the loader choice below has to satisfy",
+        "main": "docs/reference/gtk/css-properties.md (the property table) and gtk/gtkcssselector.c (the pseudo-class names)"
+      }
+    },
+    "libadwaita": {
+      "project": "GNOME/libadwaita",
+      "ref": "1.7.12",
+      "what": "src/*.h for every widget and function named below, src/meson.build for the list of widgets that exist at this release, and src/stylesheet/*.scss for the style classes and the named colours"
+    },
+    "glib": {
+      "project": "GNOME/glib",
+      "ref": "main",
+      "what": "gio/gappinfo.h:279 for g_app_info_launch_default_for_uri, the only call this project uses to open a link"
+    },
+    "adwaita_icon_theme": {
+      "project": "GNOME/adwaita-icon-theme",
+      "ref": "48.1",
+      "what": "the symbolic icon filenames under symbolic/; an icon name is the filename without .svg"
+    },
+    "introspection_versions": {
+      "gtk": "gtk/meson.build:88 at 4.10.0 sets gtk_api_version = '4.0', used as nsversion for both Gtk and Gdk",
+      "adwaita": "meson.build:19 at 1.7.12 sets apiversion to the major version, which is 1"
+    }
+  },
+  "source": "GNOME/libadwaita at 1.7.12: src/*.h for every widget and function named below, src/meson.build for the list of widgets built at that release, and src/stylesheet/*.scss for the style classes and the @define-color names; GNOME/gtk at 4.10.0 for the widget headers, gtk/gtksettings.c, gtk/gtkcssprovider.h, gtk/gtkfiledialog.h, gtk/gtkwidget.h, gtk/gtkversion.c and gdk/gdkclipboard.h, and at main for docs/reference/gtk/css-properties.md and gtk/gtkcssselector.c; GNOME/glib at main for gio/gappinfo.h; GNOME/adwaita-icon-theme at 48.1 for the symbolic icon filenames",
+  "minimum_versions": {
+    "gtk": {
+      "version": "4.10",
+      "why": "GtkFileDialog, the folder chooser the wallpaper and backup pages use, is the newest GTK API in this record: the header is absent at 4.8.0 and present at 4.10.0. Arch and Fedora both ship well past that.",
+      "evidence": "GNOME/gtk:gtk/gtkfiledialog.h absent at 4.8.0, present at 4.10.0"
+    },
+    "libadwaita": {
+      "version": "1.6",
+      "why": "AdwBanner, the strip the Home page uses for a message that is not an error dialog, is the newest widget in this record. Fedora 41 ships 1.6 and Arch ships past it; nothing here needs 1.7 even though 1.7.12 is the ref the API was read from.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-banner.h and src/meson.build (banner listed among the widgets built at this release)"
+    },
+    "pygobject": {
+      "version": "",
+      "why": "Not pinned. The binding version that can see a GTK 4.10 and libadwaita 1.6 typelib is whatever the distribution ships next to them (python-gobject on Arch, python3-gobject on Fedora), and neither installer in this repository had a version to check when this record was written. TODO(verify) SET-06 in docs/UNVERIFIED.md.",
+      "evidence": ""
+    }
+  },
+  "introspection": [
+    {
+      "namespace": "Gtk",
+      "version": "4.0",
+      "evidence": "GNOME/gtk@4.10.0:meson.build:88"
+    },
+    {
+      "namespace": "Gdk",
+      "version": "4.0",
+      "evidence": "GNOME/gtk@4.10.0:meson.build:88 (the same gtk_api_version is used for the Gdk gir)"
+    },
+    {
+      "namespace": "Adw",
+      "version": "1",
+      "evidence": "GNOME/libadwaita@1.7.12:meson.build:19"
+    },
+    {
+      "namespace": "Gio",
+      "version": "2.0",
+      "evidence": "GNOME/glib: the gio gir has been versioned 2.0 since GLib 2, which is why g_app_info_launch_default_for_uri needs no newer binding than the one that ships with it"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Adw.Application",
+      "since": "1.0",
+      "used_for": "the application object; owns the window, the actions and the style loading",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-application.h"
+    },
+    {
+      "name": "Adw.ApplicationWindow",
+      "since": "1.0",
+      "used_for": "the single window; its default 1100x720 and minimum 760x560 come from here",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-application-window.h"
+    },
+    {
+      "name": "Adw.NavigationSplitView",
+      "since": "1.4",
+      "used_for": "sidebar plus content, collapsing to a single pane below the fold threshold",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-split-view.h"
+    },
+    {
+      "name": "Adw.NavigationView",
+      "since": "1.4",
+      "used_for": "the content pane's page stack, which gives the crossfade and the back gesture",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h"
+    },
+    {
+      "name": "Adw.NavigationPage",
+      "since": "1.4",
+      "used_for": "one wrapped page per sidebar entry",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h"
+    },
+    {
+      "name": "Adw.HeaderBar",
+      "since": "1.0",
+      "used_for": "each page's title bar",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-header-bar.h"
+    },
+    {
+      "name": "Adw.ToolbarView",
+      "since": "1.0",
+      "used_for": "header bar over scrolling content, so the bar raises its background on scroll",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-toolbar-view.h"
+    },
+    {
+      "name": "Adw.ToastOverlay",
+      "since": "1.0",
+      "used_for": "the window's toast host",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-toast-overlay.h"
+    },
+    {
+      "name": "Adw.Toast",
+      "since": "1.0",
+      "used_for": "apply results, rollback notices, copy confirmations",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-toast.h"
+    },
+    {
+      "name": "Adw.PreferencesPage",
+      "since": "1.0",
+      "used_for": "a page's scrollable body",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-preferences-page.h"
+    },
+    {
+      "name": "Adw.PreferencesGroup",
+      "since": "1.0",
+      "used_for": "a card-shaped group of rows with a title and a description",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-preferences-group.h"
+    },
+    {
+      "name": "Adw.PreferencesRow",
+      "since": "1.0",
+      "used_for": "the base row; AdwButtonRow derives from it",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-preferences-row.h"
+    },
+    {
+      "name": "Adw.ActionRow",
+      "since": "1.0",
+      "used_for": "a title, a subtitle, a leading icon and a trailing control",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-action-row.h"
+    },
+    {
+      "name": "Adw.ComboRow",
+      "since": "1.0",
+      "used_for": "preset, intensity, font, icon theme and cursor dropdowns",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-combo-row.h"
+    },
+    {
+      "name": "Adw.SwitchRow",
+      "since": "1.4",
+      "used_for": "every on/off row",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-switch-row.h"
+    },
+    {
+      "name": "Adw.SpinRow",
+      "since": "1.4",
+      "used_for": "numeric rows with a range: timeouts, sizes, seconds",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-spin-row.h"
+    },
+    {
+      "name": "Adw.EntryRow",
+      "since": "1.2",
+      "used_for": "per-app opacity classes, autostart commands, search text in the key recorder",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-entry-row.h"
+    },
+    {
+      "name": "Adw.ButtonRow",
+      "since": "1.4",
+      "used_for": "a row that is one button: copy link, run doctor, export backup",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-button-row.h"
+    },
+    {
+      "name": "Adw.ExpanderRow",
+      "since": "1.0",
+      "used_for": "a row that opens to show its list: per-app opacity, autostart entries",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-expander-row.h"
+    },
+    {
+      "name": "Adw.Banner",
+      "since": "1.6",
+      "used_for": "a persistent, dismissible message that is not an error dialog",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-banner.h"
+    },
+    {
+      "name": "Adw.AlertDialog",
+      "since": "1.5",
+      "used_for": "the Keep changes / Reverting in 15 s dialog and every confirmation",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-alert-dialog.h"
+    },
+    {
+      "name": "Adw.Dialog",
+      "since": "1.5",
+      "used_for": "the base type AdwAboutDialog and AdwAlertDialog both derive from, for present()",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-dialog.h"
+    },
+    {
+      "name": "Adw.AboutDialog",
+      "since": "1.5",
+      "used_for": "the About page's dialog, including the Open-source licenses sub-page",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h"
+    },
+    {
+      "name": "Adw.StatusPage",
+      "since": "1.0",
+      "used_for": "an empty list, an unavailable tool, the Shortcuts placeholder",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-status-page.h"
+    },
+    {
+      "name": "Adw.Avatar",
+      "since": "1.0",
+      "used_for": "the Home page avatar and the Contact page header",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-avatar.h"
+    },
+    {
+      "name": "Adw.Clamp",
+      "since": "1.0",
+      "used_for": "wide content that should not stretch edge to edge",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-clamp.h"
+    },
+    {
+      "name": "Adw.StyleManager",
+      "since": "1.0",
+      "used_for": "light/dark, high contrast and the accent colour the glass CSS is tinted with",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-style-manager.h"
+    },
+    {
+      "name": "Adw.Breakpoint",
+      "since": "1.4",
+      "used_for": "the narrow-window condition that collapses the sidebar",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-breakpoint.h"
+    },
+    {
+      "name": "Gtk.FlowBox",
+      "since": "3.12",
+      "used_for": "the preset grid and the wallpaper grid on the Appearance page",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkflowbox.h"
+    },
+    {
+      "name": "Gtk.FileDialog",
+      "since": "4.10",
+      "used_for": "the wallpaper folder chooser and the backup import chooser",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkfiledialog.h"
+    },
+    {
+      "name": "Gtk.StringList",
+      "since": "4.0",
+      "used_for": "the model behind every AdwComboRow",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkstringlist.h"
+    },
+    {
+      "name": "Gtk.PropertyExpression",
+      "since": "4.0",
+      "used_for": "how an AdwComboRow turns a string item into a label",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkpropertyexpression.h"
+    },
+    {
+      "name": "Gtk.Scale",
+      "since": "3.0",
+      "used_for": "the glass sliders, which need a drag signal and a live preview that a spin row cannot give",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkscale.h"
+    },
+    {
+      "name": "Gtk.LevelBar",
+      "since": "3.6",
+      "used_for": "CPU, RAM and battery on the Home page",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtklevelbar.h"
+    },
+    {
+      "name": "Gtk.CssProvider",
+      "since": "3.0",
+      "used_for": "loading style/glass.css, and the live preview card's per-instance tint",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkcssprovider.h"
+    },
+    {
+      "name": "Gtk.ShortcutController",
+      "since": "4.0",
+      "used_for": "Escape closing a page-local dialog; application-wide keys go through set_accels_for_action instead",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkshortcutcontroller.h"
+    },
+    {
+      "name": "Gtk.EventControllerKey",
+      "since": "3.24",
+      "used_for": "the key recorder widget, which listens to raw key presses",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkeventcontrollerkey.h"
+    },
+    {
+      "name": "Gtk.GestureLongPress",
+      "since": "3.14",
+      "used_for": "the Contact page's long-press-to-copy",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkgesturelongpress.h"
+    }
+  ],
+  "api": [
+    {
+      "call": "adw_navigation_split_view_set_sidebar",
+      "python": "Adw.NavigationSplitView.set_sidebar(page)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-split-view.h"
+    },
+    {
+      "call": "adw_navigation_split_view_set_content",
+      "python": "Adw.NavigationSplitView.set_content(page)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-split-view.h"
+    },
+    {
+      "call": "adw_navigation_split_view_set_min_sidebar_width",
+      "python": "Adw.NavigationSplitView.set_min_sidebar_width(double)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-split-view.h"
+    },
+    {
+      "call": "adw_navigation_split_view_set_max_sidebar_width",
+      "python": "Adw.NavigationSplitView.set_max_sidebar_width(double)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-split-view.h"
+    },
+    {
+      "call": "adw_navigation_split_view_get_collapsed",
+      "python": "Adw.NavigationSplitView.get_collapsed()",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-split-view.h"
+    },
+    {
+      "call": "adw_navigation_split_view_set_show_content",
+      "python": "Adw.NavigationSplitView.set_show_content(bool)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-split-view.h"
+    },
+    {
+      "call": "adw_navigation_view_push",
+      "python": "Adw.NavigationView.push(page)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h"
+    },
+    {
+      "call": "adw_navigation_view_pop_to_tag",
+      "python": "Adw.NavigationView.pop_to_tag(tag)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h"
+    },
+    {
+      "call": "adw_navigation_view_get_visible_page_tag",
+      "python": "Adw.NavigationView.get_visible_page_tag()",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h"
+    },
+    {
+      "call": "adw_toast_overlay_add_toast",
+      "python": "Adw.ToastOverlay.add_toast(toast)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-toast-overlay.h"
+    },
+    {
+      "call": "adw_toast_new",
+      "python": "Adw.Toast.new(title)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-toast.h"
+    },
+    {
+      "call": "adw_toast_set_button_label",
+      "python": "Adw.Toast.set_button_label(label)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-toast.h"
+    },
+    {
+      "call": "adw_toast_set_timeout",
+      "python": "Adw.Toast.set_timeout(seconds)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-toast.h"
+    },
+    {
+      "call": "adw_alert_dialog_new",
+      "python": "Adw.AlertDialog.new(heading, body)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-alert-dialog.h"
+    },
+    {
+      "call": "adw_alert_dialog_add_response",
+      "python": "Adw.AlertDialog.add_response(id, label)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-alert-dialog.h"
+    },
+    {
+      "call": "adw_alert_dialog_set_response_appearance",
+      "python": "Adw.AlertDialog.set_response_appearance(id, Adw.ResponseAppearance.SUGGESTED)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-alert-dialog.h"
+    },
+    {
+      "call": "adw_alert_dialog_set_default_response",
+      "python": "Adw.AlertDialog.set_default_response(id)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-alert-dialog.h"
+    },
+    {
+      "call": "adw_alert_dialog_set_close_response",
+      "python": "Adw.AlertDialog.set_close_response(id)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-alert-dialog.h"
+    },
+    {
+      "call": "adw_alert_dialog_choose",
+      "python": "Adw.AlertDialog.choose(parent, cancellable, callback)",
+      "note": "Asynchronous, and the only way to show an AdwDialog from a widget that is not its parent window's child. The callback receives (dialog, response_id) and the id is read with choose_finish.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-alert-dialog.h:162"
+    },
+    {
+      "call": "adw_about_dialog_new",
+      "python": "Adw.AboutDialog.new()",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:28"
+    },
+    {
+      "call": "adw_about_dialog_add_legal_section",
+      "python": "Adw.AboutDialog.add_legal_section(title, copyright, license_type, license)",
+      "note": "This is the sub-page the credits policy names: About -> Open-source licenses. It is the only place in the application that shows another project's name, and it shows them by reading data/licenses.json, never by hard-coding one. Four arguments, not three, and the copyright comes before the license type: an earlier draft of this record had it as (title, license_type, text), which is the shape GtkAboutDialog's older add_credit_section-style calls suggest and not the shape this function has. The signature was then read out of the header at the pinned ref, which is the only reason the mistake is in this note rather than in a dialog that raises at runtime.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:170-175"
+    },
+    {
+      "call": "adw_about_dialog_set_application_name",
+      "python": "Adw.AboutDialog.set_application_name(name)",
+      "note": "The product name, which branding/product.env owns and tools/iarch_brand.py --check enforces. It is read, never typed here, so the dialog cannot disagree with the rest of the product.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:37-39"
+    },
+    {
+      "call": "adw_about_dialog_set_application_icon",
+      "python": "Adw.AboutDialog.set_application_icon(icon_name)",
+      "note": "Takes an icon name, not a paintable. The application id is used, which is how a themed icon is found; this project ships no icon of its own yet (Part 6), so the dialog falls back to the theme's default rather than to a broken image.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:43-45"
+    },
+    {
+      "call": "adw_about_dialog_set_developer_name",
+      "python": "Adw.AboutDialog.set_developer_name(name)",
+      "note": "The maintainer named in data/licenses.json's product block, which is the same name the Contact page shows.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:49-51"
+    },
+    {
+      "call": "adw_about_dialog_set_version",
+      "python": "Adw.AboutDialog.set_version(version)",
+      "note": "The VERSION file plus the revision, from iarch_settings.version.facts, so the dialog says what is actually checked out rather than what the last release was.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:55-57"
+    },
+    {
+      "call": "adw_about_dialog_set_comments",
+      "python": "Adw.AboutDialog.set_comments(text)",
+      "note": "The one-paragraph description under the name.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:73-75"
+    },
+    {
+      "call": "adw_about_dialog_set_website",
+      "python": "Adw.AboutDialog.set_website(url)",
+      "note": "The portfolio address, from the same three places tests/test_settings_links.py already asserts agree.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:79-81"
+    },
+    {
+      "call": "adw_about_dialog_add_link",
+      "python": "Adw.AboutDialog.add_link(title, url)",
+      "note": "A link below the website: the repository, and the notices document rendered from the same JSON as this dialog's legal sections.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:95-98"
+    },
+    {
+      "call": "adw_about_dialog_set_copyright",
+      "python": "Adw.AboutDialog.set_copyright(text)",
+      "note": "The copyright line from the product's own _copyright header, so the dialog and every source file say the same thing.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:154-156"
+    },
+    {
+      "call": "adw_about_dialog_set_license_type",
+      "python": "Adw.AboutDialog.set_license_type(Gtk.License)",
+      "note": "The product's own license as a GtkLicense member, mapped from the SPDX identifier in data/licenses.json by the `licenses` block of this record. Setting the type rather than the text means GTK supplies the license it already ships, so this project does not carry a copy of the GPL that could drift from the one LICENSE.txt holds.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:160-163"
+    },
+    {
+      "call": "adw_about_dialog_set_license",
+      "python": "Adw.AboutDialog.set_license(text)",
+      "note": "Recorded and not used: it replaces the text GTK derives from set_license_type, and a hand-supplied GPL text is a second copy of a document that already exists in LICENSE.txt.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:166-168"
+    },
+    {
+      "call": "adw_about_dialog_set_translator_credits",
+      "python": "Adw.AboutDialog.set_translator_credits(text)",
+      "note": "The po/ catalogues' Last-Translator lines, so a translation credits itself from its own file instead of from a list somebody has to remember to update.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:138-140"
+    },
+    {
+      "call": "adw_about_dialog_add_credit_section",
+      "python": "Adw.AboutDialog.add_credit_section(name, people)",
+      "note": "A named credit section; `people` is a list of strings.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:142-145"
+    },
+    {
+      "call": "adw_about_dialog_add_acknowledgement_section",
+      "python": "Adw.AboutDialog.add_acknowledgement_section(name, people)",
+      "note": "Where the upstream projects this product is built from are thanked by name. The credits policy allows naming another project here and in the legal sections and nowhere else in the interface.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:147-150"
+    },
+    {
+      "call": "adw_about_dialog_set_debug_info_filename",
+      "python": "Adw.AboutDialog.set_debug_info_filename(name)",
+      "note": "The file name the debug information is saved under when a person copies it into a bug report.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:108-110"
+    },
+    {
+      "call": "adw_about_dialog_set_issue_url",
+      "python": "Adw.AboutDialog.set_issue_url(url)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:91-93"
+    },
+    {
+      "call": "adw_about_dialog_set_debug_info",
+      "python": "Adw.AboutDialog.set_debug_info(text)",
+      "note": "Where the doctor's output goes, so a bug report carries what the machine actually reports.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:102-104"
+    },
+    {
+      "call": "adw_dialog_present",
+      "python": "Adw.Dialog.present(parent_widget)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-dialog.h:117"
+    },
+    {
+      "call": "adw_style_manager_get_default",
+      "python": "Adw.StyleManager.get_default()",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-style-manager.h"
+    },
+    {
+      "call": "adw_style_manager_get_accent_color_rgba",
+      "python": "Adw.StyleManager.get_accent_color_rgba()",
+      "note": "Reads the accent the CSS named colour is already derived from, so the app's glow can follow it instead of pinning a second accent.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-style-manager.h"
+    },
+    {
+      "call": "adw_combo_row_set_model",
+      "python": "Adw.ComboRow.set_model(Gtk.StringList)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-combo-row.h"
+    },
+    {
+      "call": "adw_combo_row_set_expression",
+      "python": "Adw.ComboRow.set_expression(Gtk.PropertyExpression.new(str, None, 'string'))",
+      "note": "Without an expression a StringList model shows a GObject repr instead of the string.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-combo-row.h"
+    },
+    {
+      "call": "adw_spin_row_new_with_range",
+      "python": "Adw.SpinRow.new_with_range(min, max, step)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-spin-row.h"
+    },
+    {
+      "call": "adw_avatar_set_custom_image",
+      "python": "Adw.Avatar.set_custom_image(Gdk.Paintable)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-avatar.h"
+    },
+    {
+      "call": "adw_banner_set_revealed",
+      "python": "Adw.Banner.set_revealed(bool)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-banner.h"
+    },
+    {
+      "call": "gtk_file_dialog_select_folder",
+      "python": "Gtk.FileDialog.select_folder(parent, cancellable, callback)",
+      "note": "Asynchronous only. The callback receives the dialog and the GFile comes from select_folder_finish, which raises GLib.Error when the user cancels.",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkfiledialog.h"
+    },
+    {
+      "call": "gtk_application_set_accels_for_action",
+      "python": "Gtk.Application.set_accels_for_action('app.focus-search', ['<Control>f'])",
+      "note": "An in-application shortcut, not a session keybind: it never reaches data/keybinds.default.json and cannot collide with Super+S or any compositor binding.",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkapplication.h"
+    },
+    {
+      "call": "gtk_css_provider_load_from_file",
+      "python": "Gtk.CssProvider.load_from_file(Gio.File.new_for_path(path))",
+      "note": "Chosen over load_from_data because that call's signature differs between releases: at 4.10 it is (data, length) and at 4.12 and later it is (bytes). load_from_file exists unchanged at both refs, so one call works on every supported GTK.",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkcssprovider.h and the same file at main"
+    },
+    {
+      "call": "gtk_widget_add_css_class",
+      "python": "Gtk.Widget.add_css_class(name)",
+      "note": "GtkStyleContext is deprecated in GTK 4 and this is its replacement, so no style class in this project is applied through a provider on a context.",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkwidget.h"
+    },
+    {
+      "call": "g_app_info_launch_default_for_uri",
+      "python": "Gio.AppInfo.launch_default_for_uri(uri, context=None)",
+      "note": "The only call this project uses to open anything. No link is ever passed to a shell, a browser binary or subprocess: the desktop's own handler resolution decides what opens it.",
+      "evidence": "GNOME/glib@main:gio/gappinfo.h:279"
+    }
+  ],
+  "style_classes": {
+    "evidence": "GNOME/libadwaita@1.7.12:src/stylesheet/*.scss and src/stylesheet/widgets/*.scss; a class listed here appears as a selector in one of those files",
+    "names": [
+      "card",
+      "boxed-list",
+      "boxed-list-separate",
+      "pill",
+      "flat",
+      "raised",
+      "suggested-action",
+      "destructive-action",
+      "accent",
+      "circular",
+      "linked",
+      "osd",
+      "opaque",
+      "navigation-sidebar",
+      "view",
+      "frame",
+      "title-1",
+      "title-2",
+      "title-3",
+      "title-4",
+      "heading",
+      "body",
+      "caption",
+      "caption-heading",
+      "numeric",
+      "monospace",
+      "dim-label",
+      "needs-attention",
+      "toolbar",
+      "background",
+      "activatable",
+      "rich-list",
+      "compact",
+      "narrow",
+      "sidebar-pane",
+      "content-pane",
+      "title",
+      "subtitle",
+      "header",
+      "image-button",
+      "text-button",
+      "entry",
+      "spin",
+      "indicator",
+      "iarch-glass-card",
+      "iarch-glass-sidebar",
+      "iarch-glass-hero",
+      "iarch-glass-tile",
+      "iarch-glass-preview",
+      "iarch-highlight",
+      "iarch-reduce-motion"
+    ],
+    "_note": "Every name up to 'indicator' is libadwaita's own. The seven iarch-* classes at the end are defined by iarch/settings-app/iarch_settings/style/glass.css and by nothing else; they are listed here so that tests/test_settings_surface.py can prove a class the stylesheet defines is a class the code uses and the other way round."
+  },
+  "named_colors": {
+    "evidence": "GNOME/libadwaita@1.7.12:src/stylesheet/_defaults.scss, which is where the @define-color lines live for both the light and the dark variant",
+    "names": [
+      "window_bg_color",
+      "window_fg_color",
+      "view_bg_color",
+      "view_fg_color",
+      "card_bg_color",
+      "card_fg_color",
+      "card_shade_color",
+      "sidebar_bg_color",
+      "sidebar_fg_color",
+      "sidebar_border_color",
+      "sidebar_shade_color",
+      "headerbar_bg_color",
+      "headerbar_fg_color",
+      "headerbar_border_color",
+      "headerbar_shade_color",
+      "dialog_bg_color",
+      "dialog_fg_color",
+      "popover_bg_color",
+      "popover_fg_color",
+      "accent_color",
+      "shade_color",
+      "error_color",
+      "warning_color",
+      "success_color"
+    ],
+    "_note": "The palette names with an _bg or _fg suffix are what a glass surface has to be transparent over: the stylesheet writes background-color with alpha() over these, so a light/dark switch keeps working without a second set of colours."
+  },
+  "css_properties": {
+    "evidence": "GNOME/gtk@main:docs/reference/gtk/css-properties.md, the property table GTK itself publishes",
+    "names": [
+      "background-color",
+      "background-image",
+      "background-clip",
+      "border-radius",
+      "border-color",
+      "border-width",
+      "border-style",
+      "box-shadow",
+      "outline-color",
+      "outline-width",
+      "outline-offset",
+      "outline-style",
+      "padding",
+      "margin",
+      "min-width",
+      "min-height",
+      "color",
+      "font-family",
+      "font-size",
+      "font-weight",
+      "letter-spacing",
+      "opacity",
+      "transition",
+      "transition-property",
+      "transition-duration",
+      "transition-timing-function",
+      "transition-delay",
+      "transform",
+      "caret-color",
+      "-gtk-icon-size",
+      "-gtk-icon-shadow"
+    ],
+    "_note": "alpha(), shade(), mix() and the color functions are documented in the same file's Colors section, and that is where the translucency comes from: GTK composites the widget's own background, and the blur behind it is the compositor's window rule, not a CSS filter."
+  },
+  "pseudo_classes": {
+    "evidence": "GNOME/gtk@main:gtk/gtkcssselector.c, the table of pseudo-class names the selector parser accepts",
+    "names": [
+      "hover",
+      "active",
+      "focus",
+      "focus-visible",
+      "disabled",
+      "checked",
+      "selected",
+      "backdrop",
+      "dir"
+    ],
+    "_note": ":focus-visible is the ring that keyboard navigation draws and the mouse does not; :focus fires for both. The Part 2 sheets already use it (iarch/lib/templates/gtk4.css.j2:161), so the app inherits that rule rather than restating it."
+  },
+  "icons": {
+    "evidence": "GNOME/adwaita-icon-theme@48.1; an icon name is the filename of a symbolic icon under symbolic/ with the .svg suffix removed",
+    "_note": "Brand icons do not exist in a freedesktop icon theme, and this project does not ship any: the Contact page's rows use a generic icon per kind, so the record says what each kind maps to rather than inventing a logo. An icon the theme does not have renders as a missing-image placeholder, which is why every name below was checked against the tag instead of against memory.",
+    "names": {
+      "user-home-symbolic": "Home page",
+      "preferences-desktop-appearance-symbolic": "Appearance page",
+      "view-conceal-symbolic": "Glass page",
+      "media-playback-start-symbolic": "Animations page",
+      "preferences-desktop-font-symbolic": "Fonts & Icons page",
+      "sidebar-show-symbolic": "Bar, Dock & Panels page",
+      "preferences-desktop-display-symbolic": "Display page",
+      "network-wireless-symbolic": "Sound, Network & Bluetooth page",
+      "preferences-desktop-keyboard-shortcuts-symbolic": "Shortcuts page",
+      "preferences-desktop-apps-symbolic": "Startup & Default apps page",
+      "gnome-power-manager-symbolic": "Power & Idle page",
+      "application-x-addon-symbolic": "Features page",
+      "document-save-symbolic": "Backup & Restore page",
+      "user-info-symbolic": "Contact page",
+      "dialog-information-symbolic": "About page",
+      "system-search-symbolic": "the sidebar search entry",
+      "list-add-symbolic": "add a row",
+      "list-remove-symbolic": "remove a row",
+      "edit-copy-symbolic": "copy a value",
+      "object-select-symbolic": "applied, current, saved",
+      "go-next-symbolic": "open a sub-page",
+      "open-menu-symbolic": "a row's overflow menu",
+      "view-refresh-symbolic": "re-read what the session reports",
+      "window-close-symbolic": "dismiss",
+      "folder-open-symbolic": "choose a folder",
+      "document-save-as-symbolic": "export",
+      "edit-clear-symbolic": "reset to defaults",
+      "user-trash-symbolic": "delete a restore point",
+      "web-browser-symbolic": "open a link, and the portfolio contact row",
+      "insert-link-symbolic": "copy a link",
+      "dialog-warning-symbolic": "contrast warning, risky change",
+      "dialog-error-symbolic": "an apply that was rolled back",
+      "mail-unread-symbolic": "the email contact row",
+      "camera-photo-symbolic": "the photo-sharing contact row",
+      "camera-video-symbolic": "the video-sharing contact row",
+      "chat-message-new-symbolic": "the messaging contact row",
+      "accessories-text-editor-symbolic": "the code-hosting contact row",
+      "battery-good-symbolic": "battery level on the Home page",
+      "computer-symbolic": "hostname on the Home page",
+      "preferences-system-symbolic": "processor and distribution on the Home page",
+      "drive-harddisk-symbolic": "memory on the Home page",
+      "system-users-symbolic": "the user on the Home page",
+      "avatar-default-symbolic": "an avatar with no image",
+      "preferences-desktop-screensaver-symbolic": "lock and idle",
+      "system-lock-screen-symbolic": "lock the session now",
+      "display-brightness-symbolic": "brightness",
+      "night-light-symbolic": "night light",
+      "audio-volume-high-symbolic": "volume mixer",
+      "bluetooth-symbolic": "bluetooth manager",
+      "utilities-terminal-symbolic": "default terminal",
+      "input-keyboard-symbolic": "the key recorder",
+      "applications-games-symbolic": "game mode",
+      "folder-pictures-symbolic": "wallpapers",
+      "user-bookmarks-symbolic": "a saved restore point",
+      "face-cool-symbolic": "the Meet the creator card",
+      "view-grid-symbolic": "the preset grid",
+      "view-app-grid-symbolic": "the wallpaper grid",
+      "window-restore-symbolic": "restore a backup",
+      "applications-system-symbolic": "autostart entries"
+    }
+  },
+  "licenses": {
+    "evidence": "GNOME/gtk@4.10.0:gtk/gtkaboutdialog.h:66-92 (the GtkLicense enum) and :42-60 (what each member means)",
+    "_note": "GtkLicense has eighteen members and the SPDX identifiers in data/licenses.json are not all among them, so this block records both halves: which identifier maps to which member, and which ones have no member and are therefore shown as CUSTOM with their own text. Mapping an identifier GTK does not name onto the nearest member it does would state something false about somebody else's license -- ISC is not MIT, and the SIL Open Font License is not the Artistic License -- so the honest answer for those is CUSTOM, which is the member whose documentation says the caller supplies the text.",
+    "names": {
+      "GPL-3.0-or-later": "Gtk.License.GPL_3_0",
+      "GPL-3.0-only": "Gtk.License.GPL_3_0_ONLY",
+      "GPL-2.0-only": "Gtk.License.GPL_2_0_ONLY",
+      "LGPL-2.1-only": "Gtk.License.LGPL_2_1_ONLY",
+      "MIT": "Gtk.License.MIT_X11",
+      "BSD-3-Clause": "Gtk.License.BSD_3",
+      "Apache-2.0": "Gtk.License.APACHE_2_0",
+      "MPL-2.0": "Gtk.License.MPL_2_0"
+    },
+    "custom": "Gtk.License.CUSTOM",
+    "custom_for": [
+      "ISC",
+      "MIT-CMU",
+      "OFL-1.1"
+    ],
+    "unknown": "Gtk.License.UNKNOWN",
+    "composite_rule": "An identifier that is not a key of `names` and not in `custom_for` is a sentence rather than a license -- a pair of licenses separated by a semicolon, a parenthetical note, `Varies per package`, `Service terms of the operator`, `TODO(verify)`, or the statement that no license file was published. Each of those is shown as CUSTOM with the identifier quoted verbatim in the section's text, because paraphrasing one would replace a statement about somebody else's terms with a guess. `TODO(verify)` additionally carries the open item into the section, so a license nobody has confirmed says so on screen instead of looking settled.",
+    "members": [
+      "UNKNOWN", "CUSTOM", "GPL_2_0", "GPL_3_0", "LGPL_2_1", "LGPL_3_0", "BSD",
+      "MIT_X11", "ARTISTIC", "GPL_2_0_ONLY", "GPL_3_0_ONLY", "LGPL_2_1_ONLY",
+      "LGPL_3_0_ONLY", "AGPL_3_0", "AGPL_3_0_ONLY", "BSD_3", "APACHE_2_0", "MPL_2_0"
+    ]
+  },
+  "portability": [
+    {
+      "call": "gtk_css_provider_load_from_data",
+      "problem": "the signature is (data, length) at GTK 4.10 and (bytes) at 4.12 and later, so one spelling of the call cannot work on both",
+      "this_project_uses": "gtk_css_provider_load_from_file",
+      "evidence": "GNOME/gtk:gtk/gtkcssprovider.h at 4.10.0 and at main"
+    },
+    {
+      "call": "adw_message_dialog_new",
+      "problem": "AdwMessageDialog still builds at 1.7.12 but AdwAlertDialog superseded it, and a new application should not start on the superseded one",
+      "this_project_uses": "adw_alert_dialog_new",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-alert-dialog.h and src/adw-message-dialog.h both present"
+    },
+    {
+      "call": "gtk_style_context_add_class",
+      "problem": "GtkStyleContext is deprecated in GTK 4 and is scheduled for removal",
+      "this_project_uses": "gtk_widget_add_css_class",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkwidget.h"
+    }
+  ],
+  "rejected": [
+    {
+      "spelling": "@media (prefers-reduced-motion: reduce) in the application's own CSS",
+      "why": "GTK's own property document puts CSS Media Queries at 'Since GTK 4.20', and the floor this record argues for is GTK 4.10 because that is where GtkFileDialog appears. On 4.10 to 4.18 the at-rule is a parse error: gtkcssprovider.c documents that parsing errors are never fatal and parsing resumes, so the sheet still loads, but the block does nothing and a person who asked their desktop for less motion gets every fade this window has. The lever that works on the floor is a style class the window adds itself, from animation.reduce_motion and from Gtk.Settings:gtk-enable-animations, which the application can read on any supported release. iarch-reduce-motion is that class.",
+      "evidence": "GNOME/gtk@main:docs/reference/gtk/css-properties.md, the Media Queries section ('Since GTK 4.20 CSS Media Queries are supported'), and GNOME/gtk@4.10.0:gtk/gtkcssprovider.c on the GtkCssProvider::parsing-error signal ('Parsing errors are never fatal, so the parsing will resume after the error')"
+    },
+    {
+      "spelling": "Adw.AboutDialog.add_other_app(appid, name, summary)",
+      "why": "It is marked ADW_AVAILABLE_IN_1_7 while every other call in this record is 1.5, and the floor this record argues for is libadwaita 1.6 because that is what Fedora 41 ships. Using it would make the About dialog the one place the application fails to start on a supported distribution, for a row that adds nothing the acknowledgement section does not.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:176-181 (ADW_AVAILABLE_IN_1_7)"
+    },
+    {
+      "spelling": "accent-color (CSS property)",
+      "why": "GTK 4's published property table has no accent-color: libadwaita exposes the accent as the named colours @accent_color and @accent_bg_color, not as a CSS property, so a rule setting accent-color would be a parse error on every supported release",
+      "evidence": "GNOME/gtk@main:docs/reference/gtk/css-properties.md lists every supported property and accent-color is not among them"
+    },
+    {
+      "spelling": "filter: blur() in the app's own CSS",
+      "why": "GTK does support the filter property, but blurring inside the widget would blur the app's own content rather than the desktop behind it, and it would cost a full-window offscreen buffer on every frame. The real blur is the compositor's, applied by the window rule in .config/hypr/generated/glass.lua for this application's class",
+      "evidence": "GNOME/gtk@main:docs/reference/gtk/css-properties.md (filter, CSS Filter Effect Level 1)"
+    },
+    {
+      "spelling": "g_app_info_launch_default_for_uri_async",
+      "why": "the asynchronous variant exists at gio/gappinfo.h:284 and would work, but the synchronous one already returns to the GTK main loop between calls and an async variant here would only add a code path that has to be reasoned about when a link fails",
+      "evidence": "GNOME/glib@main:gio/gappinfo.h:279 and :284"
+    },
+    {
+      "spelling": "shell=True, or any subprocess call that interpolates a URL, a path or a settings value",
+      "why": "every command this application runs is a fixed list of arguments, the way iarch/lib/modes.py and scripts/iarch-control-center.sh already do it, because a value from a user-editable JSON file that reaches a shell is an injection and not a feature",
+      "evidence": "iarch/lib/modes.py run(), and SECURITY.md's allowlist rule for shell wrappers"
+    }
+  ]
+}

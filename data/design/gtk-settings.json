@@ -1,0 +1,179 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "name": "gtk-settings",
+  "description": "The GtkSettings keys the settings application's Fonts & Icons and Appearance pages write into ~/.config/gtk-4.0/settings.ini and ~/.config/gtk-3.0/settings.ini, with the value domain GTK itself accepts for each one. A key that is not listed here is not written, and tests/test_settings_gtk_keys.py fails if the application names one.",
+  "_note": "This record exists because the Fonts & Icons page has to change something that survives a logout, and the compositor's config leaves do not reach GTK applications: a font family set with hyprctl eval would be a value nothing reads. GtkSettings is the mechanism GTK reads at startup on a session with no GNOME settings daemon, the file is plain INI under the user's own config directory, and the frozen v4 payload already used it (legacy/config/gtk-3.0/settings.ini), so this is not a new idea in this project -- it is the same one, with each key now verified against the release this project pins instead of inherited.",
+  "verified_against": {
+    "gtk4": {
+      "project": "GNOME/gtk",
+      "ref": "4.10.0",
+      "what": "gtk/gtksettings.c: every property name below appears as a g_param_spec_* call at the line cited, and the value domain is the one that call declares"
+    },
+    "gtk3": {
+      "project": "GNOME/gtk",
+      "ref": "3.24",
+      "what": "the same property names are GtkSettings properties in GTK 3, which is why the two settings.ini files can carry the same keys; this project's own frozen v4 payload already writes six of them (legacy/config/gtk-3.0/settings.ini)",
+      "unverified": true,
+      "unverified_note": "TODO(verify) SET-05 in docs/UNVERIFIED.md: the GTK 3 property table was not read out of a pinned 3.24 ref this pass. The six keys the legacy payload writes are evidence they exist, and the application writes GTK 3 keys only from that same set."
+    },
+    "file_format": {
+      "what": "settings.ini is an INI file with one [Settings] section; GtkSettings reads it through GKeyFile, so a key is written as name=value with no quoting and no comment support inside a value",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c gtk_settings_load_files() and the legacy payload legacy/config/gtk-3.0/settings.ini"
+    }
+  },
+  "source": "GNOME/gtk at 4.10.0: gtk/gtksettings.c -- every g_param_spec_* declaration below, and the strcmp chains at :1442-1448 and :1458-1466 that decide which spellings of the hint style and subpixel order are accepted; this repository's own frozen v4 payload legacy/config/gtk-3.0/settings.ini for the GTK 3 keys it already writes",
+  "files": [
+    {
+      "path": ".config/gtk-4.0/settings.ini",
+      "owned_by": "the user, through this application",
+      "generated": false,
+      "note": "Not a generated file: it carries no GENERATED header and is not rendered from tokens, because it holds the user's own choices rather than a preset's. The Part 2 sheets in the same directory are generated and say so."
+    },
+    {
+      "path": ".config/gtk-3.0/settings.ini",
+      "owned_by": "the user, through this application",
+      "generated": false,
+      "note": "Written with the same keys, limited to the set the frozen v4 payload already used, because GTK 3 applications still read this file and a font change that only reached GTK 4 would look like a bug."
+    }
+  ],
+  "keys": {
+    "gtk-font-name": {
+      "type": "string",
+      "format": "Family Size, for example 'Inter 11'",
+      "default": "Sans 10",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:433-435",
+      "used_by": "the Fonts & Icons page's UI font row"
+    },
+    "gtk-xft-antialias": {
+      "type": "int",
+      "values": [
+        -1,
+        0,
+        1
+      ],
+      "value_note": "A closed choice list, not a range: -1 is 'use the system default', 0 is off and 1 is on. This project writes 1 or 0 and never -1, because not writing the key at all is what leaves the system default in place.",
+      "default": -1,
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:444-446",
+      "used_by": "the Fonts & Icons page's antialiasing row"
+    },
+    "gtk-xft-hinting": {
+      "type": "int",
+      "values": [
+        -1,
+        0,
+        1
+      ],
+      "value_note": "A closed choice list, not a range: -1 is 'use the system default', 0 is off and 1 is on. This project writes 1 or 0 and never -1, because not writing the key at all is what leaves the system default in place.",
+      "default": -1,
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:455-457",
+      "used_by": "the Fonts & Icons page's hinting switch"
+    },
+    "gtk-xft-hintstyle": {
+      "type": "string",
+      "values": [
+        "hintnone",
+        "hintslight",
+        "hintmedium",
+        "hintfull"
+      ],
+      "value_note": "Compared with strcmp against exactly these four spellings; anything else leaves the hint style at Cairo's default rather than raising, which is why the application offers a dropdown and never a text entry.",
+      "default": null,
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:464-465 and :1442-1448",
+      "used_by": "the Fonts & Icons page's hinting strength row"
+    },
+    "gtk-xft-rgba": {
+      "type": "string",
+      "values": [
+        "rgb",
+        "bgr",
+        "vrgb",
+        "vbgr"
+      ],
+      "value_note": "Subpixel order. A value outside the four leaves CAIRO_SUBPIXEL_ORDER_DEFAULT in place, so an unrecognised spelling is silently ignored -- recorded here so the application lists four options and no free text.",
+      "default": null,
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:478-480 and :1458-1466",
+      "used_by": "the Fonts & Icons page's subpixel order row"
+    },
+    "gtk-icon-theme-name": {
+      "type": "string",
+      "default": "the DEFAULT_ICON_THEME constant, which is Adwaita",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:413-415",
+      "used_by": "the Fonts & Icons page's icon theme row"
+    },
+    "gtk-cursor-theme-name": {
+      "type": "string",
+      "default": null,
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c (gtk-cursor-theme-name property)",
+      "used_by": "the Fonts & Icons page's cursor theme row"
+    },
+    "gtk-cursor-theme-size": {
+      "type": "int",
+      "range": [
+        0,
+        128
+      ],
+      "range_note": "An inclusive range rather than a choice list: the property spec declares minimum 0 and maximum 128, and every integer between them is accepted.",
+      "default": 0,
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:525-527",
+      "used_by": "the Fonts & Icons page's cursor size row"
+    },
+    "gtk-application-prefer-dark-theme": {
+      "type": "bool",
+      "default": false,
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:736-738",
+      "used_by": "the Appearance page's dark mode switch, which also drives libadwaita's own colour scheme so the two cannot disagree"
+    },
+    "gtk-theme-name": {
+      "type": "string",
+      "default": null,
+      "written_by_this_project": false,
+      "note": "Recorded and deliberately not written. The GTK theme this session uses is applied by iarch-theme through the generated sheets and the installer's package choice, so a second writer of gtk-theme-name would be a second source of truth for the same decision.",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c (gtk-theme-name property)"
+    },
+    "gtk-enable-animations": {
+      "type": "bool",
+      "default": true,
+      "written_by_this_project": false,
+      "note": "Recorded and deliberately not written. Reduce motion in this project is the animation.reduce_motion switch, which iarch-anim owns and which renders every transition at 0ms in the Part 2 sheets; setting this key as well would give one intention two mechanisms that can disagree.",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:556-558"
+    }
+  },
+  "gtk3_keys": {
+    "_note": "The subset of the keys above that is also written to the GTK 3 file. GTK 3's own property table was not read out of a pinned 3.24 ref this pass -- docs/UNVERIFIED.md SET-05 -- so the evidence for these five is this repository's own frozen v4 payload, which has written them since before Part 1: legacy/config/gtk-3.0/settings.ini. A key GTK 4 added later is deliberately absent, because writing one to a GTK 3 file is writing a key nothing reads. gtk-theme-name is in that payload at :3 and is still refused here, for the reason recorded under keys.",
+    "keys": [
+      {
+        "key": "gtk-application-prefer-dark-theme",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:2"
+      },
+      {
+        "key": "gtk-icon-theme-name",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:4"
+      },
+      {
+        "key": "gtk-cursor-theme-name",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:5"
+      },
+      {
+        "key": "gtk-cursor-theme-size",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:6"
+      },
+      {
+        "key": "gtk-font-name",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:7"
+      }
+    ]
+  },
+  "rejected": [
+    {
+      "spelling": "gsettings set org.gnome.desktop.interface font-name",
+      "why": "The GNOME schema is not guaranteed to exist on a Hyprland session, and gsettings is not installed in this repository's CI, so a change made that way could not be verified or rolled back. settings.ini is a file this project can read, back up and restore with the machinery it already has.",
+      "evidence": "no gsettings binary in the development environment; GtkSettings reads settings.ini directly (GNOME/gtk@4.10.0:gtk/gtksettings.c)"
+    },
+    {
+      "spelling": "a hyprctl eval that sets a font or an icon theme",
+      "why": "The compositor's config leaves are about compositing: there is no font-family leaf, and an eval cannot reach a GTK application's settings. Writing one would be a value nothing reads.",
+      "evidence": "data/design/tokens.json hyprland.leaves lists all 41 leaves this project may set, and none of them is a font or an icon theme"
+    }
+  ]
+}

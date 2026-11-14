@@ -1,0 +1,531 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "name": "noctalia-ipc",
+  "description": "The shell IPC verbs this project sends, with the arguments each one takes and the line of the pinned release each was read from. data/design/noctalia.json records the configuration keys the shell has; this record is the other half of the same surface -- the commands that read and write them while the session is running -- and the settings application may not send a verb that is not listed here.",
+  "_note": "Kept apart from noctalia.json because the two answer different questions and are verified differently: a config key is a field in a schema struct, a verb is an entry in the command table, and a key can exist with no verb that reaches it (Do Not Disturb is exactly that case -- IPC only, no key at all in v5.4.1). One trap this record exists to prevent: the command table's header also declares positional-argument names and choice values as string literals, so extracting every quoted string from src/cli/schema_msg.h yields 204 names of which only some are commands. `monitor-selector` is the clearest example -- it is a positional several bar commands accept, not a verb, and sending it would be refused at runtime rather than caught here. Every entry below was matched against an `inline constexpr Command` definition.",
+  "verified_against": {
+    "project": "noctalia-dev/noctalia",
+    "ref": "v5.4.1",
+    "file": "src/cli/schema_msg.h",
+    "invocation": "noctalia msg <verb> [argument...]",
+    "reply_note": "The handler prints one line and exits non-zero when it refuses. iarch/lib/modes.py reads the reply text rather than trusting the exit code, because a handler that answers 'ok' as a no-op -- caffeine already in that state, src/idle/idle_inhibitor.cpp:175-212 -- and a handler that could not be reached are different facts and only the text tells them apart."
+  },
+  "source": "noctalia-dev/noctalia at v5.4.1: src/cli/schema_msg.h (the Command table, its Positional declarations and its choice lists), src/app/application_ipc.cpp:158-159 (what a handler prints for Do Not Disturb) and src/idle/idle_inhibitor.cpp:175-212 (what caffeine answers, including the no-op ok)",
+  "verbs": [
+    {
+      "verb": "config-get",
+      "description": "Get a config value",
+      "arguments": [
+        {
+          "name": "path",
+          "required": true,
+          "note": "Dotted config path, for example theme.shell_mode. The path is checked against data/design/noctalia.json before it is sent, so a typo is refused here rather than answered with an unknown-setting warning."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:468-469 (Command) and :133-135 (positionals)",
+      "used_by": [
+        "iarch/settings-app: the Bar, Dock & Panels, Features, Power & Idle and Appearance pages read what the shell runs before showing it"
+      ]
+    },
+    {
+      "verb": "config-set",
+      "description": "Set a config value",
+      "arguments": [
+        {
+          "name": "path",
+          "required": true,
+          "note": "Dotted config path."
+        },
+        {
+          "name": "value",
+          "required": true,
+          "note": "A TOML value, and the header's own example is explicit that a string is quoted: \"'light'\". So a boolean goes as true, a number as 900, a float as 0.5 and a string as 'light' -- sending light unquoted is a parse failure in the shell, not a silent default."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:470-471 (Command) and :136-139 (positionals, including the quoting example)",
+      "used_by": [
+        "iarch/settings-app: every row on the Bar, Dock & Panels, Features and Power & Idle pages that maps to a shell key",
+        "iarch/cli/iarch_doctor.py: dnd_set()"
+      ]
+    },
+    {
+      "verb": "config-reload",
+      "description": "Reload the config file",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:472",
+      "used_by": [
+        "iarch/cli/theme.py: after a render, so the shell picks up config.toml",
+        "iarch/cli/iarch_gamemode.py: SHELL_RELOAD after the bundle is applied",
+        "iarch/settings-app: after any config-set, because a set that is not reloaded is a change nothing has read yet"
+      ]
+    },
+    {
+      "verb": "theme-mode-set",
+      "description": "Set the resolved theme mode",
+      "arguments": [
+        {
+          "name": "mode",
+          "required": true,
+          "choices": [
+            "dark",
+            "light",
+            "auto"
+          ],
+          "note": "A closed choice list declared next to the command, so a fourth spelling is refused by the shell's own argument parser."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:83 (choices) and the theme-mode-set Command in the same table",
+      "used_by": [
+        "iarch/settings-app: the Appearance page's light/dark/auto row"
+      ]
+    },
+    {
+      "verb": "theme-mode-get",
+      "description": "Print the current resolved theme mode",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:805",
+      "used_by": [
+        "iarch/settings-app: the Appearance page reads the mode back instead of assuming the set took effect"
+      ]
+    },
+    {
+      "verb": "theme-mode-toggle",
+      "description": "Toggle theme mode between dark and light",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:816",
+      "used_by": []
+    },
+    {
+      "verb": "color-scheme-get",
+      "description": "Print the colour scheme the shell resolved",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:448",
+      "used_by": [
+        "iarch/settings-app: the Appearance page, to show whether the shell and this application agree on dark"
+      ]
+    },
+    {
+      "verb": "color-scheme-set",
+      "description": "Set the colour scheme",
+      "arguments": [
+        {
+          "name": "color-scheme",
+          "required": true,
+          "note": "Not used by this project: theme-mode-set is the switch that resolves to a scheme, and setting a scheme as well would give one intention two mechanisms."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:458",
+      "used_by": []
+    },
+    {
+      "verb": "notification-dnd-set",
+      "description": "Set notification Do Not Disturb state",
+      "arguments": [
+        {
+          "name": "state",
+          "required": true,
+          "choices": [
+            "on",
+            "off",
+            "true",
+            "false",
+            "1",
+            "0"
+          ],
+          "note": "Six spellings of two states. This project sends 'on' and 'off' only, so a reply is comparable with what iarch/cli/iarch_focus.py already sends."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:76-77 (choices), :628-634 (Command) and :169-171 (positionals)",
+      "used_by": [
+        "iarch/cli/iarch_focus.py: CAFFEINE_ENABLE's sibling step, and the rollback that undoes it",
+        "iarch/cli/iarch_doctor.py: dnd_set()",
+        "iarch/settings-app: the Home page's Do Not Disturb quick toggle and the Features page"
+      ]
+    },
+    {
+      "verb": "notification-dnd-status",
+      "description": "Print notification Do Not Disturb state",
+      "arguments": [],
+      "prints": "exactly 'on' or 'off'",
+      "evidence": "src/cli/schema_msg.h:638 and src/app/application_ipc.cpp:158-159",
+      "used_by": [
+        "iarch/cli/iarch_doctor.py: dnd_status()",
+        "iarch/settings-app: the Home page's toggle reads its state from here, because any other answer means the question could not be asked and the toggle shows that instead of guessing"
+      ]
+    },
+    {
+      "verb": "caffeine-enable",
+      "description": "Enable caffeine (idle inhibitor)",
+      "arguments": [],
+      "prints": "'ok', or 'error: caffeine protocol unavailable' when neither the Wayland idle-inhibit protocol nor the logind fallback is there",
+      "evidence": "src/cli/schema_msg.h:428 and src/idle/idle_inhibitor.cpp:175-212",
+      "used_by": [
+        "iarch/cli/iarch_focus.py: CAFFEINE_ENABLE",
+        "scripts/iarch-control-center.sh: allowlisted",
+        "iarch/settings-app: the Features page's keep-awake row"
+      ]
+    },
+    {
+      "verb": "caffeine-disable",
+      "description": "Disable caffeine (idle inhibitor)",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:425",
+      "used_by": [
+        "iarch/cli/iarch_focus.py: focus mode off, which disables outright because no verb reports the state",
+        "scripts/iarch-control-center.sh: allowlisted"
+      ]
+    },
+    {
+      "verb": "caffeine-toggle",
+      "description": "Toggle caffeine (idle inhibitor)",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:431",
+      "used_by": [
+        "scripts/iarch-control-center.sh: allowlisted"
+      ]
+    },
+    {
+      "verb": "nightlight-enable",
+      "description": "Enable night light schedule",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:613",
+      "used_by": [
+        "iarch/settings-app: the Features page's night light row"
+      ]
+    },
+    {
+      "verb": "nightlight-disable",
+      "description": "Disable night light schedule",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:610",
+      "used_by": [
+        "iarch/settings-app: the Features page's night light row"
+      ]
+    },
+    {
+      "verb": "nightlight-toggle",
+      "description": "Toggle night light schedule",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:619",
+      "used_by": []
+    },
+    {
+      "verb": "nightlight-force-toggle",
+      "description": "Toggle forced night light mode",
+      "arguments": [],
+      "note": "Forcing is a different thing from the schedule: it holds the filter on whatever the clock says. Recorded so the Features page can offer the schedule without implying it also forces.",
+      "evidence": "src/cli/schema_msg.h:616",
+      "used_by": []
+    },
+    {
+      "verb": "power-set",
+      "description": "Set the UPower power profile (e.g. performance, balanced, power-saver)",
+      "arguments": [
+        {
+          "name": "profile",
+          "required": true,
+          "note": "The description names three examples but the argument has no closed choice list, so the shell passes the profile to UPower and UPower decides. This project offers the three named ones and reads back what UPower accepted rather than assuming."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:716 and :200-202 (positionals)",
+      "used_by": [
+        "iarch/settings-app: the Power & Idle page's power profile row"
+      ]
+    },
+    {
+      "verb": "power-cycle",
+      "description": "Step through UPower's ordered profile list, forward by default (wraps)",
+      "arguments": [
+        {
+          "name": "direction",
+          "required": false,
+          "choices": [
+            "next",
+            "prev"
+          ]
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:706-712 and :78 (choices)",
+      "used_by": []
+    },
+    {
+      "verb": "session",
+      "description": "Run a built-in session action",
+      "arguments": [
+        {
+          "name": "action",
+          "required": true,
+          "choices": [
+            "lock",
+            "suspend",
+            "lock-and-suspend",
+            "logout",
+            "reboot",
+            "reboot-uefi",
+            "shutdown"
+          ],
+          "note": "This project sends 'lock' and 'suspend' only. A settings panel that can log out, reboot or shut down the machine is one mis-click away from losing somebody's unsaved work, and the session menu the shell already draws is the right place for those; see not_used below."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:747 and :79-80 (choices)",
+      "used_by": [
+        "iarch/settings-app: the Power & Idle page's Lock now row"
+      ]
+    },
+    {
+      "verb": "wallpaper-set",
+      "description": "Set the wallpaper",
+      "arguments": [
+        {
+          "name": "connector",
+          "required": false,
+          "note": "Omit for every output; name one to set a single monitor, which is how the Display page's per-monitor wallpaper row works when the shell supports it."
+        },
+        {
+          "name": "path",
+          "required": true,
+          "note": "A filesystem path, not a URI. The picker hands over a local path it got from GtkFileDialog, so no scheme parsing is involved."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:259-262 (positionals) and the wallpaper-set Command in the same table",
+      "used_by": [
+        "iarch/settings-app: the Appearance page's wallpaper picker"
+      ]
+    },
+    {
+      "verb": "wallpaper-get",
+      "description": "Print the wallpaper path",
+      "arguments": [
+        {
+          "name": "connector",
+          "required": false
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:247-249 (positionals)",
+      "used_by": [
+        "iarch/settings-app: the Appearance page reads the current wallpaper back"
+      ]
+    },
+    {
+      "verb": "volume-set",
+      "description": "Set speaker volume",
+      "arguments": [
+        {
+          "name": "value",
+          "required": true
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:828 and :241-243 (positionals)",
+      "used_by": []
+    },
+    {
+      "verb": "volume-osd",
+      "description": "Show the volume OSD without changing volume (defaults to the current volume)",
+      "arguments": [
+        {
+          "name": "value",
+          "required": false
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:823",
+      "used_by": [
+        "iarch/settings-app: the Sound page's open-the-mixer quick action, which shows the shell's own volume surface instead of drawing a second one"
+      ]
+    },
+    {
+      "verb": "volume-mute",
+      "description": "Toggle speaker mute",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:821",
+      "used_by": []
+    },
+    {
+      "verb": "wifi-status",
+      "description": "Print Wi-Fi state",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:880",
+      "used_by": [
+        "iarch/settings-app: the Network row's current state"
+      ]
+    },
+    {
+      "verb": "wifi-toggle",
+      "description": "Toggle Wi-Fi",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:881",
+      "used_by": [
+        "iarch/settings-app: the Network row's quick action"
+      ]
+    },
+    {
+      "verb": "bluetooth-status",
+      "description": "Print Bluetooth state",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:381",
+      "used_by": [
+        "iarch/settings-app: the Bluetooth row's current state"
+      ]
+    },
+    {
+      "verb": "bluetooth-toggle",
+      "description": "Toggle Bluetooth",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:382",
+      "used_by": [
+        "iarch/settings-app: the Bluetooth row's quick action"
+      ]
+    },
+    {
+      "verb": "network-toggle",
+      "description": "Disconnect the active network, or reconnect when nothing is connected",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:601-603",
+      "used_by": []
+    },
+    {
+      "verb": "panel-open",
+      "description": "Open a panel by id, optionally with context (e.g. launcher /emo, control-center audio)",
+      "arguments": [
+        {
+          "name": "id",
+          "required": true,
+          "note": "A panel id the shell knows; the header's own examples are 'launcher' and 'control-center'. This project sends only those two, with a context for the control centre's audio and network sections, so the panel that opens is the shell's own rather than a reimplementation."
+        },
+        {
+          "name": "context",
+          "required": false
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:677-682 and kMsgPanelOpenPositionals",
+      "used_by": [
+        "iarch/settings-app: the Sound, Network and Bluetooth rows open the shell's control centre at the right section"
+      ]
+    },
+    {
+      "verb": "panel-toggle",
+      "description": "Toggle a panel by id, optionally with context (e.g. launcher /emo, control-center audio)",
+      "arguments": [
+        {
+          "name": "id",
+          "required": true
+        },
+        {
+          "name": "context",
+          "required": false
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:683-690",
+      "used_by": []
+    },
+    {
+      "verb": "settings-open",
+      "description": "Open the settings window, or focus it if already open, optionally at a specific section",
+      "arguments": [
+        {
+          "name": "section",
+          "required": false,
+          "note": "This opens the shell's own settings window, not this application. It is what a row uses when the setting belongs to the shell and this project has no business storing a copy of it."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:751-758 and kMsgSettingsOpenPositionals",
+      "used_by": [
+        "iarch/settings-app: the Bar, Dock & Panels page's 'open in the shell' escape hatch for a key this project has not verified a range for"
+      ]
+    },
+    {
+      "verb": "screenshot-region",
+      "description": "Start an interactive region screenshot",
+      "arguments": [],
+      "flags": "kMsgScreenshotFlags",
+      "evidence": "src/cli/schema_msg.h:742",
+      "used_by": [
+        "iarch/settings-app: the Features page's screenshot row, which triggers the shell's own capture rather than shipping a second one"
+      ]
+    },
+    {
+      "verb": "screenshot-window",
+      "description": "Capture the focused window",
+      "arguments": [],
+      "flags": "kMsgScreenshotFlags",
+      "evidence": "src/cli/schema_msg.h:745",
+      "used_by": []
+    },
+    {
+      "verb": "dpms-off",
+      "description": "Turn monitors off",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:517",
+      "used_by": [
+        "iarch/settings-app: the Power & Idle page's turn the screen off now row"
+      ]
+    },
+    {
+      "verb": "dpms-on",
+      "description": "Turn monitors on",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:518",
+      "used_by": []
+    },
+    {
+      "verb": "brightness-set",
+      "description": "Set screen brightness",
+      "arguments": [
+        {
+          "name": "target",
+          "required": false
+        },
+        {
+          "name": "value",
+          "required": true
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:406 and :122-125 (positionals)",
+      "used_by": []
+    },
+    {
+      "verb": "clipboard-copy",
+      "description": "Copy text to the clipboard",
+      "arguments": [
+        {
+          "name": "text",
+          "required": true
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:435 and kMsgClipboardCopyPositionals",
+      "used_by": [],
+      "not_used_note": "Recorded and deliberately not used by the Contact page's copy button: that copy happens inside this application through the widget's own Gdk clipboard (GNOME/gtk@4.10.0:gdk/gdkclipboard.h gdk_clipboard_set_text), so it works when the shell is not running and does not put a link on an IPC socket."
+    }
+  ],
+  "not_commands": [
+    {
+      "spelling": "monitor-selector",
+      "what_it_really_is": "A positional-argument name that six bar commands accept, not a verb",
+      "why_it_matters": "It appears in the header's string literals alongside real verbs, so a list extracted by grepping quoted strings includes it. Sending `noctalia msg monitor-selector` would be refused by the shell's own verb lookup, and only at runtime.",
+      "evidence": "src/cli/schema_msg.h:92, :96, :101, :105, :109, :113 (all positional declarations)"
+    },
+    {
+      "spelling": "bar-name, connector, target, step, path, value, mode, kind, profile, state, level, direction",
+      "what_it_really_is": "Positional-argument names and choice values, not verbs",
+      "why_it_matters": "Same trap as monitor-selector: 204 quoted strings in this header, of which the Commands are a subset.",
+      "evidence": "src/cli/schema_msg.h:70-263 (the positional and choice declarations)"
+    }
+  ],
+  "not_used": [
+    {
+      "verb": "session logout | reboot | reboot-uefi | shutdown",
+      "why": "This application offers Lock now and Suspend and stops there. A control panel that can end a session, reboot or power off the machine turns one mis-click into lost work, and the shell's own session menu already draws those actions with the confirmation the shell owns.",
+      "evidence": "src/cli/schema_msg.h:79-80 lists the seven actions; SECURITY.md's rule that a diagnostic or a panel never takes an action it was not asked for"
+    },
+    {
+      "verb": "greeter-sync",
+      "why": "Syncing the login screen needs the polkit action org.noctalia.greeter.sync-appearance and a state directory owned by root, which is why Part 3 recorded the whole greeter surface and emitted nothing. A settings row that prompts for administrative authentication to change a screen the user is not looking at is not a feature this project ships.",
+      "evidence": "src/cli/schema_msg.h:530 and data/design/greeter.json (auto_sync and privilege_command are withheld)"
+    },
+    {
+      "verb": "effects-profile-set",
+      "why": "Despite the name, this is an audio effects profile (its kind choices are output and input), not a glass effect profile. Recorded because the name invites exactly the wrong mapping from this project's own `preset` and `effects` switches.",
+      "evidence": "src/cli/schema_msg.h:70 (kMsgEffectsProfileSetKindChoices is {output, input}) and :140-143"
+    }
+  ]
+}

@@ -18,7 +18,11 @@
       "type": "string"
     },
     "version": {
-      "const": 1
+      "enum": [
+        1,
+        2
+      ],
+      "description": "Version 2 is what this project writes; version 1 is accepted as input. A settings.json written before the settings application existed has no glass, fonts, startup or app section, and configstore.load merges the defaults underneath it, so refusing a version 1 document would refuse every existing install. The migration that upgrades one lives in iarch/settings-app/iarch_settings/services/config_store.py as migrate_v1_to_v2, and tests/test_settings_config_store.py proves a version 1 document comes out of it as a version 2 document that validates."
     },
     "preset": {
       "enum": [
@@ -70,6 +74,18 @@
             "soft",
             "performance"
           ]
+        },
+        "colour_mode": {
+          "enum": [
+            "light",
+            "dark",
+            "auto"
+          ],
+          "description": "What this application and the shell agree on. Applied through the shell's theme-mode-set verb and through gtk-application-prefer-dark-theme, so the two cannot drift: one value, two projections, written together."
+        },
+        "accent": {
+          "type": "string",
+          "description": "An accent override as #rrggbb, or an empty string to follow the colour preset's own accent role. Empty is the default because a preset that has passed the contrast gate should not be second-guessed by a value that has not; when it is set, the contrast gate is run again before anything is written."
         }
       }
     },
@@ -214,6 +230,219 @@
     },
     "notes": {
       "type": "string"
+    },
+    "glass": {
+      "type": "object",
+      "description": "The Glass page. leaves holds overrides on top of the intensity the theme renders: the key is a Hyprland config leaf exactly as data/design/tokens.json spells it under hyprland.leaves, and the value is inside that record's range. An empty object means the intensity's own values, which is what a fresh install has. per_app_opacity is an ordered list of window-class regexes and the opacity to give them, added to the rules the tokens' app_classes groups already produce. Neither is a second source of truth for an intensity: an override says 'this leaf, this value, on top of whatever the intensity decided', and clearing the section returns to the intensity exactly.",
+      "additionalProperties": false,
+      "properties": {
+        "leaves": {
+          "type": "object",
+          "description": "Leaf name to value. The schema cannot enumerate the leaves because they belong to the compositor's record, so the authority is data/design/tokens.json: hyprland.leaves for the names, hyprland.integer_leaves for which ones are whole numbers and hyprland.ranges for the bounds. tests/test_settings_glass.py checks every key and value against that record, which is where a leaf that does not exist gets caught.",
+          "additionalProperties": {
+            "type": [
+              "boolean",
+              "number"
+            ]
+          }
+        },
+        "per_app_opacity": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "required": [
+              "class",
+              "opacity"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "class": {
+                "type": "string",
+                "pattern": "^[^^$]*$",
+                "minLength": 1,
+                "description": "A window class. Anchored and escaped by the renderer the way data/design/tokens.json's app_classes patterns are, so a value here is a plain class name or a simple regex body, not a full pattern."
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0
+              }
+            }
+          }
+        }
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "description": "The Fonts & Icons page. Every key maps to one GtkSettings property recorded in data/design/gtk-settings.json, and the projection is ~/.config/gtk-4.0/settings.ini plus ~/.config/gtk-3.0/settings.ini. An empty string or a zero means 'do not write this key at all', which leaves the system default in place -- a font the user never chose must not be pinned, because pinning one stops the session's own font change from reaching GTK applications.",
+      "additionalProperties": false,
+      "properties": {
+        "ui_family": {
+          "type": "string",
+          "description": "The family part of gtk-font-name. Empty leaves the design tokens' Inter in place."
+        },
+        "size_pt": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 72.0,
+          "description": "The size part of gtk-font-name, in points. 0 means do not write the key."
+        },
+        "antialias": {
+          "type": "boolean",
+          "description": "gtk-xft-antialias, written as 1 or 0. The key's third value, -1, is the system default and is what not writing the key means."
+        },
+        "hinting": {
+          "type": "boolean",
+          "description": "gtk-xft-hinting, written as 1 or 0."
+        },
+        "hint_style": {
+          "enum": [
+            "hintnone",
+            "hintslight",
+            "hintmedium",
+            "hintfull"
+          ],
+          "description": "gtk-xft-hintstyle. The four spellings GTK compares with strcmp; anything else is ignored rather than refused, so the page offers a dropdown and no free text."
+        },
+        "subpixel": {
+          "enum": [
+            "rgb",
+            "bgr",
+            "vrgb",
+            "vbgr"
+          ],
+          "description": "gtk-xft-rgba, the subpixel order. Same silent-ignore behaviour as the hint style."
+        },
+        "icon_theme": {
+          "type": "string",
+          "description": "gtk-icon-theme-name. Empty means do not write the key."
+        },
+        "cursor_theme": {
+          "type": "string",
+          "description": "gtk-cursor-theme-name. Empty means do not write the key."
+        },
+        "cursor_size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 128,
+          "description": "gtk-cursor-theme-size. 0 is the key's own 'system default' value and also means do not write it."
+        }
+      }
+    },
+    "startup": {
+      "type": "object",
+      "description": "The Startup & Default apps page's autostart list. Each entry becomes one ~/.config/autostart/iarch-<name>.desktop file, which is the mechanism a session without a display manager still honours. This application writes the file and never runs the command: the session runs it, at startup, exactly as it would a .desktop file the user wrote by hand. The default apps are deliberately not here -- they belong to ~/.config/mimeapps.list, which xdg-mime owns, and a copy in this file could disagree with it.",
+      "additionalProperties": false,
+      "properties": {
+        "autostart": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "command"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                "description": "Becomes the file's stem, so it is restricted to characters that are safe in a filename on every filesystem this project supports."
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024,
+                "description": "The Exec= value. Written verbatim into the .desktop file and never executed by this application, so it is not passed through a shell here; the session's own launcher parses it the way it parses any autostart entry."
+              },
+              "enabled": {
+                "type": "boolean",
+                "description": "False writes the entry with Hidden=true rather than deleting it, so turning a program back on does not need its command retyped."
+              },
+              "comment": {
+                "type": "string",
+                "maxLength": 256
+              }
+            }
+          }
+        }
+      }
+    },
+    "app": {
+      "type": "object",
+      "description": "This application's own state: the window it opens and the page it opens on.",
+      "additionalProperties": false,
+      "properties": {
+        "window_width": {
+          "type": "integer",
+          "minimum": 360,
+          "maximum": 7680
+        },
+        "window_height": {
+          "type": "integer",
+          "minimum": 240,
+          "maximum": 4320
+        },
+        "last_page": {
+          "type": "string",
+          "description": "A page id from the registry in iarch/settings-app/iarch_settings/pages/__init__.py. Not an enum here, because the schema would then have to be edited every time a page is added, and an unknown id is already handled: the window opens on Home and says nothing about a page that no longer exists."
+        }
+      }
+    },
+    "display": {
+      "type": "object",
+      "description": "The Display page. One entry per monitor the user configured, rendered into ~/.config/hypr/monitors.lua by iarch/cli/gen_monitors_lua.py. An empty list is the shipped default and means the identity rule -- output \"\", mode preferred, position auto, scale 1 -- which matches every output and is why a fresh install works on hardware nobody has seen. The shapes below are the ones the compositor's own parser accepts; the bounds and the field list are in data/design/monitors.json, and the generator refuses a value that record does not allow rather than emitting a line the compositor answers with a config error at login. Nothing the compositor reports about a monitor is stored here: the page reads `hyprctl -j monitors` and shows that, so there is no second copy of a resolution or a refresh rate to go stale.",
+      "required": [
+        "monitors"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "monitors": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "required": [
+              "output"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "output": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                "description": "The output name exactly as `hyprctl -j monitors` reported it (DP-1, HDMI-A-2, eDP-1). Restricted to characters that are safe inside a Lua string and inside a filename."
+              },
+              "mode": {
+                "type": "string",
+                "pattern": "^$|^pref[a-z]*$|^highrr[a-z]*$|^highres$|^maxwidth$|^[0-9]{1,5}x[0-9]{1,5}(@[0-9]{1,6}(\\.[0-9]{1,3})?(Hz)?)?$",
+                "description": "A resolution, optionally with a refresh rate. The spellings come from parseMode in src/config/shared/monitor/Parser.cpp at v0.57.2, and the optional Hz suffix is there because availableModes prints `WxH@RR.RRHz` and parseMode reads the rate with stof, which stops at the first character that is not part of a number; the generator additionally requires a WxH form to be one the compositor listed in availableModes, so a resolution nobody can drive is refused here rather than tried on the hardware."
+              },
+              "position": {
+                "type": "string",
+                "pattern": "^$|^auto(-(right|left|up|down|center-right|center-left|center-up|center-down))?$|^-?[0-9]{1,6}x-?[0-9]{1,6}$",
+                "description": "Either one of the nine auto spellings parsePosition accepts, or an XxY offset. An offset without the x is refused by the parser, which is why the pattern requires it."
+              },
+              "scale": {
+                "type": "string",
+                "pattern": "^$|^auto[a-z]*$|^[0-9]{1,3}(\\.[0-9]{1,3})?$",
+                "description": "A string, not a number: MONITOR_FIELDS builds this field with CLuaConfigString, so `scale = 1` unquoted is a parse error. parseScale refuses a value below 0.25 and resets it to 1, and the generator refuses it first with a message that says so."
+              },
+              "transform": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 7,
+                "description": "The wl_output_transform enumeration. 0 is normal, then the three rotations and the four flipped forms."
+              },
+              "disabled": {
+                "type": "boolean",
+                "description": "Switch the output off. The generator refuses to disable the last enabled monitor, because a monitor that is off cannot show the dialog that offers to turn it back on."
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

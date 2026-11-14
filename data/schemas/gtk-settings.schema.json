@@ -1,0 +1,357 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/gtk-settings.schema.json",
+  "title": "The GtkSettings keys the settings application may write",
+  "description": "A closed record of the settings.ini keys, their value domains and the upstream line each one was read from. A key the application writes that is not here is a build failure, because a key GtkSettings does not know is ignored silently and the person who changed a font would see nothing happen.",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "description",
+    "verified_against",
+    "source",
+    "files",
+    "keys",
+    "gtk3_keys",
+    "rejected"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "type": "string"
+    },
+    "_note": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verified_against": {
+      "type": "object",
+      "required": [
+        "gtk4",
+        "gtk3",
+        "file_format"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "gtk4": {
+          "$ref": "#/definitions/source"
+        },
+        "gtk3": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/source"
+            },
+            {
+              "properties": {
+                "unverified": {
+                  "const": true
+                },
+                "unverified_note": {
+                  "type": "string",
+                  "pattern": "TODO\\(verify\\)"
+                }
+              },
+              "required": [
+                "unverified",
+                "unverified_note"
+              ]
+            }
+          ]
+        },
+        "file_format": {
+          "type": "object",
+          "required": [
+            "what",
+            "evidence"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "what": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "owned_by",
+          "generated",
+          "note"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^\\.config/gtk-[34]\\.0/settings\\.ini$"
+          },
+          "owned_by": {
+            "type": "string",
+            "minLength": 1
+          },
+          "generated": {
+            "const": false,
+            "description": "Neither file is generated: they hold the user's own choices, not a preset's, so they carry no GENERATED header and no renderer owns them."
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "keys": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Keyed by the GtkSettings property name as it is spelled in settings.ini.",
+      "additionalProperties": false,
+      "propertyNames": {
+        "pattern": "^gtk-[a-z0-9-]+$"
+      },
+      "properties": {
+        "gtk-font-name": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-xft-antialias": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-xft-hinting": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-xft-hintstyle": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-xft-rgba": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-icon-theme-name": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-cursor-theme-name": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-cursor-theme-size": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-application-prefer-dark-theme": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-theme-name": {
+          "$ref": "#/definitions/key"
+        },
+        "gtk-enable-animations": {
+          "$ref": "#/definitions/key"
+        }
+      }
+    },
+    "rejected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "spelling",
+          "why",
+          "evidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "spelling": {
+            "type": "string",
+            "minLength": 1
+          },
+          "why": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The upstream files this record was read from, named so a reader can find the line each entry cites."
+    },
+    "gtk3_keys": {
+      "type": "object",
+      "required": [
+        "_note",
+        "keys"
+      ],
+      "additionalProperties": false,
+      "description": "The subset also written to the GTK 3 file. A key that is not here is written to the GTK 4 file only, which is what keeps a key GTK 4 added later out of a file whose property table this project has not read at a pinned ref (SET-05).",
+      "properties": {
+        "_note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "key",
+              "evidence"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string",
+                "pattern": "^gtk-[a-z0-9-]+$",
+                "description": "Must also be one of the keys above: a GTK 3 key that is not in the GTK 4 table would be a key this project wrote nowhere it had read."
+              },
+              "evidence": {
+                "type": "string",
+                "pattern": "^legacy/config/gtk-3\\.0/settings\\.ini:[0-9]+$"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "source": {
+      "type": "object",
+      "required": [
+        "project",
+        "ref",
+        "what"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "type": "string",
+          "const": "GNOME/gtk"
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "what": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unverified": {
+          "type": "boolean"
+        },
+        "unverified_note": {
+          "type": "string"
+        }
+      }
+    },
+    "key": {
+      "type": "object",
+      "required": [
+        "type",
+        "evidence"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "used_by"
+          ]
+        },
+        {
+          "required": [
+            "written_by_this_project",
+            "note"
+          ]
+        }
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "string",
+            "int",
+            "bool"
+          ]
+        },
+        "format": {
+          "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "minItems": 2,
+          "description": "A closed choice list: the exact spellings a string property is compared against with strcmp, or the discrete integers an int property accepts. An unrecognised spelling is ignored by GtkSettings rather than refused, which is why a page offers these as a dropdown and never as a text entry.",
+          "items": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "value_note": {
+          "type": "string"
+        },
+        "default": {
+          "type": [
+            "string",
+            "integer",
+            "boolean",
+            "null"
+          ]
+        },
+        "written_by_this_project": {
+          "const": false,
+          "description": "Present only on a key this project records but refuses to write, with the reason in note."
+        },
+        "note": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "string",
+          "pattern": "^GNOME/gtk@"
+        },
+        "used_by": {
+          "type": "string"
+        },
+        "range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "An inclusive minimum and maximum for an int property whose spec declares bounds rather than a choice list. Mutually exclusive with `values`: a key is either one or the other, and a record that says both is a record that does not know which.",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "range_note": {
+          "type": "string"
+        }
+      },
+      "description": "A key this project writes names the row that writes it; a key it only records says written_by_this_project false and why in note.",
+      "not": {
+        "required": [
+          "values",
+          "range"
+        ]
+      }
+    }
+  }
+}

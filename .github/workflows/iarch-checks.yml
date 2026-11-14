@@ -104,6 +104,7 @@ jobs:
           python iarch/cli/gen_glass_lua.py --check    # shipped glass.lua matches the tokens
           python iarch/cli/gen_animations_lua.py --check  # shipped animations.lua matches the motion tokens
           python iarch/cli/gen_startup_lua.py --check  # shipped startup.lua matches the startup record, installers' sed anchors intact
+          python iarch/cli/gen_monitors_lua.py --check  # shipped monitors.lua matches the monitor record, and refuses a field or a bound it does not carry
           python iarch/cli/render_noctalia.py --check  # shipped config.toml + palettes match the presets
           python iarch/cli/render_hyprlock.py --check  # shipped hyprlock.conf + hypridle.conf match a fresh render
           python iarch/cli/render_gtk_css.py --check --repo  # shipped GTK sheets match the tokens
@@ -129,13 +130,19 @@ jobs:
               "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
               "data/design/tokens.json": "data/schemas/tokens.schema.json",
               "data/design/noctalia.json": "data/schemas/noctalia.schema.json",
+              "data/design/noctalia-ipc.json": "data/schemas/noctalia-ipc.schema.json",
               "data/design/hyprlock.json": "data/schemas/hyprlock.schema.json",
               "data/design/greeter.json": "data/schemas/greeter.schema.json",
               "data/design/gtk.json": "data/schemas/gtk.schema.json",
+              "data/design/gtk-settings.json": "data/schemas/gtk-settings.schema.json",
               "data/design/kvantum.json": "data/schemas/kvantum.schema.json",
               "data/design/fontconfig.json": "data/schemas/fontconfig.schema.json",
               "data/design/animations.json": "data/schemas/animations.schema.json",
               "data/design/startup.json": "data/schemas/startup.schema.json",
+              "data/design/monitors.json": "data/schemas/monitors.schema.json",
+              "data/design/autostart.json": "data/schemas/autostart.schema.json",
+              "data/design/xdg-defaults.json": "data/schemas/xdg-defaults.schema.json",
+              "data/design/adwaita.json": "data/schemas/adwaita.schema.json",
               "data/licenses.json": "data/schemas/licenses.schema.json",
               # Colour presets are a family under one schema.
               **{

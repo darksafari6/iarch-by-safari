@@ -54,6 +54,10 @@ ALLOWLIST: Dict[str, str] = {
     "tools/recover_session.py": FROZEN + " (~/.config/minimalinux of the legacy session)",
     "data/design/greeter.json": FROZEN + " (records that the login screen can select the legacy "
                                 "session by its desktop entry name, and cites the file by path)",
+    "data/design/autostart.json": FROZEN + " (the autostart record cites this repository's own "
+                                  "shipped desktop entries under legacy/session/ as the evidence "
+                                  "for the keys it writes and for the ownership marker, and those "
+                                  "file names are the frozen ones)",
     # --- Policy and enforcement -----------------------------------------
     "branding/product.env": POLICY,
     "tools/branding_lint.py": POLICY,

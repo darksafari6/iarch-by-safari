@@ -1,0 +1,202 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "name": "xdg-defaults",
+  "description": "How a default application is read and set on this desktop: which xdg-settings properties exist, which xdg-mime operations exist, which file each one writes, and what the Startup & Default apps page may therefore offer. A default the tools cannot set is recorded as unsettable rather than offered as a switch that silently does nothing.",
+  "verified_against": "xdg-utils scripts/xdg-settings.in and scripts/xdg-mime.in at freedesktop-unofficial-mirror/xdg__xdg-utils master c5512229 (committed 2015-04-13); glib 2.84.4 gio/gdesktopappinfo.c, both fetched 2026-11-13",
+  "source": "scripts/xdg-settings.in (dispatch_specific :633-692, dispatch_generic :694-712, get_browser_mime :108-118, set_browser_mime :119-137) and scripts/xdg-mime.in (the argument dispatch :440-528, make_default_generic :242-301, defapp_generic :346-395) in freedesktop-unofficial-mirror/xdg__xdg-utils at c5512229; gio/gdesktopappinfo.c (the desktop-file loader :1898-1980, should_show :3688-3696, get_all_for_type :4547-4569, the mimeapps.list tweaks :896-975) in GNOME/glib at 2.84.4",
+  "_note": "The official xdg-utils repository is on gitlab.freedesktop.org, which this sandbox cannot reach; the mirror cited is unofficial and its last commit is from 2015, so what is verified here is that snapshot of the two scripts and not the release a distribution ships today. docs/UNVERIFIED.md SET-08 records exactly that limitation. The consequences below are all of the conservative kind -- they say what the tools refuse to do rather than what they are newly able to do -- so a newer release can only widen what is offered, never invalidate a refusal recorded here.",
+  "settings_tool": {
+    "binary": "xdg-settings",
+    "operations": [
+      { "operation": "get", "evidence": "scripts/xdg-settings.in:639-652" },
+      { "operation": "check", "evidence": "scripts/xdg-settings.in:653-666" },
+      { "operation": "set", "evidence": "scripts/xdg-settings.in:667-685" }
+    ],
+    "properties": [
+      {
+        "property": "default-web-browser",
+        "operations": ["get", "check", "set"],
+        "argument": "one .desktop file name, checked with check_desktop_filename before it is used",
+        "meaning": "The default handler for text/html. get_browser_mime and set_browser_mime default to that mimetype when none is given, so 'the browser' is one MIME association and not a separate setting.",
+        "evidence": "scripts/xdg-settings.in:641-643, :655-658, :669-673 and the default MIME at :108-118"
+      },
+      {
+        "property": "default-url-scheme-handler",
+        "operations": ["get", "check", "set"],
+        "argument": "a scheme name, then one .desktop file name for check and set",
+        "meaning": "The default handler for x-scheme-handler/<scheme>, which is how a mailto: or a webcal: link is routed.",
+        "evidence": "scripts/xdg-settings.in:645-647, :660-663, :675-678 and :493-496, :526"
+      }
+    ],
+    "refusals": [
+      {
+        "what": "Any other property name",
+        "behaviour": "exit_failure_syntax when a desktop environment was detected (:650-651, :664-665, :682-683), and exit_failure_operation_impossible in the generic path (:699-700)",
+        "why_it_matters": "There is no xdg-settings property for a terminal emulator, a file manager or a text editor. A page offering 'default terminal' through this tool would be offering a command that exits with a failure, so those three are set through xdg-mime's MIME associations instead -- or, for a terminal, not at all: see unsettable."
+      },
+      {
+        "what": "Any operation other than get or check, when no desktop environment was detected",
+        "behaviour": "dispatch_generic refuses with exit_failure_operation_impossible, and additionally refuses any property that is not default-web-browser (:697-700)",
+        "why_it_matters": "This session's XDG_CURRENT_DESKTOP is not GNOME, KDE or XFCE, so the generic path is the one that runs. `xdg-settings set default-web-browser` is therefore not a mechanism this project can rely on: the write it performs is xdg-mime's, reached through set_browser_mime (:119-137), and that is what this project calls directly instead."
+      }
+    ]
+  },
+  "mime_tool": {
+    "binary": "xdg-mime",
+    "operations": [
+      {
+        "operation": "query default MIMETYPE",
+        "prints": "the .desktop file name associated with that mimetype, or nothing",
+        "refuses": "a mimetype with no '/' in it: exit_failure_syntax \"mimetype '$mimetype' is not in the form 'minor/major'\"",
+        "evidence": "scripts/xdg-mime.in:473-493"
+      },
+      {
+        "operation": "query filetype FILE",
+        "prints": "the mimetype of an existing file",
+        "refuses": "a missing argument, or a filename beginning with '-'",
+        "evidence": "scripts/xdg-mime.in:456-471"
+      },
+      {
+        "operation": "default APPLICATION.desktop MIMETYPE...",
+        "writes": "$XDG_DATA_HOME/applications/mimeapps.list, defaulting to ~/.local/share/applications/mimeapps.list, under [Default Applications]",
+        "refuses": "a first argument that does not end in .desktop: exit_failure_syntax \"malformed argument '$1', expected *.desktop\"",
+        "evidence": "scripts/xdg-mime.in:500-520 for the argument check, :530-545 for the dispatch, and make_default_generic :242-301 for the file it writes",
+        "note": "The file written is under XDG_DATA_HOME, not XDG_CONFIG_HOME. A page that reported the change as living in ~/.config/mimeapps.list would be pointing at a file nothing wrote."
+      },
+      {
+        "operation": "install / uninstall",
+        "writes": "a .desktop file into the applications directories, plus the KDE 3 vendor files it maintains",
+        "evidence": "scripts/xdg-mime.in:441-448 and the case at :914-925",
+        "used_by_this_project": false,
+        "why_not": "Installing an application is not a settings page's job, and the uninstall branch removes files by name from every XDG data directory -- a delete this project will not perform on a file it did not create."
+      }
+    ],
+    "read_order": {
+      "description": "Where `query default` looks, in order. The user's own file wins, which is what makes a change made here survive a system package update.",
+      "paths": [
+        "$XDG_DATA_HOME/applications/mimeapps.list (default ~/.local/share/applications/mimeapps.list), section [Default Applications]",
+        "$XDG_DATA_HOME/applications/$XDG_MENU_PREFIX-defaults.list and -mimeinfo.cache",
+        "each directory of $XDG_DATA_DIRS (default /usr/local/share/:/usr/share/), same two file names",
+        "a built-in fallback per mimetype"
+      ],
+      "evidence": "scripts/xdg-mime.in:346-395, with the fallback at :315-345"
+    },
+    "verify_and_restore": {
+      "description": "set_browser_mime reads the association back after writing it and, when the read-back does not equal what was asked for, writes the original value again.",
+      "evidence": "scripts/xdg-settings.in:126-137",
+      "why_it_matters": "Upstream already treats a default-application write as something that has to be verified rather than assumed, and rolls back when it fails. The apply pipeline in iarch/settings-app does the same thing for every file it writes, so the two agree on what 'applied' means."
+    }
+  },
+  "roles": [
+    {
+      "role": "browser",
+      "label": "Web browser",
+      "mechanism": "xdg-mime default <app>.desktop text/html x-scheme-handler/http x-scheme-handler/https",
+      "read": "xdg-mime query default text/html",
+      "mimetypes": ["text/html", "x-scheme-handler/http", "x-scheme-handler/https"],
+      "why": "text/html is the association xdg-settings itself means by 'default web browser' (:108-118), and the two scheme handlers are what a link clicked outside a browser resolves through. Setting all three is what stops a page opening in one program and a link in another.",
+      "evidence": "scripts/xdg-settings.in:108-118 and :357-361"
+    },
+    {
+      "role": "file_manager",
+      "label": "File manager",
+      "mechanism": "xdg-mime default <app>.desktop inode/directory application/x-gnome-saved-search",
+      "read": "xdg-mime query default inode/directory",
+      "mimetypes": ["inode/directory", "application/x-gnome-saved-search"],
+      "why": "inode/directory is the association a file manager is reached through. The second mimetype is there because this repository's own installers already set both for Thunar in one command (install.sh:1245, fedora_install.sh:897): writing only the first would leave saved searches pointing at whatever the install chose, so the page and the installer would disagree about the same role.",
+      "evidence": "install.sh:1245 and fedora_install.sh:897 (both `xdg-mime default thunar.desktop inode/directory application/x-gnome-saved-search`); fedora_install.sh:1102 sets inode/directory alone"
+    },
+    {
+      "role": "editor",
+      "label": "Text editor",
+      "mechanism": "xdg-mime default <app>.desktop text/plain",
+      "read": "xdg-mime query default text/plain",
+      "mimetypes": ["text/plain"],
+      "why": "text/plain is the association a plain text file resolves through. It is one mimetype and not a list of every text format, because a page that offered to claim forty mimetypes would be claiming file types the user did not ask about.",
+      "evidence": "scripts/xdg-mime.in:500-520 (any mimetype list is accepted; this project sends one)"
+    },
+    {
+      "role": "mail",
+      "label": "Mail client",
+      "mechanism": "xdg-mime default <app>.desktop x-scheme-handler/mailto",
+      "read": "xdg-mime query default x-scheme-handler/mailto",
+      "mimetypes": ["x-scheme-handler/mailto"],
+      "why": "The Contact page opens mailto: links through Gio.AppInfo.launch_default_for_uri, which resolves through this association. Setting it is what makes that button reach a mail client rather than failing silently.",
+      "evidence": "scripts/xdg-settings.in:493-496 and :526 (the scheme-handler property is the same association under a different name)"
+    }
+  ],
+  "candidates": {
+    "_note": "Which programs a role's dropdown may offer, and why each one is in or out. Read out of glib because glib is what every application chooser on this desktop uses, so a list that disagreed with it would offer a program the rest of the desktop hides or hide one it offers.",
+    "how": "The page reads the .desktop files in the application directories and keeps the ones whose MimeType line names one of the role's mimetypes. It does not call Gio: the page has to be testable with no display server and no PyGObject installed, and scanning the same directories answers the same question with a citation behind every filter.",
+    "directories": [
+      "$XDG_DATA_HOME/applications, which is ~/.local/share/applications by default",
+      "each directory of $XDG_DATA_DIRS with /applications appended; the default for that variable is /usr/local/share/:/usr/share/"
+    ],
+    "directories_evidence": "scripts/xdg-mime.in:346-395 (defapp_generic reads exactly these, in this order) and gio/gdesktopappinfo.c:1180-1200 (glib indexes the same files)",
+    "filters": [
+      {
+        "key": "Hidden",
+        "keep_when": "it is absent or false",
+        "why": "glib does not index a Hidden desktop file at all, so a program that hid itself this way would appear in this list and nowhere else on the desktop.",
+        "evidence": "gio/gdesktopappinfo.c:1188-1189"
+      },
+      {
+        "key": "NoDisplay",
+        "keep_when": "it is absent or false",
+        "why": "Gio.AppInfo.should_show is false when NoDisplay is true, and that is the test every application chooser applies before offering a program.",
+        "evidence": "gio/gdesktopappinfo.c:1962 and :3688-3696"
+      },
+      {
+        "key": "TryExec",
+        "keep_when": "it is absent, or names a program that can be found",
+        "why": "glib refuses to load the file at all when TryExec cannot be resolved, which is how a desktop file says the program is not installed.",
+        "evidence": "gio/gdesktopappinfo.c:1902-1918"
+      },
+      {
+        "key": "Exec",
+        "keep_when": "it is present and can be parsed as a command line",
+        "why": "glib refuses to load a file whose Exec line it cannot parse, and a file with no Exec line cannot launch anything.",
+        "evidence": "gio/gdesktopappinfo.c:1920-1934"
+      },
+      {
+        "key": "MimeType",
+        "keep_when": "it names at least one of the role's mimetypes",
+        "why": "That line is the program's own claim about what it can open. A program that does not claim the type is not offered for it, because choosing it would ask a program to open something it never said it could.",
+        "evidence": "gio/gdesktopappinfo.c:1975 (MimeType is read into the program's type list) and :4547-4569 (the answer for a type comes from that list)"
+      },
+      {
+        "key": "Name",
+        "keep_when": "it is present in some language",
+        "why": "A row with no label is a row nobody can choose.",
+        "evidence": "gio/gdesktopappinfo.c:1957"
+      }
+    ],
+    "always_listed": {
+      "what": "The association that is currently set, even when its own file would be filtered out by one of the rules above.",
+      "why": "A dropdown that cannot show the value already in force looks unset and invites a pointless change. The row is marked, so a person can see that the program no longer claims the type, or is no longer installed, rather than wondering why it is there.",
+      "evidence": "scripts/xdg-mime.in:346-395 (query default answers with a file name whether or not that file still claims the type)"
+    },
+    "localised_names": {
+      "what": "Name, GenericName, Comment and Keywords are read with the locale in brackets first and the unlocalised key as the fallback, so a candidate's label is shown in the user's language.",
+      "why": "This is the opposite of the autostart generator, where a key with a bracket in it is ignored: the same file format has two readers and they do not agree. data/design/autostart.json records the other half, and the difference is why a startup entry this project writes carries one unlocalised Name while a candidate here may carry several.",
+      "evidence": "gio/gdesktopappinfo.c:1957-1961"
+    },
+    "limitation": {
+      "what": "glib also applies the [Added Associations] and [Removed Associations] groups of mimeapps.list when it answers which programs handle a type. This scan does not.",
+      "consequence": "A program associated with a type only through one of those groups is not offered as a candidate. It is still shown when it is the current default, because of always_listed. The error is in the direction of offering less rather than more, which is the direction this project prefers to be wrong in.",
+      "evidence": "gio/gdesktopappinfo.c:896-975"
+    }
+  },
+  "unsettable": [
+    {
+      "role": "terminal",
+      "label": "Terminal emulator",
+      "why": "There is no xdg-settings property for one (:699-700 refuses anything but the two recorded properties) and no MIME type that means 'open a terminal here', so there is no standard association to write. Which terminal a keyboard shortcut launches is decided by this session's own binds in .config/hypr/keybind.lua and by the shell's launcher, and both are configured elsewhere in this project. The page says that instead of offering a dropdown that would write a file nothing reads."
+    },
+    {
+      "role": "any role, when neither tool is installed",
+      "why": "xdg-mime and xdg-settings come from xdg-utils, which neither installer in this repository adds to its package list. A missing binary is unverified rather than a failure, so the page shows what it could not read and does not offer a write it cannot verify afterwards."
+    }
+  ]
+}

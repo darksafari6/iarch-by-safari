@@ -3,12 +3,14 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/contacts.schema.json",
   "title": "iArch by Safari contact page defaults",
+  "description": "The Contact page's data. Version 2 replaced the version 1 'links' array with a portfolio block and a fixed list of row kinds, because the page needs to know which row is the primary button and which rows are placeholders a person fills in. A row with an empty value is hidden by the page, not shown disabled; a row with a value the link validator refuses is shown with the reason. Only https, mailto and tel values are ever opened.",
   "type": "object",
   "required": [
     "version",
     "display_name",
     "role",
-    "links"
+    "portfolio",
+    "rows"
   ],
   "additionalProperties": false,
   "properties": {
@@ -18,40 +20,86 @@
     "_generated": {
       "type": "string"
     },
+    "_placeholder_note": {
+      "type": "string"
+    },
     "version": {
-      "const": 1
+      "const": 2
     },
     "display_name": {
-      "type": "string"
+      "type": "string",
+      "description": "Shown as the Contact page's title. Empty is allowed: the page falls back to the maintainer named in branding/product.env."
     },
     "role": {
-      "type": "string"
+      "type": "string",
+      "description": "Shown as the subtitle under the title."
     },
-    "links": {
+    "portfolio": {
+      "type": "object",
+      "required": [
+        "url",
+        "button_label",
+        "note"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^https://[A-Za-z0-9.-]+(/[^\\s]*)?$",
+          "description": "Must agree with PORTFOLIO_URL in iarch/settings-app/iarch_settings/services/links.py; tests/test_settings_links.py asserts the two match, so the address cannot be changed in one place only."
+        },
+        "button_label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "description": "The one line under the primary button. The portfolio holds the social links, so the page says that instead of listing them twice."
+        }
+      }
+    },
+    "rows": {
       "type": "array",
+      "maxItems": 12,
       "items": {
         "type": "object",
         "required": [
+          "kind",
           "label",
-          "url"
+          "icon",
+          "value"
         ],
         "additionalProperties": false,
         "properties": {
+          "kind": {
+            "enum": [
+              "portfolio",
+              "email",
+              "github",
+              "instagram",
+              "tiktok",
+              "whatsapp",
+              "other"
+            ],
+            "description": "An identifier the page matches on. It is not a display string and is not translated."
+          },
           "label": {
             "type": "string",
             "minLength": 1
           },
-          "url": {
+          "subtitle": {
             "type": "string",
-            "pattern": "^(https?|mailto):"
+            "description": "Optional second line. Usually the address without its scheme, which is what a person recognises."
           },
-          "kind": {
-            "enum": [
-              "portfolio",
-              "social",
-              "email",
-              "other"
-            ]
+          "icon": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*-symbolic$",
+            "description": "A freedesktop symbolic icon name. Every name the application uses is verified against the icon theme in data/design/adwaita.json, and tests/test_settings_surface.py checks this file's icons against that record too."
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 2048,
+            "description": "The URI to open, or an empty string for a placeholder row the page hides. Validated at load time by services/links.py; a non-empty value that is refused is shown with the reason rather than opened."
           }
         }
       }

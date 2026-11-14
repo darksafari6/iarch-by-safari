@@ -51,7 +51,7 @@ UNVERIFIED = ROOT / "docs" / "UNVERIFIED.md"
 # compositor half of it is a record of Hyprland's leaves and carries the same pin.
 HYPRLAND_RELEASE = "v0.57.2"
 SHELL_RELEASE = "v5.4.1"
-COMPOSITOR_RECORDS = ("animations.json", "startup.json")
+COMPOSITOR_RECORDS = ("animations.json", "startup.json", "monitors.json")
 SHELL_RECORDS = ("noctalia.json",)
 
 # Records pinned to something other than a release tag, each for a recorded reason:
@@ -71,6 +71,7 @@ PAYLOAD_RECORDS = {
     ".config/hypr/generated/glass.lua": "data/design/tokens.json",
     ".config/hypr/generated/animations.lua": "data/design/animations.json",
     ".config/hypr/startup.lua": "data/design/startup.json",
+    ".config/hypr/monitors.lua": "data/design/monitors.json",
     ".config/hypr/hyprlock.conf": "data/design/hyprlock.json",
     ".config/hypr/hypridle.conf": "data/design/hyprlock.json",
     ".config/noctalia/config.toml": "data/design/noctalia.json",

@@ -43,6 +43,11 @@ REQUIRED_KEYS = (
     "IARCH_PROFILE_DIR",
     "IARCH_SHELL_CONFIG_DIR",
     "IARCH_HYPRLAND_ENTRY",
+    # Both application ids, because the compositor's glass window rules in
+    # data/design/tokens.json match on them and an id that vanished from
+    # product.env would silently un-rule its own window.
+    "IARCH_APP_ID",
+    "IARCH_APP_ID_SETTINGS",
 )
 
 _ASSIGNMENT = re.compile(r'^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"\s*(?:#.*)?$')

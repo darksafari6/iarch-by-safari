@@ -400,7 +400,14 @@ def render_sheet(version: str, context: Dict[str, Any]) -> str:
 
 
 COMMENT = re.compile(r"/\*.*?\*/", re.S)
-AT_RULE = re.compile(r"@([a-z-]+)")
+# The lookahead is what keeps a named colour out of the at-rule list: `@card_bg_color`
+# would otherwise match as an at-rule called `@card`, because an at-rule name has no
+# underscore in it and a libadwaita colour name is made of them. The two sheets this
+# renderer emits never reference a named colour -- they define their own with
+# @define-color and use hex literals from the preset -- so the mistake stayed latent
+# until iarch/settings-app/iarch_settings/style/glass.css, which uses libadwaita's
+# named colours so that it follows the colour preset without being re-rendered.
+AT_RULE = re.compile(r"@([a-z-]+)(?![a-z0-9_-])")
 FUNCTION = re.compile(r"(?<![a-zA-Z0-9_-])(-?[a-zA-Z][a-zA-Z0-9]*)\(")
 RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
 FUNC_PSEUDO = re.compile(r":([a-zA-Z-]+)\(([^)]*)\)")
