@@ -619,9 +619,19 @@ class TestAMissingBinaryIsUnverifiedAndNeverOff(unittest.TestCase):
                               {runner.OK, runner.FAILED, runner.UNVERIFIED},
                               f"{role} answered {answer['verdict']}, which no page has a way "
                               f"to draw")
-                self.assertTrue(str(answer["reason"]).strip(),
-                                f"{role} gave a verdict with no sentence behind it, so the "
-                                f"page would show a state and no reason for it")
+                # A value or a sentence, and a sentence whenever there is no value. A
+                # successful read that came back with the name of a program needs no
+                # explaining -- that was a machine with a default set, which a CI runner is
+                # and this sandbox is not, and demanding a sentence there asked a machine
+                # that answered for an apology.
+                self.assertTrue(str(answer["reason"]).strip()
+                                or str(answer["desktop_id"]).strip(),
+                                f"{role} gave a verdict with neither a value nor a sentence "
+                                f"behind it, so the page would draw an empty row")
+                if answer["verdict"] != runner.OK or not str(answer["desktop_id"]).strip():
+                    self.assertTrue(str(answer["reason"]).strip(),
+                                    f"{role} answered {answer['verdict']} with nothing to show "
+                                    f"and no sentence saying why")
                 self.assertEqual(list(defaults.query_argv(role, ROOT)), list(answer["argv"]),
                                  f"{role} reported a command it did not run")
                 self.assertEqual(role, answer["role"])

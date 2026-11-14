@@ -294,21 +294,84 @@ class TestOwnershipDecidesWhatMayBeTouched(unittest.TestCase):
                                               "the person's own comment and ordering went "
                                               "with it")
 
+    def isolated_env(self) -> Dict[str, str]:
+        """An environment whose system autostart directories are empty and known.
+
+        ``entries()`` reads the user's directory and then every system one, which is
+        ``$XDG_CONFIG_DIRS`` or ``/etc/xdg``. A GitHub runner has files in
+        ``/etc/xdg/autostart`` and this sandbox has no such directory at all, so a test that
+        counts entries without pinning that variable is counting the machine it happens to
+        run on: it saw one entry here and three there, and the difference was the runner's
+        own package set rather than anything this project did.
+        """
+        empty = self.tmp / "no-system-entries"
+        empty.mkdir(exist_ok=True)
+        return {"XDG_CONFIG_DIRS": str(empty), "HOME": str(self.tmp)}
+
     def test_a_file_this_project_does_not_own_is_listed_and_never_changed(self):
         foreign = self.tmp / "autostart" / "other.desktop"
         foreign.parent.mkdir(parents=True, exist_ok=True)
         foreign.write_text("[Desktop Entry]\nName=Other\nExec=/bin/true\n",
                            encoding="utf-8")
-        entries = autostart.entries(config_home=self.tmp)
-        self.assertEqual(1, len(entries))
+        entries = autostart.entries(config_home=self.tmp, env=self.isolated_env())
+        self.assertEqual(1, len(entries),
+                         f"the user's directory holds one file this project does not own and "
+                         f"{len(entries)} entries were listed, so the machine's own system "
+                         f"entries leaked into a test about the user's directory")
         self.assertFalse(entries[0].owned)
         self.assertFalse(entries[0].ours)
+        self.assertFalse(entries[0].system, "a file in the user's own directory was listed "
+                                            "as a system entry, which is the flag that "
+                                            "decides whether it may be shadowed")
         before = foreign.read_text(encoding="utf-8")
         with self.assertRaises(autostart.AutostartError) as caught:
             autostart.set_enabled(entries[0], False, config_home=self.tmp)
         self.assertIn("not written by this application", str(caught.exception))
         self.assertEqual(before, foreign.read_text(encoding="utf-8"),
                          "a refusal that changed the file first is not a refusal")
+
+    def test_a_system_directory_is_read_and_marked_as_the_kind_that_may_not_be_written(self):
+        """The other half of the isolation above: system entries are read, and say where they are.
+
+        Pinning ``XDG_CONFIG_DIRS`` to an empty directory keeps a test about the user's
+        directory honest, and it would hide this behaviour entirely if nothing else covered
+        it -- so here it is, with a system directory that exists on purpose.
+        """
+        system_root = self.tmp / "etc-xdg"
+        (system_root / "autostart").mkdir(parents=True)
+        vendor = system_root / "autostart" / "vendor.desktop"
+        vendor.write_text("[Desktop Entry]\nName=Vendor\nExec=/bin/true\n", encoding="utf-8")
+        env = {"XDG_CONFIG_DIRS": str(system_root), "HOME": str(self.tmp)}
+
+        found = autostart.entries(config_home=self.tmp, env=env)
+        self.assertEqual([vendor], [entry.path for entry in found],
+                         "a system autostart directory on XDG_CONFIG_DIRS was not read, so "
+                         "the page would list only what the user added and hide the entries "
+                         "the session actually runs")
+        self.assertTrue(found[0].system)
+        self.assertFalse(found[0].ours)
+
+    def test_a_user_entry_of_the_same_name_masks_the_system_one(self):
+        """The generator stops at the first name it sees, and the list has to say so."""
+        system_root = self.tmp / "etc-xdg"
+        (system_root / "autostart").mkdir(parents=True)
+        (system_root / "autostart" / "same.desktop").write_text(
+            "[Desktop Entry]\nName=System\nExec=/bin/true\n", encoding="utf-8")
+        user_dir = self.tmp / "autostart"
+        user_dir.mkdir(parents=True)
+        (user_dir / "same.desktop").write_text(
+            "[Desktop Entry]\nName=User\nExec=/bin/false\n", encoding="utf-8")
+        env = {"XDG_CONFIG_DIRS": str(system_root), "HOME": str(self.tmp)}
+
+        found = autostart.entries(config_home=self.tmp, env=env)
+        self.assertEqual(1, len(found), "one name was listed twice, and the session would "
+                                        "only ever run the first file it found")
+        self.assertEqual("User", found[0].values["Name"], "the system file won a name it "
+                                                          "should have lost")
+        self.assertFalse(found[0].system)
+        self.assertEqual(system_root / "autostart" / "same.desktop", found[0].masked_by,
+                         "the entry does not name the file it beat, so a person cannot tell "
+                         "why a system entry disappeared from the list")
 
     def test_a_system_entry_is_shadowed_rather_than_written(self):
         """The record allows one shadow and refuses the other, and says why in both cases."""
