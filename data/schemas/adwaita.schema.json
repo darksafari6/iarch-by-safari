@@ -20,6 +20,7 @@
     "css_properties",
     "pseudo_classes",
     "icons",
+    "licenses",
     "portability",
     "rejected"
   ],
@@ -343,6 +344,39 @@
         }
       }
     },
+    "licenses": {
+      "type": "object",
+      "description": "Which SPDX identifier in data/licenses.json maps to which GtkLicense member, and which have no member. A mapping GTK does not name would state something false about another project's terms, so the ones it cannot name are recorded as CUSTOM with a rule saying what the section's text must then carry.",
+      "required": ["evidence", "names", "custom", "custom_for", "unknown", "composite_rule", "members"],
+      "additionalProperties": false,
+      "properties": {
+        "evidence": { "type": "string", "pattern": "^GNOME/gtk@" },
+        "_note": { "type": "string" },
+        "names": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "pattern": "^Gtk\\.License\\.[A-Z0-9_]+$" },
+          "propertyNames": { "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$" }
+        },
+        "custom": { "type": "string", "pattern": "^Gtk\\.License\\.[A-Z0-9_]+$" },
+        "custom_for": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$" }
+        },
+        "unknown": { "type": "string", "pattern": "^Gtk\\.License\\.[A-Z0-9_]+$" },
+        "composite_rule": { "type": "string", "minLength": 1 },
+        "members": {
+          "type": "array",
+          "minItems": 18,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+          "description": "The whole enum, so a test can assert every value in `names`, `custom_for`'s fallback and `unknown` is a member of it."
+        }
+      }
+    },
+
     "portability": {
       "type": "array",
       "items": {

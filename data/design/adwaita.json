@@ -402,24 +402,108 @@
     {
       "call": "adw_about_dialog_new",
       "python": "Adw.AboutDialog.new()",
-      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h"
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:28"
     },
     {
       "call": "adw_about_dialog_add_legal_section",
-      "python": "Adw.AboutDialog.add_legal_section(title, license_type, text)",
-      "note": "This is the sub-page the credits policy names: About -> Open-source licenses. It is the only place in the application that shows another project's name, and it shows them by reading data/licenses.json, never by hard-coding one.",
-      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h"
+      "python": "Adw.AboutDialog.add_legal_section(title, copyright, license_type, license)",
+      "note": "This is the sub-page the credits policy names: About -> Open-source licenses. It is the only place in the application that shows another project's name, and it shows them by reading data/licenses.json, never by hard-coding one. Four arguments, not three, and the copyright comes before the license type: an earlier draft of this record had it as (title, license_type, text), which is the shape GtkAboutDialog's older add_credit_section-style calls suggest and not the shape this function has. The signature was then read out of the header at the pinned ref, which is the only reason the mistake is in this note rather than in a dialog that raises at runtime.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:170-175"
+    },
+    {
+      "call": "adw_about_dialog_set_application_name",
+      "python": "Adw.AboutDialog.set_application_name(name)",
+      "note": "The product name, which branding/product.env owns and tools/iarch_brand.py --check enforces. It is read, never typed here, so the dialog cannot disagree with the rest of the product.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:37-39"
+    },
+    {
+      "call": "adw_about_dialog_set_application_icon",
+      "python": "Adw.AboutDialog.set_application_icon(icon_name)",
+      "note": "Takes an icon name, not a paintable. The application id is used, which is how a themed icon is found; this project ships no icon of its own yet (Part 6), so the dialog falls back to the theme's default rather than to a broken image.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:43-45"
+    },
+    {
+      "call": "adw_about_dialog_set_developer_name",
+      "python": "Adw.AboutDialog.set_developer_name(name)",
+      "note": "The maintainer named in data/licenses.json's product block, which is the same name the Contact page shows.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:49-51"
+    },
+    {
+      "call": "adw_about_dialog_set_version",
+      "python": "Adw.AboutDialog.set_version(version)",
+      "note": "The VERSION file plus the revision, from iarch_settings.version.facts, so the dialog says what is actually checked out rather than what the last release was.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:55-57"
+    },
+    {
+      "call": "adw_about_dialog_set_comments",
+      "python": "Adw.AboutDialog.set_comments(text)",
+      "note": "The one-paragraph description under the name.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:73-75"
+    },
+    {
+      "call": "adw_about_dialog_set_website",
+      "python": "Adw.AboutDialog.set_website(url)",
+      "note": "The portfolio address, from the same three places tests/test_settings_links.py already asserts agree.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:79-81"
+    },
+    {
+      "call": "adw_about_dialog_add_link",
+      "python": "Adw.AboutDialog.add_link(title, url)",
+      "note": "A link below the website: the repository, and the notices document rendered from the same JSON as this dialog's legal sections.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:95-98"
+    },
+    {
+      "call": "adw_about_dialog_set_copyright",
+      "python": "Adw.AboutDialog.set_copyright(text)",
+      "note": "The copyright line from the product's own _copyright header, so the dialog and every source file say the same thing.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:154-156"
+    },
+    {
+      "call": "adw_about_dialog_set_license_type",
+      "python": "Adw.AboutDialog.set_license_type(Gtk.License)",
+      "note": "The product's own license as a GtkLicense member, mapped from the SPDX identifier in data/licenses.json by the `licenses` block of this record. Setting the type rather than the text means GTK supplies the license it already ships, so this project does not carry a copy of the GPL that could drift from the one LICENSE.txt holds.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:160-163"
+    },
+    {
+      "call": "adw_about_dialog_set_license",
+      "python": "Adw.AboutDialog.set_license(text)",
+      "note": "Recorded and not used: it replaces the text GTK derives from set_license_type, and a hand-supplied GPL text is a second copy of a document that already exists in LICENSE.txt.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:166-168"
+    },
+    {
+      "call": "adw_about_dialog_set_translator_credits",
+      "python": "Adw.AboutDialog.set_translator_credits(text)",
+      "note": "The po/ catalogues' Last-Translator lines, so a translation credits itself from its own file instead of from a list somebody has to remember to update.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:138-140"
+    },
+    {
+      "call": "adw_about_dialog_add_credit_section",
+      "python": "Adw.AboutDialog.add_credit_section(name, people)",
+      "note": "A named credit section; `people` is a list of strings.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:142-145"
+    },
+    {
+      "call": "adw_about_dialog_add_acknowledgement_section",
+      "python": "Adw.AboutDialog.add_acknowledgement_section(name, people)",
+      "note": "Where the upstream projects this product is built from are thanked by name. The credits policy allows naming another project here and in the legal sections and nowhere else in the interface.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:147-150"
+    },
+    {
+      "call": "adw_about_dialog_set_debug_info_filename",
+      "python": "Adw.AboutDialog.set_debug_info_filename(name)",
+      "note": "The file name the debug information is saved under when a person copies it into a bug report.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:108-110"
     },
     {
       "call": "adw_about_dialog_set_issue_url",
       "python": "Adw.AboutDialog.set_issue_url(url)",
-      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h"
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:91-93"
     },
     {
       "call": "adw_about_dialog_set_debug_info",
       "python": "Adw.AboutDialog.set_debug_info(text)",
       "note": "Where the doctor's output goes, so a bug report carries what the machine actually reports.",
-      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h"
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:102-104"
     },
     {
       "call": "adw_dialog_present",
@@ -696,6 +780,33 @@
       "applications-system-symbolic": "autostart entries"
     }
   },
+  "licenses": {
+    "evidence": "GNOME/gtk@4.10.0:gtk/gtkaboutdialog.h:66-92 (the GtkLicense enum) and :42-60 (what each member means)",
+    "_note": "GtkLicense has eighteen members and the SPDX identifiers in data/licenses.json are not all among them, so this block records both halves: which identifier maps to which member, and which ones have no member and are therefore shown as CUSTOM with their own text. Mapping an identifier GTK does not name onto the nearest member it does would state something false about somebody else's license -- ISC is not MIT, and the SIL Open Font License is not the Artistic License -- so the honest answer for those is CUSTOM, which is the member whose documentation says the caller supplies the text.",
+    "names": {
+      "GPL-3.0-or-later": "Gtk.License.GPL_3_0",
+      "GPL-3.0-only": "Gtk.License.GPL_3_0_ONLY",
+      "GPL-2.0-only": "Gtk.License.GPL_2_0_ONLY",
+      "LGPL-2.1-only": "Gtk.License.LGPL_2_1_ONLY",
+      "MIT": "Gtk.License.MIT_X11",
+      "BSD-3-Clause": "Gtk.License.BSD_3",
+      "Apache-2.0": "Gtk.License.APACHE_2_0",
+      "MPL-2.0": "Gtk.License.MPL_2_0"
+    },
+    "custom": "Gtk.License.CUSTOM",
+    "custom_for": [
+      "ISC",
+      "MIT-CMU",
+      "OFL-1.1"
+    ],
+    "unknown": "Gtk.License.UNKNOWN",
+    "composite_rule": "An identifier that is not a key of `names` and not in `custom_for` is a sentence rather than a license -- a pair of licenses separated by a semicolon, a parenthetical note, `Varies per package`, `Service terms of the operator`, `TODO(verify)`, or the statement that no license file was published. Each of those is shown as CUSTOM with the identifier quoted verbatim in the section's text, because paraphrasing one would replace a statement about somebody else's terms with a guess. `TODO(verify)` additionally carries the open item into the section, so a license nobody has confirmed says so on screen instead of looking settled.",
+    "members": [
+      "UNKNOWN", "CUSTOM", "GPL_2_0", "GPL_3_0", "LGPL_2_1", "LGPL_3_0", "BSD",
+      "MIT_X11", "ARTISTIC", "GPL_2_0_ONLY", "GPL_3_0_ONLY", "LGPL_2_1_ONLY",
+      "LGPL_3_0_ONLY", "AGPL_3_0", "AGPL_3_0_ONLY", "BSD_3", "APACHE_2_0", "MPL_2_0"
+    ]
+  },
   "portability": [
     {
       "call": "gtk_css_provider_load_from_data",
@@ -717,6 +828,11 @@
     }
   ],
   "rejected": [
+    {
+      "spelling": "Adw.AboutDialog.add_other_app(appid, name, summary)",
+      "why": "It is marked ADW_AVAILABLE_IN_1_7 while every other call in this record is 1.5, and the floor this record argues for is libadwaita 1.6 because that is what Fedora 41 ships. Using it would make the About dialog the one place the application fails to start on a supported distribution, for a row that adds nothing the acknowledgement section does not.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-about-dialog.h:176-181 (ADW_AVAILABLE_IN_1_7)"
+    },
     {
       "spelling": "accent-color (CSS property)",
       "why": "GTK 4's published property table has no accent-color: libadwaita exposes the accent as the named colours @accent_color and @accent_bg_color, not as a CSS property, so a rule setting accent-color would be a parse error on every supported release",
