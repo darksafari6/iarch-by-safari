@@ -141,6 +141,106 @@ def check_arguments(entry: Mapping[str, Any], args: Sequence[str]) -> List[str]:
     return problems
 
 
+# -------------------------------------------------------------- config paths
+
+
+def design_record(root: Optional[Path] = None) -> Dict[str, Any]:
+    """``data/design/noctalia.json``, parsed: the shell's own configuration keys."""
+    try:
+        return json.loads(paths.design_file("noctalia.json", root).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise NoctaliaError(f"the shell configuration record cannot be read: {exc}") from exc
+
+
+def key_specs(root: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
+    """Every shell configuration key the record declares, by dotted config path.
+
+    A section name in the record is already a dotted prefix -- ``theme``, ``dock``,
+    ``bar.default`` -- and ``bar.default`` is the bar whose own ``name`` key is
+    ``default``, which is why the bar's keys are three words deep while the dock's
+    are two. Nothing here invents a path: every key comes out of the record, so a
+    key added to the record is a key a page can offer, and a key the record does
+    not carry cannot be sent.
+    """
+    sections = design_record(root).get("sections") or {}
+    specs: Dict[str, Dict[str, Any]] = {}
+    for name, section in sections.items():
+        if not isinstance(section, dict):
+            continue
+        keys = section.get("keys")
+        if not isinstance(keys, dict):
+            continue
+        for key, spec in keys.items():
+            specs[f"{name}.{key}"] = dict(spec) if isinstance(spec, dict) else {}
+    return specs
+
+
+def known_paths(root: Optional[Path] = None) -> List[str]:
+    """The recorded config paths, sorted. The closed list a test checks against."""
+    return sorted(key_specs(root))
+
+
+def check_path(path: str, root: Optional[Path] = None) -> List[str]:
+    """Why ``path`` is not a key the record declares, or an empty list.
+
+    The shell answers an unknown path with ``warning: unknown setting`` and then
+    ignores it, so a typo would come back looking like a value. Refusing it here
+    means the sentence a person reads names the record, not the shell's warning.
+    """
+    specs = key_specs(root)
+    if path in specs:
+        return []
+    section = path.rsplit(".", 1)[0]
+    siblings = sorted(other.rsplit(".", 1)[1] for other in specs
+                      if other.rsplit(".", 1)[0] == section)
+    hint = (f" the {section} keys are {', '.join(siblings)}" if siblings else
+            f" the sections are {', '.join(sorted({key.rsplit('.', 1)[0] for key in specs}))}")
+    return [f"{path!r} is not a shell configuration key in data/design/noctalia.json, so it "
+            f"is not sent;{hint}"]
+
+
+def check_value(path: str, value: Any, root: Optional[Path] = None) -> List[str]:
+    """Why ``value`` cannot be written to ``path``, or an empty list.
+
+    Two of the shell's own behaviours are the reason this exists: an out-of-range
+    number is **clamped and continues**, and a bad type is an error that leaves the
+    old value in place. A clamp is the worse of the two, because the reply says the
+    set worked and the value that arrived is not the one asked for, so both are
+    refused here -- which is what the record's own ``diagnostics.consequence``
+    demands of anything this project sends.
+    """
+    specs = key_specs(root)
+    spec = specs.get(path)
+    if spec is None:
+        return check_path(path, root)
+    kind = spec.get("type")
+    problems: List[str] = []
+
+    if kind == "bool" and not isinstance(value, bool):
+        problems.append(f"{path} is a boolean, and {value!r} is not one")
+    elif kind in ("integer", "float"):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            problems.append(f"{path} is a number, and {value!r} is not one")
+        else:
+            bounds = spec.get("range") or []
+            if len(bounds) >= 2:
+                low, high = float(bounds[0]), float(bounds[1])
+                if not low <= float(value) <= high:
+                    problems.append(
+                        f"{value!r} is outside the range {path} accepts, {low:g} to {high:g}: the "
+                        f"shell would clamp it and report success, so it is not sent")
+                elif kind == "integer" and float(value) != int(value):
+                    problems.append(f"{path} is an integer key, and {value!r} has a fraction")
+    elif kind == "string" and not isinstance(value, str):
+        problems.append(f"{path} is a string, and {value!r} is not one")
+
+    choices = spec.get("enum")
+    if isinstance(choices, list) and isinstance(value, str) and value not in choices:
+        problems.append(f"{value!r} is not one of the values {path} accepts: "
+                        f"{', '.join(str(choice) for choice in choices)}")
+    return problems
+
+
 # ------------------------------------------------------------------ sending
 
 
@@ -267,21 +367,50 @@ def set_dnd(state: bool) -> runner.Outcome:
     return send("notification-dnd-set", "on" if state else "off")
 
 
-def config_get(path: str) -> Tuple[Optional[Any], str]:
-    """Read one shell configuration key by its dotted path."""
+def read(path: str, root: Optional[Path] = None) -> Tuple[Optional[Any], str, str]:
+    """Read one shell configuration key, as ``(value, verdict, reason)``.
+
+    The three-part answer is what a page needs, because "could not be asked" and
+    "the shell said no" and "the value is empty" are three different sentences on
+    a screen, and a two-part answer collapses the first two into the same ``None``.
+
+    The path is checked against ``data/design/noctalia.json`` before it is sent, so
+    a typo is refused here rather than answered with the shell's unknown-setting
+    warning -- which a reader would otherwise have to parse out of a reply that
+    looks like a value.
+    """
+    problems = check_path(path, root)
+    if problems:
+        return None, runner.FAILED, "; ".join(problems)
     outcome = send("config-get", path)
     text = answered(outcome)
     if text is None:
-        return None, outcome.verdict
+        return None, outcome.verdict, (outcome.reason or reply_text(outcome)
+                                       or "the shell did not answer")
     try:
-        return json.loads(text), runner.OK
+        return json.loads(text), runner.OK, ""
     except json.JSONDecodeError:
         # A bare word or a number is a legitimate reply for a scalar key.
-        return text, runner.OK
+        return text, runner.OK, ""
 
 
-def config_set(path: str, value: Any) -> runner.Outcome:
-    """Write one shell configuration key. The value is encoded as TOML."""
+def config_get(path: str, root: Optional[Path] = None) -> Tuple[Optional[Any], str]:
+    """Read one shell configuration key by its dotted path: ``(value, verdict)``."""
+    value, verdict, _reason = read(path, root)
+    return value, verdict
+
+
+def config_set(path: str, value: Any, root: Optional[Path] = None) -> runner.Outcome:
+    """Write one shell configuration key. The value is encoded as TOML.
+
+    Both the path and the value are checked against the record first, for the reason
+    :func:`check_value` gives: the shell clamps an out-of-range number and reports
+    success, and a reply that says the change worked is not a change that arrived.
+    """
+    problems = check_path(path, root) or check_value(path, value, root)
+    if problems:
+        return runner.Outcome([runner.NOCTALIA_BIN, "msg", "config-set", path],
+                              runner.FAILED, reason="; ".join(problems))
     try:
         rendered = toml_value(value)
     except NoctaliaError as exc:
@@ -333,6 +462,78 @@ def toggle(kind: str) -> runner.Outcome:
         return runner.Outcome([runner.NOCTALIA_BIN, "msg", kind], runner.FAILED,
                               reason=f"{kind!r} has no toggle verb in the record")
     return send(verb)
+
+
+# ------------------------------------------------------------------ page verbs
+#
+# Zero-argument spellings of the calls above, one per button a page draws. They exist
+# because a plan row names a function and the renderer calls it with nothing: a row
+# cannot carry arguments, and a row that had to would be a row that could smuggle a
+# value past the plan's checks. Each of these is one recorded verb with its argument
+# already decided, so the set of things a button can do to the shell is exactly the
+# set written here -- and a test can enumerate it.
+
+
+def lock_now() -> runner.Outcome:
+    """Lock the session now. One of the three session actions this project offers."""
+    return session("lock")
+
+
+def suspend_now() -> runner.Outcome:
+    """Suspend the session now."""
+    return session("suspend")
+
+
+def screen_off() -> runner.Outcome:
+    """Turn the panel off without touching the idle timer."""
+    return screen("off")
+
+
+def screen_on() -> runner.Outcome:
+    """Turn the panel back on."""
+    return screen("on")
+
+
+def toggle_wifi() -> runner.Outcome:
+    """The shell's own wi-fi toggle."""
+    return toggle("wifi")
+
+
+def toggle_bluetooth() -> runner.Outcome:
+    """The shell's own bluetooth toggle."""
+    return toggle("bluetooth")
+
+
+def toggle_network() -> runner.Outcome:
+    """The shell's own network toggle, which is wired rather than wireless."""
+    return toggle("network")
+
+
+def screenshot_region() -> runner.Outcome:
+    """Capture a region, through the shell's own capture."""
+    return screenshot("region")
+
+
+def screenshot_window() -> runner.Outcome:
+    """Capture one window, through the shell's own capture."""
+    return screenshot("window")
+
+
+def open_launcher() -> runner.Outcome:
+    """Open the shell's launcher panel."""
+    return panel(PANEL_LAUNCHER)
+
+
+def open_control_center() -> runner.Outcome:
+    """Open the shell's control centre panel."""
+    return panel(PANEL_CONTROL_CENTER)
+
+
+#: Every page verb, so a test can assert that a button's action is one of them and
+#: that none of them is a verb this project refuses.
+PAGE_VERBS = ("lock_now", "suspend_now", "screen_off", "screen_on", "toggle_wifi",
+              "toggle_bluetooth", "toggle_network", "screenshot_region",
+              "screenshot_window", "open_launcher", "open_control_center")
 
 
 def power_profile(profile: str) -> runner.Outcome:
