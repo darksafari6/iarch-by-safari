@@ -1,0 +1,163 @@
+/* Copyright (C) 2026 Safari — GPL-3.0-or-later
+
+   The settings application's own stylesheet. It is loaded with
+   gtk_css_provider_load_from_file (the spelling that is the same at GTK 4.10 and
+   4.12 -- data/design/adwaita.json:portability records why the load_from_data
+   spelling cannot be used) and added after the session-wide sheet, so the order is:
+   libadwaita's defaults, ~/.config/gtk-4.0/gtk.css rendered by
+   iarch/cli/render_gtk_css.py, then this file.
+
+   What this file is for, and what it deliberately is not:
+
+   * It defines exactly six style classes, all of them prefixed `iarch-`, and they
+     are the six data/design/adwaita.json lists as project-owned. Every other class
+     in the application is libadwaita's own and is styled by libadwaita or by the
+     session sheet; restyling `card` or `boxed-list` here would change a widget the
+     application does not own, in a way that survives a change of intensity.
+   * It contains no number it chose. Every radius is tokens.json:radius resolved
+     through the role that names it, every alpha is the default intensity's
+     tokens.json:intensities.frosted.gtk or .glass block, every duration and easing
+     is tokens.json:motion, every padding is tokens.json:spacing and every border
+     width is tokens.json:layout.border_size. tests/test_settings_surface.py checks
+     each one against the token, so this file cannot drift into being the second
+     place the design system's numbers live.
+   * It contains no colour literal. Every colour is a named colour libadwaita
+     defines, so the sheet follows the colour preset and the light and dark mode
+     without being re-rendered, and so a person who changes accent does not have to
+     find this file.
+   * It sets no `backdrop-filter` and no `filter`. The blur behind this window is
+     the compositor's, from the window rule for dev.safari.iarch.settings in
+     .config/hypr/generated/glass.lua; blurring inside the widget would blur the
+     application's own text instead of the desktop behind it, and would cost an
+     offscreen buffer per frame. data/design/adwaita.json:rejected says the same
+     thing about the same property, for the same reason.
+   * It sets no box-shadow with an offset or a blur. Every shadow here is either an
+     inset hairline, which is a border drawn as a shadow, or the focus ring's 2px
+     spread, which has no offset and no blur and so casts nothing. The drop shadow
+     under a window is the compositor's (decoration:shadow), and drawing a second one
+     here would double it under a tiling compositor.
+
+   GTK hides its mistakes in a stylesheet: an unknown property warns and is dropped,
+   a selector that matches nothing is kept and never applies. Both are checked at
+   build time rather than at runtime, against data/design/gtk.json (what GTK 4
+   parses) and data/design/adwaita.json (what this application is allowed to name). */
+
+/* ---- the card a group of rows sits on -------------------------------------
+   radius.card resolves to radius.md. The tint is the default intensity's
+   gtk.card alpha over the card colour libadwaita already chose, so the card stays
+   readable at every colour preset and every mode. */
+.iarch-glass-card {
+  background-color: alpha(@card_bg_color, 0.76);
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px alpha(@card_shade_color, 0.18);
+  padding: 12px;
+  transition-property: background-color, box-shadow;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- the Home page's hero surface ------------------------------------------
+   radius.panel resolves to radius.lg, the largest radius the design system has,
+   because this is the one surface that is meant to read as a pane of glass rather
+   than as a control. tint_alpha_strong is the token for "a surface that has to
+   carry a heading over whatever is behind it". */
+.iarch-glass-hero {
+  background-color: alpha(@window_bg_color, 0.48);
+  border-radius: 24px;
+  box-shadow: inset 0 0 0 1px alpha(@shade_color, 0.18);
+  padding: 24px;
+}
+
+/* ---- the sidebar pane ------------------------------------------------------
+   gtk.sidebar is the least translucent surface in the intensity block, on purpose:
+   the sidebar carries the fifteen page names, and a test in the session sheet's
+   own suite asserts a sidebar is never more translucent than its window. The
+   hairline is on the content side only, which is what sidebar_border_color is for. */
+.iarch-glass-sidebar {
+  background-color: alpha(@sidebar_bg_color, 0.92);
+  border-radius: 16px;
+  box-shadow: inset -1px 0 0 0 alpha(@sidebar_border_color, 0.18);
+  padding: 8px;
+}
+
+/* A page's own row, in the sidebar. `navigation-sidebar` is libadwaita's class and
+   stays in charge of the shape; this adds the highlight the design system calls
+   for, at the glass block's highlight_alpha. */
+.iarch-glass-sidebar .iarch-highlight {
+  background-color: alpha(@accent_color, 0.1);
+  border-radius: 12px;
+}
+
+/* ---- a tile in a grid ------------------------------------------------------
+   One tile of the preset grid, the wallpaper grid or the intensity picker: a
+   Gtk.FlowBox child that is selectable, so it has a checked state that has to read
+   as "this is the one" without a label saying so. radius.button resolves to
+   radius.sm; gtk.button is the alpha the design system gives a control surface. */
+.iarch-glass-tile {
+  background-color: alpha(@view_bg_color, 0.64);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px alpha(@shade_color, 0.18);
+  padding: 8px;
+  transition-property: background-color, box-shadow, transform;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.iarch-glass-tile:hover {
+  background-color: alpha(@view_bg_color, 0.76);
+}
+
+/* The selected tile carries the accent as a hairline and as a tint, which is the
+   only place in the application where the accent means "chosen". */
+.iarch-glass-tile:checked {
+  background-color: alpha(@accent_color, 0.1);
+  box-shadow: inset 0 0 0 1px @accent_color;
+}
+
+/* Keyboard focus is a ring that fades in rather than appearing, at the same
+   duration the session sheet uses, so the two sheets do not disagree about how
+   long a focus change takes. focus-visible and not focus: a pointer click should
+   not leave a ring on the tile somebody just clicked. */
+.iarch-glass-tile:focus-visible {
+  box-shadow: inset 0 0 0 1px @accent_color, 0 0 0 2px alpha(@accent_color, 0.34);
+  transition-duration: 220ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ---- a read-only preview ---------------------------------------------------
+   The surface a page draws a sample on: what the current motion preset looks like,
+   what the current glass intensity does to a card, what a font size reads as. It is
+   not a control, so it gets no hover and no checked state, and it is the one
+   surface here that takes the input alpha -- the faintest one -- because nothing in
+   it is meant to be clicked. */
+.iarch-glass-preview {
+  background-color: alpha(@view_bg_color, 0.6);
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px alpha(@shade_color, 0.18);
+  padding: 16px;
+}
+
+/* ---- a search hit ----------------------------------------------------------
+   The highlight the sidebar's search results wear on the words that matched, and
+   the one a tile wears when the search index points at it. highlight_alpha is the
+   token; the radius is radius.sm so the highlight follows the tile it is on. */
+.iarch-highlight {
+  background-color: alpha(@accent_color, 0.1);
+  border-radius: 12px;
+}
+
+/* ---- reduce motion ---------------------------------------------------------
+   GTK 4 parses @media (GTK 3 does not, and this sheet is GTK 4 only because the
+   application is). Zeroing the durations here is what makes the tiles answer the
+   desktop's own reduce-motion preference even when this project's
+   animation.reduce_motion is off: the two switches are separate, and a person who
+   asked their desktop for no motion gets no motion from this window regardless of
+   what the settings file says. docs/MOTION.md records the same rule for the
+   session sheet. */
+@media (prefers-reduced-motion: reduce) {
+  .iarch-glass-card,
+  .iarch-glass-tile {
+    transition-duration: 0ms;
+    transition-delay: 0ms;
+  }
+}
