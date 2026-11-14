@@ -34,9 +34,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -382,8 +383,54 @@ def layer_rules(tokens: Dict[str, Any], intensity_name: str) -> List[str]:
     return calls
 
 
-def window_rules(tokens: Dict[str, Any], intensity_name: str) -> List[str]:
-    """Opacity per class group, then the fullscreen override last so it wins."""
+#: What a per-app opacity entry from settings.json may look like. The same rule
+#: data/schemas/settings.schema.json states, enforced here as well because this
+#: generator can be handed any file and a pattern that reaches the compositor's rule
+#: engine unanchored matches windows nobody meant.
+OPACITY_CLASS = re.compile(r"^[^^$]+$")
+
+
+def check_overrides(entries: Sequence[Mapping[str, Any]]) -> List[str]:
+    """Every way a ``glass.per_app_opacity`` list is unusable, as sentences."""
+    problems: List[str] = []
+    seen: Dict[str, int] = {}
+    for index, entry in enumerate(entries):
+        where = f"glass.per_app_opacity[{index}]"
+        if not isinstance(entry, Mapping):
+            problems.append(f"{where} is not an object")
+            continue
+        unexpected = set(entry) - {"class", "opacity"}
+        if unexpected:
+            problems.append(f"{where} declares {', '.join(sorted(unexpected))}, which is "
+                            f"neither a class nor an opacity")
+        pattern = entry.get("class")
+        if not isinstance(pattern, str) or not OPACITY_CLASS.match(pattern):
+            problems.append(f"{where} needs a window class with at least one character "
+                            f"and no ^ or $ in it: this generator anchors the pattern")
+        elif pattern in seen:
+            problems.append(f"{where} names {pattern}, which entry {seen[pattern]} already "
+                            f"gave an opacity; two rules for one class is a rule that "
+                            f"depends on the order they were written in")
+        else:
+            seen[pattern] = index
+        value = entry.get("opacity")
+        if not isinstance(value, (int, float)) or isinstance(value, bool) \
+                or not 0.0 <= float(value) <= 1.0:
+            problems.append(f"{where} needs an opacity between 0.0 and 1.0, and "
+                            f"{value!r} is not one")
+    return problems
+
+
+def window_rules(tokens: Dict[str, Any], intensity_name: str,
+                 overrides: Optional[Sequence[Mapping[str, Any]]] = None) -> List[str]:
+    """Opacity per class group, then the user's own, then fullscreen last so it wins.
+
+    ``overrides`` is ``glass.per_app_opacity`` out of settings.json. Those rules are
+    emitted after the token groups and before the fullscreen rule, so a person's own
+    choice beats the group default for that class and a fullscreen window is still
+    opaque whatever it is: the ordering is the whole semantics of the list, and it is
+    why the fullscreen rule stays last rather than being sorted with the rest.
+    """
     opacity = tokens["window_opacity"]
     allowed = set(tokens["hyprland"]["window_rule_effects"])
     calls = []
@@ -412,6 +459,15 @@ def window_rules(tokens: Dict[str, Any], intensity_name: str) -> List[str]:
                 rule["no_blur"] = True
                 rule["no_dim"] = True
             calls.append(guarded(pattern, rule))
+    for entry in overrides or ():
+        pattern = str(entry["class"])
+        calls.append(guarded(pattern, {
+            # Anchored here and not in the settings file: data/schemas/settings.schema.json
+            # forbids a ^ or a $ in the value so that the anchoring lives in exactly one
+            # place, and this is it.
+            "match": {"class": f"^{pattern}$"},
+            "opacity": float(entry["opacity"]),
+        }))
     # Registered last, so it overrides every group opacity above for any window
     # that is actually fullscreen -- a game, a video, a presentation.
     calls.append(guarded("iarch-glass-fullscreen", {
@@ -424,8 +480,9 @@ def window_rules(tokens: Dict[str, Any], intensity_name: str) -> List[str]:
     return calls
 
 
-def render(tokens: Dict[str, Any], preset: Dict[str, Any],
-           intensity_name: str) -> Tuple[str, List[str]]:
+def render(tokens: Dict[str, Any], preset: Dict[str, Any], intensity_name: str,
+           overrides: Optional[Sequence[Mapping[str, Any]]] = None
+           ) -> Tuple[str, List[str]]:
     """Return (lua source without the generated header, warnings)."""
     warnings: List[str] = []
     decoration = decoration_block(tokens, intensity_name, warnings)
@@ -439,7 +496,7 @@ def render(tokens: Dict[str, Any], preset: Dict[str, Any],
         }),
     ]
     calls.extend(layer_rules(tokens, intensity_name))
-    calls.extend(window_rules(tokens, intensity_name))
+    calls.extend(window_rules(tokens, intensity_name, overrides))
     body = "\n\n".join(calls) + "\n"
     return body, warnings
 
@@ -502,9 +559,33 @@ def sanity_check_lua(text: str) -> List[str]:
     return problems
 
 
-def build(tokens: Dict[str, Any], preset: Dict[str, Any],
-          intensity_name: str) -> str:
-    body, warnings = render(tokens, preset, intensity_name)
+def load_overrides(path: Path) -> List[Dict[str, Any]]:
+    """``glass.per_app_opacity`` out of a settings document, checked.
+
+    Raises rather than skipping: an entry this generator cannot anchor is an entry
+    that would become a window rule matching something else, and a refusal that names
+    the line is the only outcome that does not silently change a window nobody asked
+    about.
+    """
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise GlassError(f"{path} could not be read: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise GlassError(f"{path} is not valid JSON ({exc.msg} at line {exc.lineno})") from exc
+    entries = ((document.get("glass") or {}).get("per_app_opacity") or []) \
+        if isinstance(document, Mapping) else []
+    if not isinstance(entries, list):
+        raise GlassError("glass.per_app_opacity is not a list")
+    problems = check_overrides(entries)
+    if problems:
+        raise GlassError("; ".join(problems))
+    return [dict(entry) for entry in entries]
+
+
+def build(tokens: Dict[str, Any], preset: Dict[str, Any], intensity_name: str,
+          overrides: Optional[Sequence[Mapping[str, Any]]] = None) -> str:
+    body, warnings = render(tokens, preset, intensity_name, overrides)
     problems = sanity_check_lua(body)
     if problems:
         raise GlassError("rendered Lua failed its structural check: "
@@ -547,13 +628,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         help="verify the committed default matches a fresh render")
     parser.add_argument("--output", type=Path,
                         help="explicit destination (overrides the config dir)")
+    parser.add_argument("--settings", type=Path,
+                        help="a settings.json to read glass.per_app_opacity from; "
+                             "ignored by --check and --write-repo-default, because the "
+                             "committed default has to be reproducible from the records "
+                             "alone and not from whoever is running the command")
     args = parser.parse_args(argv)
 
+    # The repository default is one file rendered from two records, so a person's own
+    # per-app opacities cannot be part of it: --check would then fail on every machine
+    # that had set one, and the failure would say nothing about the source.
+    wanted = bool(args.settings) and not (args.check or args.write_repo_default)
     try:
         tokens = load_tokens()
         preset = load_preset(tokens, args.preset)
         intensity = resolve_intensity(tokens, args.intensity or preset.get("default_intensity"))
-        source = build(tokens, preset, intensity)
+        overrides = load_overrides(args.settings) if wanted else None
+        source = build(tokens, preset, intensity, overrides)
     except GlassError as exc:
         print(f"glass-lua: {exc}", file=sys.stderr)
         return 2
@@ -584,7 +675,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     except (OSError, configstore.ConfigError) as exc:
         print(f"glass-lua: {exc}", file=sys.stderr)
         return 1
-    print(f"glass-lua: wrote {written} (preset {preset['id']}, intensity {intensity})")
+    extra = f", {len(overrides)} per-app rule(s)" if wanted and overrides else ""
+    print(f"glass-lua: wrote {written} (preset {preset['id']}, intensity {intensity}{extra})")
     return 0
 
 
