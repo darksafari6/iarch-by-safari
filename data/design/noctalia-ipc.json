@@ -94,7 +94,8 @@
       "description": "Toggle theme mode between dark and light",
       "arguments": [],
       "evidence": "src/cli/schema_msg.h:816",
-      "used_by": []
+      "used_by": [],
+      "not_used_note": "Recorded and deliberately not sent: the Appearance page offers dark, light and auto as three choices and sends theme-mode-set with the one that was chosen. A toggle cannot say which mode it landed on, and it would drop auto, which is the mode most people on this shell actually run."
     },
     {
       "verb": "color-scheme-get",
@@ -208,7 +209,9 @@
       "description": "Toggle night light schedule",
       "arguments": [],
       "evidence": "src/cli/schema_msg.h:619",
-      "used_by": []
+      "used_by": [
+        "iarch/settings-app: the Features page's and the Home page's Night light button, through noctalia.nightlight() when no state is asked for"
+      ]
     },
     {
       "verb": "nightlight-force-toggle",
@@ -247,7 +250,8 @@
         }
       ],
       "evidence": "src/cli/schema_msg.h:706-712 and :78 (choices)",
-      "used_by": []
+      "used_by": [],
+      "not_used_note": "Recorded and deliberately not sent: the Power & Idle page names it in profile_read_text() and offers power-set with a named profile instead, because cycling cannot report which profile it landed on and the page has no way to store that either."
     },
     {
       "verb": "session",
@@ -317,7 +321,8 @@
         }
       ],
       "evidence": "src/cli/schema_msg.h:828 and :241-243 (positionals)",
-      "used_by": []
+      "used_by": [],
+      "not_used_note": "Recorded and deliberately not sent: the Sound page changes volume through the compositor's own dispatch (services/control.py, 'applied to the running compositor with hyprctl and remembered here'), so the level the slider shows and the level the compositor has are one mechanism. Sending this as well would give the volume two writers that can disagree."
     },
     {
       "verb": "volume-osd",
@@ -338,7 +343,8 @@
       "description": "Toggle speaker mute",
       "arguments": [],
       "evidence": "src/cli/schema_msg.h:821",
-      "used_by": []
+      "used_by": [],
+      "not_used_note": "Recorded and deliberately not sent, for the same reason as volume-set: mute is a state of the compositor's mixer, and this project changes that state through hyprctl so the switch and the level cannot drift apart."
     },
     {
       "verb": "wifi-status",
@@ -381,7 +387,9 @@
       "description": "Disconnect the active network, or reconnect when nothing is connected",
       "arguments": [],
       "evidence": "src/cli/schema_msg.h:601-603",
-      "used_by": []
+      "used_by": [
+        "iarch/settings-app: the Sound page's 'Toggle networking altogether' button, through noctalia.toggle_network()"
+      ]
     },
     {
       "verb": "panel-open",
@@ -416,7 +424,10 @@
         }
       ],
       "evidence": "src/cli/schema_msg.h:683-690",
-      "used_by": []
+      "used_by": [
+        ".config/hypr/keybind.lua:68 the launcher key, :71 SUPER+I for the control centre, :73 SUPER+SHIFT+N for the notification centre"
+      ],
+      "note": "Sent by the session's own keybinds and not by the settings application: a panel that could open the launcher would be a second mechanism for a decision the keybind file already owns, and the Shortcuts page shows those bindings rather than pressing them."
     },
     {
       "verb": "settings-open",
@@ -449,7 +460,9 @@
       "arguments": [],
       "flags": "kMsgScreenshotFlags",
       "evidence": "src/cli/schema_msg.h:745",
-      "used_by": []
+      "used_by": [
+        "iarch/settings-app: the Shortcuts page's 'Capture the focused window' button, through noctalia.screenshot_window()"
+      ]
     },
     {
       "verb": "dpms-off",
@@ -465,7 +478,9 @@
       "description": "Turn monitors on",
       "arguments": [],
       "evidence": "src/cli/schema_msg.h:518",
-      "used_by": []
+      "used_by": [
+        "iarch/settings-app: the Home and Power & Idle pages' 'Turn the screens back on' button, through noctalia.screen_on()"
+      ]
     },
     {
       "verb": "brightness-set",
@@ -481,7 +496,8 @@
         }
       ],
       "evidence": "src/cli/schema_msg.h:406 and :122-125 (positionals)",
-      "used_by": []
+      "used_by": [],
+      "not_used_note": "Recorded and deliberately not sent: brightness is the compositor's, so the Display page changes it through hyprctl like volume, and the optional target argument would mean naming a monitor this page has no way to enumerate through the shell's IPC."
     },
     {
       "verb": "clipboard-copy",
