@@ -99,6 +99,17 @@ jobs:
           python -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tee "$output"
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
+            # Annotations as well as the summary, because they are the part of a run that is
+            # readable without opening the raw log: the checks list on the pull request itself
+            # carries them, and so does the API. Bounded, because a run that fails everywhere
+            # should still produce ten readable lines rather than ten thousand.
+            grep -E '^(FAIL|ERROR): ' "$output" | head -n 10 | while IFS= read -r line; do
+              echo "::error title=Python unit test failed::${line}"
+            done
+            grep -E '^(AssertionError|[A-Za-z_][A-Za-z0-9_.]*(Error|Exception)): ' \
+              "$output" | head -n 10 | while IFS= read -r line; do
+              echo "::error title=What it said::${line}"
+            done
             {
               echo '### The Python unit tests failed'
               echo
