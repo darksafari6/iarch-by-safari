@@ -152,6 +152,20 @@ def design_record(root: Optional[Path] = None) -> Dict[str, Any]:
         raise NoctaliaError(f"the shell configuration record cannot be read: {exc}") from exc
 
 
+def _is_table(spec: Any) -> bool:
+    """Whether a recorded key is a table rather than a value.
+
+    A key can carry a ``keys`` block for two different reasons, and only one of them makes
+    it a table. ``shell.launcher`` is a table: its keys are the config paths beneath it.
+    ``idle.behavior`` is an **array whose items** have a schema, and its ``keys`` block
+    describes one item -- so the config path is still ``idle.behavior``, and recursing into
+    it would invent paths like ``idle.behavior.enabled`` that the shell has never heard of.
+    The declared type is what tells the two apart.
+    """
+    return (isinstance(spec, dict) and isinstance(spec.get("keys"), dict)
+            and str(spec.get("type") or "") != "array")
+
+
 def key_specs(root: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
     """Every shell configuration key the record declares, by dotted config path.
 
@@ -164,15 +178,49 @@ def key_specs(root: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
     """
     sections = design_record(root).get("sections") or {}
     specs: Dict[str, Dict[str, Any]] = {}
-    for name, section in sections.items():
-        if not isinstance(section, dict):
-            continue
-        keys = section.get("keys")
+
+    def walk(prefix: str, keys: Any) -> None:
         if not isinstance(keys, dict):
-            continue
+            return
         for key, spec in keys.items():
-            specs[f"{name}.{key}"] = dict(spec) if isinstance(spec, dict) else {}
+            path = f"{prefix}.{key}"
+            if _is_table(spec):
+                # A nested table, not a leaf: `shell.launcher` holds a schema of its own,
+                # and its keys are the real config paths. Recording the table as a leaf
+                # would give a page an entry row for a table.
+                walk(path, spec["keys"])
+                continue
+            specs[path] = dict(spec) if isinstance(spec, dict) else {}
+
+    for name, section in sections.items():
+        if isinstance(section, dict):
+            walk(name, section.get("keys"))
     return specs
+
+
+def table_paths(root: Optional[Path] = None) -> List[str]:
+    """The recorded config paths that are tables rather than values.
+
+    ``shell.launcher``, ``shell.panel`` and the rest hold schemas of their own, so a page
+    that wants to be complete without drawing sixty of somebody else's switches names them
+    here and points at the shell's own window. A table is not a key: :func:`check_path`
+    refuses one, because there is no value to write to it.
+    """
+    sections = design_record(root).get("sections") or {}
+    found: List[str] = []
+
+    def walk(prefix: str, keys: Any) -> None:
+        if not isinstance(keys, dict):
+            return
+        for key, spec in keys.items():
+            if _is_table(spec):
+                found.append(f"{prefix}.{key}")
+                walk(f"{prefix}.{key}", spec["keys"])
+
+    for name, section in sections.items():
+        if isinstance(section, dict):
+            walk(name, section.get("keys"))
+    return sorted(found)
 
 
 def known_paths(root: Optional[Path] = None) -> List[str]:

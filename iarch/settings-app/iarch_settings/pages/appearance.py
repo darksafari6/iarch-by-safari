@@ -33,9 +33,98 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..services import config_store, control, noctalia, runner, themes
 from . import page as registry_page
+from . import shellkeys
 from .plan import Banner, Context, Group, PagePlan, Row
 
 PAGE_ID = "appearance"
+
+#: The shell's own appearance keys that belong on the Features page instead, because the
+#: clipboard and telemetry are features and corner radii are not. The two pages share one
+#: container, so each names the keys it wants and neither can draw a switch the other drew.
+SHELL_ELSEWHERE = ("clipboard_enabled", "clipboard_confirm_clear_history",
+                   "telemetry_enabled")
+
+SHELL_BUCKETS = (
+    ("Corners, borders and shadows", ("corner_radius", "button_borders", "input_borders",
+                                      "popup_borders", "card_borders", "show_close_buttons",
+                                      "popup_shadows")),
+    ("Type and time", ("font_family", "time_format", "date_format")),
+    ("The shell's own window", ("settings_", "app_icon_colorize")),
+)
+
+SHELL_ICONS = {
+    "Corners, borders and shadows": "preferences-desktop-appearance-symbolic",
+    "Type and time": "preferences-desktop-font-symbolic",
+    "The shell's own window": "preferences-desktop-appearance-symbolic",
+}
+
+_SHELL_ROWS, _SHELL_NAMES = shellkeys.build(
+    "shell", PAGE_ID, buckets=SHELL_BUCKETS, skip=SHELL_ELSEWHERE, icons=SHELL_ICONS,
+    fallback_icon="preferences-desktop-appearance-symbolic")
+
+# The generator's readers, setters and validators become this module's attributes, because a
+# plan resolves a row's names against the modules it is allowed to resolve into.
+globals().update(_SHELL_NAMES)
+
+
+def _slug(text: str) -> str:
+    """An identifier-safe version of a table path, for a generated reader's name."""
+    return "".join(character if character.isalnum() else "_"
+                   for character in str(text).lower()).strip("_") or "table"
+
+
+def _table_reader(path: str) -> Any:
+    """Build the reader one named-but-not-drawn table's row shows."""
+
+    def read() -> str:
+        try:
+            leaves = [other for other in noctalia.known_paths() if other.startswith(path + ".")]
+        except noctalia.NoctaliaError:
+            leaves = []
+        return (f"a table of {len(leaves)} keys the shell owns, changed in its own settings "
+                f"window rather than here")
+
+    read.__name__ = f"shell_table_{_slug(path)}"
+    read.__doc__ = f"What ``{path}`` is, and where it is changed."
+    return read
+
+
+def shell_table_rows() -> List[Row]:
+    """One row per table under the shell's own appearance keys.
+
+    Named rather than drawn, and the reason is scope rather than effort: the launcher, the
+    panels, the session menu and the window switcher are the shell's own surfaces with sixty
+    leaves between them, and a page that drew all of them would be a second copy of the
+    shell's settings window -- one that could not keep up with it. What this page owes a
+    person is the knowledge that they exist, what they are, and where they are changed.
+    """
+    rows: List[Row] = []
+    for path in shellkeys.table_keys("shell"):
+        rows.append(Row(
+            "state", path, source=f"appearance.shell_table_{_slug(path)}",
+            icon="preferences-desktop-appearance-symbolic",
+            subtitle="Recorded in data/design/noctalia.json, and not drawn here",
+            keywords=(path, shellkeys.key_name(path), "table", "shell", "not drawn")))
+    if not rows:
+        rows.append(Row(
+            "state", "No shell table left undrawn", source="appearance.shell_key_count_text",
+            icon="object-select-symbolic",
+            subtitle="Every key under the shell's own appearance section is a row above",
+            keywords=("shell", "tables", "none")))
+    return rows
+
+
+for _path in shellkeys.table_keys("shell"):
+    globals()[f"shell_table_{_slug(_path)}"] = _table_reader(_path)
+del _path
+
+
+def shell_key_count_text() -> str:
+    """How many of the shell's own keys this page writes."""
+    total = len(shellkeys.keys_of("shell"))
+    return (f"{total - len(SHELL_ELSEWHERE)} of the shell's {total} own keys are here; the "
+            f"{len(SHELL_ELSEWHERE)} about the clipboard and telemetry are on the Features "
+            f"page")
 
 #: The three values ``theme.colour_mode`` accepts, straight out of
 #: ``data/schemas/settings.schema.json``. Written here rather than read from the
@@ -211,8 +300,38 @@ def build(context: Context) -> PagePlan:
                     "set in the shell are two opinions about the same desktop.",
     )
 
+    shell_groups = []
+    for title, rows in _SHELL_ROWS.items():
+        shell_groups.append(Group(
+            title, *rows,
+            description="The shell's own keys, read and written through its IPC: its corner "
+                        "radius and borders are not this project's tokens, and its font "
+                        "family is not the GTK one on the Fonts & Icons page."
+            if not shell_groups else "",
+        ))
+
+    shell_groups.append(Group(
+        "The shell's own surfaces",
+        Row("expander", "Tables named and not drawn", rows_source="appearance.shell_table_rows",
+            icon="preferences-desktop-appearance-symbolic",
+            subtitle="The launcher, the panels, the session menu and the window switcher: the "
+                     "shell's own settings window changes them",
+            keywords=("shell", "launcher", "panel", "session", "window switcher", "tables")),
+        Row("state", "How many keys this page writes", icon="preferences-desktop-appearance-symbolic",
+            source="appearance.shell_key_count_text",
+            keywords=("shell", "keys", "count", "appearance")),
+        Row("button", "Open the shell's own settings",
+            action="noctalia.open_shell_settings", icon="go-next-symbolic",
+            subtitle="The escape hatch the record describes, for a key this project has not "
+                     "verified a range for",
+            keywords=("shell", "settings", "open", "escape hatch")),
+        description="Nothing the record declares is dropped: a key this page writes is a row "
+                    "above, and a table it does not draw is named here with the place that "
+                    "does.",
+    ))
+
     return PagePlan(
-        PAGE_ID, spec.label, colour, glass, wallpaper,
+        PAGE_ID, spec.label, colour, glass, wallpaper, *shell_groups,
         description=spec.description, icon=spec.icon, keywords=spec.keywords,
         styles=("iarch-glass-card", "iarch-glass-preview"),
         banners=(
