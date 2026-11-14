@@ -71,6 +71,40 @@ class ConfigStoreError(RuntimeError):
     """The settings file could not be used."""
 
 
+def user_path(env: Optional[Mapping[str, str]] = None) -> Path:
+    """``~/.config/iarch/settings.json``, without needing a :class:`Store`.
+
+    A generator that has to be *told* which settings file to read -- because the
+    apply pipeline writes the document before the command runs and the command must
+    read the same file -- needs the path on its own, and building a whole store to
+    ask where its file lives would also read and validate the document.
+    """
+    paths.add_repo_to_path()
+    from iarch.lib import configstore  # noqa: PLC0415
+
+    return configstore.user_path(NAME, env)
+
+
+def document(env: Optional[Mapping[str, str]] = None,
+             root: Optional[Path] = None) -> Dict[str, Any]:
+    """The merged settings document, read and thrown away.
+
+    For a caller that wants to *say* something about the settings rather than change
+    them -- a status row on the Home page, a plan built by a test -- and so has no
+    reason to hold a :class:`Store`, subscribe to it or watch its file. A store that
+    is kept is a store that has to be reloaded by hand; this reads once and returns,
+    and the migration and quarantine rules still apply because it is the same code
+    path.
+    """
+    return Store(root=root, env=env).load()
+
+
+def defaults_path(env: Optional[Mapping[str, str]] = None,
+                  root: Optional[Path] = None) -> Path:
+    """``data/settings.default.json``: the defaults under the user's file."""
+    return paths.data_file(f"{NAME}.default.json", root)
+
+
 def _timestamp() -> str:
     """A sortable, filesystem-safe timestamp, matching configstore's backup names."""
     return time.strftime("%Y%m%dT%H%M%S", time.gmtime())

@@ -123,21 +123,31 @@ def cli_module_path(tool: str) -> Path:
 
 
 def config_dir(env: Optional[Mapping[str, str]] = None) -> Path:
-    """``~/.config/iarch/``, delegated so tests use one override for both."""
-    from iarch.lib import configstore  # imported late: needs add_repo_to_path()
+    """``~/.config/iarch/``, delegated so tests use one override for both.
+
+    Each of these three adds the checkout to ``sys.path`` itself rather than asking
+    the caller to: they are read by :func:`iarch_settings.version.debug_info`, which
+    runs while the About dialog is being built, and a path helper that raises
+    ``ModuleNotFoundError`` from inside a dialog is a much worse failure than the
+    import it was trying to reach. :func:`add_repo_to_path` is idempotent and cheap.
+    """
+    add_repo_to_path()
+    from iarch.lib import configstore  # noqa: PLC0415 - imported late: it needs the path
 
     return configstore.config_dir(env)
 
 
 def state_dir(env: Optional[Mapping[str, str]] = None) -> Path:
     """``~/.local/state/iarch/``."""
-    from iarch.lib import configstore
+    add_repo_to_path()
+    from iarch.lib import configstore  # noqa: PLC0415
 
     return configstore.state_dir(env)
 
 
 def backup_dir(env: Optional[Mapping[str, str]] = None) -> Path:
     """``~/.local/state/iarch/backups/``, which the restore page lists."""
-    from iarch.lib import configstore
+    add_repo_to_path()
+    from iarch.lib import configstore  # noqa: PLC0415
 
     return configstore.backup_dir(env)

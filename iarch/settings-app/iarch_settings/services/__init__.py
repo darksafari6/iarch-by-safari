@@ -28,6 +28,27 @@ The rules every service here follows:
 """
 from __future__ import annotations
 
+# The submodules are imported here so a page can write
+# ``from ..services import autostart`` and get the module rather than an
+# AttributeError, and so ``services.<name>`` is one namespace to list when asking
+# what this application is capable of. None of them does work at import time --
+# no probe, no read, no subprocess -- so importing the package costs an
+# :mod:`ast`-shaped handful of module objects and nothing else.
+from . import (  # noqa: F401  (re-exported: the package is the interface)
+    apply,
+    autostart,
+    config_store,
+    contacts,
+    defaults,
+    gtk_settings,
+    hypr,
+    licenses,
+    links,
+    noctalia,
+    runner,
+    system,
+    themes,
+)
 from .runner import (  # noqa: F401  (re-exported: a page asks this package, not runner)
     BINARIES,
     HYPRCTL,
@@ -38,12 +59,46 @@ from .runner import (  # noqa: F401  (re-exported: a page asks this package, not
     which,
 )
 
+#: The service modules, in the order the pages meet them. ``MODULES`` is what a
+#: :class:`iarch_settings.pages.plan.Context` is allowed to resolve into, so a plan
+#: cannot point a row at anything outside this list -- which is the mechanism, not
+#: the convention, that keeps a page from reaching into the machine by itself.
+MODULES = (
+    "apply",
+    "autostart",
+    "config_store",
+    "contacts",
+    "defaults",
+    "gtk_settings",
+    "hypr",
+    "licenses",
+    "links",
+    "noctalia",
+    "runner",
+    "system",
+    "themes",
+)
+
 __all__ = [
     "BINARIES",
     "HYPRCTL",
+    "MODULES",
     "NOCTALIA_BIN",
+    "apply",
+    "autostart",
+    "config_store",
+    "contacts",
+    "defaults",
+    "gtk_settings",
+    "hypr",
     "hyprctl_present",
+    "licenses",
+    "links",
+    "noctalia",
     "noctalia_present",
     "presence",
+    "runner",
+    "system",
+    "themes",
     "which",
 ]
