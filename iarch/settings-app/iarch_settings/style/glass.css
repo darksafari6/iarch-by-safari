@@ -3,9 +3,21 @@
    The settings application's own stylesheet. It is loaded with
    gtk_css_provider_load_from_file (the spelling that is the same at GTK 4.10 and
    4.12 -- data/design/adwaita.json:portability records why the load_from_data
-   spelling cannot be used) and added after the session-wide sheet, so the order is:
-   libadwaita's defaults, ~/.config/gtk-4.0/gtk.css rendered by
-   iarch/cli/render_gtk_css.py, then this file.
+   spelling cannot be used) and attached to the display with
+   gtk_style_context_add_provider_for_display at
+   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION, which is 600
+   (GNOME/gtk@4.10.0:gtk/gtkstyleprovider.h:73 and :94).
+
+   That priority is below the person's own sheet, and deliberately so: GTK itself
+   loads ~/.config/gtk-4.0/gtk.css -- the file iarch/cli/render_gtk_css.py writes --
+   at GTK_STYLE_PROVIDER_PRIORITY_USER, which is 800
+   (GNOME/gtk@4.10.0:gtk/gtksettings.c:1029-1037). A sheet this project ships must
+   not outrank a sheet the person can edit. Nothing is lost by staying below it,
+   because this file styles only `iarch-` classes and the session sheet styles
+   everything else, so the two never set the same property on the same widget. What
+   "added after" means here is the order they are loaded in, not the order they win
+   in -- and the difference only shows up if a future edit to this file restyles a
+   class libadwaita owns, which the rule above forbids for exactly that reason.
 
    What this file is for, and what it deliberately is not:
 

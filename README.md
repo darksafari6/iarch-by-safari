@@ -210,5 +210,7 @@ match on and in the historical documents under [`legacy/`](legacy/).
 | Contributing, and the checks to run | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | Reporting a security problem | [`SECURITY.md`](SECURITY.md) |
 | What changed, newest first | [`CHANGELOG.md`](CHANGELOG.md) |
+| The settings window, and the rules it is built under | [`docs/SETTINGS-APP.md`](docs/SETTINGS-APP.md) |
+| Where the design numbers live | [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) |
 | Claims not proven yet | [`docs/UNVERIFIED.md`](docs/UNVERIFIED.md) |
 | The frozen legacy v4 session | [`legacy/docs/V4-SESSION.md`](legacy/docs/V4-SESSION.md) |

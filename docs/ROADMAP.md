@@ -165,19 +165,86 @@ greeter staging, so INS-01 to INS-06 are still Part 6. And nothing in this part 
 session: the frame-timing and latency measurement is still PERF-01, and MODE-01 to MODE-04, START-01
 and START-02, WAL-01 and WAL-02 are the specific claims that a sandbox could not reach.
 
-## Part 4 — Settings app, About page and Contact/Portfolio
+## Part 4 — Settings app, About page and Contact/Portfolio ✅ landed
 
 **Goal:** the glass settings application: every switch introduced in Parts 1 to 3 reachable from it,
 About → Open-source licenses rendered from the same JSON as `THIRD_PARTY_NOTICES.md`, and the
 Contact/Portfolio page.
 
-Provisional scope, and the reason it is provisional is that its work order has not arrived: a GTK4 +
-libadwaita application (`dev.safari.iarch`, reserved in `iarch/settings-app/README.md`) that edits
-`~/.config/iarch/settings.json`, calls the generators in `iarch/cli/`, reconciles the coarse
-`preset`/`effects` switches with `theme.intensity`, renders the licenses page from
-`data/licenses.json` and the contact page from `data/contacts.default.json`. Acceptance will have to
-include: nothing in the settings UI names an upstream project; every visual switch in the product is
-reachable; and the About page and `THIRD_PARTY_NOTICES.md` come from one source.
+| Deliverable | Where | Proof |
+| --- | --- | --- |
+| Fifteen pages described as data — 495 rows, and not one widget, callback or translated string among them | `iarch/settings-app/iarch_settings/pages/plan.py` and the fifteen page modules beside it | `tests/test_settings_pages.py`, `tests/test_part4_acceptance.py` |
+| One renderer that turns a plan into a widget tree, and refuses a plan it cannot draw | `iarch_settings/widgets/__init__.py` | `tests/test_settings_surface.py` |
+| The toolkit contract: every `Gtk` and `Adw` spelling the package may use, read out of the pinned releases' own headers rather than out of documentation that may be ahead of them | `data/design/adwaita.json` — 46 widgets, 58 api entries, `minimum_versions` GTK 4.10 / libadwaita 1.6, plus `portability` and `rejected` | `tests/test_settings_surface.py`, which reads the package's AST and fails on any attribute the record does not verify |
+| The window: a navigation split view, a sidebar of fifteen grouped toggle buttons, the glass stylesheet added display-wide at `APPLICATION` priority, and reduce-motion as a style class because CSS media queries arrive only at GTK 4.20 | `iarch_settings/widgets/window.py`, `iarch_settings/style/glass.css` | `tests/test_gtk_css.py`, `tests/test_part4_acceptance.py` |
+| The application: three actions, one accelerator, and a headless start that exits 1 naming the package that is missing instead of raising through a `None` toolkit | `iarch_settings/widgets/app.py`, `__main__.py`, `gtkenv.py` | `tests/test_settings_packaging.py` |
+| Fourteen services that answer from the machine or refuse in a sentence | `iarch_settings/services/` | the eleven `tests/test_settings_*.py` |
+| The coarse version-1 switches reconciled with `theme.intensity`, so one decision has one mechanism | `services/config_store.py` — `migrate_v1_to_v2`, `intensity_from_effects`, `derive_coarse` | `tests/test_settings_config_store.py`, `tests/test_part4_acceptance.py` |
+| About → Open-source licenses out of the same record as `THIRD_PARTY_NOTICES.md`, with the mapping to `Gtk.License` recorded rather than guessed | `services/licenses.py`, `pages/about.py`, `data/licenses.json`, `tools/notices.py` | `tests/test_licenses_data.py`, `tools/notices.py --check`, `tests/test_part4_acceptance.py` |
+| Contact and Portfolio from one record, opening through one allowlisted call, with the portfolio URL asserted equal where both halves state it | `services/links.py`, `services/contacts.py`, `data/contacts.default.json` | `tests/test_settings_links.py` |
+| Packaging: one `pyproject.toml` for the one component that is a package, a launcher, a desktop entry, and a record of what is not installed yet | `iarch/settings-app/pyproject.toml`, `scripts/iarch-settings.sh`, `iarch/settings-app/dev.safari.iarch.settings.desktop` | `tests/test_settings_packaging.py` (29 tests), `shellcheck`, `SET-10` |
+| The design system written down: tokens as the only source, roles rather than sizes, four intensities, five glass alphas, seven `iarch-` classes | `docs/DESIGN-SYSTEM.md`, `data/design/tokens.json` | `tests/test_design_tokens.py`, `tests/test_contrast_check.py` |
+| The application documented, including what it cannot do | `docs/SETTINGS-APP.md` | linked from `docs/ARCHITECTURE.md`'s documentation set and from `README.md` |
+
+**Acceptance**, proven mechanically by `tests/test_part4_acceptance.py`:
+
+- *Nothing in the settings interface names an upstream project.* The check scans the plan rather than
+  the source, because a page is what a person reads and a name in a comment is not a name on screen:
+  every string a widget can draw — titles, descriptions, subtitles, choice labels, confirmation
+  sentences, banner text, the sidebar's own labels and the search index's row and group names, across
+  all fifteen pages — is collected and scanned. No historical product name appears in any of them,
+  and none appears in the navigation, which is this product's own voice. The criterion as the roadmap
+  first stated it is not satisfiable and this part says so rather than quietly narrowing it: the
+  Shortcuts page shows what each key actually runs, and a shortcut table that paraphrased
+  `noctalia msg panel-toggle launcher` into "opens a panel" would be a table nobody could check
+  against the session. So an upstream name appears only as the subject of a technical statement a
+  person needs, on four named pages, for four named reasons — and a fifth kind of occurrence is a
+  failure. A row's `keywords` are excluded because they are index terms no widget draws, and typeface
+  names are excluded because a font picker names the thing being chosen, which is the value; the
+  credit for it is on the About page out of the same record as the notices document.
+- *Every visual switch in the product is reachable from a page.* Seventeen of the thirty-four paths in
+  `data/settings.default.json` are written by a row, and eleven more are the leaf overrides under
+  `glass.leaves`, whose item shape comes from `data/design/tokens.json` rather than from the document.
+  The seventeen no row writes are each accounted for by name and reason in the acceptance test:
+  document metadata, the schema version, window state the window writes when it closes, the accent
+  that comes from the colour preset, five dynamic containers that ship empty, and the five coarse
+  version-1 switches this part exists to reconcile — offering `effects.blur` beside `theme.intensity`
+  would be two mechanisms for one decision. Four of the five containers reach nothing on a fresh
+  install because they ship empty, so the test checks that the page owning each one declares rows
+  keyed by that path, which is what makes the container reachable the moment it has content.
+- *The About page and `THIRD_PARTY_NOTICES.md` come from one source.* Both are rendered from
+  `data/licenses.json`, itself generated from `branding/notices.json` by `tools/notices.py`, so the
+  test checks the chain rather than its two ends: the generator's own `--check` still agrees with what
+  is committed, the record carries the stamp that names both files, the twenty-nine legal sections are
+  one per recorded component plus this product's own licence, the page's section titles are the
+  record's titles and not a second list, a component the record does not verify says `TODO(verify)` on
+  screen, the seventy-four open claims are listed with the reason each is open rather than folded into
+  their three components, and no licence identifier is mapped onto a `Gtk.License` member that would
+  misstate somebody else's terms — `ISC`, `MIT-CMU` and `OFL-1.1` are shown as `CUSTOM` with their own
+  text because none of the eighteen members means any of them.
+- *A machine missing a binary says unverified, never off.* Part 3 proved this for the command-line
+  tools; Part 4 draws the answer on screen, where "off" and "nobody knows" look identical to a person
+  and mean opposite things. All seven probed binaries are answered for, a default-application role
+  whose tool is absent answers `unverified` with a reason, the shell's own sentence says where the
+  binary was looked for and what that costs, and no reader turns an absent machine into a plausible
+  number: a CPU percentage with no second sample to compare it to is `None`, a machine with no battery
+  does not answer whether it is on AC.
+
+**Explicitly not done in Part 4:** the sidebar's search field is absent. The index behind it exists —
+`PagePlan.search_entries()` carries one entry per row, 495 of them — and `app.focus-search` is bound to
+`Control+f`, but the record carries no widget for the field, so the accelerator currently focuses
+nothing; wiring it is a small piece of work that needs a decision about where the field lives. `SET-02`
+is the claim that costs the most: a *misused* API — a property given the wrong type, a signal connected
+with the wrong signature — is caught only by running the window, and the window has never been run,
+because no toolkit, no typelib and no display server exists on the machine this part was built on.
+Everything the suite proves about the interface is therefore proven about the plan and the record, not
+about pixels. Neither installer copies the desktop entry into `~/.local/share/applications`,
+`update-desktop-database` has never been run over it, no icon exists under the application id, and the
+console script has never been installed by a package manager — `SET-10` records that, and two tests
+fail the moment an installer starts copying the entry or an icon appears, so the claim cannot go stale
+in silence. The sidebar's width is libadwaita's default because no token exists for it. And nothing in
+this part was observed on a live session, so `SET-01` to `SET-09` are still open.
+
 
 ## Part 5 — Notifications, control center and the in-session overlays
 

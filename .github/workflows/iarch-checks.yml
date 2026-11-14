@@ -88,7 +88,50 @@ jobs:
           ./tests/test_uninstall.sh
 
       - name: Run the Python unit tests
-        run: python -m unittest discover -s tests -p 'test_*.py' -v
+        run: |
+          set -uo pipefail
+          # A failure in this step otherwise says "Process completed with exit code 1" on the
+          # run page, and the names of the tests that failed live only in the raw log. Write
+          # them, and the assertion each one died on, into the job summary, so the run page
+          # answers the only question anyone has at that point: which test, and what did it
+          # say. The full output still goes to the log unchanged.
+          output=$(mktemp)
+          python -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tee "$output"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # Annotations as well as the summary, because they are the part of a run that is
+            # readable without opening the raw log: the checks list on the pull request itself
+            # carries them, and so does the API. Bounded, because a run that fails everywhere
+            # should still produce ten readable lines rather than ten thousand.
+            grep -E '^(FAIL|ERROR): ' "$output" | head -n 10 | while IFS= read -r line; do
+              echo "::error title=Python unit test failed::${line}"
+            done
+            grep -E '^(AssertionError|[A-Za-z_][A-Za-z0-9_.]*(Error|Exception)): ' \
+              "$output" | head -n 10 | while IFS= read -r line; do
+              echo "::error title=What it said::${line}"
+            done
+            {
+              echo '### The Python unit tests failed'
+              echo
+              echo 'Tests that failed:'
+              echo
+              echo '```'
+              grep -E '^(FAIL|ERROR): ' "$output" | head -n 40 || echo '(none matched)'
+              echo '```'
+              echo
+              echo 'What they said:'
+              echo
+              echo '```'
+              grep -E '^(AssertionError|[A-Za-z_][A-Za-z0-9_.]*(Error|Exception)): ' \
+                "$output" | head -n 40 || echo '(none matched)'
+              echo '```'
+              echo
+              echo '```'
+              tail -n 4 "$output"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
 
       - name: Check every generated file is up to date with its source
         run: |

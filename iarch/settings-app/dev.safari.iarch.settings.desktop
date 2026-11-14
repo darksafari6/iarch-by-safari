@@ -1,0 +1,32 @@
+# Copyright (C) 2026 Safari — GPL-3.0-or-later
+#
+# The menu entry for the settings window. It sits beside the package it launches rather
+# than in data/, because data/ holds the JSON records the application reads and this file
+# is not one of them: it is a shipped artifact describing how to start the application.
+#
+# Two of these values are copies of a decision made elsewhere, and
+# tests/test_settings_packaging.py is what stops them drifting:
+#
+#   Exec=  is IARCH_COMPONENT_SETTINGS in branding/product.env, and the launcher that
+#          answers to that name is scripts/iarch-settings.sh.
+#   Icon=  is APP_ID in iarch_settings/__init__.py, which is the anchored id the
+#          compositor's own window rule in .config/hypr/generated/glass.lua matches, so
+#          the icon name and the window rule cannot disagree about which window this is.
+#
+# What is not true yet, and is recorded as SET-10 in docs/UNVERIFIED.md rather than left
+# implicit: neither install.sh nor fedora_install.sh copies this file into
+# ~/.local/share/applications, and no icon is installed under that name -- assets/branding
+# carries the two logos and neither is named after the application id. So this entry is
+# correct and is not yet reachable from a menu, and it has never been registered with
+# update-desktop-database on a machine that has one.
+[Desktop Entry]
+Version=1.5
+Type=Application
+Name=iArch Settings
+GenericName=Settings
+Comment=Glass, motion, displays, sound and startup for the iArch by Safari Hyprland session
+Exec=iarch-settings
+Icon=dev.safari.iarch.settings
+Terminal=false
+Categories=Settings;DesktopSettings;
+StartupNotify=true

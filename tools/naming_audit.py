@@ -87,6 +87,10 @@ ALLOWLIST: Dict[str, str] = {
     "tests/test_licenses_data.py": TEST,
     "tests/test_naming_audit.py": TEST,
     "tests/test_recovery.py": TEST,
+    "tests/test_settings_pages.py": TEST + " (asserts that no row a person reads, and no "
+                                   "search result a person is shown, names an upstream "
+                                   "project -- which needs the names in the file to check "
+                                   "the pages against)",
     "tests/test_shortcuts_doc.py": TEST,
     "tests/test_v5_staging.py": TEST,
 }

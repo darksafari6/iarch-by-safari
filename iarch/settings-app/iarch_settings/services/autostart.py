@@ -691,6 +691,31 @@ def resolve_program(word: str) -> Optional[str]:
     return runner.which(word)
 
 
+def _runs_a_script(words: Sequence[str]) -> bool:
+    """True when a shell's arguments ask it to run a script rather than a file.
+
+    Every shell in :data:`SHELLS` takes the script with ``-c``, and a POSIX shell
+    clusters short flags, so ``-lc``, ``-ic`` and ``-ec`` are that same request with
+    extra flags on it. Matching the exact word ``-c`` alone therefore misses the common
+    spelling of the thing the record refuses at ``shell-wrapper``, and what it misses is
+    the worst case: a login shell running a string this project never checked, with the
+    existence check turned into a check on the shell itself.
+
+    A long option is never a cluster. ``--config`` contains a ``c`` and means something
+    else entirely, so only a single-dash word of two or more letters counts.
+
+    The caller passes the words *after* a shell's own name, so this is asked of every
+    position a shell appears at and not only of ``argv[0]``.
+    """
+    for word in words:
+        if word in ("-c", "--command"):
+            return True
+        if (word.startswith("-") and not word.startswith("--") and len(word) > 2
+                and word[1:].isalpha() and "c" in word[1:]):
+            return True
+    return False
+
+
 def check_command(argv: Sequence[str], root: Optional[Path] = None) -> List[str]:
     """Every reason a command may not be written into an entry. Empty means fine."""
     words = [str(word) for word in argv]
@@ -709,10 +734,15 @@ def check_command(argv: Sequence[str], root: Optional[Path] = None) -> List[str]
     first = words[0]
     if first.startswith("-"):
         problems.append(f"the program name cannot begin with '-': {first}")
-    if Path(first).name in SHELLS and any(word == "-c" for word in words[1:]):
-        rejection = refusals(root).get("shell-wrapper")
-        problems.append(rejection["message"] if rejection else
-                        "a startup command is run directly, never through a shell")
+    # Not only the first word: `env bash -c ...` is the same wrapper with one more
+    # program in front of it, and refusing only argv[0] would leave the common bypass
+    # open. A shell name is a shell wherever it sits, as long as a script flag follows it.
+    for position, word in enumerate(words):
+        if Path(word).name in SHELLS and _runs_a_script(words[position + 1:]):
+            rejection = refusals(root).get("shell-wrapper")
+            problems.append(rejection["message"] if rejection else
+                            "a startup command is run directly, never through a shell")
+            break
     for word in words:
         if '"' in word:
             problems.append(f"a command argument cannot contain a double quote: {word}")
