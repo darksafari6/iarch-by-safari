@@ -1,0 +1,161 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "version": 1,
+  "name": "xdg-autostart",
+  "description": "The autostart surface: which directory is scanned, which desktop-entry keys are read, which are recognised and ignored, and which conditions make an entry be skipped. The Startup & Default apps page writes entries into ~/.config/autostart/ from this record, and refuses a key that nothing reads.",
+  "verified_against": "v257.1",
+  "source": "systemd v257.1 (byte-identical to the v257 tag for both files cited): src/xdg-autostart-generator/xdg-autostart-generator.c (the directory scan), src/xdg-autostart-generator/xdg-autostart-service.c (the key table at :320-347, the skip conditions at :528-606, the unit name at :48-65) and src/xdg-autostart-generator/xdg-autostart-service.h (the parsed fields). This repository's own shipped entries, legacy/session/minimalinux-customize.desktop and legacy/session/minimalinux.desktop, are cited for the two keys the generator ignores but an application menu reads.",
+  "_note": "Read out of the generator rather than out of the desktop-entry specification, because the generator is the thing that decides whether an entry runs. The specification says what a key means; this record says what a session does with it, and those are not the same list. A key the generator does not read is recorded as unread rather than as wrong, and the one key a settings panel would reach for that is not read at all -- X-GNOME-Autostart-enabled -- is recorded under rejected with what to write instead.",
+  "directory": {
+    "user": "$XDG_CONFIG_HOME/autostart, which is ~/.config/autostart by default",
+    "evidence": "src/xdg-autostart-generator/xdg-autostart-generator.c:63-66 (xdg_user_config_dir(\"/autostart\"))",
+    "system": "every directory in $XDG_CONFIG_DIRS with /autostart appended; the default for that variable is /etc/xdg",
+    "system_evidence": "src/xdg-autostart-generator/xdg-autostart-generator.c:35-37 and :70-73",
+    "notes": [
+      {
+        "what": "Only regular files are considered.",
+        "evidence": "src/xdg-autostart-generator/xdg-autostart-generator.c:95-98"
+      },
+      {
+        "what": "The user directory is scanned first and the first entry for a name wins, so ~/.config/autostart/foo.desktop shadows /etc/xdg/autostart/foo.desktop. That is how a user disables a system entry without editing a file they do not own.",
+        "evidence": "src/xdg-autostart-generator/xdg-autostart-generator.c:77 (the directory order) and :104-108 (a name already seen is skipped)"
+      },
+      {
+        "what": "A file that fails to parse is treated as hidden, but it still masks an entry of the same name in a later directory: the generator keeps the record so the name stays taken. A corrupt file in the user directory therefore does not merely fail to start, it stops the system entry of the same name from starting too, and it does so silently. This project reads its own entries back after writing one (see verify) so a file it wrote is never left in that state.",
+        "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:357-361"
+      },
+      {
+        "what": "A .desktop suffix is stripped before the name is escaped into the unit name app-<name>@autostart.service. A file without the suffix is still parsed, because the strip is conditional; this project always writes the suffix, because an entry that is not named the way every other entry is named is one a person cannot find.",
+        "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:48-65"
+      }
+    ]
+  },
+  "parsing": {
+    "_note": "Four rules the file format itself imposes, each of which changes what a page may promise. They are recorded here rather than discovered at runtime because a page that offered a translated entry name, or a duplicate key, would be offering something that is silently dropped.",
+    "localized_keys": {
+      "what": "A key with a locale in brackets, such as Name[ur], is looked up and then deliberately ignored: the table lookup returns a NULL parse function for any lvalue containing '['. Only the unlocalised key is read.",
+      "consequence": "This project ships Urdu translations, and none of them can reach an autostart entry. The Startup page shows its own translated label for a row and writes the unlocalised Name, so the file says one thing in every language and the interface says it in the user's.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:285-305 (the lookup), :296-303 (the '[' test)"
+    },
+    "duplicate_keys": {
+      "what": "The first definition of a key wins and a second one is ignored with a warning, for both string and string-list values.",
+      "consequence": "Appending a key to an existing entry is not a way to change it. The writer finds the line and replaces it, which is the same discipline the GtkSettings writer follows.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:167-170 and :237-240"
+    },
+    "string_lists": {
+      "what": "A list value is split on ';' and each element is unescaped; the recognised escapes are \\s, \\n, \\t, \\r, \\\\ and \\;, and an undefined escape makes the whole value be dropped with a warning.",
+      "consequence": "OnlyShowIn and NotShowIn are the two list keys, and neither is written by this project, so the writer never has to produce an escape. It does have to tolerate one when reading somebody else's entry, which is why the reader splits on ';' and keeps the raw text beside it.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:218-283 (the split), :94-144 (the escapes)"
+    },
+    "booleans": {
+      "what": "Hidden and X-systemd-skip are read by systemd's boolean parser, which accepts 1, yes, y, true, t and on as true and 0, no, n, false, f and off as false, ignoring case. Any other spelling is an error the parser reports and then leaves the value at its default, which for both keys is false.",
+      "consequence": "`Hidden=maybe` does not fail the file and does not hide the entry; it logs a line nobody reads and starts the program anyway. The writer therefore emits exactly `true` or `false`, and the reader treats an unrecognised spelling as false while saying so in the entry's notes, because reporting it as true would claim a switch is off when the session will start it.",
+      "evidence": "src/basic/parse-util.c (parse_boolean), src/shared/conf-parser.c:1005-1032 (config_parse_bool, non-fatal at ltype 0) and src/xdg-autostart-generator/xdg-autostart-service.c:327, :331"
+    },
+    "sections": {
+      "what": "Only the [Desktop Entry] section is read; a key in any other section is not looked up at all.",
+      "consequence": "The writer emits exactly one section, and the reader does not merge a second one into the values it reports.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:319-348 (every table row names the section) and :352 (the section string passed to config_parse)"
+    }
+  },
+  "exec_line": {
+    "_note": "How the Exec value is turned into the command a unit runs. Read separately from the key table because it is a second parser with its own rules, and because two of them decide whether a program this project was asked to start will start at all.",
+    "quoting": {
+      "what": "The value is split into arguments with EXTRACT_UNQUOTE and EXTRACT_RELAX, so a double-quoted argument may contain spaces. Single quotes are accepted too, which the code itself notes is beyond the specification.",
+      "consequence": "The writer quotes an argument that contains a space with double quotes and nothing else. It never emits a backslash escape: the six escapes the file parser accepts are \\s \\n \\t \\r \\\\ and \\;, and any other escape is a LOG_ERR that fails the parse of the whole file -- which is then treated as hidden and still masks a system entry of the same name. A double quote inside an argument is therefore refused rather than escaped.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:387-389 (the split), :94-144 (the escapes and the LOG_ERR default), :357-361 (a failed parse is hidden)"
+    },
+    "absolute_path": {
+      "what": "The first argument is resolved with find_executable and replaced by the absolute path that was found. When nothing is found the unit is not generated, with an informational message rather than a warning.",
+      "consequence": "A program that is not on PATH at login does not start and does not report anything a person would see. This project therefore refuses to write an entry whose first argument cannot be resolved, and says so at the moment the entry is added rather than at the next login. The same rule the record gives TryExec, applied to Exec.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:407-416 and the caller at :573-581"
+    },
+    "field_codes": {
+      "what": "The XDG field codes %f %F %u %U %d %D %n %N %i %c %k %v %m are removed from the argument list before the unit is written. A %% becomes %, and any other % is doubled so that it reaches the unit as a literal percent sign instead of being expanded.",
+      "consequence": "An autostart entry cannot be given a file or a URL to open, and a literal % in an argument survives. Neither is offered by the page: the codes are removed, so a command containing one would run with the argument missing.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:418-445"
+    },
+    "tilde": {
+      "what": "An argument that begins with ~ followed by nothing or by an absolute path is expanded against the user's home directory. The code notes the specification does not require this and that it exists for compatibility with older KDE entries.",
+      "consequence": "A leading ~ is not a literal character in this file. The writer emits absolute paths and refuses an argument beginning with ~ so that what the page shows is what the unit runs.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:447-466"
+    },
+    "cunescape": {
+      "what": "After the split, each argument is passed through cunescape, systemd's C-style unescaping, before it is used.",
+      "consequence": "A backslash in an argument is not necessarily a literal backslash by the time the program sees it. The writer refuses a backslash for the same reason it refuses a double quote: two parsers read this one string, and only one of them is the desktop-entry parser.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:402-404"
+    }
+  },
+  "keys": [
+    { "key": "Name", "read": true, "type": "string", "used_for": "the entry's description, and the label the Startup page shows", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:320", "written_by_this_project": true },
+    { "key": "Exec", "read": true, "type": "string", "used_for": "the command to run. Required: an entry with no Exec is skipped with a warning rather than refused, so a typo here is a program that silently never starts.", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:321 and the skip at :544-548", "written_by_this_project": true },
+    { "key": "Path", "read": true, "type": "string", "used_for": "the working directory the command runs in", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:322", "written_by_this_project": false },
+    { "key": "TryExec", "read": true, "type": "string", "used_for": "a binary that has to exist for the entry to be considered at all; checked with find_executable, and a missing one skips the entry", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:323 and the check at :563-571", "written_by_this_project": false },
+    { "key": "Type", "read": true, "type": "string", "values": ["Application"], "used_for": "an assertion: anything that is not exactly Application is skipped", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:324 and the check at :539-543", "written_by_this_project": true },
+    { "key": "OnlyShowIn", "read": true, "type": "string list", "used_for": "desktops the entry is restricted to", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:325", "written_by_this_project": false },
+    { "key": "NotShowIn", "read": true, "type": "string list", "used_for": "desktops the entry is excluded from", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:326", "written_by_this_project": false },
+    { "key": "Hidden", "read": true, "type": "boolean", "used_for": "the key that actually turns an entry off: a true value skips unit generation entirely. This is what the Startup page writes for an entry the user switched off, so turning it back on does not need the command retyped.", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:327 and the skip at :528-532", "written_by_this_project": true },
+    { "key": "AutostartCondition", "read": true, "type": "string", "used_for": "a condition, mostly GNOME specific, run as an ExecCondition before the command", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:328 and :488-509", "written_by_this_project": false },
+    { "key": "X-KDE-autostart-condition", "read": true, "type": "string", "used_for": "the same idea, KDE's spelling", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:329", "written_by_this_project": false },
+    { "key": "X-GNOME-Autostart-Phase", "read": true, "type": "string", "used_for": "GNOME's startup phases, which the generator does not implement: an entry that sets one is marked NotShowIn=GNOME and left to GNOME's own mechanism", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:330 and :582-606", "written_by_this_project": false },
+    { "key": "X-systemd-skip", "read": true, "type": "boolean", "used_for": "an explicit opt out of unit generation", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:331 and the skip at :533-537", "written_by_this_project": false },
+    { "key": "Comment", "read": false, "type": "string", "used_for": "recognised and deliberately ignored by the generator. Written anyway, because it is the sentence a person reads when they open the file, and this repository already writes it in its own shipped entries.", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:335 (a NULL parse function) and legacy/session/minimalinux-customize.desktop:5", "written_by_this_project": true },
+    { "key": "Categories", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:334", "written_by_this_project": false },
+    { "key": "DBusActivatable", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:336", "written_by_this_project": false },
+    { "key": "Encoding", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:337", "written_by_this_project": false },
+    { "key": "GenericName", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:338", "written_by_this_project": false },
+    { "key": "Icon", "read": false, "used_for": "recognised and ignored by the generator. Not written: an autostart entry is never shown in a menu, so an icon name here is a value nothing reads.", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:339", "written_by_this_project": false },
+    { "key": "Keywords", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:340", "written_by_this_project": false },
+    { "key": "MimeType", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:341", "written_by_this_project": false },
+    { "key": "NoDisplay", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:342", "written_by_this_project": false },
+    { "key": "StartupNotify", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:343", "written_by_this_project": false },
+    { "key": "StartupWMClass", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:344", "written_by_this_project": false },
+    { "key": "Terminal", "read": false, "used_for": "recognised and ignored by the generator: an autostart entry is run as a service unit, so a command that needs a terminal needs to start one itself.", "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:345", "written_by_this_project": false },
+    { "key": "URL", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:346", "written_by_this_project": false },
+    { "key": "Version", "read": false, "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:347", "written_by_this_project": false }
+  ],
+  "rejected": [
+    {
+      "id": "gnome-autostart-enabled",
+      "spelling": "X-GNOME-Autostart-enabled=false",
+      "message": "An entry is switched off with Hidden=true, which is the key this session reads. X-GNOME-Autostart-enabled is not read at all here, so it would look like a switch and change nothing.",
+      "why": "Not in the generator's key table at all -- neither read (:320-331) nor recognised-and-ignored (:334-347) -- so under a systemd-started session writing it changes nothing, and a switch on screen would appear to work while the entry kept starting. Hidden=true is the key that is read (:327) and acted on (:528-532), and it is what this project writes for a disabled entry. A GNOME Session does read X-GNOME-Autostart-enabled, which is exactly why it is tempting and exactly why it is recorded here rather than used.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:320-347 (the complete key table)"
+    },
+    {
+      "id": "shell-wrapper",
+      "spelling": "a shell wrapper: Exec=/bin/sh -c '<command>'",
+      "message": "A startup command is run directly, never through a shell. Name the program and its arguments, and this project can tell you when the program is missing.",
+      "why": "The Exec line is parsed and its executable is checked for existence (:573-581), so wrapping a command in a shell turns a check on the program into a check on /bin/sh and loses the one thing that makes a missing program reportable. It would also put a command from a user-editable JSON file one step closer to a shell, which this project does not do anywhere.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:573-581 and SECURITY.md's rule that no string from a user file reaches a shell"
+    }
+  ],
+  "activation": {
+    "_note": "Whether an entry actually runs is not a property of the file. The generator turns entries into units for a systemd user target; if that target is not reached in this session, a perfectly correct entry does nothing. This project cannot read that from a sandbox, and nothing in the repository enables a target on the user's behalf, so the Startup page reports the question rather than assuming the answer.",
+    "generator": "systemd-xdg-autostart-generator",
+    "unit_name": "app-<escaped file name without .desktop>@autostart.service",
+    "unit_name_evidence": "src/xdg-autostart-generator/xdg-autostart-service.c:48-65",
+    "escaping": {
+      "what": "The file name without its .desktop suffix is escaped before it is used as the instance: a leading '.' becomes \\x2e, '/' becomes '-', and '-', '\\' and every character outside 0-9 A-Z a-z : - _ . \\ becomes \\xHH with a lowercase hex byte. So `iarch-portfolio.desktop` becomes `app-iarch\\x2dportfolio@autostart.service`.",
+      "consequence": "The Startup page can name the unit beside an entry, which is what makes the probe answer readable: a person sees the row and the unit that row turned into, or sees that no unit exists. This project reimplements the escape rather than calling systemd for it, and a test compares the two spellings against the table above.",
+      "evidence": "src/basic/unit-name.c:312-330 (do_escape), :301-310 (do_escape_char), :24-27 (VALID_CHARS) and src/basic/hexdecoct.c (hexchar, lowercase table)"
+    },
+    "probe": ["systemctl", "--user", "list-units", "--all", "--plain", "app-*@autostart.service"],
+    "probe_note": "A read-only probe. It lists the units the generator produced, which answers both halves of the question at once: whether the mechanism ran and whether this entry was among the ones it turned into units. `systemctl` missing, or no user manager running, is unverified rather than a failure -- the same three-way answer every other probe in this project gives.",
+    "compositor_alternative": "This compositor's own mechanism for starting something at login is exec-once in .config/hypr/startup.lua, rendered from data/design/startup.json. It is the mechanism this repository already uses for the session's own programs, and it does not depend on a systemd target. The autostart directory is offered for programs a person adds, because that is the directory every desktop reads and the one a person will look in."
+  },
+  "ownership": {
+    "prefix": "iarch-",
+    "rule": "This project only ever writes, changes or removes a file whose name starts with `iarch-`. Every other file in ~/.config/autostart/ is listed, so the page can show what will start, and none is touched: an entry another program wrote is that program's to remove.",
+    "why": "A settings panel that can delete files it did not create is a panel that can undo work it knows nothing about. The prefix is the ownership marker this repository already uses -- `# Managed by ...` at legacy/session/minimalinux-customize.desktop:2 is the same idea, written inside the file instead of into its name, and a name is what a listing can check without opening anything.",
+    "marker": "# Generated by iarch-settings.",
+    "marker_note": "The first line of a file this project wrote. A comment is ignored by the generator (src/xdg-autostart-generator/xdg-autostart-service.c:335), so the marker costs nothing at runtime, and it lets a later version of this application recognise a file it wrote under a name it did not choose.",
+    "shadowing": {
+      "allowed_for": "an entry whose file is in a system autostart directory and not in the user's",
+      "mechanism": "Create a file of the same name in the user directory holding Hidden=true. The generator scans the user directory first and the first name wins, so the system file is never opened for writing and deleting the shadow restores the system behaviour exactly.",
+      "evidence": "src/xdg-autostart-generator/xdg-autostart-generator.c:77 (the directory order) and :104-108 (a name already seen is skipped)",
+      "refused_for": "a file already in the user directory that this project does not own. That file is another program's own record of what it should start; overwriting it would destroy a value nothing else keeps, and the program would not know to write it again.",
+      "why": "Turning off something the system starts is a real need and this is the only mechanism the generator offers for it. It is allowed narrowly -- a new file in the user's own directory, never an edit to a file elsewhere -- because the alternative is a switch on screen that explains why it cannot work."
+    }
+  }
+}

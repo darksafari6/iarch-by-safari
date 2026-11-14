@@ -1,0 +1,264 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/xdg-defaults.schema.json",
+  "title": "The default-application surface",
+  "description": "A closed record of what xdg-settings and xdg-mime can read and write, the MIME associations each role in the Default apps page means, and the roles this project refuses to offer. tests/test_settings_startup.py fails when the page or the writer names a property, an operation or a mimetype this record does not.",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "description",
+    "verified_against",
+    "source",
+    "settings_tool",
+    "mime_tool",
+    "roles",
+    "candidates",
+    "unsettable"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string" },
+    "version": { "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "verified_against": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "fetched [0-9]{4}-[0-9]{2}-[0-9]{2}",
+      "description": "The revision the scripts were read from plus the date, because the mirror cited carries no release tags."
+    },
+    "source": { "type": "string", "minLength": 1 },
+
+    "settings_tool": {
+      "type": "object",
+      "required": ["binary", "operations", "properties", "refusals"],
+      "additionalProperties": false,
+      "properties": {
+        "binary": { "type": "string", "minLength": 1 },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["operation", "evidence"],
+            "additionalProperties": false,
+            "properties": {
+              "operation": { "enum": ["get", "check", "set"] },
+              "evidence": { "$ref": "#/definitions/cite" }
+            }
+          }
+        },
+        "properties": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["property", "operations", "argument", "meaning", "evidence"],
+            "additionalProperties": false,
+            "properties": {
+              "property": { "enum": ["default-web-browser", "default-url-scheme-handler"] },
+              "operations": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "enum": ["get", "check", "set"] }
+              },
+              "argument": { "type": "string", "minLength": 1 },
+              "meaning": { "type": "string", "minLength": 1 },
+              "evidence": { "$ref": "#/definitions/cite" }
+            }
+          }
+        },
+        "refusals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["what", "behaviour", "why_it_matters"],
+            "additionalProperties": false,
+            "properties": {
+              "what": { "type": "string", "minLength": 1 },
+              "behaviour": { "type": "string", "minLength": 1 },
+              "why_it_matters": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+
+    "mime_tool": {
+      "type": "object",
+      "required": ["binary", "operations", "read_order", "verify_and_restore"],
+      "additionalProperties": false,
+      "properties": {
+        "binary": { "type": "string", "minLength": 1 },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["operation", "evidence"],
+            "additionalProperties": false,
+            "properties": {
+              "operation": { "type": "string", "minLength": 1 },
+              "prints": { "type": "string" },
+              "writes": { "type": "string" },
+              "refuses": { "type": "string" },
+              "note": { "type": "string" },
+              "used_by_this_project": { "type": "boolean" },
+              "why_not": { "type": "string" },
+              "evidence": { "$ref": "#/definitions/cite" }
+            }
+          }
+        },
+        "read_order": {
+          "type": "object",
+          "required": ["description", "paths", "evidence"],
+          "additionalProperties": false,
+          "properties": {
+            "description": { "type": "string", "minLength": 1 },
+            "paths": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "evidence": { "$ref": "#/definitions/cite" }
+          }
+        },
+        "verify_and_restore": {
+          "type": "object",
+          "required": ["description", "evidence", "why_it_matters"],
+          "additionalProperties": false,
+          "properties": {
+            "description": { "type": "string", "minLength": 1 },
+            "evidence": { "$ref": "#/definitions/cite" },
+            "why_it_matters": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per row the Default apps page may offer. The mimetypes are what `xdg-mime default` is given, in one call, so the role cannot end up half set.",
+      "items": {
+        "type": "object",
+        "required": ["role", "label", "mechanism", "read", "mimetypes", "why", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "role": { "enum": ["browser", "file_manager", "editor", "mail"] },
+          "label": { "type": "string", "minLength": 1 },
+          "mechanism": {
+            "type": "string",
+            "pattern": "^xdg-mime default ",
+            "description": "Always xdg-mime, never xdg-settings: see the settings_tool refusal about the generic path."
+          },
+          "read": {
+            "type": "string",
+            "pattern": "^xdg-mime query default ",
+            "minLength": 1
+          },
+          "mimetypes": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$" }
+          },
+          "why": { "type": "string", "minLength": 1 },
+          "evidence": { "$ref": "#/definitions/cite" }
+        }
+      }
+    },
+
+    "candidates": {
+      "type": "object",
+      "description": "Which programs a role's dropdown may offer, and the citation behind every filter. A list that disagreed with the desktop's own application chooser would offer a program the rest of the desktop hides.",
+      "required": [
+        "_note",
+        "how",
+        "directories",
+        "directories_evidence",
+        "filters",
+        "always_listed",
+        "localised_names",
+        "limitation"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string", "minLength": 1 },
+        "how": { "type": "string", "minLength": 1 },
+        "directories": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "directories_evidence": { "$ref": "#/definitions/cite" },
+        "filters": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "type": "object",
+            "required": ["key", "keep_when", "why", "evidence"],
+            "additionalProperties": false,
+            "properties": {
+              "key": { "type": "string", "minLength": 1 },
+              "keep_when": { "type": "string", "minLength": 1 },
+              "why": { "type": "string", "minLength": 1 },
+              "evidence": { "$ref": "#/definitions/cite" }
+            }
+          }
+        },
+        "always_listed": { "$ref": "#/definitions/claim_why" },
+        "localised_names": { "$ref": "#/definitions/claim_why" },
+        "limitation": { "$ref": "#/definitions/claim_consequence" }
+      }
+    },
+
+    "unsettable": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Roles the page names and then explains, instead of offering. A dropdown with no association behind it is a control that lies.",
+      "items": {
+        "type": "object",
+        "required": ["role", "why"],
+        "additionalProperties": false,
+        "properties": {
+          "role": { "type": "string", "minLength": 1 },
+          "label": { "type": "string", "minLength": 1 },
+          "why": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "claim_why": {
+      "type": "object",
+      "required": ["what", "why", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "what": { "type": "string", "minLength": 1 },
+        "why": { "type": "string", "minLength": 1 },
+        "evidence": { "$ref": "#/definitions/cite" }
+      }
+    },
+    "claim_consequence": {
+      "type": "object",
+      "required": ["what", "consequence", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "what": { "type": "string", "minLength": 1 },
+        "consequence": { "type": "string", "minLength": 1 },
+        "evidence": { "$ref": "#/definitions/cite" }
+      }
+    },
+    "cite": {
+      "type": "string",
+      "pattern": ":[0-9]",
+      "description": "A path with the line or line range it was read from. Paths in the pinned upstream scripts and paths in this repository are both accepted, because a refusal here is often justified by what this repository already does."
+    }
+  }
+}

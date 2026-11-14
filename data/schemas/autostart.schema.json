@@ -1,0 +1,226 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/autostart.schema.json",
+  "title": "The autostart surface",
+  "description": "A closed record of the directory, the desktop-entry keys and the skip conditions a session's autostart generator honours. The Startup & Default apps page may write a key listed here and marked written_by_this_project, and no other; tests/test_settings_startup.py fails when the page or the writer names something this record does not.",
+  "type": "object",
+  "required": [
+    "version",
+    "name",
+    "description",
+    "verified_against",
+    "source",
+    "directory",
+    "parsing",
+    "exec_line",
+    "keys",
+    "rejected",
+    "activation",
+    "ownership"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string" },
+    "version": { "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "verified_against": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+(\\.[0-9]+)?$",
+      "description": "The release every line cite was read from. A dotted form, because a bare major tag is a moving target the moment a point release lands."
+    },
+    "source": { "type": "string", "minLength": 1 },
+
+    "directory": {
+      "type": "object",
+      "required": ["user", "evidence", "system", "system_evidence", "notes"],
+      "additionalProperties": false,
+      "properties": {
+        "user": { "type": "string", "minLength": 1 },
+        "evidence": { "$ref": "#/definitions/cite" },
+        "system": { "type": "string", "minLength": 1 },
+        "system_evidence": { "$ref": "#/definitions/cite" },
+        "notes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["what", "evidence"],
+            "additionalProperties": false,
+            "properties": {
+              "what": { "type": "string", "minLength": 1 },
+              "evidence": { "$ref": "#/definitions/cite" }
+            }
+          }
+        }
+      }
+    },
+
+    "parsing": {
+      "type": "object",
+      "description": "Rules the file format imposes. Each one names what a page may not promise, so a control that would be silently dropped cannot be built.",
+      "required": [
+        "_note",
+        "localized_keys",
+        "duplicate_keys",
+        "string_lists",
+        "booleans",
+        "sections"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string", "minLength": 1 },
+        "localized_keys": { "$ref": "#/definitions/rule" },
+        "duplicate_keys": { "$ref": "#/definitions/rule" },
+        "string_lists": { "$ref": "#/definitions/rule" },
+        "booleans": { "$ref": "#/definitions/rule" },
+        "sections": { "$ref": "#/definitions/rule" }
+      }
+    },
+
+    "exec_line": {
+      "type": "object",
+      "description": "The second parser: how an Exec value becomes a command. Each rule names what the writer must therefore refuse.",
+      "required": ["_note", "quoting", "absolute_path", "field_codes", "tilde", "cunescape"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string", "minLength": 1 },
+        "quoting": { "$ref": "#/definitions/rule" },
+        "absolute_path": { "$ref": "#/definitions/rule" },
+        "field_codes": { "$ref": "#/definitions/rule" },
+        "tilde": { "$ref": "#/definitions/rule" },
+        "cunescape": { "$ref": "#/definitions/rule" }
+      }
+    },
+
+    "keys": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["key", "read", "evidence", "written_by_this_project"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9-]*$" },
+          "read": {
+            "type": "boolean",
+            "description": "True when the generator parses the key into a field, false when it recognises the name and deliberately ignores it. Both are recorded, because a key that is ignored is a key a page must not offer as a switch."
+          },
+          "type": { "enum": ["string", "boolean", "string list"] },
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          },
+          "used_for": { "type": "string" },
+          "evidence": { "$ref": "#/definitions/cite" },
+          "written_by_this_project": { "type": "boolean" }
+        }
+      }
+    },
+
+    "rejected": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Spellings that look right and are not, each with what to write instead. A key nothing reads is worse than no key: it makes a switch on screen that does nothing.",
+      "items": {
+        "type": "object",
+        "required": ["id", "spelling", "message", "why", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "enum": ["gnome-autostart-enabled", "shell-wrapper"],
+            "description": "A stable name a module looks a refusal up by, so the sentence a person reads comes from this file rather than from a string copied into the code."
+          },
+          "spelling": { "type": "string", "minLength": 1 },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The sentence a person sees, with no line numbers in it: `why` carries the reasoning and the cites, and a citation is not an explanation."
+          },
+          "why": { "type": "string", "minLength": 1 },
+          "evidence": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+
+    "activation": {
+      "type": "object",
+      "required": [
+        "_note",
+        "generator",
+        "unit_name",
+        "unit_name_evidence",
+        "escaping",
+        "probe",
+        "probe_note",
+        "compositor_alternative"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string", "minLength": 1 },
+        "generator": { "type": "string", "minLength": 1 },
+        "unit_name": { "type": "string", "minLength": 1 },
+        "unit_name_evidence": { "$ref": "#/definitions/cite" },
+        "escaping": { "$ref": "#/definitions/rule" },
+        "probe": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "A read-only command as an argument list, never as a string for a shell to parse."
+        },
+        "probe_note": { "type": "string", "minLength": 1 },
+        "compositor_alternative": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "ownership": {
+      "type": "object",
+      "required": ["prefix", "rule", "why", "marker", "marker_note", "shadowing"],
+      "additionalProperties": false,
+      "properties": {
+        "prefix": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*-$" },
+        "rule": { "type": "string", "minLength": 1 },
+        "why": { "type": "string", "minLength": 1 },
+        "marker": {
+          "type": "string",
+          "pattern": "^#",
+          "description": "The first line of a file this project wrote. A comment, because the generator ignores them."
+        },
+        "marker_note": { "type": "string", "minLength": 1 },
+        "shadowing": {
+          "type": "object",
+          "required": ["allowed_for", "mechanism", "evidence", "refused_for", "why"],
+          "additionalProperties": false,
+          "properties": {
+            "allowed_for": { "type": "string", "minLength": 1 },
+            "mechanism": { "type": "string", "minLength": 1 },
+            "evidence": { "$ref": "#/definitions/cite" },
+            "refused_for": { "type": "string", "minLength": 1 },
+            "why": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "rule": {
+      "type": "object",
+      "required": ["what", "consequence", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "what": { "type": "string", "minLength": 1 },
+        "consequence": { "type": "string", "minLength": 1 },
+        "evidence": { "$ref": "#/definitions/cite" }
+      }
+    },
+    "cite": {
+      "type": "string",
+      "pattern": "^src/",
+      "description": "A path in the pinned release with the line or line range it was read from, optionally followed by a second cite or by a path in this repository."
+    }
+  }
+}

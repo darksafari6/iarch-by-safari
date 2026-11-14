@@ -140,6 +140,8 @@ jobs:
               "data/design/animations.json": "data/schemas/animations.schema.json",
               "data/design/startup.json": "data/schemas/startup.schema.json",
               "data/design/monitors.json": "data/schemas/monitors.schema.json",
+              "data/design/autostart.json": "data/schemas/autostart.schema.json",
+              "data/design/xdg-defaults.json": "data/schemas/xdg-defaults.schema.json",
               "data/design/adwaita.json": "data/schemas/adwaita.schema.json",
               "data/licenses.json": "data/schemas/licenses.schema.json",
               # Colour presets are a family under one schema.

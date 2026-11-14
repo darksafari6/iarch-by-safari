@@ -40,6 +40,12 @@ PAIRS = {
     # The monitor surface: what `hyprctl -j monitors` answers and what
     # `hl.monitor` accepts, each with the line of v0.57.2 it was read from.
     "data/design/monitors.json": "data/schemas/monitors.schema.json",
+    # The autostart surface: which directory a session scans, which desktop-entry
+    # keys its generator reads, which it ignores, and what makes an entry skip.
+    "data/design/autostart.json": "data/schemas/autostart.schema.json",
+    # The default-application surface: what xdg-settings and xdg-mime can read
+    # and write, and the roles the page refuses to offer.
+    "data/design/xdg-defaults.json": "data/schemas/xdg-defaults.schema.json",
     # The settings application's upstream surface: every GTK, libadwaita and
     # icon name it is allowed to use, each read out of a pinned upstream ref.
     "data/design/adwaita.json": "data/schemas/adwaita.schema.json",
