@@ -38,6 +38,7 @@ PART_ONE_TO_THREE_FILES = (
 #: modules, fourteen services and the renderer.
 SETTINGS_APP_FILES = (
     "iarch/settings-app/iarch_settings/__init__.py",
+    "iarch/settings-app/iarch_settings/__main__.py",
     "iarch/settings-app/iarch_settings/gtkenv.py",
     "iarch/settings-app/iarch_settings/i18n.py",
     "iarch/settings-app/iarch_settings/pages/__init__.py",
@@ -76,6 +77,8 @@ SETTINGS_APP_FILES = (
     "iarch/settings-app/iarch_settings/services/themes.py",
     "iarch/settings-app/iarch_settings/version.py",
     "iarch/settings-app/iarch_settings/widgets/__init__.py",
+    "iarch/settings-app/iarch_settings/widgets/app.py",
+    "iarch/settings-app/iarch_settings/widgets/window.py",
 )
 
 #: The tests that hold the settings application to the records it was built from.

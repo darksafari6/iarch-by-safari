@@ -242,6 +242,44 @@
       "evidence": "GNOME/libadwaita@1.7.12:src/adw-breakpoint.h"
     },
     {
+      "name": "Gtk.Box",
+      "since": "2.0",
+      "used_for": "the sidebar's column of page rows and the header bar's two ends; GTK 4 packing is append, prepend and remove, because pack_start and pack_end are not in the 4.10 header at all",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkbox.h:72 gtk_box_new(GtkOrientation, int spacing), :80 set_spacing, :91 append, :97 remove; every function in the header is GDK_AVAILABLE_IN_ALL"
+    },
+    {
+      "name": "Gtk.Label",
+      "since": "2.0",
+      "used_for": "the header bar's title and the sidebar's row text, wrapped rather than ellipsised so a long page name is readable at the narrowest sidebar width",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtklabel.h:45 gtk_label_new(const char *str), :49 set_text, :116 set_wrap, :131 set_selectable, :161 set_xalign"
+    },
+    {
+      "name": "Gtk.Button",
+      "since": "2.0",
+      "used_for": "the header bar's back button and its search button; a row's own button is AdwButtonRow, and this is the one that sits in a bar",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkbutton.h:80 gtk_button_new(), :84 new_from_icon_name, :94 set_label, :111 set_child"
+    },
+    {
+      "name": "Gtk.Image",
+      "since": "2.0",
+      "used_for": "the icon beside each sidebar page name, from the icon names data/design/adwaita.json:icons records",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkimage.h:83 gtk_image_new_from_icon_name(const char *icon_name), :108 set_pixel_size, :121 get_icon_name"
+    },
+    {
+      "name": "Gtk.ToggleButton",
+      "since": "2.0",
+      "used_for": "one per sidebar page, grouped so exactly one is down at a time and the group is the page selection; the toggled signal is connected and the method form is never called",
+      "note": "gtk_toggle_button_toggled() at :81 is GDK_DEPRECATED_IN_4_10 -- that is the method that emits the signal by hand, not the signal itself, so the window connects to 'toggled' and changes the selection with set_active. gtk_toggle_button_set_group at :83 is still GDK_AVAILABLE_IN_ALL, which is what makes a group of toggle buttons the radio behaviour without GtkRadioButton.",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtktogglebutton.h:70 gtk_toggle_button_new(), :76 set_active, :79 get_active, :81 GDK_DEPRECATED_IN_4_10 toggled(), :83 set_group"
+    },
+    {
+      "name": "Gtk.StyleContext",
+      "since": "3.0",
+      "used_for": "not a widget and not a style class: the one function this project needs from it is the display-wide provider, which is how style/glass.css reaches every window at APPLICATION priority",
+      "note": "The name is misleading at 4.10 and the header layout is the evidence. The per-widget functions live in gtk/deprecated/gtkstylecontext.h and are GDK_DEPRECATED_IN_4_10 -- add_provider at :65, remove_provider at :70 -- while gtk_style_context_add_provider_for_display is declared in gtk/gtkstyleprovider.h:94 and is GDK_AVAILABLE_IN_ALL. So the deprecated thing is attaching a provider to one widget's context, not attaching one to a display, and this project does only the second. The priority constants are #defines in the same header: FALLBACK 1 at :46, THEME 200 at :54, SETTINGS 400 at :65, APPLICATION 600 at :73, USER 800 at :84.",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkstyleprovider.h:46-98 and gtk/deprecated/gtkstylecontext.h:64-71"
+    },
+    {
       "name": "Gtk.Orientation",
       "since": "4.0",
       "used_for": "an enumeration, not a widget: the scale a 'scale' row draws is horizontal, and GtkScale.new_with_range takes the orientation as its first argument",
@@ -349,6 +387,18 @@
       "call": "adw_navigation_view_push",
       "python": "Adw.NavigationView.push(page)",
       "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h"
+    },
+    {
+      "call": "adw_navigation_view_add",
+      "python": "Adw.NavigationView.add(page)",
+      "note": "Adding is not pushing: a page added here is in the view and can be shown, but is not on the stack, which is what lets fifteen pages exist without fifteen back steps.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h:120"
+    },
+    {
+      "call": "adw_navigation_view_replace",
+      "python": "Adw.NavigationView.replace(page)",
+      "note": "Choosing a page in the sidebar replaces the visible page rather than pushing it, so the stack stays one deep and the back button does not walk through every page the person has visited. push_by_tag at :136 is the spelling for the same thing when only the tag is known.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h:151 and :136"
     },
     {
       "call": "adw_navigation_view_pop_to_tag",
@@ -582,6 +632,40 @@
       "python": "Gtk.Widget.add_css_class(name)",
       "note": "GtkStyleContext is deprecated in GTK 4 and this is its replacement, so no style class in this project is applied through a provider on a context.",
       "evidence": "GNOME/gtk@4.10.0:gtk/gtkwidget.h"
+    },
+    {
+      "call": "gtk_style_context_add_provider_for_display",
+      "python": "Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider, 600)",
+      "note": "600 is GTK_STYLE_PROVIDER_PRIORITY_APPLICATION (gtkstyleprovider.h:73). It is not USER, because gtksettings.c:1037 adds the person's own ~/.config/gtk-4.0/gtk.css at GTK_STYLE_PROVIDER_PRIORITY_USER (800) and a file this project ships must not outrank a file the person can edit. glass.css only styles iarch- classes, so the two sheets never set the same property on the same widget and nothing is lost by staying below.",
+      "evidence": "GNOME/gtk@4.10.0:gtk/gtkstyleprovider.h:94 and gtk/gtksettings.c:1029-1037"
+    },
+    {
+      "call": "adw_application_window_set_content",
+      "python": "Adw.ApplicationWindow.set_content(widget)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-application-window.h:39"
+    },
+    {
+      "call": "adw_application_window_add_breakpoint",
+      "python": "Adw.ApplicationWindow.add_breakpoint(Adw.Breakpoint)",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-application-window.h:45"
+    },
+    {
+      "call": "adw_toolbar_view_add_top_bar",
+      "python": "Adw.ToolbarView.add_top_bar(bar)",
+      "note": "A header bar goes in as a top bar rather than being packed into a box, which is what makes it raise its background when the content underneath scrolls.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-toolbar-view.h:43"
+    },
+    {
+      "call": "adw_navigation_page_new",
+      "python": "Adw.NavigationPage.new(child, title)",
+      "note": "AdwNavigationPage is declared in adw-navigation-view.h, not in a header of its own: there is no src/adw-navigation-page.h at 1.7.12, and a citation that names one is a citation to a file that does not exist.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h:79, ADW_AVAILABLE_IN_1_4"
+    },
+    {
+      "call": "adw_navigation_page_new_with_tag",
+      "python": "Adw.NavigationPage.new_with_tag(child, title, tag)",
+      "note": "The tag is the page id, which is what makes pop_to_tag and get_visible_page_tag able to answer which of the fifteen pages is showing without this project keeping its own stack.",
+      "evidence": "GNOME/libadwaita@1.7.12:src/adw-navigation-view.h:83 and :94 get_tag"
     },
     {
       "call": "g_app_info_launch_default_for_uri",
