@@ -55,12 +55,21 @@ def _read(path: Path) -> Optional[str]:
         return None
 
 
-def _read_first_field(path: Path) -> Optional[str]:
+def _read_value(path: Path) -> Optional[str]:
+    """The one value a sysfs file holds, or ``None``. Empty is ``None`` too.
+
+    Not the first whitespace-separated field. The kernel publishes one value per
+    file, and ``status`` can be ``Not charging`` -- which a field split truncates to
+    ``Not``, and ``Not`` is neither charging nor plugged in, so a laptop on mains at
+    a charge threshold would show a battery draining while it is plugged in. The
+    four statuses :func:`batteries` recognises are named there, so a reader that
+    cannot produce one of them is a reader that has lost a state.
+    """
     text = _read(path)
     if text is None:
         return None
-    fields = text.split()
-    return fields[0] if fields else None
+    value = text.strip()
+    return value or None
 
 
 def _int(value: Optional[str]) -> Optional[int]:
@@ -99,7 +108,12 @@ def os_release(root: Path = ETC) -> Dict[str, str]:
     """
     text = _read(root / "os-release")
     if text is None:
-        text = _read(root / "usr" / "lib" / "os-release")
+        # /usr/lib/os-release is the copy the distribution ships and the one an
+        # administrator's /etc/os-release is meant to be based on. `root` is the etc
+        # *directory*, so that copy is a sibling of it: looking for usr inside etc
+        # finds nothing on every real system, and a distribution that ships only the
+        # /usr/lib copy would report no name at all.
+        text = _read(root.parent / "usr" / "lib" / "os-release")
     values: Dict[str, str] = {}
     if text is None:
         return values
@@ -117,14 +131,28 @@ def os_release(root: Path = ETC) -> Dict[str, str]:
 
 
 def distro(root: Path = ETC) -> Dict[str, Optional[str]]:
-    """The distribution, as the fields the Home page shows."""
+    """The distribution, as the fields the Home page shows.
+
+    A field the file publishes as empty comes back as ``None`` and not as ``""``,
+    because ``ID_LIKE=`` is what a distribution with no parent writes, and a page
+    that hid only ``None`` would draw an empty label where the honest answer is
+    "this distribution does not say".
+    """
     release = os_release(root)
+
+    def value(*keys: str) -> Optional[str]:
+        for key in keys:
+            text = str(release.get(key) or "").strip()
+            if text:
+                return text
+        return None
+
     return {
-        "name": release.get("PRETTY_NAME") or release.get("NAME"),
-        "id": release.get("ID"),
-        "like": release.get("ID_LIKE"),
-        "version": release.get("VERSION"),
-        "version_id": release.get("VERSION_ID"),
+        "name": value("PRETTY_NAME", "NAME"),
+        "id": value("ID"),
+        "like": value("ID_LIKE"),
+        "version": value("VERSION"),
+        "version_id": value("VERSION_ID"),
     }
 
 
@@ -337,8 +365,8 @@ def batteries(sys_root: Path = SYS) -> List[Dict[str, Any]]:
     """
     found: List[Dict[str, Any]] = []
     for path in battery_paths(sys_root):
-        capacity = _int(_read_first_field(path / "capacity"))
-        status = (_read_first_field(path / "status") or "").strip() or None
+        capacity = _int(_read_value(path / "capacity"))
+        status = _read_value(path / "status")
         found.append({
             "name": path.name,
             "percent": capacity,
@@ -369,7 +397,7 @@ def power_on_ac(sys_root: Path = SYS) -> Optional[bool]:
     except OSError:
         return None
     for path in candidates:
-        online = _int(_read_first_field(path / "online"))
+        online = _int(_read_value(path / "online"))
         if online is not None:
             return bool(online)
     return None
