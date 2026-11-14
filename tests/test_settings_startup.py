@@ -49,7 +49,7 @@ sys.path.insert(0, str(ROOT / "iarch" / "settings-app"))
 
 from iarch_settings import pages  # noqa: E402
 from iarch_settings.pages.plan import default_context  # noqa: E402
-from iarch_settings.services import autostart, defaults  # noqa: E402
+from iarch_settings.services import autostart, defaults, runner  # noqa: E402
 
 AUTOSTART = json.loads((ROOT / "data" / "design" / "autostart.json").read_text(
     encoding="utf-8"))
@@ -423,19 +423,41 @@ class TestTheDefaultAppsPageNamesOnlyRecordedThings(unittest.TestCase):
                       "person looking for it finds no control and no explanation")
 
     def test_a_missing_tool_is_unverified_rather_than_a_failure(self):
-        """xdg-utils is in neither installer's package list, so absence is expected."""
+        """The verdicts are the runner's own, and absence is answered for on both kinds of machine.
+
+        ``xdg-utils`` is in neither installer's package list, so on a machine nobody has set
+        up the read cannot run at all and the answer has to be ``unverified``. A CI runner is
+        the other kind of machine: it has ``xdg-mime``, the read runs, and the answer is
+        ``ok``. Asserting one verdict without saying which machine it needs is how this test
+        came to pass in a sandbox with no ``xdg-utils`` and fail on a runner with it, so both
+        cases are now stated, and the vocabulary is the runner's constants rather than three
+        words invented here -- ``ok``, ``failed`` and ``unverified`` are what a caller gets,
+        and a page cannot draw a fourth.
+        """
         answer = defaults.current("browser", ROOT)
         self.assertEqual("browser", answer["role"])
-        self.assertIn(answer["verdict"], ("answered", "refused", "unverified"),
+        self.assertIn(answer["verdict"], (runner.OK, runner.FAILED, runner.UNVERIFIED),
                       f"{answer['verdict']} is not one of the three verdicts, so a caller "
                       f"cannot tell an absent tool from a tool that said no")
         self.assertEqual(["xdg-mime", "query", "default"], answer["argv"][:3],
                          "the read is a query, and the argv is published so the page can "
                          "show the command it could not run")
-        if answer["verdict"] == "unverified":
+        if answer["verdict"] == runner.UNVERIFIED:
             self.assertTrue(str(answer["reason"]).strip(),
                             "the page has to say what it could not read")
             self.assertIn("not installed", answer["reason"])
+        if runner.which(defaults.MIME_TOOL) is None:
+            self.assertEqual(runner.UNVERIFIED, answer["verdict"],
+                             f"{defaults.MIME_TOOL} is not on PATH and the read answered "
+                             f"{answer['verdict']}, which is a state nobody reported")
+        else:  # pragma: no cover - depends on the machine
+            self.assertNotEqual(runner.UNVERIFIED, answer["verdict"],
+                                f"{defaults.MIME_TOOL} is installed and the read still called "
+                                f"itself unverified, so the page would refuse to show an "
+                                f"answer it could have had")
+            self.assertTrue(str(answer["reason"]).strip() or answer["desktop_id"],
+                            "the tool ran and the answer carries neither a value nor a "
+                            "sentence, so the page would draw an empty row")
         unsettable = " ".join(str(entry.get("why") or "")
                               for entry in defaults.unsettable())
         self.assertIn("unverified", unsettable.lower(),

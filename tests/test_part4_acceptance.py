@@ -582,9 +582,18 @@ class TestAMissingBinaryIsUnverifiedAndNeverOff(unittest.TestCase):
         self.assertTrue(absent, "every binary this project probes is installed here, so this "
                                 "class is not testing the condition it exists for")
 
-    def test_a_reader_of_an_absent_binary_answers_unverified(self):
-        if runner.which(runner.NOCTALIA_BIN):  # pragma: no cover - depends on the machine
-            self.skipTest("the shell binary is installed here")
+    def test_a_reader_of_an_absent_tool_answers_unverified(self):
+        """Guarded on the tool the roles are actually read with, not on the shell's.
+
+        The default-application roles are queried through ``xdg-mime``, which this sandbox
+        does not have and a CI runner does. Guarding on ``noctalia`` instead -- the binary the
+        sentence below is about -- made the assertion machine-dependent in the one direction
+        that fails silently: it passed here and failed on a runner where the tool exists and
+        answers, because an answer is not "unverified".
+        """
+        if runner.which(defaults.MIME_TOOL):  # pragma: no cover - depends on the machine
+            self.skipTest(f"{defaults.MIME_TOOL} is installed here, so the roles can be read "
+                          f"and the answer is not unverified")
         for role in defaults.role_ids():
             answer = defaults.current(role, ROOT)
             with self.subTest(role=role):
@@ -592,6 +601,33 @@ class TestAMissingBinaryIsUnverifiedAndNeverOff(unittest.TestCase):
                                  f"{role} answered {answer['verdict']} for an absent tool, "
                                  f"and a page drawing that would show a state nobody reported")
                 self.assertTrue(str(answer["reason"]).strip())
+
+    def test_a_reader_never_invents_a_verdict_whatever_the_machine_has(self):
+        """The half of the rule that holds on every machine, including one with the tools.
+
+        Three verdicts exist and a reader has to pick one of them, say why in a sentence, and
+        report the command it actually ran -- so a machine that *can* answer is checked too,
+        which is the case a CI runner is in and this sandbox is not.
+        """
+        for role in defaults.role_ids():
+            answer = defaults.current(role, ROOT)
+            with self.subTest(role=role):
+                # The three verdicts are the runner's own constants, spelled here as the
+                # constants rather than as strings: a fourth verdict would be a state no page
+                # has a way to draw, and a renamed one would be a state no page can find.
+                self.assertIn(answer["verdict"],
+                              {runner.OK, runner.FAILED, runner.UNVERIFIED},
+                              f"{role} answered {answer['verdict']}, which no page has a way "
+                              f"to draw")
+                self.assertTrue(str(answer["reason"]).strip(),
+                                f"{role} gave a verdict with no sentence behind it, so the "
+                                f"page would show a state and no reason for it")
+                self.assertEqual(list(defaults.query_argv(role, ROOT)), list(answer["argv"]),
+                                 f"{role} reported a command it did not run")
+                self.assertEqual(role, answer["role"])
+                self.assertTrue(str(answer["label"]).strip())
+                self.assertTrue(answer["mimetypes"],
+                                f"{role} has no mimetypes, so there is nothing to ask about")
 
     def test_the_sentence_says_what_is_missing_and_what_it_costs(self):
         sentence = noctalia.available()
