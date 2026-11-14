@@ -103,7 +103,7 @@ def shell_table_rows() -> List[Row]:
         rows.append(Row(
             "state", path, source=f"appearance.shell_table_{_slug(path)}",
             icon="preferences-desktop-appearance-symbolic",
-            subtitle="Recorded in data/design/noctalia.json, and not drawn here",
+            subtitle="Recorded in the shell's own design record, and not drawn here",
             keywords=(path, shellkeys.key_name(path), "table", "shell", "not drawn")))
     if not rows:
         rows.append(Row(
