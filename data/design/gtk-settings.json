@@ -52,7 +52,7 @@
         0,
         1
       ],
-      "value_note": "-1 is the system default, 0 is off, 1 is on. Declared by g_param_spec_int with exactly that range.",
+      "value_note": "A closed choice list, not a range: -1 is 'use the system default', 0 is off and 1 is on. This project writes 1 or 0 and never -1, because not writing the key at all is what leaves the system default in place.",
       "default": -1,
       "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:444-446",
       "used_by": "the Fonts & Icons page's antialiasing row"
@@ -64,7 +64,7 @@
         0,
         1
       ],
-      "value_note": "-1 is the system default, 0 is off, 1 is on.",
+      "value_note": "A closed choice list, not a range: -1 is 'use the system default', 0 is off and 1 is on. This project writes 1 or 0 and never -1, because not writing the key at all is what leaves the system default in place.",
       "default": -1,
       "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:455-457",
       "used_by": "the Fonts & Icons page's hinting switch"
@@ -109,11 +109,11 @@
     },
     "gtk-cursor-theme-size": {
       "type": "int",
-      "values": [
+      "range": [
         0,
         128
       ],
-      "value_note": "0 means the system default, which is why the row's lowest position is 0 and not 16.",
+      "range_note": "An inclusive range rather than a choice list: the property spec declares minimum 0 and maximum 128, and every integer between them is accepted.",
       "default": 0,
       "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:525-527",
       "used_by": "the Fonts & Icons page's cursor size row"
@@ -138,6 +138,31 @@
       "note": "Recorded and deliberately not written. Reduce motion in this project is the animation.reduce_motion switch, which iarch-anim owns and which renders every transition at 0ms in the Part 2 sheets; setting this key as well would give one intention two mechanisms that can disagree.",
       "evidence": "GNOME/gtk@4.10.0:gtk/gtksettings.c:556-558"
     }
+  },
+  "gtk3_keys": {
+    "_note": "The subset of the keys above that is also written to the GTK 3 file. GTK 3's own property table was not read out of a pinned 3.24 ref this pass -- docs/UNVERIFIED.md SET-05 -- so the evidence for these five is this repository's own frozen v4 payload, which has written them since before Part 1: legacy/config/gtk-3.0/settings.ini. A key GTK 4 added later is deliberately absent, because writing one to a GTK 3 file is writing a key nothing reads. gtk-theme-name is in that payload at :3 and is still refused here, for the reason recorded under keys.",
+    "keys": [
+      {
+        "key": "gtk-application-prefer-dark-theme",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:2"
+      },
+      {
+        "key": "gtk-icon-theme-name",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:4"
+      },
+      {
+        "key": "gtk-cursor-theme-name",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:5"
+      },
+      {
+        "key": "gtk-cursor-theme-size",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:6"
+      },
+      {
+        "key": "gtk-font-name",
+        "evidence": "legacy/config/gtk-3.0/settings.ini:7"
+      }
+    ]
   },
   "rejected": [
     {

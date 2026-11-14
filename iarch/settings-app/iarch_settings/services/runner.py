@@ -17,9 +17,20 @@ was no compositor" lead to opposite decisions in the apply pipeline.
 """
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 from typing import List, Optional, Sequence
+
+HYPRCTL = "hyprctl"
+NOCTALIA_BIN = "noctalia"
+
+#: The binaries a service may look for. Each one is a probe, never a promise: a
+#: page that needs one asks first and shows what it could not check. ``systemctl``
+#: is here for one read-only question -- whether the session's autostart generator
+#: ran at all -- and a missing one is unverified, not a failure.
+BINARIES = (HYPRCTL, NOCTALIA_BIN, "xdg-mime", "xdg-settings", "systemctl",
+            "fc-list", "git")
 
 #: Every command this application runs is given a wall-clock limit. A hung
 #: compositor client must not hang the interface with it.
@@ -87,6 +98,26 @@ class Outcome:
             "stderr": self.stderr,
             "reason": self.reason,
         }
+
+
+def which(binary: str) -> Optional[str]:
+    """The absolute path of ``binary``, or ``None`` when it is not on PATH."""
+    return shutil.which(binary)
+
+
+def hyprctl_present() -> bool:
+    """True when the compositor's client is on PATH and can be asked anything."""
+    return which(HYPRCTL) is not None
+
+
+def noctalia_present() -> bool:
+    """True when the shell's binary is on PATH and can be sent a verb."""
+    return which(NOCTALIA_BIN) is not None
+
+
+def presence() -> dict:
+    """Every probe at once, for the About page's debug information."""
+    return {name: which(name) is not None for name in BINARIES}
 
 
 def _argv(binary: str, args: Sequence[str]) -> List[str]:

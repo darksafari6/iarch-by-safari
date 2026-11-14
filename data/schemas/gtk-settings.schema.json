@@ -13,6 +13,7 @@
     "source",
     "files",
     "keys",
+    "gtk3_keys",
     "rejected"
   ],
   "additionalProperties": false,
@@ -194,6 +195,44 @@
       "type": "string",
       "minLength": 1,
       "description": "The upstream files this record was read from, named so a reader can find the line each entry cites."
+    },
+    "gtk3_keys": {
+      "type": "object",
+      "required": [
+        "_note",
+        "keys"
+      ],
+      "additionalProperties": false,
+      "description": "The subset also written to the GTK 3 file. A key that is not here is written to the GTK 4 file only, which is what keeps a key GTK 4 added later out of a file whose property table this project has not read at a pinned ref (SET-05).",
+      "properties": {
+        "_note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "key",
+              "evidence"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string",
+                "pattern": "^gtk-[a-z0-9-]+$",
+                "description": "Must also be one of the keys above: a GTK 3 key that is not in the GTK 4 table would be a key this project wrote nowhere it had read."
+              },
+              "evidence": {
+                "type": "string",
+                "pattern": "^legacy/config/gtk-3\\.0/settings\\.ini:[0-9]+$"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -260,7 +299,7 @@
         "values": {
           "type": "array",
           "minItems": 2,
-          "description": "The domain GTK accepts. For an int this is the inclusive range the property spec declares; for a string it is the exact spellings the parser compares against.",
+          "description": "A closed choice list: the exact spellings a string property is compared against with strcmp, or the discrete integers an int property accepts. An unrecognised spelling is ignored by GtkSettings rather than refused, which is why a page offers these as a dropdown and never as a text entry.",
           "items": {
             "type": [
               "string",
@@ -292,9 +331,27 @@
         },
         "used_by": {
           "type": "string"
+        },
+        "range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "An inclusive minimum and maximum for an int property whose spec declares bounds rather than a choice list. Mutually exclusive with `values`: a key is either one or the other, and a record that says both is a record that does not know which.",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "range_note": {
+          "type": "string"
         }
       },
-      "description": "A key this project writes names the row that writes it; a key it only records says written_by_this_project false and why in note."
+      "description": "A key this project writes names the row that writes it; a key it only records says written_by_this_project false and why in note.",
+      "not": {
+        "required": [
+          "values",
+          "range"
+        ]
+      }
     }
   }
 }

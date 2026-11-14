@@ -43,7 +43,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Mapping, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
 from .. import paths
 
@@ -170,17 +170,60 @@ def migrate_v1_to_v2(document: Mapping[str, Any], defaults: Mapping[str, Any]) -
     return derive_coarse(migrated)
 
 
-def derive_coarse(document: Mapping[str, Any]) -> Dict[str, Any]:
+#: What an intensity does with blur and shadows, read out of the tokens rather
+#: than restated here. Cached because derive_coarse runs on every load and save.
+_EFFECTS_BY_INTENSITY: Optional[Dict[str, Tuple[bool, bool]]] = None
+
+BLUR_LEAF = "decoration:blur:enabled"
+SHADOW_LEAF = "decoration:shadow:enabled"
+
+
+def effects_by_intensity(root: Optional[Path] = None) -> Dict[str, Tuple[bool, bool]]:
+    """``intensity -> (blurs, shadows)`` out of ``data/design/tokens.json``.
+
+    Read from the tokens so the coarse switches cannot drift from the design
+    system: an intensity that starts blurring is a change in one file, not in two.
+    A tokens file that cannot be read falls back to the one distinction the tokens
+    themselves make explicit in their own description of ``performance`` -- blur
+    off, shadows off -- so a missing record degrades to a conservative answer
+    rather than to a crash while somebody is logging in.
+    """
+    global _EFFECTS_BY_INTENSITY  # noqa: PLW0603 - a cache, deliberately module level
+    if _EFFECTS_BY_INTENSITY is None or root is not None:
+        table: Dict[str, Tuple[bool, bool]] = {}
+        try:
+            tokens = json.loads(paths.design_file("tokens.json", root)
+                                .read_text(encoding="utf-8"))
+            for name, entry in (tokens.get("intensities") or {}).items():
+                blur = bool((entry.get("blur") or {}).get("enabled", False))
+                shadow = bool((entry.get("shadow") or {}).get("enabled", False))
+                table[name] = (blur, shadow)
+        except (OSError, ValueError, paths.PathError):
+            table = {}
+        if not table:
+            table = {"crystal": (True, True), "frosted": (True, True),
+                     "soft": (True, True), "performance": (False, False)}
+        if root is None:
+            _EFFECTS_BY_INTENSITY = table
+        return table
+    return _EFFECTS_BY_INTENSITY
+
+
+def derive_coarse(document: Mapping[str, Any],
+                  root: Optional[Path] = None) -> Dict[str, Any]:
     """Rewrite ``preset`` and ``effects`` from the sections that own them.
 
     The coarse pair is Part 1's master switch and still read by the installers and
     by ``iarch-doctor``, so it cannot be dropped; but it must not be a second
-    opinion. ``preset`` follows ``theme.intensity``, ``effects.blur`` and
-    ``effects.shadows`` follow the intensity's own tables, and
-    ``effects.animations`` follows ``animation.preset`` -- the one animation
-    preset named ``off`` is the only state in which the coarse switch is false,
-    which is why ``reduce_motion`` does not turn it off: reducing motion renders
-    the minimal preset, it does not remove animation from the session.
+    opinion. ``preset`` follows ``theme.intensity``; ``effects.blur`` and
+    ``effects.shadows`` follow the intensity's own tables *and* the leaf overrides
+    in ``glass.leaves``, because an override that switched blur off while the
+    coarse switch still said blur was on would be the two descriptions disagreeing
+    in the same file; and ``effects.animations`` follows ``animation.preset`` --
+    the one animation preset named ``off`` is the only state in which the coarse
+    switch is false, which is why ``reduce_motion`` does not turn it off: reducing
+    motion renders the minimal preset, it does not remove animation from the
+    session.
 
     ``effects.transparency`` has no counterpart in version 2 -- every intensity
     keeps some translucency -- so it is always true here. A version 1 file that
@@ -190,13 +233,18 @@ def derive_coarse(document: Mapping[str, Any]) -> Dict[str, Any]:
     result: Dict[str, Any] = json.loads(json.dumps(dict(document)))
     intensity = str(result.get("theme", {}).get("intensity", "frosted"))
     animation_preset = str(result.get("animation", {}).get("preset", "smooth"))
-    performance = intensity == "performance"
-    result["preset"] = "performance" if performance else "glass"
+    leaves = (result.get("glass") or {}).get("leaves") or {}
+    blurs, shadows = effects_by_intensity(root).get(intensity, (True, True))
+    if BLUR_LEAF in leaves:
+        blurs = bool(leaves[BLUR_LEAF])
+    if SHADOW_LEAF in leaves:
+        shadows = bool(leaves[SHADOW_LEAF])
+    result["preset"] = "performance" if intensity == "performance" else "glass"
     result["effects"] = {
-        "blur": not performance,
+        "blur": blurs,
         "transparency": True,
         "animations": animation_preset != "off",
-        "shadows": not performance,
+        "shadows": shadows,
     }
     return result
 

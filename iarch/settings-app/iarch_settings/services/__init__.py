@@ -28,32 +28,22 @@ The rules every service here follows:
 """
 from __future__ import annotations
 
-import shutil
-from typing import Optional
+from .runner import (  # noqa: F401  (re-exported: a page asks this package, not runner)
+    BINARIES,
+    HYPRCTL,
+    NOCTALIA_BIN,
+    hyprctl_present,
+    noctalia_present,
+    presence,
+    which,
+)
 
-HYPRCTL = "hyprctl"
-NOCTALIA_BIN = "noctalia"
-
-#: The binaries a service may look for. Each one is a probe, never a promise: a
-#: page that needs one asks first and shows what it could not check.
-BINARIES = (HYPRCTL, NOCTALIA_BIN, "xdg-mime", "fc-list", "git")
-
-
-def which(binary: str) -> Optional[str]:
-    """The absolute path of ``binary``, or ``None`` when it is not on PATH."""
-    return shutil.which(binary)
-
-
-def hyprctl_present() -> bool:
-    """True when the compositor's client is on PATH and can be asked anything."""
-    return which(HYPRCTL) is not None
-
-
-def noctalia_present() -> bool:
-    """True when the shell's binary is on PATH and can be sent a verb."""
-    return which(NOCTALIA_BIN) is not None
-
-
-def presence() -> dict:
-    """Every probe at once, for the About page's debug information."""
-    return {name: which(name) is not None for name in BINARIES}
+__all__ = [
+    "BINARIES",
+    "HYPRCTL",
+    "NOCTALIA_BIN",
+    "hyprctl_present",
+    "noctalia_present",
+    "presence",
+    "which",
+]
