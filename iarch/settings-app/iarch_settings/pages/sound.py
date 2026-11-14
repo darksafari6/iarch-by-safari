@@ -91,6 +91,35 @@ def no_slider_text() -> str:
             "drawing a second one that would be stale the moment the keys changed it")
 
 
+#: The shell's notification keys, named here and written by Part 5.
+#:
+#: A key no page mentions is unreachable, which is what Part 4's acceptance forbids. But
+#: notifications are Part 5's subject, and drawing twenty-four switches on the Sound page
+#: would be a page that owns keys it has not verified. So they are named with the shape the
+#: record gives each one, and the row says which part writes them.
+NOTIFICATION_WHY = (
+    "notifications are Part 5: the keys are named here so that nothing the shell declares is "
+    "unreachable, and none of them is a control on this page because this page has not "
+    "verified what a change to one does")
+
+_NOTIFICATION_ROWS, _NOTIFICATION_NAMES = shellkeys.named_rows(
+    "notification", PAGE_ID, why=NOTIFICATION_WHY)
+
+#: ``notification.filter`` is a section of its own in the record rather than a table under
+#: ``notification``, so it needs its own pass: a container prefix is how the record is
+#: organised, and a page that named only the top-level one would leave twelve keys
+#: unreachable.
+_FILTER_ROWS, _FILTER_NAMES = shellkeys.named_rows(
+    "notification.filter", PAGE_ID, why=NOTIFICATION_WHY)
+globals().update(_NOTIFICATION_NAMES)
+globals().update(_FILTER_NAMES)
+
+
+def notification_why() -> str:
+    """Why the notification keys are named here and written by another part."""
+    return NOTIFICATION_WHY
+
+
 def notification_keys_text() -> str:
     """How many notification keys the shell declares, and whose they are."""
     try:
@@ -202,6 +231,19 @@ def build(context: Context) -> PagePlan:
             source="sound.notification_keys_text",
             subtitle="Not hidden, and not this page's: the sentence is the row",
             keywords=("notification", "part 5", "shell", "keys")),
+        Row("expander", "The filter rules, named too", rows=tuple(_FILTER_ROWS),
+            icon="view-conceal-symbolic",
+            subtitle="notification.filter is its own section in the record, so it needs its "
+                     "own pass: a page that named only the top level would leave twelve keys "
+                     "unreachable",
+            keywords=("notification", "filter", "rules", "named", "part 5")),
+        Row("expander", "Every one of them, named", rows=tuple(_NOTIFICATION_ROWS),
+            icon="view-conceal-symbolic",
+            subtitle="What the record says each key is, so nothing the shell declares is a "
+                     "value only a text editor can change",
+            keywords=("notification", "keys", "named", "part 5", "filter")),
+        Row("state", "Why they are not controls here", icon="dialog-information-symbolic",
+            source="sound.notification_why", keywords=("notification", "why", "part 5")),
         Row("state", "What this page writes", icon="audio-volume-high-symbolic",
             source="sound.key_count_text", keywords=("audio", "keys", "count", "ipc")),
         Row("button", "Open this in the shell's own window",

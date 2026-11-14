@@ -194,21 +194,39 @@ def restore_count_text() -> str:
 # ------------------------------------------------------------------ the plan
 
 
+def restore_row() -> Row:
+    """Either the restore control or the reason there is not one.
+
+    Decided at draw time rather than shipped as a dropdown that may be empty, and the reason
+    is the same one the Default apps page gives: a dropdown with nothing behind it is a
+    control that lies. With no backup on this machine the honest row is a sentence saying so,
+    and with one the honest row is the list of them.
+    """
+    if backups():
+        return Row("combo", "Put a backup back", choices_source="backup.backup_choices",
+                   action="backup.restore_choice", icon="document-save-as-symbolic",
+                   risky=True, confirm="Restore this backup over your settings?",
+                   confirm_body="The file you have now is copied aside first, so this can be "
+                                "undone. Every page reads the restored document, and the look "
+                                "of the session does not change until a theme is applied "
+                                "again.",
+                   subtitle="The newest first. A backup that does not parse, or that is not a "
+                            "version this application reads, is refused rather than restored",
+                   keywords=("restore", "backup", "undo", "revert", "settings"))
+    return Row("state", "Nothing to restore yet", source="backup.no_backup_text",
+               icon="document-save-as-symbolic",
+               subtitle="A restore point appears the first time a change is applied from this "
+                        "machine",
+               keywords=("restore", "backup", "none", "empty", "undo"))
+
+
 def build(context: Context) -> PagePlan:
     """The Backup & Restore page, as data."""
     spec = registry_page(PAGE_ID)
 
     restore = Group(
         "Restore",
-        Row("combo", "Put a backup back", choices_source="backup.backup_choices",
-            action="backup.restore_choice", icon="document-save-as-symbolic",
-            risky=True, confirm="Restore this backup over your settings?",
-            confirm_body="The file you have now is copied aside first, so this can be "
-                         "undone. Every page reads the restored document, and the look of "
-                         "the session does not change until a theme is applied again.",
-            subtitle="The newest first. A backup that does not parse, or that is not a "
-                     "version this application reads, is refused rather than restored",
-            keywords=("restore", "backup", "undo", "revert", "settings")),
+        restore_row(),
         Row("state", "How many there are", icon="document-save-symbolic",
             source="backup.restore_count_text", keywords=("backups", "count", "restore")),
         Row("state", "Restore points", icon="document-save-symbolic",

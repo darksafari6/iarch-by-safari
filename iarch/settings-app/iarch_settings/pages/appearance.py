@@ -119,6 +119,39 @@ for _path in shellkeys.table_keys("shell"):
 del _path
 
 
+#: The shell's own theme and wallpaper keys, named here rather than written here.
+#:
+#: Part 4's acceptance is that every visual switch in the product is reachable, and a key no
+#: page mentions is not reachable. But reachability is not ownership: this project writes the
+#: shell's colour mode through ``theme.mode`` and its wallpaper through the shell's own
+#: picker, so the remaining keys are named with the shape the record gives them and the
+#: reason they are not a control on this page.
+THEME_WHY = (
+    "this project writes the shell's colour mode from theme.colour_mode and leaves the rest "
+    "of the shell's palette alone: a palette is chosen by the colour preset, so a row per "
+    "palette key would be a second place to disagree with it")
+WALLPAPER_WHY = (
+    "the wallpaper is the shell's own: this page reads the current one and opens the shell's "
+    "picker, because a directory of images and a per-monitor assignment are a file chooser "
+    "and a list editor, not a switch")
+
+_THEME_ROWS, _THEME_NAMES = shellkeys.named_rows("theme", PAGE_ID, why=THEME_WHY)
+_WALLPAPER_ROWS, _WALLPAPER_NAMES = shellkeys.named_rows("wallpaper", PAGE_ID,
+                                                        why=WALLPAPER_WHY)
+globals().update(_THEME_NAMES)
+globals().update(_WALLPAPER_NAMES)
+
+
+def shell_theme_why() -> str:
+    """Why the shell's palette keys are named and not drawn."""
+    return THEME_WHY
+
+
+def shell_wallpaper_why() -> str:
+    """Why the shell's wallpaper keys are named and not drawn."""
+    return WALLPAPER_WHY
+
+
 def shell_key_count_text() -> str:
     """How many of the shell's own keys this page writes."""
     total = len(shellkeys.keys_of("shell"))
@@ -309,6 +342,29 @@ def build(context: Context) -> PagePlan:
                         "family is not the GTK one on the Fonts & Icons page."
             if not shell_groups else "",
         ))
+
+    shell_groups.append(Group(
+        "The shell's palette, named and not written",
+        Row("expander", "Six keys", rows=tuple(_THEME_ROWS), icon="view-conceal-symbolic",
+            subtitle="Named so that nothing the record declares is unreachable, and not drawn "
+                     "because the colour preset already chooses a palette",
+            keywords=("theme", "shell", "palette", "named", "not written")),
+        Row("state", "Why they are not controls here", icon="dialog-information-symbolic",
+            source="appearance.shell_theme_why", keywords=("theme", "palette", "why")),
+        description=THEME_WHY,
+    ))
+
+    shell_groups.append(Group(
+        "The shell's wallpaper, named and not written",
+        Row("expander", "Twelve keys and one table", rows=tuple(_WALLPAPER_ROWS),
+            icon="view-conceal-symbolic",
+            subtitle="Named for the same reason, and the shell's own picker is the button "
+                     "above",
+            keywords=("wallpaper", "shell", "named", "not written", "automation")),
+        Row("state", "Why they are not controls here", icon="dialog-information-symbolic",
+            source="appearance.shell_wallpaper_why", keywords=("wallpaper", "why", "picker")),
+        description=WALLPAPER_WHY,
+    ))
 
     shell_groups.append(Group(
         "The shell's own surfaces",

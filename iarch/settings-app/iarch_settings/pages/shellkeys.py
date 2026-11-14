@@ -159,6 +159,114 @@ def array_keys(container: str, root: Optional[Any] = None) -> List[str]:
             if str((table.get(path) or {}).get("type") or "") == "array"]
 
 
+def _slug(text: str) -> str:
+    """An identifier-safe version of a dotted path, for a generated reader's name."""
+    return "".join(character if character.isalnum() else "_"
+                   for character in str(text).lower()).strip("_") or "path"
+
+
+def known_leaf_paths(root: Optional[Any] = None) -> List[str]:
+    """Every leaf key the record declares, whatever container it is in."""
+    return list(specs(root))
+
+
+def _table_shape_reader(path: str, leaves: int) -> Callable[[], str]:
+    def read() -> str:
+        return f"a table of {leaves} keys the shell owns"
+
+    read.__name__ = f"named_{_slug(path)}"
+    read.__doc__ = f"What ``{path}`` is, and that it is a table rather than a value."
+    return read
+
+
+def shape_text(path: str, root: Optional[Any] = None) -> str:
+    """What the record says a key is, as one sentence.
+
+    Used by the rows that *name* a key without writing it, so that naming it is worth
+    something: a person can see that ``theme.shell_mode`` is one of four spellings, and
+    that ``notification.max_visible`` is a whole number, without this application
+    offering a control it has not verified.
+    """
+    spec = specs(root).get(path) or {}
+    kind = str(spec.get("type") or "value")
+    bits = [f"a {kind}"]
+    choices = spec.get("enum")
+    if isinstance(choices, list) and choices:
+        bits.append("one of " + ", ".join(str(choice) for choice in choices))
+    bounds = spec.get("range") or []
+    if len(bounds) >= 2:
+        step = bounds[2] if len(bounds) > 2 else None
+        bits.append(f"from {float(bounds[0]):g} to {float(bounds[1]):g}"
+                    + (f" in steps of {float(step):g}" if step else ""))
+    if spec.get("color"):
+        bits.append("a colour role name or a fixed hex colour")
+    if kind == "array":
+        bits.append("a list, so it needs a list editor and not one entry row")
+    note = spec.get("note")
+    if note:
+        bits.append(str(note))
+    return "; ".join(bits)
+
+
+def _shape_reader(path: str) -> Callable[[], str]:
+    def read() -> str:
+        return shape_text(path)
+
+    read.__name__ = f"named_{container_prefix(path)}_{key_name(path)}"
+    read.__doc__ = f"What the record says ``{path}`` is."
+    return read
+
+
+def named_rows(container: str, module: str, *, why: str,
+               skip: Sequence[str] = (), root: Optional[Any] = None,
+               ) -> Tuple[List[Row], Dict[str, Any]]:
+    """One read-only row per key in a container this page does not write.
+
+    Part 4's acceptance is that every visual switch in the product is reachable, and a key
+    that no page mentions is not reachable -- it is a value only a text editor can change.
+    But *reachability* is not the same as *ownership*: the shell's notification keys are
+    Part 5's, its wallpaper keys belong to the shell's own picker, and its theme palette is
+    written by this project's colour preset rather than key by key. What every one of those
+    owes a person is a name, a shape and the reason it is not a control here, which is what
+    these rows carry.
+
+    ``why`` is that reason, and it is required: a group of read-only rows with no
+    explanation reads as a page that gave up.
+    """
+    table = specs(root)
+    skipped = {str(path) if "." in str(path) else f"{container}.{path}" for path in skip}
+    rows: List[Row] = []
+    names: Dict[str, Any] = {}
+    for path in table_keys(container, root):
+        # A table is named with its leaf count rather than drawn, so that the container's
+        # accounting is complete without this page becoming a second copy of the shell's
+        # own settings window.
+        name = f"named_{_slug(path)}"
+        leaves = [other for other in known_leaf_paths(root) if other.startswith(path + ".")]
+        names[name] = _table_shape_reader(path, len(leaves))
+        rows.append(Row(
+            "state", title_for(path), source=f"{module}.{name}",
+            icon="view-conceal-symbolic",
+            subtitle=f"{path}: a table of {len(leaves)} keys, changed in the shell's own "
+                     f"settings window",
+            keywords=tuple(part for part in (key_name(path), path, container, "table",
+                                             "named", "not written here") if part)))
+    for path in keys_of(container, root, direct=True):
+        if path in skipped:
+            continue
+        name = f"named_{container_prefix(path)}_{key_name(path)}"
+        names[name] = _shape_reader(path)
+        spec = table.get(path) or {}
+        rows.append(Row(
+            "state", title_for(path), source=f"{module}.{name}",
+            icon="view-conceal-symbolic",
+            subtitle=f"{path}: {shape_text(path, root)}",
+            keywords=tuple(part for part in (key_name(path), path, container,
+                                             str(spec.get("type") or ""), "named",
+                                             "not written here") if part)))
+    return rows, names
+
+
 def is_unbounded_number(path: str, root: Optional[Any] = None) -> bool:
     """True for a number key the record declares without a range.
 

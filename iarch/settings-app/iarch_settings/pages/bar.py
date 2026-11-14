@@ -39,6 +39,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from ..services import noctalia, runner
 from . import page as registry_page
+from . import shellkeys
 from .plan import Banner, Context, Group, PagePlan, Row
 
 PAGE_ID = "bar"
@@ -472,6 +473,20 @@ def build(context: Context) -> PagePlan:
                     "settings.json never holds a copy that could disagree.",
     ))
 
+    groups.append(Group(
+        "The control centre, named and not written",
+        Row("expander", "Eleven keys", rows=tuple(_CONTROL_CENTRE_ROWS),
+            icon="view-conceal-symbolic",
+            subtitle="Named so that nothing the shell declares is unreachable, and changed in "
+                     "the shell's own window",
+            keywords=("control center", "control centre", "shell", "named", "not written",
+                      "calendar", "media", "sidebar")),
+        Row("state", "Why they are not controls here", icon="dialog-information-symbolic",
+            source="bar.control_centre_why",
+            keywords=("control centre", "why", "surface")),
+        description=CONTROL_CENTRE_WHY,
+    ))
+
     return PagePlan(
         PAGE_ID, spec.label, *groups,
         description=spec.description, icon=spec.icon, keywords=spec.keywords,
@@ -492,6 +507,27 @@ def build(context: Context) -> PagePlan:
                 source="bar.key_count_text", keywords=("keys", "count", "bar", "dock")),
         ),
     )
+
+
+#: The control centre's own keys, named here and not written here.
+#:
+#: The Bar, Dock & Panels page writes the shell's bar and dock keys, and the control centre is
+#: the third surface in that record. Its keys are named with the shape the record gives each
+#: one, because a key no page mentions is unreachable -- and the reason they are not controls
+#: is that this page has not verified what changing one does to a surface it does not draw.
+CONTROL_CENTRE_WHY = (
+    "the control centre is a surface this page does not draw: its keys are named so that "
+    "nothing the shell declares is unreachable, and they are changed in the shell's own "
+    "settings window, which is the button below")
+
+_CONTROL_CENTRE_ROWS, _CONTROL_CENTRE_NAMES = shellkeys.named_rows(
+    "control_center", PAGE_ID, why=CONTROL_CENTRE_WHY)
+globals().update(_CONTROL_CENTRE_NAMES)
+
+
+def control_centre_why() -> str:
+    """Why the control centre's keys are named here and not drawn here."""
+    return CONTROL_CENTRE_WHY
 
 
 def key_count_text() -> str:
