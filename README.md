@@ -108,12 +108,12 @@ to run it on a machine you can reinstall.
 ## Shortcuts
 
 The full table is in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md). It is generated
-from the session's own keybind file, so it cannot drift from what your keyboard
-actually does:
+from the same record the session's own keyboard map is generated from, so neither
+can drift from what your keyboard actually does:
 
 ```
-.config/hypr/keybind.lua  →  data/keybinds.default.json  →  docs/SHORTCUTS.md
-        (tools/extract_keybinds.py)      (tools/render_shortcuts.py)
+data/keybinds.default.json  →  .config/hypr/generated/keybinds.lua   (iarch-keybinds generate)
+        (the source)        →  docs/SHORTCUTS.md                     (tools/render_shortcuts.py)
 ```
 
 The ones worth knowing first:
@@ -128,7 +128,7 @@ The ones worth knowing first:
 | `SUPER + L` | Lock screen |
 | `SUPER + 1`–`0` | Switch workspace (`SUPER + SHIFT + 1`–`0` moves the window) |
 | `SUPER + A` | Annotate a screenshot |
-| `SUPER + H` | Shortcut overlay — reserved, not bound yet |
+| `SUPER + H` | Shortcut overlay — the key is bound; the overlay itself ships in a later part |
 
 ## Customization
 
@@ -139,7 +139,7 @@ never the checkout — an edit to the repository is lost at the next update.
 | To change | Edit |
 | :--- | :--- |
 | Monitors, resolution, scaling | `.config/hypr/monitors.lua` |
-| Keybindings | `.config/hypr/keybind.lua`, then `python3 tools/extract_keybinds.py --write` |
+| Keybindings | `~/.config/iarch/keybinds.json` (your differences), then `iarch-keybinds generate --write` |
 | Border, rounding, gaps, blur, opacity | `.config/hypr/themes/theme.lua` |
 | Shell colours | `.config/noctalia/palettes/iarch-midnight.json` |
 | Terminal colours and font | `.config/kitty/` and `.config/starship.toml` |

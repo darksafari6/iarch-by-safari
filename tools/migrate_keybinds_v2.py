@@ -19,10 +19,17 @@ the generator and whoever has a text editor open.
 
 So this script runs once. It reads the v1 extract, which is still the faithful
 record of what the shipped Lua does, and writes the v2 record the generator
-consumes. After it has run, ``keybind.lua`` stops being a source and
-``extract_keybinds.py`` stops being part of the pipeline; both stay in the tree
-because the v1 extract is the evidence that nothing was lost, and a test reads
-that evidence rather than trusting this script.
+consumes. After it has run, ``keybind.lua`` stops being a source: it keeps only
+the binds the record cannot express, and ``.config/hypr/generated/keybinds.lua``
+carries the rest.
+
+The v1 evidence that nothing was lost is ``tests/fixtures/keybinds.v1.json``, a
+copy of the extract kept in the tree precisely so a test can read it and check
+this migration against it rather than trusting this script. ``extract_keybinds.py``
+itself is removed: it is the v1 direction (Lua to JSON), it cannot run against a
+v2 record or an emptied ``keybind.lua``, and keeping a tool the CI freshness check
+would force into the workflow but that can no longer pass is a trap, not a
+reference. The fixture, not the extractor, is what proves the migration is honest.
 
 What it changes beyond the shape
 ---------------------------------
@@ -42,6 +49,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import shlex
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -227,12 +236,25 @@ def action_for(entry: Dict[str, Any]) -> Dict[str, Any]:
     raise ValueError(f"{keys}: unknown action kind {kind!r}")
 
 
-#: What makes a command a shell pipeline rather than an argv list. A command
+#: What makes a command a shell string rather than an argv list. A command
 #: carrying any of these is stored as ``type: shell`` with the string intact,
-#: because splitting it on whitespace would produce an argv that means something
-#: else entirely -- ``["grim", "-g", "$(slurp)", "-", "|", "satty"]`` is not a
-#: program with six arguments, it is two programs and a pipe.
-SHELL_TOKENS = ("|", "&&", "||", ">", "<", "$(", "${", ";", "`")
+#: because splitting it on whitespace and re-quoting each token would produce
+#: something that means else entirely -- or nothing at all.
+#:
+#: The tilde and the environment assignment are the two that are easy to miss and
+#: expensive to get wrong. ``shlex.quote`` treats ``~`` as an unsafe character and
+#: wraps the word in single quotes, and a tilde inside single quotes does not
+#: expand: ``'~/bin/x'`` is a file literally named ``~/bin/x``. An environment
+#: assignment is worse, because ``sh -c "'VAR=value' prog"`` does not set VAR at
+#: all -- the quoted word is a command name, not an assignment prefix, so the
+#: shell tries to run a program called ``VAR=value``. Both render cleanly and both
+#: fail at run time, which is the failure mode this whole record exists to stop.
+SHELL_TOKENS = ("|", "&&", "||", ">", "<", "$(", "${", ";", "`", "~")
+
+#: A leading ``NAME=`` token is an environment assignment for the command that
+#: follows it, and only the shell knows that. ``--flag=value`` is not one: the
+#: assignment is only special as the first word.
+_ENV_PREFIX = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 
 def command_action(command: str) -> Dict[str, Any]:
@@ -243,18 +265,29 @@ def command_action(command: str) -> Dict[str, Any]:
     record says (data/design/keybinds.json -> exec), so the split is not about
     what the compositor receives; it is about what a person edits and what a
     validator can check. An argv list cannot carry a quoting mistake and can be
-    checked argument by argument. A pipeline cannot be checked at all, so it is
-    marked ``shell`` and the settings page marks it advanced.
+    checked argument by argument. A command that leans on the shell -- a pipe, a
+    substitution, a tilde, an environment prefix -- cannot be checked at all, so
+    it is marked ``shell`` and the settings page marks it advanced.
     """
-    import shlex
-    if any(token in command for token in SHELL_TOKENS):
-        return {"type": "shell", "script": command,
-                "why_shell": "A pipeline or a substitution, so it is one string by "
-                             "necessity and not by choice."}
+    stripped = command.strip()
+    if not stripped:
+        raise ValueError("empty command")
+    words = stripped.split()
+    if any(token in stripped for token in SHELL_TOKENS):
+        reason = ("A tilde the shell expands, so quoting it would break the path"
+                  if "~" in stripped else
+                  "A pipeline or a substitution, so it is one string by necessity "
+                  "and not by choice")
+        return {"type": "shell", "script": stripped, "why_shell": reason + "."}
+    if _ENV_PREFIX.match(words[0]):
+        return {"type": "shell", "script": stripped,
+                "why_shell": "An environment assignment in front of the command, "
+                             "which only the shell reads as an assignment; quoted "
+                             "as an argv token it becomes the program name."}
     try:
-        parts = shlex.split(command)
+        parts = shlex.split(stripped)
     except ValueError as error:
-        return {"type": "shell", "script": command,
+        return {"type": "shell", "script": stripped,
                 "why_shell": f"Not splittable as an argv list: {error}"}
     if not parts:
         raise ValueError(f"empty command: {command!r}")
@@ -296,7 +329,17 @@ def migrate(v1: Dict[str, Any]) -> Dict[str, Any]:
         else:
             seen[slug] = 1
 
+        # Two different things are both called "locked" and they must not share a
+        # field. Upstream's hl.bind `locked` option means the bind still works
+        # while the session is locked -- the five media keys carry it so volume
+        # works on the lock screen. This project's `locked` means a person may
+        # rebind the entry but not delete it. The first is a compositor option and
+        # belongs in `flags`, which is the bag the generator renders into the
+        # hl.bind options table; the second is a property of the entry and stays
+        # at the top level. data/design/keybinds.json keeps the two apart and
+        # tests/test_keybinds_migration.py fails if they are merged again.
         options = entry.get("options") or {}
+        flags = {name: True for name in ("mouse", "locked") if options.get(name)}
         record: Dict[str, Any] = {
             "id": slug,
             "mods": mods,
@@ -305,10 +348,10 @@ def migrate(v1: Dict[str, Any]) -> Dict[str, Any]:
             "description": entry["description"],
             "category": entry["category"],
             "enabled": entry["status"] == "bound",
-            "locked": bool(options.get("locked")),
+            "locked": False,
         }
-        if options.get("mouse"):
-            record["flags"] = {"mouse": True}
+        if flags:
+            record["flags"] = flags
         if entry["status"] == "reserved":
             record["reserved"] = True
         bindings.append(record)

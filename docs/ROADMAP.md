@@ -47,7 +47,7 @@ Global rules that apply to every part:
 | Performance preset that cannot invent keys | `profiles/performance.toml`, `tools/profile_preset.py` | `tests/test_profile_preset.py` |
 | Root cleaned, historical docs marked | `legacy/`, `assets/screenshots/`, banners | `tests/test_payload_map.py` |
 | One place owns user state: defaults in `data/`, settings in `~/.config/iarch/`, atomic generated writes, five backups | `iarch/lib/configstore.py`, `data/*.default.json` | `tests/test_config_store.py` |
-| Keyboard map is data, not prose | `data/keybinds.default.json`, `tools/extract_keybinds.py` | `tests/test_keybinds_data.py`, `--check` in CI |
+| Keyboard map is data, not prose; the session reads Lua generated from it | `data/keybinds.default.json`, `iarch/cli/iarch_keybinds.py` | `tests/test_keybinds_data.py`, `iarch-keybinds --check` in CI |
 | Glass design tokens recorded with their source | `data/design/glass.tokens.json` | `data/schemas/design-tokens.schema.json` |
 | Credit rendered twice from one source, no license guessed | `branding/notices.json`, `tools/notices.py`, `THIRD_PARTY_NOTICES.md`, `data/licenses.json` | `tests/test_licenses_data.py` |
 | Copyright header defined once and applied to new files | `branding/product.env`, `docs/BRANDING.md` | `tests/test_copyright_headers.py` |

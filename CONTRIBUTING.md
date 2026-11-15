@@ -30,7 +30,7 @@ python3 -m unittest discover -s tests -p 'test_*.py'   # all unit tests
 python3 tools/notices.py --check                       # credit files match their source
 python3 tools/iarch_brand.py --check                   # product naming is consistent
 python3 tools/branding_lint.py                         # no upstream name in the everyday UI
-python3 tools/extract_keybinds.py --check              # keybind data matches keybind.lua
+python3 iarch/cli/iarch_keybinds.py --check            # generated Lua + docs/SHORTCUTS.md match the keybind record
 python3 tools/render_shortcuts.py --check              # docs/SHORTCUTS.md matches that data
 python3 tools/naming_audit.py --check                  # old names only where allowlisted
 python3 iarch/cli/contrast_check.py --quiet             # every preset clears the WCAG gate
@@ -60,7 +60,7 @@ there as root is the correct behaviour, not a bug.
 | :--- | :--- |
 | The repository ships defaults in `data/`; a user never edits repo files after install | `iarch/lib/configstore.py`, `tests/test_config_store.py` |
 | Generated files start with the GENERATED header, are written atomically, and keep five backups | `iarch/lib/configstore.py`, `tests/test_config_store.py` |
-| The keyboard map is data extracted from `keybind.lua`, never typed by hand | `tools/extract_keybinds.py --check`, `tests/test_keybinds_data.py` |
+| The keyboard map is data, and the Lua the session reads is generated from it, never typed by hand | `iarch/cli/iarch_keybinds.py --check`, `tests/test_keybinds_data.py` |
 | Third-party credit is rendered, not hand-written, and no license is guessed | `tools/notices.py --check`, `tests/test_licenses_data.py` |
 | New files carry the copyright header defined in `branding/product.env`; vendored code under `legacy/` keeps its own | `tests/test_copyright_headers.py` |
 | An effect preset may only lower values of keys the base profile already has | `tools/profile_preset.py`, `tests/test_profile_preset.py` |

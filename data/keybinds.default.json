@@ -1,842 +1,1387 @@
 {
   "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
-  "generated_by": "tools/extract_keybinds.py --write",
-  "source_file": ".config/hypr/keybind.lua",
-  "version": 1,
-  "modifier": "SUPER",
+  "_note": "The keyboard map this session ships, and the single source of it. iarch-keybinds renders .config/hypr/generated/keybinds.lua from this file plus the differences a person has saved in ~/.config/iarch/keybinds.json, so a bind is written here or in that file and nowhere else. Until Part 5 the direction was the other way round -- tools/extract_keybinds.py read this record out of .config/hypr/keybind.lua -- and the reversal is the point: a report about a file cannot be edited, because the next extract overwrites the edit, which is why the Shortcuts page was read-only. Every spelling a bind here may use is recorded in data/design/keybinds.json against the pinned compositor, and iarch-keybinds check validates this file against that record rather than against an assumption.",
+  "version": 2,
+  "migrated_from": {
+    "version": 1,
+    "by": "tools/migrate_keybinds_v2.py",
+    "source": "the v1 extract of .config/hypr/keybind.lua, kept in git history",
+    "bindings": 77,
+    "rewritten": [
+      "super + shift + ctrl + down",
+      "super + shift + ctrl + left",
+      "super + shift + ctrl + right",
+      "super + shift + ctrl + up",
+      "super + shift + down",
+      "super + shift + left",
+      "super + shift + right",
+      "super + shift + up"
+    ],
+    "rewritten_note": "Written in the lower-case spelling the v1 record used for the key part of a combination -- it spelled modifiers upper-case and some keys lower-case, so `SUPER + SHIFT + right` and `SUPER + tab` sat side by side. A key name resolves case-insensitively (src/keybinds/Resolver.cpp:58), so both spellings bind the same key; the record normalises on one rather than carrying two.",
+    "why_rewritten": "Each reached for a pre-Lua dispatcher name through `hyprctl dispatch`, which on a Lua config is evaluated as `hl.dispatch(resizeactive 30 0)` and is not Lua. The replacements and their argument tables are in data/design/keybinds.json.",
+    "bound_here": [
+      "SUPER + H"
+    ],
+    "why_bound_here": "SUPER + H, SUPER + SHIFT + H and SUPER + K were declared in the Lua and never bound, and v1 carried them with the status reserved so nothing would reassign them by accident. SUPER + H is the shortcut overlay this part exists to build, so it is bound; the other two stay reserved."
+  },
   "bindings": [
     {
-      "keys": "SUPER + RETURN",
+      "id": "applications.terminal",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "RETURN",
+      "action": {
+        "type": "exec",
+        "command": [
+          "kitty"
+        ]
+      },
       "description": "Terminal",
-      "action": {
-        "kind": "exec",
-        "command": "kitty",
-        "lua": "hl.dsp.exec_cmd(TERMINAL)"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + E",
+      "id": "applications.file-manager",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "E",
+      "action": {
+        "type": "exec",
+        "command": [
+          "thunar"
+        ]
+      },
       "description": "File manager",
-      "action": {
-        "kind": "exec",
-        "command": "thunar",
-        "lua": "hl.dsp.exec_cmd(EXPLORER)"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + C",
+      "id": "applications.code-editor",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "C",
+      "action": {
+        "type": "exec",
+        "command": [
+          "code"
+        ]
+      },
       "description": "Code editor",
-      "action": {
-        "kind": "exec",
-        "command": "code",
-        "lua": "hl.dsp.exec_cmd(EDITOR)"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + B",
+      "id": "applications.browser",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "B",
+      "action": {
+        "type": "shell",
+        "script": "~/.config/hypr/Scripts/browser-launcher.sh",
+        "why_shell": "A tilde the shell expands, so quoting it would break the path."
+      },
       "description": "Browser",
-      "action": {
-        "kind": "exec",
-        "command": "~/.config/hypr/Scripts/browser-launcher.sh",
-        "lua": "hl.dsp.exec_cmd(BROWSER)"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + D",
+      "id": "applications.launcher",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "D",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "panel-toggle",
+          "launcher"
+        ]
+      },
       "description": "Toggle launcher",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg panel-toggle launcher",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle launcher\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + L",
+      "id": "applications.lock-screen",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "L",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "session",
+          "lock"
+        ]
+      },
       "description": "Lock screen",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg session lock ",
-        "lua": "hl.dsp.exec_cmd( \"noctalia msg session lock \")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + T",
+      "id": "applications.settings",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "T",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "settings-toggle"
+        ]
+      },
       "description": "Toggle settings",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg settings-toggle",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg settings-toggle\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + I",
+      "id": "applications.control-center",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "I",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "panel-toggle",
+          "control-center"
+        ]
+      },
       "description": "Open Control Center",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg panel-toggle control-center",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + I",
+      "id": "applications.settings-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "I",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "settings-toggle"
+        ]
+      },
       "description": "Open Settings",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg settings-toggle",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg settings-toggle\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + N",
+      "id": "applications.notification-center",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "N",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "panel-toggle",
+          "control-center",
+          "notifications"
+        ]
+      },
       "description": "Open notification center",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg panel-toggle control-center notifications",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center notifications\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + A",
+      "id": "applications.audio-controls",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "A",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "panel-toggle",
+          "control-center",
+          "audio"
+        ]
+      },
       "description": "Open audio controls",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg panel-toggle control-center audio",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center audio\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + W",
+      "id": "applications.network-controls",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "W",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "panel-toggle",
+          "control-center",
+          "network"
+        ]
+      },
       "description": "Open network controls",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg panel-toggle control-center network",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center network\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + B",
+      "id": "applications.bluetooth-controls",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "B",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "panel-toggle",
+          "control-center",
+          "bluetooth"
+        ]
+      },
       "description": "Open Bluetooth controls",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg panel-toggle control-center bluetooth",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center bluetooth\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + P",
+      "id": "applications.power-controls",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "P",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "panel-toggle",
+          "control-center",
+          "power"
+        ]
+      },
       "description": "Open power controls",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg panel-toggle control-center power",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg panel-toggle control-center power\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + S",
+      "id": "applications.steam",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "S",
+      "action": {
+        "type": "exec",
+        "command": [
+          "steam"
+        ]
+      },
       "description": "Steam",
-      "action": {
-        "kind": "exec",
-        "command": "steam",
-        "lua": "hl.dsp.exec_cmd(\"steam\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + M",
+      "id": "applications.music-player",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "M",
+      "action": {
+        "type": "exec",
+        "command": [
+          "quodlibet"
+        ]
+      },
       "description": "Music player",
-      "action": {
-        "kind": "exec",
-        "command": "quodlibet",
-        "lua": "hl.dsp.exec_cmd(\"quodlibet\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + V",
+      "id": "applications.video-player",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "V",
+      "action": {
+        "type": "exec",
+        "command": [
+          "mpv",
+          "--player-operation-mode=pseudo-gui",
+          "--force-window=immediate"
+        ]
+      },
       "description": "Video player",
-      "action": {
-        "kind": "exec",
-        "command": "mpv --player-operation-mode=pseudo-gui --force-window=immediate",
-        "lua": "hl.dsp.exec_cmd(\"mpv --player-operation-mode=pseudo-gui --force-window=immediate\")"
-      },
       "category": "Applications",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + Q",
+      "id": "window.close",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "Q",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.close"
+      },
       "description": "Close window",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.close()"
-      },
       "category": "Window Management",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + W",
+      "id": "window.floating",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "W",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.float",
+        "args_lua": "{ action = \"toggle\" }"
+      },
       "description": "Toggle floating",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.float({ action = \"toggle\" })"
-      },
       "category": "Window Management",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + F",
+      "id": "window.fullscreen",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "F",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.fullscreen"
+      },
       "description": "Toggle fullscreen",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.fullscreen()"
-      },
       "category": "Window Management",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + tab",
+      "id": "window.next-monitor",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "tab",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.exec_cmd",
+        "args_lua": "scrPath .. \"/workspace.sh\""
+      },
       "description": "Next workspace on monitor",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.exec_cmd(scrPath .. \"/workspace.sh\")"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + tab",
+      "id": "window.previous-monitor",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "tab",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ workspace = \"m-1\" }"
+      },
       "description": "Previous workspace on monitor",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = \"m-1\" })"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + left",
+      "id": "window.focus-left",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "left",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ direction = \"left\" }"
+      },
       "description": "Focus left",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ direction = \"left\" })"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + right",
+      "id": "window.focus-right",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "right",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ direction = \"right\" }"
+      },
       "description": "Focus right",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ direction = \"right\" })"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + up",
+      "id": "window.focus-up",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "up",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ direction = \"up\" }"
+      },
       "description": "Focus up",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ direction = \"up\" })"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + down",
+      "id": "window.focus-down",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "down",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ direction = \"down\" }"
+      },
       "description": "Focus down",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ direction = \"down\" })"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "ALT + tab",
+      "id": "window.switcher-overlay",
+      "mods": [
+        "ALT"
+      ],
+      "key": "tab",
+      "action": {
+        "type": "exec",
+        "command": [
+          "noctalia",
+          "msg",
+          "window-switcher",
+          "hold"
+        ]
+      },
       "description": "Window switcher overlay",
-      "action": {
-        "kind": "exec",
-        "command": "noctalia msg window-switcher hold",
-        "lua": "hl.dsp.exec_cmd(\"noctalia msg window-switcher hold\")"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + right",
+      "id": "window.resize-right",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "right",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.resize",
+        "args": {
+          "x": 30,
+          "y": 0,
+          "relative": true
+        }
+      },
       "description": "Resize window right",
-      "action": {
-        "kind": "lua-function",
-        "lua": "function() hl.exec_cmd(\"hyprctl dispatch resizeactive 30 0\") end"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + left",
+      "id": "window.resize-left",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "left",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.resize",
+        "args": {
+          "x": -30,
+          "y": 0,
+          "relative": true
+        }
+      },
       "description": "Resize window left",
-      "action": {
-        "kind": "lua-function",
-        "lua": "function() hl.exec_cmd(\"hyprctl dispatch resizeactive -30 0\") end"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + up",
+      "id": "window.resize-up",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "up",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.resize",
+        "args": {
+          "x": 0,
+          "y": -30,
+          "relative": true
+        }
+      },
       "description": "Resize window up",
-      "action": {
-        "kind": "lua-function",
-        "lua": "function() hl.exec_cmd(\"hyprctl dispatch resizeactive 0 -30\") end"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + down",
+      "id": "window.resize-down",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "down",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.resize",
+        "args": {
+          "x": 0,
+          "y": 30,
+          "relative": true
+        }
+      },
       "description": "Resize window down",
-      "action": {
-        "kind": "lua-function",
-        "lua": "function() hl.exec_cmd(\"hyprctl dispatch resizeactive 0 30\") end"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + CTRL + left",
+      "id": "window.swap-left",
+      "mods": [
+        "SUPER",
+        "SHIFT",
+        "CTRL"
+      ],
+      "key": "left",
+      "action": {
+        "type": "lua",
+        "lua": "function()\n    local window = hl.get_active_window()\n    if not window then\n        return\n    end\n    if window.floating then\n        hl.dispatch(hl.dsp.window.move({ x = -30, y = 0, relative = true }))\n    else\n        hl.dispatch(hl.dsp.window.swap({ direction = \"left\" }))\n    end\nend",
+        "why_lua": "Asks the compositor whether the focused window is floating and picks one of two dispatchers. The v1 bind answered the same question by running `hyprctl activewindow -j | jq -r .floating` through bash and grepping for the string true, which needed two external programs to ask a yes-or-no question the Lua API answers with a boolean field (LuaBindingsQuery.cpp:129-138, LuaWindow.cpp:101-102)."
+      },
       "description": "Move or swap window left",
-      "action": {
-        "kind": "lua-function",
-        "lua": "function() hl.exec_cmd(\"bash -c 'grep -q true <<< $(hyprctl activewindow -j | jq -r .floating) && hyprctl dispatch moveactive -30 0 || hyprctl dispatch movewindow l'\") end"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + CTRL + right",
+      "id": "window.swap-right",
+      "mods": [
+        "SUPER",
+        "SHIFT",
+        "CTRL"
+      ],
+      "key": "right",
+      "action": {
+        "type": "lua",
+        "lua": "function()\n    local window = hl.get_active_window()\n    if not window then\n        return\n    end\n    if window.floating then\n        hl.dispatch(hl.dsp.window.move({ x = 30, y = 0, relative = true }))\n    else\n        hl.dispatch(hl.dsp.window.swap({ direction = \"right\" }))\n    end\nend",
+        "why_lua": "Asks the compositor whether the focused window is floating and picks one of two dispatchers. The v1 bind answered the same question by running `hyprctl activewindow -j | jq -r .floating` through bash and grepping for the string true, which needed two external programs to ask a yes-or-no question the Lua API answers with a boolean field (LuaBindingsQuery.cpp:129-138, LuaWindow.cpp:101-102)."
+      },
       "description": "Move or swap window right",
-      "action": {
-        "kind": "lua-function",
-        "lua": "function() hl.exec_cmd(\"bash -c 'grep -q true <<< $(hyprctl activewindow -j | jq -r .floating) && hyprctl dispatch moveactive 30 0 || hyprctl dispatch movewindow r'\") end"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + CTRL + up",
+      "id": "window.swap-up",
+      "mods": [
+        "SUPER",
+        "SHIFT",
+        "CTRL"
+      ],
+      "key": "up",
+      "action": {
+        "type": "lua",
+        "lua": "function()\n    local window = hl.get_active_window()\n    if not window then\n        return\n    end\n    if window.floating then\n        hl.dispatch(hl.dsp.window.move({ x = 0, y = -30, relative = true }))\n    else\n        hl.dispatch(hl.dsp.window.swap({ direction = \"up\" }))\n    end\nend",
+        "why_lua": "Asks the compositor whether the focused window is floating and picks one of two dispatchers. The v1 bind answered the same question by running `hyprctl activewindow -j | jq -r .floating` through bash and grepping for the string true, which needed two external programs to ask a yes-or-no question the Lua API answers with a boolean field (LuaBindingsQuery.cpp:129-138, LuaWindow.cpp:101-102)."
+      },
       "description": "Move or swap window up",
-      "action": {
-        "kind": "lua-function",
-        "lua": "function() hl.exec_cmd(\"bash -c 'grep -q true <<< $(hyprctl activewindow -j | jq -r .floating) && hyprctl dispatch moveactive 0 -30 || hyprctl dispatch movewindow u'\") end"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + CTRL + down",
+      "id": "window.swap-down",
+      "mods": [
+        "SUPER",
+        "SHIFT",
+        "CTRL"
+      ],
+      "key": "down",
+      "action": {
+        "type": "lua",
+        "lua": "function()\n    local window = hl.get_active_window()\n    if not window then\n        return\n    end\n    if window.floating then\n        hl.dispatch(hl.dsp.window.move({ x = 0, y = 30, relative = true }))\n    else\n        hl.dispatch(hl.dsp.window.swap({ direction = \"down\" }))\n    end\nend",
+        "why_lua": "Asks the compositor whether the focused window is floating and picks one of two dispatchers. The v1 bind answered the same question by running `hyprctl activewindow -j | jq -r .floating` through bash and grepping for the string true, which needed two external programs to ask a yes-or-no question the Lua API answers with a boolean field (LuaBindingsQuery.cpp:129-138, LuaWindow.cpp:101-102)."
+      },
       "description": "Move or swap window down",
-      "action": {
-        "kind": "lua-function",
-        "lua": "function() hl.exec_cmd(\"bash -c 'grep -q true <<< $(hyprctl activewindow -j | jq -r .floating) && hyprctl dispatch moveactive 0 30 || hyprctl dispatch movewindow d'\") end"
-      },
       "category": "Window Navigation & Layout",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + PRINT",
+      "id": "screenshots.screenshot",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "PRINT",
+      "action": {
+        "type": "shell",
+        "script": "HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m window",
+        "why_shell": "A tilde the shell expands, so quoting it would break the path."
+      },
       "description": "Screenshot window",
-      "action": {
-        "kind": "exec",
-        "command": "HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m window",
-        "lua": "hl.dsp.exec_cmd(\"HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m window\")"
-      },
       "category": "Screenshots",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "ALT + PRINT",
+      "id": "screenshots.screenshot-monitor",
+      "mods": [
+        "ALT"
+      ],
+      "key": "PRINT",
+      "action": {
+        "type": "shell",
+        "script": "HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m output",
+        "why_shell": "A tilde the shell expands, so quoting it would break the path."
+      },
       "description": "Screenshot monitor",
-      "action": {
-        "kind": "exec",
-        "command": "HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m output",
-        "lua": "hl.dsp.exec_cmd(\"HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m output\")"
-      },
       "category": "Screenshots",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SHIFT + PRINT",
+      "id": "screenshots.screenshot-region",
+      "mods": [
+        "SHIFT"
+      ],
+      "key": "PRINT",
+      "action": {
+        "type": "shell",
+        "script": "HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m region",
+        "why_shell": "A tilde the shell expands, so quoting it would break the path."
+      },
       "description": "Screenshot region",
-      "action": {
-        "kind": "exec",
-        "command": "HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m region",
-        "lua": "hl.dsp.exec_cmd(\"HYPRSHOT_DIR=~/Pictures/Screenshots hyprshot -m region\")"
-      },
       "category": "Screenshots",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + A",
+      "id": "screenshots.annotate-screenshot",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "A",
+      "action": {
+        "type": "shell",
+        "script": "grim -g \"$(slurp)\" - | satty --filename - --output-filename ~/Pictures/Screenshots/Screenshot-$(date '+%Y%m%d-%H:%M:%S').png",
+        "why_shell": "A tilde the shell expands, so quoting it would break the path."
+      },
       "description": "Annotate screenshot",
-      "action": {
-        "kind": "exec",
-        "command": "grim -g \"$(slurp)\" - | satty --filename - --output-filename ~/Pictures/Screenshots/Screenshot-$(date '+%Y%m%d-%H:%M:%S').png",
-        "lua": "hl.dsp.exec_cmd(\"grim -g \\\"$(slurp)\\\" - | satty --filename - --output-filename ~/Pictures/Screenshots/Screenshot-$(date '+%Y%m%d-%H:%M:%S').png\")"
-      },
       "category": "Screenshots",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 1",
+      "id": "workspace.workspace1",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "1",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "workspace": "1"
+      },
       "description": "Workspace1",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = i })",
-        "workspace": "1"
-      },
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 2",
+      "id": "workspace.workspace2",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "2",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "workspace": "2"
+      },
       "description": "Workspace2",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = i })",
-        "workspace": "2"
-      },
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 3",
-      "description": "Workspace3",
+      "id": "workspace.workspace3",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "3",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
         "workspace": "3"
       },
+      "description": "Workspace3",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 4",
-      "description": "Workspace4",
+      "id": "workspace.workspace4",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "4",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
         "workspace": "4"
       },
+      "description": "Workspace4",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 5",
-      "description": "Workspace5",
+      "id": "workspace.workspace5",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "5",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
         "workspace": "5"
       },
+      "description": "Workspace5",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 6",
-      "description": "Workspace6",
+      "id": "workspace.workspace6",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "6",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
         "workspace": "6"
       },
+      "description": "Workspace6",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 7",
-      "description": "Workspace7",
+      "id": "workspace.workspace7",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "7",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
         "workspace": "7"
       },
+      "description": "Workspace7",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 8",
-      "description": "Workspace8",
+      "id": "workspace.workspace8",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "8",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
         "workspace": "8"
       },
+      "description": "Workspace8",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 9",
-      "description": "Workspace9",
+      "id": "workspace.workspace9",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "9",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
         "workspace": "9"
       },
+      "description": "Workspace9",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 1",
-      "description": "Move to workspace1",
+      "id": "workspace.workspace1-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "1",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
         "workspace": "1"
       },
+      "description": "Move to workspace1",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 2",
-      "description": "Move to workspace2",
+      "id": "workspace.workspace2-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "2",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
         "workspace": "2"
       },
+      "description": "Move to workspace2",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 3",
-      "description": "Move to workspace3",
+      "id": "workspace.workspace3-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "3",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
         "workspace": "3"
       },
+      "description": "Move to workspace3",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 4",
-      "description": "Move to workspace4",
+      "id": "workspace.workspace4-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "4",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
         "workspace": "4"
       },
+      "description": "Move to workspace4",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 5",
-      "description": "Move to workspace5",
+      "id": "workspace.workspace5-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "5",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
         "workspace": "5"
       },
+      "description": "Move to workspace5",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 6",
-      "description": "Move to workspace6",
+      "id": "workspace.workspace6-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "6",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
         "workspace": "6"
       },
+      "description": "Move to workspace6",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 7",
-      "description": "Move to workspace7",
+      "id": "workspace.workspace7-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "7",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
         "workspace": "7"
       },
+      "description": "Move to workspace7",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 8",
-      "description": "Move to workspace8",
+      "id": "workspace.workspace8-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "8",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
         "workspace": "8"
       },
+      "description": "Move to workspace8",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 9",
-      "description": "Move to workspace9",
+      "id": "workspace.workspace9-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "9",
       "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = i })",
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
         "workspace": "9"
       },
+      "description": "Move to workspace9",
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + 0",
+      "id": "workspace.10",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "0",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ workspace = 10 }"
+      },
       "description": "Workspace 10",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = 10 })"
-      },
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + SHIFT + 0",
+      "id": "workspace.10-2",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "0",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
+        "args_lua": "{ workspace = 10 }"
+      },
       "description": "Move to workspace 10",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = 10 })"
-      },
       "category": "Workspace Switching",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + CTRL + right",
+      "id": "workspace.next",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "right",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ workspace = \"r+1\" }"
+      },
       "description": "Next workspace",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = \"r+1\" })"
-      },
       "category": "Workspace Navigation",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + CTRL + left",
+      "id": "workspace.previous",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "left",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ workspace = \"r-1\" }"
+      },
       "description": "Previous workspace",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = \"r-1\" })"
-      },
       "category": "Workspace Navigation",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + CTRL + down",
+      "id": "workspace.empty",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "down",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ workspace = \"empty\" }"
+      },
       "description": "Open empty workspace",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = \"empty\" })"
-      },
       "category": "Workspace Navigation",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + CTRL + ALT + right",
+      "id": "move.next",
+      "mods": [
+        "SUPER",
+        "CTRL",
+        "ALT"
+      ],
+      "key": "right",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
+        "args_lua": "{ workspace = \"r+1\" }"
+      },
       "description": "Move to next workspace",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = \"r+1\" })"
-      },
       "category": "Move Window Across Workspaces",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + CTRL + ALT + left",
+      "id": "move.previous",
+      "mods": [
+        "SUPER",
+        "CTRL",
+        "ALT"
+      ],
+      "key": "left",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.move",
+        "args_lua": "{ workspace = \"r-1\" }"
+      },
       "description": "Move to previous workspace",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.move({ workspace = \"r-1\" })"
-      },
       "category": "Move Window Across Workspaces",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + mouse_down",
+      "id": "mouse.scroll-next",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "mouse_down",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ workspace = \"e+1\" }"
+      },
       "description": "Scroll to next workspace",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = \"e+1\" })"
-      },
       "category": "Mouse Workspace Navigation",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + mouse_up",
+      "id": "mouse.scroll-previous",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "mouse_up",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "args_lua": "{ workspace = \"e-1\" }"
+      },
       "description": "Scroll to previous workspace",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.focus({ workspace = \"e-1\" })"
-      },
       "category": "Mouse Workspace Navigation",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "SUPER + mouse:272",
+      "id": "mouse.drag",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "mouse:272",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.drag"
+      },
       "description": "Drag window",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.drag()"
-      },
-      "options": {
-        "mouse": true
-      },
       "category": "Mouse Window Management",
-      "status": "bound"
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "mouse": true
+      }
     },
     {
-      "keys": "SUPER + mouse:273",
+      "id": "mouse.resize",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "mouse:273",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.resize"
+      },
       "description": "Resize window",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.resize()"
-      },
-      "options": {
+      "category": "Mouse Window Management",
+      "enabled": true,
+      "locked": false,
+      "flags": {
         "mouse": true
-      },
-      "category": "Mouse Window Management",
-      "status": "bound"
+      }
     },
     {
-      "keys": "SUPER + X",
+      "id": "mouse.resize-2",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "X",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.resize"
+      },
       "description": "Resize mode",
-      "action": {
-        "kind": "dispatcher",
-        "lua": "hl.dsp.window.resize()"
-      },
       "category": "Mouse Window Management",
-      "status": "bound"
+      "enabled": true,
+      "locked": false
     },
     {
-      "keys": "XF86AudioPlay",
+      "id": "media.play-pause",
+      "mods": [],
+      "key": "XF86AudioPlay",
+      "action": {
+        "type": "exec",
+        "command": [
+          "playerctl",
+          "play-pause"
+        ]
+      },
       "description": "Play or pause",
-      "action": {
-        "kind": "exec",
-        "command": "playerctl play-pause",
-        "lua": "hl.dsp.exec_cmd(\"playerctl play-pause\")"
-      },
-      "options": {
-        "locked": true
-      },
       "category": "Media",
-      "status": "bound"
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true
+      }
     },
     {
-      "keys": "XF86AudioNext",
+      "id": "media.next-track",
+      "mods": [],
+      "key": "XF86AudioNext",
+      "action": {
+        "type": "exec",
+        "command": [
+          "playerctl",
+          "next"
+        ]
+      },
       "description": "Next track",
-      "action": {
-        "kind": "exec",
-        "command": "playerctl next",
-        "lua": "hl.dsp.exec_cmd(\"playerctl next\")"
-      },
-      "options": {
-        "locked": true
-      },
       "category": "Media",
-      "status": "bound"
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true
+      }
     },
     {
-      "keys": "XF86AudioPrev",
+      "id": "media.previous-track",
+      "mods": [],
+      "key": "XF86AudioPrev",
+      "action": {
+        "type": "exec",
+        "command": [
+          "playerctl",
+          "previous"
+        ]
+      },
       "description": "Previous track",
-      "action": {
-        "kind": "exec",
-        "command": "playerctl previous",
-        "lua": "hl.dsp.exec_cmd(\"playerctl previous\")"
-      },
-      "options": {
-        "locked": true
-      },
       "category": "Media",
-      "status": "bound"
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true
+      }
     },
     {
-      "keys": "XF86AudioRaiseVolume",
+      "id": "media.volume-up",
+      "mods": [],
+      "key": "XF86AudioRaiseVolume",
+      "action": {
+        "type": "exec",
+        "command": [
+          "pamixer",
+          "-i",
+          "5"
+        ]
+      },
       "description": "Volume up",
-      "action": {
-        "kind": "exec",
-        "command": "pamixer -i 5",
-        "lua": "hl.dsp.exec_cmd(\"pamixer -i 5\")"
-      },
-      "options": {
-        "locked": true
-      },
       "category": "Media",
-      "status": "bound"
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true
+      }
     },
     {
-      "keys": "XF86AudioLowerVolume",
+      "id": "media.volume-down",
+      "mods": [],
+      "key": "XF86AudioLowerVolume",
+      "action": {
+        "type": "exec",
+        "command": [
+          "pamixer",
+          "-d",
+          "5"
+        ]
+      },
       "description": "Volume down",
-      "action": {
-        "kind": "exec",
-        "command": "pamixer -d 5",
-        "lua": "hl.dsp.exec_cmd(\"pamixer -d 5\")"
-      },
-      "options": {
-        "locked": true
-      },
       "category": "Media",
-      "status": "bound"
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true
+      }
     },
     {
-      "keys": "SUPER + H",
-      "description": "Shortcut overlay (Part 7)",
+      "id": "overlay.cheatsheet",
       "action": {
-        "kind": "reserved"
+        "type": "exec",
+        "command": [
+          "iarch-cheatsheet"
+        ]
       },
-      "category": "Planned",
-      "status": "reserved"
+      "description": "Shortcut overlay",
+      "category": "System",
+      "locked": true,
+      "unverified": "The overlay itself is not built. Binding the key is what makes it reachable the moment it is, and iarch-keybinds check reports the missing program rather than failing silently.",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "H",
+      "enabled": true
     },
     {
-      "keys": "SUPER + SHIFT + H",
+      "id": "planned.refresh-overlay",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "H",
+      "action": {
+        "type": "none"
+      },
       "description": "Refresh the shortcut overlay (Part 7)",
-      "action": {
-        "kind": "reserved"
-      },
       "category": "Planned",
-      "status": "reserved"
+      "enabled": false,
+      "locked": false,
+      "reserved": true
     },
     {
-      "keys": "SUPER + K",
-      "description": "Hyprland key panel (Part 7)",
+      "id": "planned.hyprland-key",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "K",
       "action": {
-        "kind": "reserved"
+        "type": "none"
       },
+      "description": "Hyprland key panel (Part 7)",
       "category": "Planned",
-      "status": "reserved"
+      "enabled": false,
+      "locked": false,
+      "reserved": true
     }
   ]
 }

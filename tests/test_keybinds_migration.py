@@ -289,37 +289,67 @@ class MigrationLosesNothing(unittest.TestCase):
                               "swap takes a direction word now; the old single "
                               "letters are refused by parseDirectionStr")
 
-    def test_a_pipeline_is_stored_as_a_shell_string_and_not_as_an_argv_list(self):
+    def test_a_command_that_needs_the_shell_is_stored_as_a_string(self):
         """The split exists so a validator knows which commands it cannot check.
 
         Upstream spawns one string through /bin/sh -c either way, so this is not
-        about what the compositor receives. It is about what a person edits: an
-        argv list can be checked argument by argument and cannot carry a quoting
-        mistake, and a pipeline can be checked not at all -- so it is marked
-        `shell`, which is what makes the settings page able to mark it advanced.
+        about what the compositor receives. It is about what a person edits and
+        what survives the round trip. Three things make a v1 command a shell
+        string rather than an argv list, and each one breaks differently if it is
+        split and re-quoted:
+
+          * a pipeline -- `grim ... | satty ...` split on whitespace is two
+            programs and a literal `|` argument;
+          * a tilde -- shlex.quote wraps `~` in single quotes and a tilde in
+            single quotes does not expand, so `~/Scripts/x` becomes a file
+            literally named `~/Scripts/x`;
+          * an environment prefix -- `sh -c "'VAR=v' prog"` does not set VAR, it
+            tries to run a program named `VAR=v`.
+
+        All five of the shipped commands that lean on the shell are marked, and
+        every one of them says why.
         """
         shells = [entry for entry in self.bindings
                   if entry["action"]["type"] == "shell"]
-        self.assertEqual(1, len(shells),
-                         "exactly one shipped bind is a pipeline: the annotate "
-                         "screenshot, which pipes grim into satty")
-        entry = shells[0]
-        self.assertIn("|", entry["action"]["script"])
-        self.assertTrue(entry["action"]["why_shell"].strip())
+        self.assertEqual(5, len(shells),
+                         "the browser launcher and the four screenshot binds are the "
+                         "ones that need the shell; if this count moved, a command was "
+                         "reclassified and the reason should be read before accepting it")
+        for entry in shells:
+            with self.subTest(id=entry["id"]):
+                self.assertTrue(entry["action"]["why_shell"].strip(),
+                                "a shell action with no reason is an argv list nobody split")
+        by_id = {entry["id"]: entry for entry in shells}
+        self.assertIn("|", by_id["screenshots.annotate-screenshot"]["action"]["script"])
+        self.assertIn("~", by_id["applications.browser"]["action"]["script"])
+        self.assertTrue(by_id["screenshots.screenshot"]["action"]["script"]
+                        .startswith("HYPRSHOT_DIR="))
 
-        for binding in self.bindings:
-            action = binding["action"]
+    def test_no_exec_action_carries_a_shell_feature_that_quoting_would_break(self):
+        """The other half: an argv list must be a plain program and its arguments.
+
+        This is the invariant the five shell entries exist to protect. If any exec
+        command still held a tilde, a pipe or an environment prefix, the generator
+        would quote it and silently change what runs -- which renders cleanly and
+        fails at run time, the exact failure this record is here to prevent.
+        """
+        import re
+        env_prefix = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+        for entry in self.bindings:
+            action = entry["action"]
             if action["type"] != "exec":
                 continue
-            with self.subTest(id=binding["id"]):
-                self.assertIsInstance(action["command"], list)
+            with self.subTest(id=entry["id"]):
                 self.assertTrue(action["command"], "an exec action with no argv")
-                joined = " ".join(action["command"])
-                for token in ("|", "&&", "||", "$("):
-                    self.assertNotIn(token, joined,
-                                     f"{binding['id']} is stored as an argv list but "
-                                     "carries shell syntax, so the list is a lie "
-                                     "about how it will be spawned")
+                for token in action["command"]:
+                    self.assertNotIn("~", token, f"{entry['id']}: a tilde in an argv "
+                                     "token does not survive shlex.quote")
+                    for metachar in ("|", "&&", "||", "$(", "`", ";", ">", "<"):
+                        self.assertNotIn(metachar, token,
+                                         f"{entry['id']}: shell syntax in an argv token")
+                self.assertIsNone(env_prefix.match(action["command"][0]),
+                                  f"{entry['id']}: an environment prefix in an argv "
+                                  "list is a program name, not an assignment")
 
     def test_the_mouse_binds_kept_their_mouse_flag(self):
         """`mouse` is exclusive upstream, so it cannot ride along with anything."""
@@ -331,26 +361,45 @@ class MigrationLosesNothing(unittest.TestCase):
                                 "on a key nobody has")
                 self.assertFalse(entry["locked"])
 
-    def test_the_five_locked_media_keys_are_still_locked(self):
-        """Upstream's `locked` means the bind works while the session is locked.
+    def test_the_five_media_keys_carry_the_compositors_locked_option(self):
+        """Upstream's `locked` is a compositor option, so it lives in `flags`.
 
-        Not to be confused with this record's own `locked` field, which means a
-        person may rebind the entry but not delete it. The five media keys are
-        locked in both senses and the record keeps the senses apart.
+        It means the bind still works while the session is locked, which is why
+        the media keys carry it: volume on the lock screen is exactly when it is
+        most obviously needed. It is not this record's own top-level `locked`.
         """
-        locked = [entry["id"] for entry in self.bindings
-                  if entry.get("flags") or entry["locked"]]
-        media = [entry["id"] for entry in self.bindings
-                 if entry["category"] == "Media"]
+        media = [entry for entry in self.bindings if entry["category"] == "Media"]
         self.assertEqual(5, len(media))
-        for entry in self.bindings:
-            if entry["category"] != "Media":
-                continue
+        for entry in media:
             with self.subTest(id=entry["id"]):
-                self.assertTrue(entry["locked"],
-                                "a media key that stops working on the lock screen "
-                                "is a media key that stops working when it is most "
-                                "obviously needed")
+                self.assertTrue((entry.get("flags") or {}).get("locked"),
+                                "a media key with no `locked` flag stops working on "
+                                "the lock screen")
+
+    def test_the_two_things_called_locked_are_not_the_same_field(self):
+        """The confusion the record warns about, pinned so it cannot come back.
+
+        Upstream's `locked` (works on the lock screen) is a compositor option and
+        belongs in `flags`. This project's `locked` (rebindable but not deletable)
+        is a property of the entry and belongs at the top level. A media key is
+        locked in the first sense only; the cheat sheet in the second only. Were
+        they one field, deleting the cheat sheet and muting the lock screen would
+        be the same decision, and neither the generator nor the settings page
+        could tell them apart.
+        """
+        by_id = {entry["id"]: entry for entry in self.bindings}
+        for entry in self.bindings:
+            if entry["category"] == "Media":
+                with self.subTest(id=entry["id"]):
+                    self.assertTrue((entry.get("flags") or {}).get("locked"))
+                    self.assertFalse(entry["locked"],
+                                     "a media key is marked undeletable, which is the "
+                                     "other meaning of locked")
+        cheatsheet = by_id["overlay.cheatsheet"]
+        self.assertTrue(cheatsheet["locked"], "the overlay must be rebindable-not-deletable")
+        self.assertFalse((cheatsheet.get("flags") or {}).get("locked"),
+                         "the overlay does not need to work on the lock screen, and "
+                         "claiming it does would put it in the compositor's locked set")
 
     def test_the_wheel_binds_are_carried_across_unchanged_and_still_unverified(self):
         """`mouse_up` is neither a keysym nor a `mouse:N` code, and nothing proved it.

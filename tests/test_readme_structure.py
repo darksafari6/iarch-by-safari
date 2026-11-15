@@ -68,7 +68,14 @@ class ReadmeStructure(unittest.TestCase):
         section = self.section("Shortcuts")
         self.assertIn("docs/SHORTCUTS.md", section)
         self.assertIn("SUPER + H", section, "the overlay key must be mentioned")
-        self.assertIn("reserved", section, "and it must be described as not bound yet")
+        # Part 5 bound SUPER + H to the overlay's launcher, so the key is no longer
+        # "reserved" -- but the overlay program itself ships in a later part, and the
+        # row must still say so rather than imply a working window. The point of the
+        # assertion is the anti-overclaim, not the specific word the old map used.
+        row = next(l for l in section.splitlines() if l.startswith("| `SUPER + H`"))
+        self.assertRegex(row, r"ships in a later part|not built|Part \d",
+                         "the overlay key is bound but the overlay is not built yet, "
+                         "and the row must not claim otherwise")
 
     def test_features_do_not_overclaim(self):
         """Anything not built must say so in the same row."""

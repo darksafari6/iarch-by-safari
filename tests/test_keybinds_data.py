@@ -1,5 +1,18 @@
 # Copyright (C) 2026 Safari — GPL-3.0-or-later
-"""data/keybinds.default.json must stay a faithful extract of keybind.lua."""
+"""data/keybinds.default.json is the source, and the Lua is generated from it.
+
+This file used to assert the opposite -- that the JSON was a faithful extract of
+a hand-written ``keybind.lua`` -- and Part 5 reversed the direction. The record
+is now the single source of the keyboard map: ``iarch-keybinds`` renders
+``.config/hypr/generated/keybinds.lua`` from it, ``tools/render_shortcuts.py``
+renders the documentation from it, and the Shortcuts page reads it. So the
+question this file asks is no longer "does the JSON match the Lua" but "is the
+record sound, and is everything rendered from it current".
+
+The generator's own logic -- the validation rules, the merge, the Lua it emits
+for a fixture -- is tested in ``tests/test_iarch_keybinds.py``. What is here is
+the integrity of the shipped record and the freshness of its renderings.
+"""
 import json
 import re
 import subprocess
@@ -9,47 +22,165 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "keybinds.default.json"
-SOURCE = ROOT / ".config" / "hypr" / "keybind.lua"
-KINDS = {"exec", "dispatcher", "lua-function", "reserved"}
+GENERATED = ROOT / ".config" / "hypr" / "generated" / "keybinds.lua"
+KEYSYM_LIST = ROOT / "data" / "reference" / "xkb-keysyms-1.7.0.txt"
+ACTION_TYPES = {"exec", "shell", "dispatch", "lua", "iarch", "noctalia", "none"}
+
+
+def key_string(binding):
+    return " + ".join(list(binding.get("mods") or []) + [binding["key"]])
+
+
+def is_bound(binding):
+    return bool(binding.get("enabled")) and binding["action"].get("type") != "none"
 
 
 class KeybindsData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = json.loads(DATA.read_text(encoding="utf-8"))
+        cls.bindings = cls.data["bindings"]
+        cls.keysyms = {name.lower() for name in
+                       KEYSYM_LIST.read_text(encoding="utf-8").split()}
 
-    def test_json_matches_the_lua_source(self):
-        result = subprocess.run([sys.executable, str(ROOT / "tools" / "extract_keybinds.py"), "--check"],
-                                capture_output=True, text=True)
+    def test_the_record_is_version_two(self):
+        self.assertEqual(2, self.data["version"],
+                         "the record is the source the generator renders from, and "
+                         "version 1 was a report about a Lua file")
+
+    def test_the_generated_lua_is_current_with_the_record(self):
+        """The freshness check that replaces 'the JSON matches the Lua'."""
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "iarch" / "cli" / "iarch_keybinds.py"),
+             "generate", "--check"],
+            capture_output=True, text=True, cwd=ROOT)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
-    def test_every_runtime_bind_is_present(self):
-        calls = len(re.findall(r"hl\.bind\(", SOURCE.read_text(encoding="utf-8")))
-        bound = [b for b in self.data["bindings"] if b["status"] == "bound"]
-        # two of the calls are the workspace loop, which expands to 18 binds
-        self.assertEqual(calls - 2 + 18, len(bound))
+    def test_every_enabled_binding_is_in_the_generated_lua(self):
+        lua = GENERATED.read_text(encoding="utf-8")
+        for binding in self.bindings:
+            if not is_bound(binding):
+                continue
+            with self.subTest(keys=key_string(binding)):
+                self.assertIn(f'hl.bind("{key_string(binding)}"', lua,
+                              "an enabled binding the generated file does not bind")
 
-    def test_reserved_shortcuts_are_declared_but_not_bound(self):
-        reserved = {b["keys"] for b in self.data["bindings"] if b["status"] == "reserved"}
-        self.assertEqual({"SUPER + H", "SUPER + SHIFT + H", "SUPER + K"}, reserved)
-        lua = SOURCE.read_text(encoding="utf-8")
-        for name in ("CHEATSHEET_TOGGLE", "CHEATSHEET_REFRESH", "HYPR_KEYS_PANEL"):
-            self.assertNotIn(f"hl.bind(KEY.{name}", lua, f"{name} is still unbound in Lua; keep it reserved")
+    def test_no_disabled_or_reserved_binding_is_in_the_generated_lua(self):
+        """A bind that is off is absent, not commented out.
+
+        A commented-out bind in a generated file is a bind a person will hand-edit
+        and then lose on the next render, so the renderer omits it entirely.
+        """
+        lua = GENERATED.read_text(encoding="utf-8")
+        for binding in self.bindings:
+            if is_bound(binding):
+                continue
+            with self.subTest(keys=key_string(binding)):
+                self.assertNotIn(f'hl.bind("{key_string(binding)}"', lua,
+                                 "a binding that is not enabled still renders a bind")
+
+    def test_the_reserved_keys_are_declared_but_not_bound(self):
+        reserved = [b for b in self.bindings if b.get("reserved")]
+        self.assertTrue(reserved, "the overlay keys should still be reserved")
+        for binding in reserved:
+            with self.subTest(keys=key_string(binding)):
+                self.assertFalse(binding["enabled"])
+                self.assertEqual("none", binding["action"]["type"])
+
+    def test_super_h_is_bound_to_the_overlay(self):
+        """The whole point of Part 5: SUPER + H opens the shortcut overlay."""
+        cheatsheet = [b for b in self.bindings if key_string(b) == "SUPER + H"]
+        self.assertEqual(1, len(cheatsheet), "SUPER + H is not bound exactly once")
+        entry = cheatsheet[0]
+        self.assertTrue(entry["enabled"])
+        self.assertTrue(entry["locked"],
+                        "the overlay is a way back into the keyboard map, so it is "
+                        "rebindable but not deletable")
+        self.assertIn("unverified", entry,
+                      "the overlay is not built yet and the record must say so "
+                      "rather than imply a working window")
 
     def test_entries_are_complete_and_well_formed(self):
-        for entry in self.data["bindings"]:
-            with self.subTest(keys=entry.get("keys")):
-                self.assertTrue(entry["keys"].strip())
-                self.assertTrue(entry["description"].strip())
-                self.assertIn(entry["action"]["kind"], KINDS)
-                if entry["action"]["kind"] == "exec":
-                    self.assertTrue(entry["action"]["command"].strip())
-                if entry["status"] == "bound":
-                    self.assertNotEqual("reserved", entry["action"]["kind"])
+        for binding in self.bindings:
+            with self.subTest(id=binding.get("id")):
+                self.assertTrue(binding["id"].strip())
+                self.assertTrue(binding["description"].strip())
+                self.assertIsInstance(binding["mods"], list)
+                self.assertTrue(binding["key"].strip())
+                self.assertIn(binding["action"]["type"], ACTION_TYPES)
+                if binding["action"]["type"] == "exec":
+                    self.assertTrue(binding["action"]["command"])
 
     def test_no_duplicate_key_combinations(self):
-        keys = [b["keys"] for b in self.data["bindings"] if b["status"] == "bound"]
-        self.assertEqual(len(keys), len(set(keys)), "a key may only be bound once")
+        bound = [key_string(b) for b in self.bindings if is_bound(b)]
+        duplicates = {k for k in bound if bound.count(k) > 1}
+        self.assertEqual(set(), duplicates,
+                         "two binds on one combination is two handlers, and which "
+                         "runs depends on registration order")
+
+    def test_no_duplicate_ids(self):
+        ids = [b["id"] for b in self.bindings]
+        duplicates = {i for i in ids if ids.count(i) > 1}
+        self.assertEqual(set(), duplicates,
+                         "an override file keys differences by id, so a duplicate id "
+                         "makes one of them unreachable")
+
+    def test_every_key_is_a_keysym_or_a_form_the_compositor_resolves(self):
+        """The check that stops an invented key name reaching a generated file.
+
+        A key is valid if it is a keysym in the pinned xkbcommon, a `mouse:N`
+        button code, a `code:N` keycode, or a bare number over 9. The two wheel
+        binds are the documented exception: `mouse_up` and `mouse_down` are
+        neither, are carried from the v1 map, and are recorded as unverified
+        rather than silently kept or silently changed.
+        """
+        allowed_unverified = {"mouse_up", "mouse_down", "mouse_left", "mouse_right"}
+        for binding in self.bindings:
+            if not is_bound(binding):
+                continue
+            key = binding["key"]
+            with self.subTest(keys=key_string(binding)):
+                if key in allowed_unverified:
+                    continue
+                valid = (key.lower() in self.keysyms
+                         or (key.startswith("mouse:") and key[6:].isdigit())
+                         or (key.startswith("code:") and key[5:].isdigit())
+                         or (key.isdigit() and int(key) > 9))
+                self.assertTrue(valid, f"{key!r} is not a keysym the compositor resolves")
+
+    def test_the_two_meanings_of_locked_are_kept_apart(self):
+        """Upstream's locked is a flag; this project's locked is a property."""
+        for binding in self.bindings:
+            if binding["category"] == "Media":
+                with self.subTest(id=binding["id"]):
+                    self.assertTrue((binding.get("flags") or {}).get("locked"),
+                                    "a media key with no locked flag stops working on "
+                                    "the lock screen")
+                    self.assertFalse(binding["locked"])
+        cheatsheet = next(b for b in self.bindings if b["id"] == "overlay.cheatsheet")
+        self.assertTrue(cheatsheet["locked"])
+        self.assertFalse((cheatsheet.get("flags") or {}).get("locked"))
+
+    def test_the_generator_reports_zero_conflicts_on_the_defaults(self):
+        """The acceptance criterion: `iarch-keybinds check` on a fresh map is clean."""
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "iarch" / "cli" / "iarch_keybinds.py"), "check"],
+            capture_output=True, text=True, cwd=ROOT)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("0 conflict(s)", result.stdout)
+        self.assertIn("0 error(s)", result.stdout)
+
+    def test_no_plain_ctrl_letter_is_bound(self):
+        """The key-usage rule, asserted against the shipped record itself."""
+        for binding in self.bindings:
+            if not is_bound(binding):
+                continue
+            key = binding["key"]
+            with self.subTest(keys=key_string(binding)):
+                self.assertFalse(binding["mods"] == ["CTRL"] and len(key) == 1
+                                 and key.isalpha(),
+                                 "a global Ctrl+letter takes that key from every "
+                                 "application; use Ctrl+Alt or Super+Ctrl")
 
 
 if __name__ == "__main__":
