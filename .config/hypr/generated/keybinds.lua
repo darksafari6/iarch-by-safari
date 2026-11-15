@@ -144,5 +144,6 @@ hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("pamixer -d 5"), { locked = true
 
 -- System
 hl.bind("SUPER + H", hl.dsp.exec_cmd("iarch-cheatsheet"), { description = "Shortcut overlay" })
+hl.bind("SUPER + SHIFT + E", hl.dsp.exec_cmd("noctalia msg panel-toggle session"), { description = "Open the session menu (logout, reboot, shutdown)" })
 
 return true

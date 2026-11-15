@@ -5,6 +5,127 @@ Notable changes to iArch by Safari, newest first. The format follows
 six-part plan in [`docs/ROADMAP.md`](docs/ROADMAP.md) rather than semantic
 versioning, because nothing here is a library anyone links against.
 
+## Unreleased — the keyboard map, and the record that owns it
+
+This is Part 5 of the roadmap: shortcuts as data. Before it, the keyboard map
+lived in a hand-written `.config/hypr/keybind.lua` and every report about it —
+the documentation, the Settings page — was a second copy that could drift. The
+direction is now reversed: one record is the source, and the Lua the compositor
+reads, the documentation and the Settings page are all rendered from it.
+
+### Added
+
+- **`data/keybinds.default.json`, version 2** — 80 entries, 77 of them enabled,
+  each an `{id, mods, key, action, description, category, enabled, locked}` with
+  ids of the form `category.subject`. An override in
+  `~/.config/iarch/keybinds.json` carries only the fields it changes, keyed by
+  id, so a rebind does not have to restate an action. Validated against
+  `data/schemas/keybinds.schema.json`.
+- **`data/design/keybinds.json`** — the keyboard surface of the pinned
+  compositor, read out of Hyprland v0.57.2's own source rather than transcribed:
+  the `hl.bind` signature and its option names, the dispatcher tree with an
+  arity per leaf, the bind-option exclusions, and what the compositor does by
+  itself when a Lua config fails (`recovery.emergency_mode`).
+- **`data/design/noctalia-ipc.json`** — 41 verbs the shell answers on, each with
+  its argument shape and the upstream line it was read from, verified against
+  noctalia v5.4.1. Verbs this project deliberately does not send are recorded
+  with the reason, so "not used" is a decision on the record rather than an
+  omission.
+- **`data/reference/xkb-keysyms-1.7.0.txt`** — 2 577 keysym names from the
+  pinned xkbcommon. Every key a bind may name is checked against it, which is
+  how `BackSpace` (capital S) and `period` (not `.`) stop being runtime
+  surprises.
+- **`iarch/cli/iarch_keybinds.py`** — `generate`, `list`, `check`, `docs`,
+  `reset` and a top-level `--check` for CI. `check` is the gate the render runs
+  behind: it refuses a key that is not a keysym, a modifier the compositor does
+  not know, two binds on one combination, a dispatcher outside the verified
+  tree, a noctalia verb outside the record, an exec with no argv, a duplicate
+  id, and an override that tried to delete a locked binding.
+- **`tools/migrate_keybinds_v2.py`** and **`tools/render_shortcuts.py`** — the
+  one-off v1→v2 migration, and the renderer behind `docs/SHORTCUTS.md`.
+- **The Shortcuts page** (`iarch/settings-app/iarch_settings/pages/shortcuts.py`)
+  now reads the record, so it shows the map that ships rather than a copy of it.
+- **A golden fixture pair** (`tests/fixtures/keybinds.golden.{json,lua}`) pins
+  the exact Lua a fixed record must produce, so a change to how a command is
+  quoted or a description escaped is a diff a person accepts on purpose instead
+  of a silent edit to a file the session reads.
+
+### Changed
+
+- **The Lua is generated, not written.** `.config/hypr/generated/keybinds.lua`
+  holds 76 binds and opens with a do-not-edit header naming the command that
+  regenerates it. `.config/hypr/keybind.lua` no longer binds anything except the
+  recovery combo, and `.config/hypr/hyprland.lua` requires the generated file
+  *before* it.
+- **`tools/extract_keybinds.py` is gone.** It read the record out of the Lua,
+  which is the direction this part reverses; leaving it in place would leave two
+  tools claiming to be the source.
+- **Super+Shift+E opens the session menu** rather than ending the session.
+  `hl.dsp.exit` takes no arguments and runs the moment the key goes down, and
+  noctalia's `session logout` does the same, so neither goes on a key: the bind
+  is `panel-toggle session`, and `session` is a builtin panel id in noctalia
+  v5.4.1 (`src/launcher/panel_catalog.cpp`), which means the shell draws the
+  confirmation. `lock` and `suspend` stay bindable because both are undoable.
+- **The modifier layers are enforced, not documented and hoped for.** `Super` is
+  the primary layer, `Super+Shift` the secondary one, the `Ctrl+Alt` family is
+  recovery and system, and `Super+Alt` is kept empty on purpose so a later bind
+  has somewhere to go without taking a key from anything. A plain `Ctrl+letter`
+  is still refused — and its remedy no longer suggests `Ctrl+Alt`, which the
+  layer rule reserves, because a checker that recommends its own next refusal
+  sends people in a circle.
+- **Seven bindings are locked** by role: close window, lock, exit, open
+  terminal, open settings, cheat sheet, power menu. Locked is keyed by id, not
+  by key, so a later re-layout of the map cannot quietly drop one. A locked
+  binding can be rebound but not deleted, and an override that tries is refused.
+- **`Ctrl+Alt+BackSpace` is reserved and never bound.** It is the X11
+  kill-server combination; holding the key in the record disabled is what stops
+  a future edit taking it.
+
+### Fixed
+
+- **A deployed session was missing a file it requires.**
+  `hypr/generated/keybinds.lua` was absent from both the path list in
+  `lib/stage-v5-config.sh` and `EXPECTED_PAYLOAD` in `tests/test_payload_map.py`
+  — two literal lists that agreed with each other while the installed session
+  failed to load a module `hyprland.lua` requires. Added to both, and the
+  payload test now derives one side from the load graph so the two cannot agree
+  in the same wrong way again.
+- **`user_override_path()` asked for `"keybinds.json"`** from a helper that
+  appends `.json`, so overrides were written to `keybinds.json.json` and never
+  read back. It now passes the bare stem.
+
+### Known gaps
+
+- **The recovery combo is bound but cannot yet run.** `Ctrl+Alt+R` is
+  hand-written in `.config/hypr/keybind.lua` — deliberately, because a bind
+  whose job is to repair a broken keyboard map cannot live in the file that
+  might be broken, and the compositor's safe-`require`
+  (`ConfigManager.cpp:522-527`, `:328-360`) catches a generated file that loads
+  and then errors, so the static one still registers. What it calls,
+  `iarch-keybinds`, is not on `PATH`: no entry point and no installer wiring
+  exists yet, so until then the bind opens a terminal and says why on stderr.
+  The record carries this as an `unverified` note rather than implying a working
+  key.
+- **`UI-02`: `iarch-cheatsheet` does not exist.** `Super+H` is bound to it and
+  locked, and the cheat sheet is carried as unverified. The vendored overlay
+  plugin is v4 QML while noctalia v5.4.1 needs `plugin.toml` plus a `.luau`
+  entry point, so the overlay has to be built as a layer-shell surface rather
+  than ported.
+- **Two bindings in the recovery layer are debt.** `Super+Ctrl+Alt+left` and
+  `+right` move a window across workspaces, which is not a system action; every
+  sensible destination key is already taken, so `check` reports them as warnings
+  on every run instead of an invisible exception, and they move with the next
+  laying-out of the default map.
+- **The mutating subcommands are not here.** `reset` is, because the recovery
+  combo calls it and a safety net that depends on unwritten code is not a safety
+  net; `set`, `add`, `disable`, `import` and `export` belong with the Shortcuts
+  page that calls them, and the live reload-and-rollback path needs a compositor
+  this machine does not have.
+- **Two mouse-wheel binds are carried unverified.** `Super+mouse_up` and
+  `Super+mouse_down` come from the v1 map and are neither a keysym nor a
+  `mouse:N` code, so the compositor may answer `key not found`. `check` warns on
+  both rather than passing them silently.
+
 ## Unreleased — the settings application
 
 This is Part 4 of the roadmap: the glass settings window, the About page's

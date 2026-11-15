@@ -40,7 +40,7 @@
       "description": "Terminal",
       "category": "Applications",
       "enabled": true,
-      "locked": false
+      "locked": true
     },
     {
       "id": "applications.file-manager",
@@ -130,7 +130,7 @@
       "description": "Lock screen",
       "category": "Applications",
       "enabled": true,
-      "locked": false
+      "locked": true
     },
     {
       "id": "applications.settings",
@@ -149,7 +149,7 @@
       "description": "Toggle settings",
       "category": "Applications",
       "enabled": true,
-      "locked": false
+      "locked": true
     },
     {
       "id": "applications.control-center",
@@ -299,7 +299,7 @@
       "description": "Open power controls",
       "category": "Applications",
       "enabled": true,
-      "locked": false
+      "locked": true
     },
     {
       "id": "applications.steam",
@@ -367,7 +367,7 @@
       "description": "Close window",
       "category": "Window Management",
       "enabled": true,
-      "locked": false
+      "locked": true
     },
     {
       "id": "window.floating",
@@ -1351,6 +1351,64 @@
       ],
       "key": "H",
       "enabled": true
+    },
+    {
+      "id": "session.exit-menu",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "E",
+      "action": {
+        "type": "noctalia",
+        "verb": "panel-toggle",
+        "args": [
+          "session"
+        ]
+      },
+      "description": "Open the session menu (logout, reboot, shutdown)",
+      "category": "System",
+      "enabled": true,
+      "locked": true,
+      "unverified": "Bound and locked, but the session panel has never been opened: no shell and no display exist on the machine this was written on. That 'session' is a builtin panel id is read out of noctalia v5.4.1 src/launcher/panel_catalog.cpp, and that reaching logout from it needs a click is read out of the launcher's own documentation, not observed. TODO(verify) KB-03."
+    },
+    {
+      "id": "reserved.ctrl-alt-backspace",
+      "mods": [
+        "CTRL",
+        "ALT"
+      ],
+      "key": "BackSpace",
+      "action": {
+        "type": "none"
+      },
+      "description": "Reserved: the X11 kill-server combo, deliberately never bound",
+      "category": "System",
+      "enabled": false,
+      "locked": false,
+      "reserved": true
+    },
+    {
+      "id": "recovery.reapply-defaults",
+      "mods": [
+        "CTRL",
+        "ALT"
+      ],
+      "key": "R",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-keybinds",
+          "reset",
+          "--all"
+        ]
+      },
+      "description": "Recovery: re-apply the default keyboard map",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "static": true,
+      "unverified": "The bind is written and registered, but it calls iarch-keybinds, which the repository does not yet put on PATH: the CLI is reachable only as python3 iarch/cli/iarch_keybinds.py until the installer task adds the iarch-* commands to ~/.local/bin. Until then the bind opens a terminal and says why on stderr instead of failing silently. TODO(verify) KB-01, KB-02."
     },
     {
       "id": "planned.refresh-overlay",

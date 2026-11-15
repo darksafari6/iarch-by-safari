@@ -23,6 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "keybinds.default.json"
 GENERATED = ROOT / ".config" / "hypr" / "generated" / "keybinds.lua"
+STATIC_LUA = ROOT / ".config" / "hypr" / "keybind.lua"
 KEYSYM_LIST = ROOT / "data" / "reference" / "xkb-keysyms-1.7.0.txt"
 ACTION_TYPES = {"exec", "shell", "dispatch", "lua", "iarch", "noctalia", "none"}
 
@@ -57,13 +58,69 @@ class KeybindsData(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
     def test_every_enabled_binding_is_in_the_generated_lua(self):
+        """Every enabled binding is bound, in exactly one of the two files.
+
+        A static binding is written by hand in ``keybind.lua`` on purpose -- it is
+        the recovery combo, which has to work when the generated file does not -- so
+        it is asserted against the static file instead, and against *not* being in
+        the generated one, because a key bound in both files is two handlers racing
+        and which one runs depends on require() order.
+        """
         lua = GENERATED.read_text(encoding="utf-8")
         for binding in self.bindings:
-            if not is_bound(binding):
+            if not is_bound(binding) or binding.get("static"):
                 continue
             with self.subTest(keys=key_string(binding)):
                 self.assertIn(f'hl.bind("{key_string(binding)}"', lua,
                               "an enabled binding the generated file does not bind")
+
+    def test_every_static_binding_is_hand_written_and_only_there(self):
+        static = [b for b in self.bindings if b.get("static")]
+        self.assertTrue(static, "the recovery combo is static by design; if there is "
+                                "none, the safety net has gone missing rather than "
+                                "been folded into the render")
+        lua = GENERATED.read_text(encoding="utf-8")
+        hand = STATIC_LUA.read_text(encoding="utf-8")
+        for binding in static:
+            keys = key_string(binding)
+            with self.subTest(keys=keys):
+                self.assertTrue(is_bound(binding),
+                                "a static binding that is not enabled binds nothing "
+                                "anywhere, so the record would promise a key the "
+                                "session does not have")
+                self.assertIn(f'hl.bind("{keys}"', hand,
+                              "marked static but not hand-written in keybind.lua")
+                self.assertNotIn(f'hl.bind("{keys}"', lua,
+                                 "a static binding the render also emits, so two "
+                                 "handlers race on one key")
+
+    def test_the_recovery_combo_survives_a_broken_generated_file(self):
+        """The safety net's whole reason for being, asserted on the require order.
+
+        ``hyprland.lua`` requires ``generated.keybinds`` before ``keybind``, and the
+        compositor's safe-require catches a module that loads and then errors, so a
+        failure in the generated file still reaches the static one. If either half of
+        that changes -- the order flips, or the recovery bind moves into the
+        generated file -- Ctrl+Alt+R stops being a recovery and becomes another
+        casualty of the breakage it exists to fix.
+        """
+        entry = next(b for b in self.bindings if b["id"] == "recovery.reapply-defaults")
+        self.assertTrue(entry.get("static"),
+                        "the recovery combo must stay hand-written: a bind inside the "
+                        "file that failed cannot repair that file")
+        self.assertTrue(entry["unverified"].strip(),
+                        "the recovery bind calls a command the installer has not put "
+                        "on PATH yet, and the record has to say so rather than imply "
+                        "a working key")
+
+        hyprland = (ROOT / ".config" / "hypr" / "hyprland.lua").read_text(encoding="utf-8")
+        self.assertLess(hyprland.index('require("generated.keybinds")'),
+                        hyprland.index('require("keybind")'),
+                        "generated.keybinds must be required first so a render that "
+                        "does not parse leaves the registry empty and the compositor's "
+                        "emergency binds trip")
+        self.assertIn('hl.bind("CTRL + ALT + R"',
+                      STATIC_LUA.read_text(encoding="utf-8"))
 
     def test_no_disabled_or_reserved_binding_is_in_the_generated_lua(self):
         """A bind that is off is absent, not commented out.

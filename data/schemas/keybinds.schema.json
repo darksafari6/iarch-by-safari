@@ -98,6 +98,10 @@
           "type": "string",
           "minLength": 20,
           "description": "Present when the binding points at something not yet built or not yet observed, so the record says so rather than implying a working bind. The cheat sheet carries it until the overlay exists."
+        },
+        "static": {
+          "type": "boolean",
+          "description": "Rendered by hand into .config/hypr/keybind.lua instead of into the generated file, because this bind has to work when the record or its render does not. The recovery combo is the only one: it re-applies the defaults, so it must survive the broken file it exists to fix, and a bind inside a file that failed to generate cannot do that. It is still described here so the cheat sheet and docs/SHORTCUTS.md show it, and iarch-keybinds check reads the static file back and proves the two agree rather than trusting either one."
         }
       },
       "allOf": [
@@ -117,6 +121,16 @@
               "flags": { "not": { "required": ["locked"], "properties": { "locked": { "const": true } } } }
             },
             "description": "mouse is exclusive upstream: a mouse bind cannot also carry the compositor's locked option (data/design/keybinds.json -> bind.exclusions)."
+          }
+        },
+        {
+          "if": { "required": ["static"], "properties": { "static": { "const": true } } },
+          "then": {
+            "required": ["unverified"],
+            "properties": {
+              "enabled": { "const": true }
+            },
+            "description": "A static binding is a real bind, so it is enabled and its action is not none; and because the only one this project has names a program the repository does not yet put on PATH, it carries an unverified note saying so rather than implying a working key."
           }
         }
       ]

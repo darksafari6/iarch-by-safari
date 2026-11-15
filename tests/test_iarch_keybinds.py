@@ -22,11 +22,16 @@ skips when neither is installed rather than failing a machine for what it has.
 """
 from __future__ import annotations
 
+import argparse
+import contextlib
+import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -55,6 +60,30 @@ def make_binding(**over: Any) -> Dict[str, Any]:
     }
     base.update(over)
     return base
+
+
+def list_json() -> List[Dict[str, Any]]:
+    """The real ``list --json`` payload, with no override file in the way.
+
+    ``cmd_list`` reads the environment itself, so the override directory is pointed
+    at an empty temporary one: a test that merges whatever happens to be in the
+    developer's ``~/.config/iarch`` passes on one machine and fails on another.
+    """
+    with tempfile.TemporaryDirectory() as empty:
+        previous = os.environ.get("IARCH_CONFIG_DIR")
+        os.environ["IARCH_CONFIG_DIR"] = empty
+        try:
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                code = kb.cmd_list(argparse.Namespace(json=True, category=None))
+        finally:
+            if previous is None:
+                os.environ.pop("IARCH_CONFIG_DIR", None)
+            else:
+                os.environ["IARCH_CONFIG_DIR"] = previous
+    if code != 0:
+        raise AssertionError(f"list --json exited {code}")
+    return json.loads(buffer.getvalue())
 
 
 def severities(problems: List[kb.Problem]) -> Dict[str, int]:
@@ -216,13 +245,46 @@ class Validation(unittest.TestCase):
         self.assertTrue(any("plain Ctrl+C" in p.message and p.severity == kb.WARNING
                             for p in problems))
 
-    def test_ctrl_alt_and_super_ctrl_letters_are_allowed(self):
-        for mods in (["CTRL", "ALT"], ["SUPER", "CTRL"]):
-            with self.subTest(mods=mods):
-                problems = self.validate(make_binding(id="ok", mods=mods, key="c"))
-                self.assertEqual(0, len([p for p in problems
-                                         if p.severity in (kb.ERROR, kb.CONFLICT)]),
-                                 [str(p) for p in problems])
+    def test_super_ctrl_letters_are_allowed(self):
+        problems = self.validate(make_binding(id="ok", mods=["SUPER", "CTRL"], key="c"))
+        self.assertEqual(0, len([p for p in problems
+                                 if p.severity in (kb.ERROR, kb.CONFLICT)]),
+                         [str(p) for p in problems])
+
+    def test_ctrl_alt_letters_belong_to_the_system_layer_only(self):
+        """Ctrl+Alt used to be offered as the remedy for a plain Ctrl+letter.
+
+        It is not any more: the layer rule reserves it for recovery and system
+        actions, so a checker that still suggested it would send the person into
+        its own next refusal. Both halves are asserted, because the interesting
+        failure is a rule whose remedy the following rule rejects.
+        """
+        refused = self.validate(make_binding(id="app", mods=["CTRL", "ALT"], key="c"))
+        self.assertTrue(any(p.severity == kb.ERROR and "recovery and system layer"
+                            in p.message for p in refused),
+                        [str(p) for p in refused])
+
+        allowed = self.validate(make_binding(id="sys", mods=["CTRL", "ALT"], key="c",
+                                             category="System"))
+        self.assertEqual(0, len([p for p in allowed
+                                 if p.severity in (kb.ERROR, kb.CONFLICT)]),
+                         [str(p) for p in allowed])
+
+    def test_the_plain_ctrl_remedy_is_one_the_checker_would_accept(self):
+        """The message must not recommend a layer the layer rule then refuses."""
+        problems = self.validate(make_binding(id="bad.ctrlc", mods=["CTRL"], key="c"))
+        message = next(p.message for p in problems if "plain Ctrl+C" in p.message)
+        self.assertNotIn("Ctrl+Alt", message,
+                         "the refusal recommends Ctrl+Alt, which the layer rule "
+                         "reserves for recovery -- a remedy this checker rejects")
+        for offered, mods in (("Super+Ctrl", ["SUPER", "CTRL"]),
+                              ("Super+Shift", ["SUPER", "SHIFT"])):
+            self.assertIn(offered, message)
+            follow_up = self.validate(make_binding(id="remedy", mods=mods, key="c"))
+            self.assertEqual(0, len([p for p in follow_up
+                                     if p.severity in (kb.ERROR, kb.CONFLICT)]),
+                             f"{offered}+C is recommended and then refused: "
+                             f"{[str(p) for p in follow_up]}")
 
     def test_two_binds_on_one_combination_are_a_conflict(self):
         problems = self.validate(
@@ -400,20 +462,320 @@ class ShippedRecord(unittest.TestCase):
                                  and binding["key"].isalpha())
 
     def test_the_list_json_feed_carries_what_a_cheat_sheet_needs(self):
-        """The overlay reads `list --json`; this pins the shape it will read."""
-        payload = [{
-            "id": b["id"], "keys": kb.key_string(b), "mods": b.get("mods") or [],
-            "key": b["key"], "description": b["description"], "category": b["category"],
-            "enabled": b["enabled"], "locked": b["locked"], "action": b["action"],
-        } for b in self.bindings]
+        """The overlay reads `list --json`; this pins the shape it will read.
+
+        Taken from the real command rather than rebuilt here, because a hand-copy of
+        the payload is a second opinion that drifts the first time a field is added --
+        and the overlay is exactly the consumer that would then render blanks.
+        """
+        payload = list_json()
         self.assertTrue(payload)
         for entry in payload:
-            for field in ("id", "keys", "description", "category", "enabled", "action"):
+            for field in ("id", "keys", "description", "category", "enabled", "action",
+                          "locked", "static", "reserved"):
                 self.assertIn(field, entry)
         # A cheat sheet groups by category and shows the combination and the description.
         terminal = next(e for e in payload if e["id"] == "applications.terminal")
         self.assertEqual("SUPER + RETURN", terminal["keys"])
         self.assertTrue(terminal["description"])
+
+    def test_the_json_feed_marks_the_static_and_reserved_bindings(self):
+        """The overlay has to tell a hand-written bind from a rendered one.
+
+        A cheat sheet that lists Ctrl+Alt+R as an ordinary bind is not wrong about
+        the key, but it cannot say that the bind lives in a different file and calls
+        a command the installer has not shipped yet -- which is the part a person
+        troubleshooting a dead shortcut needs.
+        """
+        payload = {e["id"]: e for e in list_json()}
+        recovery = payload["recovery.reapply-defaults"]
+        self.assertTrue(recovery["static"])
+        self.assertTrue(recovery["enabled"])
+        self.assertFalse(payload["reserved.ctrl-alt-backspace"]["enabled"])
+        self.assertTrue(payload["reserved.ctrl-alt-backspace"]["reserved"])
+        self.assertFalse(payload["applications.terminal"]["static"])
+
+
+class ConfirmationRule(unittest.TestCase):
+    """Nothing that ends a session or the machine goes on a key without a menu.
+
+    A key that logs out is a key that logs out by accident: a mistyped combination,
+    a child, a cat. The rule is not "never bind these" but "bind the confirmation",
+    and the shell already draws one, so both halves are asserted -- the refusal and
+    the thing that is allowed instead.
+    """
+
+    def errors(self, action: Dict[str, Any]) -> List[kb.Problem]:
+        problems = kb.validate(
+            [make_binding(id="destructive", mods=["SUPER", "SHIFT"], key="E",
+                          action=action)], kb.ROOT)
+        return [p for p in problems if p.severity == kb.ERROR]
+
+    def test_the_compositor_exit_dispatcher_is_refused(self):
+        errors = self.errors({"type": "dispatch", "dispatcher": "exit"})
+        self.assertTrue(any("hl.dsp.exit" in p.message for p in errors),
+                        [str(p) for p in errors])
+
+    def test_every_spelling_of_a_destructive_session_action_is_refused(self):
+        """The same mistake is reachable three ways, so all three are covered."""
+        for action in (
+            {"type": "noctalia", "verb": "session", "args": ["logout"]},
+            {"type": "noctalia", "verb": "session", "args": ["shutdown"]},
+            {"type": "noctalia", "verb": "session", "args": ["reboot"]},
+            {"type": "exec", "command": ["noctalia", "msg", "session", "logout"]},
+            {"type": "exec", "command": ["systemctl", "poweroff", "-i"]},
+            {"type": "exec", "command": ["loginctl", "terminate-session"]},
+            {"type": "exec", "command": ["hyprctl", "dispatch", "exit"]},
+            {"type": "exec", "command": ["/usr/bin/reboot"]},
+        ):
+            with self.subTest(action=action):
+                errors = self.errors(action)
+                self.assertTrue(any("the moment the key goes down" in p.message
+                                    for p in errors),
+                                f"not refused: {[str(p) for p in errors]}")
+
+    def test_the_session_menu_is_allowed_because_the_menu_is_the_confirmation(self):
+        for action in (
+            {"type": "noctalia", "verb": "panel-toggle", "args": ["session"]},
+            {"type": "exec", "command": ["noctalia", "msg", "panel-toggle", "session"]},
+        ):
+            with self.subTest(action=action):
+                self.assertEqual([], [str(p) for p in self.errors(action)],
+                                 "the menu that asks before ending a session was "
+                                 "refused by the rule that exists to make people use it")
+
+    def test_lock_and_suspend_are_not_treated_as_destructive(self):
+        """Both are undoable: logging back in, or waking the machine."""
+        for action in (
+            {"type": "exec", "command": ["noctalia", "msg", "session", "lock"]},
+            {"type": "noctalia", "verb": "session", "args": ["suspend"]},
+            {"type": "noctalia", "verb": "session", "args": ["lock-and-suspend"]},
+        ):
+            with self.subTest(action=action):
+                self.assertEqual([], [str(p) for p in self.errors(action)])
+
+    def test_the_shipped_record_binds_the_menu_and_not_the_action(self):
+        bindings = kb.default_record(kb.ROOT)["bindings"]
+        exit_entry = next(b for b in bindings if b["id"] == "session.exit-menu")
+        self.assertEqual([], [str(p) for p in self.errors(exit_entry["action"])])
+        self.assertEqual(["session"], exit_entry["action"].get("args"),
+                         "Super+Shift+E must open the shell's own session panel, which "
+                         "is a builtin panel id in noctalia v5.4.1 "
+                         "(src/launcher/panel_catalog.cpp), rather than run logout")
+
+
+class LayerRule(unittest.TestCase):
+    """The modifier layers, kept for what each one is for."""
+
+    def problems(self, **over: Any) -> List[kb.Problem]:
+        return kb.validate([make_binding(id="layer", key="c", **over)], kb.ROOT)
+
+    def test_super_alt_is_empty_on_purpose(self):
+        problems = self.problems(mods=["SUPER", "ALT"], category="Test")
+        self.assertTrue(any(p.severity == kb.ERROR and "kept empty on purpose"
+                            in p.message for p in problems),
+                        [str(p) for p in problems])
+
+    def test_bare_ctrl_alt_outside_the_system_layer_is_an_error(self):
+        """An error, not a warning: the recovery combo lives on this exact layer."""
+        problems = self.problems(mods=["CTRL", "ALT"], category="Applications")
+        self.assertTrue(any(p.severity == kb.ERROR and "safety net" in p.message
+                            for p in problems), [str(p) for p in problems])
+
+    def test_bare_ctrl_alt_inside_the_system_layer_is_clean(self):
+        problems = self.problems(mods=["CTRL", "ALT"], category="System")
+        self.assertEqual(0, len([p for p in problems
+                                 if p.severity in (kb.ERROR, kb.CONFLICT)]),
+                         [str(p) for p in problems])
+
+    def test_super_ctrl_alt_outside_the_system_layer_is_reported_as_debt(self):
+        """A warning that names the two v1 binds, so the debt is printed every run.
+
+        Not an error, because both binds work and every sensible destination key is
+        already taken; relocating them belongs with the next laying-out of the map.
+        An invisible exception would be worse than a printed one.
+        """
+        problems = self.problems(mods=["SUPER", "CTRL", "ALT"],
+                                 category="Move Window Across Workspaces")
+        matching = [p for p in problems if "Super+Ctrl+Alt" in p.message]
+        self.assertEqual(1, len(matching), [str(p) for p in problems])
+        self.assertEqual(kb.WARNING, matching[0].severity)
+
+    def test_the_shipped_map_has_no_errors_and_only_the_known_layer_debt(self):
+        bindings = kb.merge(kb.default_record(kb.ROOT), {})
+        problems = kb.validate(bindings, kb.ROOT)
+        self.assertEqual(0, len([p for p in problems
+                                 if p.severity in (kb.ERROR, kb.CONFLICT)]),
+                         [str(p) for p in problems])
+        debt = [p for p in problems if "Super+Ctrl+Alt" in p.message]
+        self.assertEqual({"move.next", "move.previous"}, {p.binding_id for p in debt},
+                         "the layer debt is exactly the two v1 workspace moves; a third "
+                         "means something else moved into the recovery layer")
+
+    def test_the_primary_and_secondary_layers_are_ungoverned(self):
+        for mods in (["SUPER"], ["SUPER", "SHIFT"], ["SUPER", "CTRL"]):
+            with self.subTest(mods=mods):
+                problems = self.problems(mods=mods, category="Applications")
+                self.assertEqual(0, len([p for p in problems
+                                         if p.severity in (kb.ERROR, kb.CONFLICT)]),
+                                 [str(p) for p in problems])
+
+
+class StaticBindings(unittest.TestCase):
+    """A bind described in the record and implemented by hand in keybind.lua."""
+
+    def temp_root(self, hand_written: str) -> Path:
+        """A root with the files render_lua and the cross-check read."""
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / ".config" / "hypr").mkdir(parents=True)
+        (tmp / "data" / "design").mkdir(parents=True)
+        (tmp / ".config" / "hypr" / "keybind.lua").write_text(hand_written,
+                                                              encoding="utf-8")
+        (tmp / "data" / "design" / "keybinds.json").write_bytes(
+            (kb.ROOT / "data" / "design" / "keybinds.json").read_bytes())
+        return tmp
+
+    def binding(self, **over: Any) -> Dict[str, Any]:
+        base = make_binding(id="recovery.test", mods=["CTRL", "ALT"], key="R",
+                            category="System", static=True,
+                            action={"type": "exec",
+                                    "command": ["iarch-keybinds", "reset", "--all"]},
+                            unverified="Carried as unverified by the test that reads it.")
+        base.update(over)
+        return base
+
+    def test_the_render_skips_a_static_binding(self):
+        rendered = kb.render_lua([self.binding()], kb.ROOT, "test")
+        self.assertNotIn('hl.bind("CTRL + ALT + R"', rendered,
+                         "a static binding the render also emits is two handlers on "
+                         "one key, and which runs depends on require() order")
+
+    def test_the_shipped_record_and_the_static_file_agree(self):
+        bindings = kb.merge(kb.default_record(kb.ROOT), {})
+        self.assertEqual([], [str(p) for p in kb.static_bindings_agree(bindings, kb.ROOT)])
+
+    def test_a_static_binding_missing_from_the_file_is_an_error(self):
+        root = self.temp_root("-- nothing hand-written here\nreturn true\n")
+        problems = kb.static_bindings_agree([self.binding()], root)
+        self.assertTrue(any(p.severity == kb.ERROR and "has no hl.bind" in p.message
+                            for p in problems), [str(p) for p in problems])
+
+    def test_a_static_binding_running_a_different_command_is_an_error(self):
+        """The drift that matters: both files valid, disagreeing about the key."""
+        root = self.temp_root('hl.bind("CTRL + ALT + R", function() end)\nreturn true\n')
+        problems = kb.static_bindings_agree([self.binding()], root)
+        self.assertTrue(any(p.severity == kb.ERROR and "disagree" in p.message
+                            for p in problems), [str(p) for p in problems])
+
+    def test_a_missing_static_file_is_an_error_not_a_silence(self):
+        root = self.temp_root("return true\n")
+        (root / ".config" / "hypr" / "keybind.lua").unlink()
+        problems = kb.static_bindings_agree([self.binding()], root)
+        self.assertTrue(any(p.severity == kb.ERROR and "is missing" in p.message
+                            for p in problems), [str(p) for p in problems])
+
+    def test_a_non_static_binding_is_not_held_to_the_static_file(self):
+        root = self.temp_root("return true\n")
+        plain = self.binding(static=False, unverified=None)
+        plain.pop("unverified")
+        self.assertEqual([], [str(p) for p in kb.static_bindings_agree([plain], root)])
+
+
+class Reset(unittest.TestCase):
+    """`reset` is what the recovery combo runs, so it is tested as a command."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = Path(self.tmp.name) / "home"
+        (self.home / ".config" / "iarch").mkdir(parents=True)
+        self.override = self.home / ".config" / "iarch" / "keybinds.json"
+        self.session_lua = self.home / ".config" / "hypr" / "generated" / "keybinds.lua"
+        self.backups = self.home / ".local" / "state" / "iarch" / "backups"
+        self._saved = {k: os.environ.get(k) for k in ("HOME", "IARCH_CONFIG_DIR")}
+
+    def tearDown(self):
+        for key, value in self._saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self.tmp.cleanup()
+
+    def write_override(self, payload: Dict[str, Any]) -> None:
+        self.override.write_text(json.dumps(payload), encoding="utf-8")
+
+    def run_reset(self, *argv: str) -> int:
+        os.environ["HOME"] = str(self.home)
+        os.environ.pop("IARCH_CONFIG_DIR", None)
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+            code = kb.main(["reset", *argv])
+        self.output = buffer.getvalue()
+        return code
+
+    def test_reset_all_drops_the_override_and_keeps_a_backup(self):
+        self.write_override({"bindings": [{"id": "window.close", "key": "W",
+                                           "description": "mine"}]})
+        self.assertEqual(0, self.run_reset("--all"))
+        self.assertFalse(self.override.exists(), "the override survived a reset --all")
+        self.assertTrue(self.session_lua.is_file(), "no session file was written")
+        self.assertIn('hl.bind("SUPER + Q"', self.session_lua.read_text(encoding="utf-8"),
+                      "the shipped default for close-window did not come back")
+        self.assertEqual(1, len(list(self.backups.glob("*keybinds.json*.bak"))),
+                         "the person's map was deleted with no way back")
+
+    def test_reset_writes_the_session_copy_and_not_the_repository_artifact(self):
+        """The file the compositor reads is a copy, so fixing the repo fixes nothing."""
+        self.write_override({"bindings": [{"id": "window.close", "key": "W",
+                                           "description": "mine"}]})
+        before = kb.GENERATED.read_bytes()
+        self.assertEqual(0, self.run_reset("--all"))
+        self.assertEqual(before, kb.GENERATED.read_bytes(),
+                         "reset rewrote the checked-in artifact CI keeps fresh")
+        self.assertTrue(self.session_lua.is_file())
+
+    def test_reset_by_id_leaves_the_other_differences_alone(self):
+        self.write_override({"bindings": [
+            {"id": "window.close", "key": "W", "description": "mine"},
+            {"id": "applications.terminal", "key": "Return", "mods": ["SUPER", "CTRL"],
+             "description": "also mine"},
+        ]})
+        self.assertEqual(0, self.run_reset("window.close"))
+        kept = [e["id"] for e in json.loads(self.override.read_text(encoding="utf-8"))["bindings"]]
+        self.assertEqual(["applications.terminal"], kept,
+                         "a targeted reset must drop exactly the named difference")
+
+    def test_an_id_the_shipped_map_does_not_have_is_refused(self):
+        self.write_override({"bindings": [{"id": "window.close", "key": "W",
+                                           "description": "mine"}]})
+        self.assertEqual(2, self.run_reset("not.a.binding"))
+        self.assertTrue(self.override.exists(),
+                        "an unknown id changed the person's map")
+
+    def test_reset_with_no_target_says_what_it_needs(self):
+        self.assertEqual(2, self.run_reset())
+        self.assertIn("--all", self.output)
+
+    def test_a_reset_that_would_not_validate_changes_nothing(self):
+        """The safety is the ordering: refuse before touching, not undo after."""
+        self.write_override({"bindings": [{"id": "window.close", "key": "W",
+                                           "description": "mine"}]})
+        with unittest.mock.patch.object(kb, "default_record",
+                                        return_value=self.broken_record()) as patched:
+            self.assertEqual(1, self.run_reset("--all"))
+            self.assertTrue(patched.called)
+        self.assertTrue(self.override.exists(),
+                        "the override was dropped even though the reset was refused")
+        self.assertIn("nothing was changed", self.output)
+        self.assertFalse(self.session_lua.exists(),
+                         "a refused reset still wrote a session file")
+
+    @staticmethod
+    def broken_record() -> Dict[str, Any]:
+        record = kb.default_record(kb.ROOT)
+        record["bindings"][0]["key"] = "NotAKeysym"
+        return record
 
 
 if __name__ == "__main__":

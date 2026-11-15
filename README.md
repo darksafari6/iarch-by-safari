@@ -186,7 +186,8 @@ manager back. Those are listed in the installer output and in
 | Screen does not lock by itself | Idle is the shell's, not `hypridle`'s: `[idle.behavior.lock]` in `~/.config/noctalia/config.toml` locks after 900 s and `screen_off` follows at 960 s, both only while the shell runs. `SUPER + L` locks immediately. `.config/hypr/hypridle.conf` ships **unlaunched** on purpose — starting it beside the shell means two daemons racing to lock and suspend the same session — so if the shell is not running, add `hypridle` to the `exec_once` list in `.config/hypr/startup.lua` *and* disable every `[idle.behavior.*]` entry. See [`docs/glass-experience.md`](docs/glass-experience.md) |
 | Login screen does not match the session | Appearance only reaches it through Sync, which is manual: `noctalia msg greeter-sync`, or Settings → Security → Noctalia Greeter → **Sync Now**, then log out. Auto-sync ships off because each sync needs an administrator prompt unless you opt in with `sudo noctalia-greeter passwordless-sync enable <user>` |
 | Numeric keypad is off at the login screen | The greeter does not read Hyprland's `input {}`, and it locks Num Lock only when `/var/lib/noctalia-greeter/greeter.toml` says `numlock = true` — whatever its own documentation claims. The session's `numlock_by_default = true` does not reach it |
-| A shortcut does nothing | Check it in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md) — reserved keys are listed as not bound yet |
+| A shortcut does nothing | Check it in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md) — reserved keys are listed as not bound yet, and two binds carry an *unverified* note saying the thing they call is not built. To change a key, or to get the shipped map back, see [`docs/CUSTOMIZING-SHORTCUTS.md`](docs/CUSTOMIZING-SHORTCUTS.md) |
+| The whole keyboard map broke after a change | `Ctrl+Alt+R` re-applies the shipped map, or `python3 iarch/cli/iarch_keybinds.py reset --all` from a terminal — it backs your override up first. If the config fails so hard that no bind registers, the compositor trips its own emergency mode: `Super+Q` for a terminal, `Super+M` to exit. See [`docs/CUSTOMIZING-SHORTCUTS.md`](docs/CUSTOMIZING-SHORTCUTS.md#getting-back-to-the-map-that-ships) |
 | Something else | [`InstallNotes.md`](InstallNotes.md) has the long-form notes, including Arch ISO Wi-Fi before `archinstall` |
 
 Please open an issue with the output of the healthcheck script. Hardware
@@ -211,6 +212,7 @@ match on and in the historical documents under [`legacy/`](legacy/).
 | Reporting a security problem | [`SECURITY.md`](SECURITY.md) |
 | What changed, newest first | [`CHANGELOG.md`](CHANGELOG.md) |
 | The settings window, and the rules it is built under | [`docs/SETTINGS-APP.md`](docs/SETTINGS-APP.md) |
+| Changing a key, and what the checker refuses | [`docs/CUSTOMIZING-SHORTCUTS.md`](docs/CUSTOMIZING-SHORTCUTS.md) |
 | Where the design numbers live | [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) |
 | Claims not proven yet | [`docs/UNVERIFIED.md`](docs/UNVERIFIED.md) |
 | The frozen legacy v4 session | [`legacy/docs/V4-SESSION.md`](legacy/docs/V4-SESSION.md) |
