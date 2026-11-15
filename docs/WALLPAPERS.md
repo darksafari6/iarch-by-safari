@@ -14,6 +14,31 @@ pictures fit in.
 | Crimson Plasma | `assets/wallpapers/desktop-red.webp` | bundled | the red image this repository already shipped |
 | Tokyo Night Glass | `assets/wallpapers/desktop-tokyo-night.webp` | bundled | the Tokyo Night image this repository already shipped |
 
+Six more ship beside the presets, in `assets/wallpapers/desktop/`. They belong to
+no preset: they are the pictures a person picks from the shell's wallpaper
+folder, and the installer's **Wallpapers** step copies them into the directory
+the picker reads. They are described in `DESKTOP_WALLPAPERS` inside
+`iarch/cli/gen_wallpapers.py` and rendered by the same seeded pipeline, so there
+is one art pipeline here and not two.
+
+| Wallpaper | File | Style | Mean luminance |
+| :--- | :--- | :--- | :--- |
+| Obsidian Mesh | `assets/wallpapers/desktop/obsidian-mesh.webp` | mesh | 0.056 |
+| Midnight Aurora | `assets/wallpapers/desktop/midnight-aurora.webp` | aurora | 0.077 |
+| Ember Radial | `assets/wallpapers/desktop/ember-radial.webp` | radial | 0.042 |
+| Slate Diagonal | `assets/wallpapers/desktop/slate-diagonal.webp` | diagonal | 0.097 |
+| Deep Plasma | `assets/wallpapers/desktop/deep-plasma.webp` | plasma | 0.102 |
+| Graphite Veil | `assets/wallpapers/desktop/graphite-veil.webp` | mesh | 0.078 |
+
+All six are 3840x2160 WebP, between 21 KB and 37 KB, and all six are dark -- and
+dark is a measurement, not an adjective. `MAX_MEAN_LUMINANCE` in the generator is
+`0.14`: the mean of Pillow's grayscale conversion (ITU-R 601-2 luma) over the
+whole frame, divided by 255, where 0.0 is black and 1.0 is white. `--check`
+refuses a file above it, because a desktop this bright would stop making the
+glass panels read as panels. No image was downloaded to make them and no
+third-party artwork is in them, which is what each entry's `credit` says and what
+`tests/test_wallpapers.py` asserts.
+
 Generated art is 3840x2160 WebP and each file is inside a 600 KB budget; in
 practice they land between 25 KB and 50 KB, because a smooth field compresses
 hard. The two bundled images are **never rendered and never modified** by the
@@ -30,7 +55,11 @@ python3 -m venv /tmp/imgvenv && /tmp/imgvenv/bin/pip install Pillow
 /tmp/imgvenv/bin/python iarch/cli/gen_wallpapers.py --preset aurora
 /tmp/imgvenv/bin/python iarch/cli/gen_wallpapers.py --check    # verify what ships
 /tmp/imgvenv/bin/python iarch/cli/gen_wallpapers.py --dry-run  # report, write nothing
+/tmp/imgvenv/bin/python iarch/cli/gen_wallpapers.py --preset slate-diagonal  # one desktop wallpaper
 ```
+
+A run with no `--preset` renders the four generated presets and the six desktop
+wallpapers together; `--preset` accepts either kind of id.
 
 The render is seeded end to end: the gradient field comes from
 `random.Random(seed)` and the grain from a second generator derived from the same

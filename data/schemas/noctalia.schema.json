@@ -12,6 +12,7 @@
     "source",
     "diagnostics",
     "bar_container",
+    "bar_widgets",
     "color_roles",
     "color_roles_note",
     "palette",
@@ -79,6 +80,60 @@
         },
         "monitor_override_schema": {
           "type": "string"
+        }
+      }
+    },
+    "bar_widgets": {
+      "type": "object",
+      "required": [
+        "source",
+        "note",
+        "types",
+        "rejected"
+      ],
+      "additionalProperties": false,
+      "description": "The widget types Noctalia's bar factory registers, and the ones this project refuses to ship. A name the factory does not know draws nothing and logs a warning, so this list is the only thing standing between a config.toml and a bar with a silently missing widget.",
+      "properties": {
+        "source": {
+          "type": "string",
+          "pattern": "widget_factory\\.cpp"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 20
+        },
+        "types": {
+          "type": "array",
+          "minItems": 34,
+          "maxItems": 34,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*([_-][a-z0-9]+)*$"
+          }
+        },
+        "rejected": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 20
+              }
+            }
+          }
         }
       }
     },
@@ -294,6 +349,10 @@
         "not_in_upstream_schema": {
           "type": "boolean",
           "description": "This project wanted a setting upstream never declared. A test asserts nothing carries the flag: it exists so the wish is recorded as a wish."
+        },
+        "widget_list": {
+          "type": "boolean",
+          "description": "An array of bar widget names, so each entry has to be a type the shell's widget factory registers. Upstream declares these keys only as arrays: a name it does not know is logged as an unknown widget and draws nothing, which is a silent failure this project refuses at render time instead. The vocabulary is bar_widgets.types, and bar_widgets.rejected lists the registered types this project still declines to ship."
         },
         "write_only": {
           "type": "boolean",

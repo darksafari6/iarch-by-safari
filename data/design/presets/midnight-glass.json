@@ -86,8 +86,8 @@
         "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
         "package_arch": "papirus-icon-theme",
         "package_fedora": "papirus-icon-theme",
-        "verified": false,
-        "note": "Installed by install.sh today; the Fedora package name is not verified from this environment (docs/UNVERIFIED.md TP-13)."
+        "verified": true,
+        "note": "Arch's extra repository carries papirus-icon-theme: version 20260801-1, GPL-3.0, read from the package search JSON API on 2026-11-09. The 'Icons and cursors' step of install.sh fetches it with yay, so a mirror that lacks it costs an icon theme rather than the whole install. The Fedora package name is still unverified (docs/UNVERIFIED.md TP-13)."
       },
       {
         "id": "papirus-light",
@@ -97,7 +97,8 @@
         "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
         "package_arch": "papirus-icon-theme",
         "package_fedora": "papirus-icon-theme",
-        "verified": false
+        "verified": true,
+        "note": "The same Arch package provides Papirus-Light, verified the same way on 2026-11-09. The Fedora package name is still unverified (TP-13)."
       },
       {
         "id": "yaru",
@@ -108,7 +109,7 @@
         "package_arch": "yaru-icon-theme",
         "package_fedora": "yaru-icon-theme",
         "verified": false,
-        "note": "Installed by install.sh today; licence split between the code and the artwork, see THIRD_PARTY_NOTICES.md."
+        "note": "Fetched by the 'Icons and cursors' step of install.sh, which warns rather than stopping the install: neither the Arch nor the Fedora name is verified from this environment (TP-13). Licence split between the code and the artwork, see THIRD_PARTY_NOTICES.md."
       }
     ]
   },

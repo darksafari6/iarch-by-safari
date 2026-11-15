@@ -5,6 +5,106 @@ Notable changes to iArch by Safari, newest first. The format follows
 six-part plan in [`docs/ROADMAP.md`](docs/ROADMAP.md) rather than semantic
 versioning, because nothing here is a library anyone links against.
 
+## Unreleased — the installer wizard, the bar's widget vocabulary, and the desktop art
+
+This is the first slice of Part 6 of the roadmap: an installer that is safe to run twice and
+honest about what it changed. Before it, `install.sh` was one long sequence of `echo` and
+`pacman -S --noconfirm` calls — it reinstalled packages a machine already had, it put three
+package names that do not exist in Arch's repositories into the transaction whose failure
+aborts everything, and it never installed the icon themes, the wallpapers, the menu entry or
+the command wrappers the session's own configuration expects to find. It also shipped a bar
+whose widget list nobody had checked against the shell that draws it.
+
+### Added
+
+- **`lib/packages.sh`** — the package-state layer every transaction now goes through. It
+  refreshes the sync databases once per run, asks `pacman -Quq` which targets are actually out
+  of date, classifies each name as missing, outdated or current, prints the plan
+  (`core: 2 to install, 1 to update, 84 already current`) on stderr, and hands pacman and yay
+  `--needed` — pacman(8)'s own "do not reinstall the targets that are already up-to-date". A
+  machine that is already current opens no transaction at all. `tests/test_packages.sh` proves
+  the classification, the single `-Sy`, the `--needed` flag and the empty-transaction case
+  against a stubbed `pacman`, `yay` and `sudo`.
+- **The installer wizard** — 24 numbered steps, each printing `[ 7/24] Bluetooth` and then
+  `✓ done`, `– skipped: <reason>` or `✗ failed: <reason>`, a banner naming the step count and
+  the manifest path, notes indented under their step, and a summary
+  (`✓ 19 done   – 4 skipped   ✗ 1 failed`) that makes the script exit non-zero when anything
+  failed. `tests/test_installer_wizard.py` executes the extracted banner, step runners, reboot
+  prompt and main flow under a pty, asserts the step count and the flow agree, and refuses a
+  named package transaction that bypasses `lib/packages.sh`.
+- **Five installer steps that were missing**: *Icons and cursors* (Papirus, Yaru and Humanity
+  icon themes plus the Bibata cursor through `yay`, non-fatal, and skipping a cursor theme that
+  is already installed under either of its two names), *Session commands on PATH* (the five
+  `iarch-*` wrappers), *Session PATH* (`~/.config/environment.d/iarch-cli-path.conf`, because a
+  session a display manager starts reads no shell profile), *Menu entry* (the settings desktop
+  entry, the icon its `Icon=` key names, and `update-desktop-database` when the machine has it)
+  and *Wallpapers* (copies the committed art into the Pictures directory noctalia's picker
+  reads, skipping files that are already identical).
+- **`~/.local/state/iarch/install-manifest.txt`** — every path the installer creates outside
+  the repository, one per line, so a second run knows what it owns and a person can read what
+  an install did.
+- **`bar_widgets` in `data/design/noctalia.json`** — the 34 widget types noctalia v5.4.1's
+  `widget_factory.cpp` registers, read out of `kBuiltinWidgets`, plus six this project refuses
+  to ship with the reason beside each. `render_noctalia.py` now refuses to render a bar array
+  naming a widget the factory does not register — upstream logs `widget factory: unknown
+  widget` and draws nothing while the config still validates, which is a silent failure — or
+  one of the six refused names.
+- **Six 4K desktop wallpapers** in `assets/wallpapers/desktop/`, one per gradient style the
+  generator has, each rendered from a recorded seed by `gen_wallpapers.py --preset <id>` and
+  each darker than `MAX_MEAN_LUMINANCE = 0.14`, measured as the mean of the ITU-R 601-2 luma
+  channel. Dark is a measurement rather than an adjective because a bright desktop stops making
+  glass panels read as panels. No third-party artwork: the generator is the author of all six.
+
+### Changed
+
+- The shipped bar's `end` array gains `clipboard` and `privacy`. `clipboard` is a registered
+  panel with no keybind and no bar entry, so clipboard history could not be opened at all;
+  `privacy` is the session's only indicator that a microphone or camera is in use. `taskbar`
+  stays refused: `dock.show_running` already draws running windows.
+- `scripts/iarch-link-cli.sh` links five commands instead of two — `iarch-keybinds`,
+  `iarch-cheatsheet`, `iarch-settings`, `iarch-control-center` and `iarch-healthcheck` — which
+  is every name the session configuration calls.
+- Papirus dark and light are `verified: true` in all six colour presets, with the registry
+  evidence in the entry's note, and `data/schemas/preset.schema.json` now says what `verified`
+  certifies: that `package_arch` was read out of Arch's own registry, and nothing about
+  `package_fedora`, which no environment here can check.
+- `THIRD_PARTY_NOTICES.md` and `data/licenses.json` carry real versions for
+  `papirus-icon-theme` (20260801-1, in `extra`) and `bibata-cursor` (2.0.7-1 in the AUR as
+  `bibata-cursor-theme-bin`, which both Provides and Conflicts `bibata-cursor-theme`).
+
+### Fixed
+
+- `papirus-folders` and `bibata-cursor-theme` were in the fatal core package list although
+  neither is in Arch's repositories — the package search JSON API returns no result for either
+  — so `install.sh` aborted at *Core packages* on any machine that had only the official
+  repositories, before it configured anything. Both moved to a step that warns instead (TP-20).
+- The icon and cursor themes the presets name were never installed by anything, so a fresh
+  install drew the cursor and icon theme the distribution happened to have.
+- **Every `install.sh:NNN` citation in the repository pointed at the wrong line** after the
+  restructure — in three design records (`greeter.json`, `startup.json`, `xdg-defaults.json`),
+  in `SECURITY.md`, in `docs/UNVERIFIED.md`, in two source docstrings, and in the header
+  `gen_startup_lua.py` renders into `.config/hypr/startup.lua`. `docs/FONTS.md` and `README.md`
+  also named `bibata-cursor-theme` as the package Arch installs, which it is not. Each was
+  re-pointed by reading the file rather than by adding an offset to the old number, because an
+  offset assumes nothing else moved — the assumption that caused the drift. A stale line number
+  does not read as a gap; it reads as a lie about code that is correct.
+- That class of drift is now checked rather than repaired: `tests/test_citations.py` scans every
+  citation of both installers in the repository, refuses one that points past the end of its
+  file, and for every citation in a design record or in `SECURITY.md` asserts the cited lines
+  still contain the token the citation is about. A new citation in a record arrives with an
+  expectation or the suite fails.
+
+### Known gaps
+
+- `--dry-run` still does not exist, `pacman -Syu --noconfirm` still upgrades the whole system
+  before the AUR builds, and the `pacman -Rns` removal path is unchanged (INS-01).
+- Nothing reads the install manifest yet (INS-08), and whether a greetd-started session
+  inherits the `environment.d` file that puts `~/.local/bin` on its `PATH` is unobserved
+  (INS-07) — which is what KB-01 and SET-10 still turn on.
+- No bar, wallpaper picker, icon theme or line of wizard output has been seen on a real
+  machine: no compositor, display, package manager or terminal emulator exists in the
+  environment these changes were made in (TP-19, WAL-03, INS-01).
+
 ## Unreleased — the keyboard map, and the record that owns it
 
 This is Part 5 of the roadmap: shortcuts as data. Before it, the keyboard map

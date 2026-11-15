@@ -13,7 +13,7 @@ So these tests check the render against ``data/design/startup.json`` -- the
 bindings, the event names and the reason beside every command -- and then check
 the two things a renderer could get right and still break:
 
-* the lines both installers rewrite with ``sed``. ``install.sh:1047-1049`` and
+* the lines both installers rewrite with ``sed``. ``install.sh:1169-1171`` and
   ``fedora_install.sh:845-847`` flip ``local enable_nvidia_optional = false`` as a
   whole line, and ``fedora_install.sh:834`` replaces *every* line containing
   ``polkit-gnome-authentication-agent-1`` with a quoted table entry. A render that

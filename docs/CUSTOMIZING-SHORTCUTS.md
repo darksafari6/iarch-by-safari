@@ -243,9 +243,11 @@ evidence they describe the same thing.
 **The recovery combo is bound, and the command it calls now exists.**
 `scripts/iarch-link-cli.sh` writes `~/.local/bin/iarch-keybinds`, and
 `tests/test_cli_launchers.py` runs that name end to end. What has not happened is
-the bind *firing*: no installer has been run on a machine and no compositor exists
-here, so whether a session's `PATH` — which a display manager starts without
-reading your shell profile — actually reaches `~/.local/bin` is unobserved. Until
+the bind *firing*: `install.sh` runs that script and writes
+`~/.config/environment.d/iarch-cli-path.conf` because a display manager starts a
+session without reading your shell profile, but no installer has been run on a
+machine and no compositor exists here, so whether the session actually inherits
+that `PATH` is unobserved (INS-07). Until
 it does, the bind opens a terminal and says on stderr which command to run rather
 than failing silently. The record carries this as an `unverified` note, and
 `docs/UNVERIFIED.md` keeps it open as KB-01.

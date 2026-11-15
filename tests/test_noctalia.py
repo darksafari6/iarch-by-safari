@@ -1634,5 +1634,139 @@ class Wallpaper(unittest.TestCase):
         parsed = tomllib.loads(noctalia.REPO_CONFIG.read_text(encoding="utf-8"))
         self.assertEqual(self.wallpaper, parsed["wallpaper"])
 
+
+class TheBarWidgetVocabulary(unittest.TestCase):
+    """Which widgets the bar may name, and what a name it may not would do.
+
+    Upstream's failure mode is the quiet kind: ``WidgetFactory::create`` logs
+    ``widget factory: unknown widget`` and returns nothing
+    (``src/shell/bar/widget_factory.cpp:431-432``), so a misspelled name leaves a
+    bar one widget short with a config that still validates. These tests are the
+    reason that cannot ship.
+    """
+
+    #: Read out of ``kBuiltinWidgets`` at ``src/shell/bar/widget_factory.cpp:147-360``
+    #: at v5.4.1, in registration order. Written down a second time on purpose: the
+    #: record is what the renderer checks against, so a record that silently lost a
+    #: type would satisfy every test that read the record alone.
+    FACTORY_TYPES = [
+        "active_window", "audio_visualizer", "battery", "bluetooth", "brightness",
+        "caffeine", "clipboard", "clock", "control-center", "custom_button",
+        "debug_indicator", "keyboard_layout", "launcher", "lock_keys", "media",
+        "network", "nightlight", "notifications", "power_profile", "privacy",
+        "screenshot", "session", "settings", "spacer", "sysmon", "taskbar", "test",
+        "text", "theme_mode", "tray", "volume", "wallpaper", "weather", "workspaces",
+    ]
+
+    def setUp(self) -> None:
+        self.vocabulary = SURFACE["bar_widgets"]
+        self.refused = {entry["type"]: entry["reason"] for entry in self.vocabulary["rejected"]}
+        self.bar = tomllib.loads(noctalia.REPO_CONFIG.read_text(encoding="utf-8"))["bar"]["default"]
+
+    def test_the_record_is_the_factory_list(self):
+        self.assertEqual(self.FACTORY_TYPES, self.vocabulary["types"],
+                         "the recorded vocabulary and the registered one disagree, so "
+                         "the renderer is checking against a list the shell does not use")
+
+    def test_the_types_are_not_uniformly_hyphenated_and_the_docs_filenames_are(self):
+        """The trap this record exists for.
+
+        ``docs/user/bar/widgets/power-profile.mdx`` documents the type
+        ``power_profile``. Anyone who takes a widget name from a documentation
+        filename gets a name the factory does not register, and gets no error.
+        """
+        hyphenated = [name for name in self.vocabulary["types"] if "-" in name]
+        self.assertEqual(["control-center"], hyphenated,
+                         "the hyphenated set changed upstream; re-read widget_factory.cpp "
+                         "before trusting any name in it")
+        for filename_shaped in ("power-profile", "keyboard-layout", "active-window",
+                                "audio-visualizer", "custom-button", "lock-keys",
+                                "theme-mode"):
+            self.assertNotIn(filename_shaped, self.vocabulary["types"])
+            self.assertNotIn(filename_shaped, self.refused)
+
+    def test_the_shipped_bar_names_only_widgets_the_project_accepts(self):
+        allowed = set(self.vocabulary["types"]) - set(self.refused)
+        for group in ("start", "center", "end"):
+            for name in self.bar[group]:
+                with self.subTest(group=group, widget=name):
+                    self.assertIn(name, allowed,
+                                  f"{group} names a widget the factory would draw "
+                                  "nothing for, or one this project refuses")
+
+    def test_the_shipped_config_declares_no_widget_instances(self):
+        """With no ``[widget.<name>]`` table a name in the arrays *is* the type.
+
+        ``WidgetFactory::create`` resolves a name through ``m_config.widgets`` first
+        and falls back to treating the name as a type, so this is the assumption the
+        vocabulary check rests on. If instances are ever declared, the check has to
+        learn about them rather than keep passing on the fallback alone.
+        """
+        parsed = tomllib.loads(noctalia.REPO_CONFIG.read_text(encoding="utf-8"))
+        self.assertNotIn("widget", parsed)
+        self.assertNotIn("widgets", parsed)
+
+    def test_the_renderer_refuses_a_name_the_factory_does_not_register(self):
+        doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+        doc["bar"]["default"]["end"] = ["keyboard-layout"]
+        problems = noctalia.validate(doc, SURFACE)
+        self.assertEqual(1, len(problems))
+        self.assertIn("is not a widget type", problems[0])
+        self.assertIn("unknown widget", problems[0],
+                      "the message has to name upstream's own failure, or the fix "
+                      "it points at is a guess")
+
+    def test_the_renderer_refuses_a_registered_widget_this_project_declined(self):
+        for name in sorted(self.refused):
+            with self.subTest(widget=name):
+                doc = render(noctalia.DEFAULT_PRESET, TOKENS["default_intensity"])
+                doc["bar"]["default"]["end"] = [name]
+                problems = noctalia.validate(doc, SURFACE)
+                self.assertEqual(1, len(problems))
+                self.assertIn("refuses to ship", problems[0])
+                self.assertIn(self.refused[name], problems[0],
+                              "a refusal has to carry its reason, or the next reader "
+                              "removes it")
+
+    def test_every_refusal_names_a_type_that_really_exists(self):
+        """A refusal for a type upstream never registered is a lie about the pin."""
+        for entry in self.vocabulary["rejected"]:
+            with self.subTest(widget=entry["type"]):
+                self.assertIn(entry["type"], self.vocabulary["types"])
+                self.assertGreaterEqual(len(entry["reason"]), 20)
+
+    def test_the_arrays_carry_the_widget_list_flag(self):
+        keys = SURFACE["sections"]["bar.default"]["keys"]
+        for group in ("start", "center", "end"):
+            with self.subTest(group=group):
+                self.assertTrue(keys[group].get("widget_list"),
+                                f"{group} lost its widget_list flag, so the renderer "
+                                "stopped checking it")
+
+    def test_the_two_panels_nothing_else_could_open_are_in_the_bar(self):
+        """Why the layout changed: clipboard history and the mic/camera indicator.
+
+        Neither has a bind in ``data/keybinds.default.json``, so before this the
+        shell had a clipboard panel nobody could open and no indication at all of
+        a client holding the microphone.
+        """
+        for name in ("clipboard", "privacy"):
+            with self.subTest(widget=name):
+                self.assertIn(name, self.bar["end"])
+        bindings = json.loads((ROOT / "data" / "keybinds.default.json").read_text(encoding="utf-8"))
+        text = json.dumps(bindings).lower()
+        for name in ("clipboard", "privacy"):
+            self.assertNotIn(name, text,
+                             f"{name} now has a bind too, so the bar entry is a "
+                             "duplicate and this test should be re-read")
+
+    def test_the_dock_is_why_there_is_no_taskbar(self):
+        parsed = tomllib.loads(noctalia.REPO_CONFIG.read_text(encoding="utf-8"))
+        self.assertTrue(parsed["dock"]["enabled"])
+        self.assertTrue(parsed["dock"]["show_running"])
+        self.assertIn("taskbar", self.refused,
+                      "the dock shows running windows; a taskbar would draw them twice")
+
+
 if __name__ == "__main__":
     unittest.main()

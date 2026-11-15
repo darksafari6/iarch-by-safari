@@ -227,5 +227,134 @@ class ShippedArt(unittest.TestCase):
         self.assertEqual(before, after)
 
 
+
+class TheDesktopSet(unittest.TestCase):
+    """Six wallpapers that belong to no preset: what they promise on paper.
+
+    A preset's wallpaper is part of that preset's identity; these are the
+    pictures a person picks from the shell's wallpaper folder, and
+    ``install.sh`` copies them into the directory the picker reads. They are
+    described beside the code that renders them so there is one art pipeline in
+    this repository, not two.
+    """
+
+    def test_there_are_six_and_their_ids_are_unique(self):
+        ids = [str(entry["id"]) for entry in gw.DESKTOP_WALLPAPERS]
+        self.assertEqual(6, len(ids), f"the set is {ids}")
+        self.assertEqual(len(ids), len(set(ids)))
+
+    def test_every_entry_is_a_gradient_the_renderer_accepts(self):
+        for entry in gw.DESKTOP_WALLPAPERS:
+            with self.subTest(wallpaper=entry["id"]):
+                self.assertIn(entry["style"], gw.STYLES)
+                stops = entry["stops"]
+                self.assertTrue(2 <= len(stops) <= 6, stops)
+                for stop in stops:
+                    gw.parse_hex(str(stop), f"{entry['id']}.stops")
+                self.assertIsInstance(entry["seed"], int)
+                self.assertGreaterEqual(float(entry["grain"]), 0.0)
+                self.assertTrue(0.0 <= float(entry["vignette"]) <= 1.0)
+
+    def test_the_seeds_are_distinct_so_the_frames_are_not_the_same_picture(self):
+        seeds = [entry["seed"] for entry in gw.DESKTOP_WALLPAPERS]
+        self.assertEqual(len(seeds), len(set(seeds)), seeds)
+
+    def test_every_style_in_the_renderer_is_used_by_at_least_one_wallpaper(self):
+        used = {str(entry["style"]) for entry in gw.DESKTOP_WALLPAPERS}
+        self.assertEqual(set(gw.STYLES), used,
+                         "a style exists that the dark set never exercises, so a "
+                         "regression in it would ship untested")
+
+    def test_every_entry_credits_the_generator_and_no_third_party_art(self):
+        for entry in gw.DESKTOP_WALLPAPERS:
+            with self.subTest(wallpaper=entry["id"]):
+                self.assertIn("gen_wallpapers.py", str(entry["credit"]))
+                self.assertIn("No third-party artwork", str(entry["credit"]))
+
+    def test_the_path_is_the_id_and_the_directory_is_the_desktop_one(self):
+        for entry in gw.DESKTOP_WALLPAPERS:
+            path = gw.desktop_path(entry)
+            self.assertEqual(gw.DESKTOP_DIR, path.parent)
+            self.assertEqual(f"{entry['id']}.webp", path.name)
+
+    def test_the_installer_deploys_the_desktop_directory(self):
+        installer = (ROOT / "install.sh").read_text(encoding="utf-8")
+        self.assertIn("assets/wallpapers/desktop/*.webp", installer,
+                      "the installer stopped copying the desktop set, so the "
+                      "picker would offer nothing this repository shipped")
+
+    def test_the_document_lists_every_one_of_them(self):
+        document = (ROOT / "docs" / "WALLPAPERS.md").read_text(encoding="utf-8")
+        for entry in gw.DESKTOP_WALLPAPERS:
+            with self.subTest(wallpaper=entry["id"]):
+                self.assertIn(str(entry["id"]), document)
+        self.assertIn("MAX_MEAN_LUMINANCE", document,
+                      "the darkness ceiling is a number, and the document that "
+                      "explains the art has to say so")
+
+
+@unittest.skipUnless(have_pillow(), "Pillow is not installed; rendering is skipped")
+class RenderedDesktopArt(unittest.TestCase):
+    """The committed files, measured rather than admired."""
+
+    def test_the_shipped_set_is_4k_webp_inside_the_budget_and_dark(self):
+        from PIL import Image
+
+        for entry in gw.DESKTOP_WALLPAPERS:
+            path = gw.desktop_path(entry)
+            with self.subTest(wallpaper=entry["id"]):
+                self.assertTrue(path.is_file(), f"{path} is not committed")
+                with Image.open(path) as image:
+                    self.assertEqual(gw.TARGET, image.size)
+                    self.assertEqual("WEBP", image.format)
+                self.assertLessEqual(path.stat().st_size, BUDGET)
+                self.assertLessEqual(gw.mean_luminance(path), gw.MAX_MEAN_LUMINANCE)
+
+    def test_a_render_is_byte_identical_to_a_second_render(self):
+        entry = gw.DESKTOP_WALLPAPERS[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            first = Path(tmp) / "first.webp"
+            second = Path(tmp) / "second.webp"
+            gw.render_preset(gw.as_preset(entry), first, BUDGET, gw.DEFAULT_QUALITY)
+            gw.render_preset(gw.as_preset(entry), second, BUDGET, gw.DEFAULT_QUALITY)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+
+    def test_changing_the_seed_changes_the_picture(self):
+        entry = dict(gw.DESKTOP_WALLPAPERS[0])
+        other = dict(entry, seed=int(entry["seed"]) + 1)
+        with tempfile.TemporaryDirectory() as tmp:
+            first = Path(tmp) / "first.webp"
+            second = Path(tmp) / "second.webp"
+            gw.render_preset(gw.as_preset(entry), first, BUDGET, gw.DEFAULT_QUALITY)
+            gw.render_preset(gw.as_preset(other), second, BUDGET, gw.DEFAULT_QUALITY)
+            self.assertNotEqual(first.read_bytes(), second.read_bytes())
+
+    def test_check_refuses_a_desktop_wallpaper_that_is_not_dark(self):
+        """The ceiling has to be load-bearing, not decorative."""
+        ceiling = gw.MAX_MEAN_LUMINANCE
+        gw.MAX_MEAN_LUMINANCE = 0.001
+        try:
+            problems = gw.check(BUDGET)
+        finally:
+            gw.MAX_MEAN_LUMINANCE = ceiling
+        self.assertTrue(any("mean luminance" in problem for problem in problems),
+                        "a bright frame passed --check, so the darkness promise is "
+                        "not actually enforced")
+
+    def test_check_refuses_a_file_the_desktop_set_does_not_describe(self):
+        stray = gw.DESKTOP_DIR / "not-described-anywhere.webp"
+        stray.write_bytes(b"")
+        try:
+            problems = gw.check(BUDGET)
+        finally:
+            stray.unlink()
+        self.assertTrue(any(problem.startswith("orphan:") and
+                            "not-described-anywhere" in problem
+                            for problem in problems), problems)
+
+    def test_check_is_clean_for_what_ships(self):
+        self.assertEqual([], gw.check(BUDGET))
+
+
 if __name__ == "__main__":
     unittest.main()

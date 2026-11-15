@@ -269,6 +269,20 @@ second run changes nothing; a failed run reports exactly what it touched and whe
 `tools/preflight.py` runs before any privileged step; and every `INS-` item is either closed with
 evidence or still listed.
 
+**Landed so far** — this is how far the installer work has got, not the whole part. `lib/packages.sh`
+decides what every package step installs: one `-Sy` per run, each target classified from the local
+database, the plan printed before anything is fetched, `--needed` on every named transaction, and no
+transaction at all on a machine that is already current, which is the reviewed half of `INS-01`.
+`install.sh` runs 24 numbered steps that each print a verdict, ends with a summary that fails the run
+when a step failed, and records every path it creates outside the repository in
+`~/.local/state/iarch/install-manifest.txt`. The icon and cursor themes the presets name are installed
+at last, in a step that warns rather than aborting, and three package names that are not in Arch's
+repositories came out of the transaction whose failure stops everything (`TP-20`). Still open:
+`--noconfirm` on `pacman -Syu` and on the removal path (`INS-01`), narrow ownership changes
+(`INS-02`), a reversible and logged display-manager switch (`INS-03`), `tools/preflight.py`, a
+manifest-driven `uninstall.sh` (`INS-08`), whether a greetd-started session inherits the `PATH` the
+installer writes (`INS-07`), and a runtime mechanism for the icon theme (`TP-19`).
+
 ## Part 7 — Shortcut system
 
 **Goal:** `Super+H` shows every shortcut, searchable, in glass.

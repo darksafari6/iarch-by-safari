@@ -129,11 +129,12 @@ Pointer theme the session exports to Hyprland, XWayland and Qt.
 
 - **License:** GPL-3.0-only
 - **Copyright:** Copyright (c) 2018 Abdurahman
+- **Version checked:** 2.0.7-1
 - **Upstream:** https://github.com/ful1e5/Bibata_Cursor
 - **Used by:**
   - `.config/hypr/themes/theme.lua`
   - `legacy/config/gtk-3.0/settings.ini`
-- **Notes:** Bibata-Modern-Classic at size 24 is set through HYPRCURSOR_THEME, XCURSOR_THEME and QT_CURSOR_THEME. Arch's install.sh installs bibata-cursor-theme (line 424); Fedora's package is added but its name is unverified (TP-18).
+- **Notes:** Bibata-Modern-Classic at size 24 is set through HYPRCURSOR_THEME, XCURSOR_THEME and QT_CURSOR_THEME. Arch's install.sh fetches it in its 'Icons and cursors' step through yay, as bibata-cursor-theme-bin: the AUR's own RPC interface gives version 2.0.7-1, GPL-3.0-or-later, and says that package both Provides and Conflicts bibata-cursor-theme. Neither name is in Arch's repositories -- the package search JSON API returns no result for either, checked 2026-11-09 -- so the step installs the binary package unless a Bibata theme is already present, and warns instead of aborting if it cannot. Fedora's package is added but its name is unverified (TP-18).
 - **Open verification items:** `TP-18` in `docs/UNVERIFIED.md`
 
 ### DejaVu fonts
@@ -282,7 +283,8 @@ Folder colour script installed alongside the Papirus icon theme.
 - **Upstream:** https://github.com/PapirusDevelopmentTeam/papirus-folders
 - **Used by:**
   - `install.sh`
-- **Notes:** License read from the upstream repository metadata on 2026-11-10.
+- **Notes:** Not in Arch's repositories: the package search JSON API returns no result (checked 2026-11-09), and which third-party repository carries it could not be confirmed from this environment, so install.sh fetches it in a call of its own and only warns when that fails -- one unverifiable name must not take the verified ones with it (TP-20). License read from the upstream repository metadata on 2026-11-10.
+- **Open verification items:** `TP-20` in `docs/UNVERIFIED.md`
 
 ### Papirus icon theme
 
@@ -290,10 +292,12 @@ Icon theme selected by the session presets.
 
 - **License:** GPL-3.0-only
 - **Copyright:** Copyright (c) Papirus Development Team
+- **Version checked:** 20260801-1
 - **Upstream:** https://github.com/PapirusDevelopmentTeam/papirus-icon-theme
 - **Used by:**
   - `legacy/config/gtk-3.0/settings.ini`
   - `install.sh`
+- **Notes:** In Arch's extra repository: version 20260801-1, GPL-3.0, read from the package search JSON API on 2026-11-09. install.sh fetches it in the 'Icons and cursors' step rather than in its fatal core package list, so a mirror that lacks it costs the icon theme and not the install.
 
 ### Satty
 

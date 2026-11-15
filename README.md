@@ -95,15 +95,26 @@ On Fedora, the same three steps with `sudo dnf install git -y` and
 
 Both scripts are interactive: they ask about a default install, NVIDIA, printer
 support, gaming packages, which packages to remove, browser, audio stack and
-whether to reboot. Every file they replace is backed up first with a
-`.bak.<timestamp>` suffix, and additions are recorded so nothing is removed
-silently later.
+whether to reboot. `install.sh` then runs 24 numbered steps — repositories,
+packages, the configuration payload, icon and cursor themes, the session
+commands on `PATH`, the menu entry, the wallpapers and the login manager — and
+each one prints `✓ done`, `– skipped: <reason>` or `✗ failed: <reason>`, with a
+summary at the end. Every file it replaces is backed up first with a
+`.bak.<timestamp>` suffix, every file it creates outside the repository is
+recorded in `~/.local/state/iarch/install-manifest.txt`, and additions are
+recorded so nothing is removed silently later.
 
-**`--dry-run` does not exist yet.** It is scheduled for Part 6, together with the
-rest of the installer hardening (the `--noconfirm` package installs, the
-`/etc/pacman.conf` edits and the display-manager switch). Until then, the way to
-see what will happen is to read the script and [`SECURITY.md`](SECURITY.md), and
-to run it on a machine you can reinstall.
+**A run on a machine that is already up to date installs nothing.** Every
+package step goes through `lib/packages.sh`, which refreshes the sync databases
+once, asks `pacman -Qu` which of its targets are actually out of date, prints
+the plan (`install 3, update 1, current 84`) and passes `--needed`, so pacman
+skips targets that are already current instead of reinstalling them.
+
+**`--dry-run` does not exist yet.** It is scheduled for the rest of Part 6,
+together with the remaining installer hardening (the `/etc/pacman.conf` edits and
+the display-manager switch, `INS-03`). Until then, the way to see what will
+happen is to read the script and [`SECURITY.md`](SECURITY.md), and to run it on a
+machine you can reinstall.
 
 ## Shortcuts
 
@@ -182,7 +193,7 @@ manager back. Those are listed in the installer output and in
 | Nothing to check against | `bash scripts/iarch-healthcheck.sh` reports the shell, compositor and audio without changing anything |
 | Black screen or no login prompt after install | Switch to a TTY, then `sudo systemctl disable greetd && sudo systemctl enable sddm` |
 | Shell looks wrong or refuses a setting | Run `noctalia config validate`; GUI overrides in `~/.local/state/noctalia/settings.toml` win over the shipped profile |
-| Terminal font or cursor theme is not what the config says | Neither installer provides `JetBrainsMono Nerd Font Mono` yet (`TP-13`), so the terminal falls back to a system monospace. Bibata is installed on Arch (`install.sh:424`) and added on Fedora, its name unverified (`TP-18`). Install a Nerd Font package, or let the defaults stand |
+| Terminal font or cursor theme is not what the config says | Neither installer provides `JetBrainsMono Nerd Font Mono` yet (`TP-13`), so the terminal falls back to a system monospace. Bibata is installed on Arch by the installer's *Icons and cursors* step, as `bibata-cursor-theme-bin` from the AUR, and added on Fedora, its name unverified (`TP-18`). Install a Nerd Font package, or let the defaults stand |
 | Screen does not lock by itself | Idle is the shell's, not `hypridle`'s: `[idle.behavior.lock]` in `~/.config/noctalia/config.toml` locks after 900 s and `screen_off` follows at 960 s, both only while the shell runs. `SUPER + L` locks immediately. `.config/hypr/hypridle.conf` ships **unlaunched** on purpose — starting it beside the shell means two daemons racing to lock and suspend the same session — so if the shell is not running, add `hypridle` to the `exec_once` list in `.config/hypr/startup.lua` *and* disable every `[idle.behavior.*]` entry. See [`docs/glass-experience.md`](docs/glass-experience.md) |
 | Login screen does not match the session | Appearance only reaches it through Sync, which is manual: `noctalia msg greeter-sync`, or Settings → Security → Noctalia Greeter → **Sync Now**, then log out. Auto-sync ships off because each sync needs an administrator prompt unless you opt in with `sudo noctalia-greeter passwordless-sync enable <user>` |
 | Numeric keypad is off at the login screen | The greeter does not read Hyprland's `input {}`, and it locks Num Lock only when `/var/lib/noctalia-greeter/greeter.toml` says `numlock = true` — whatever its own documentation claims. The session's `numlock_by_default = true` does not reach it |

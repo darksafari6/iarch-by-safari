@@ -192,6 +192,31 @@ class TheLinker(IsolatedRun):
         self.assertTrue(bash_syntax_ok(LINKER))
         self.assertIn(HEADER, LINKER.read_text(encoding="utf-8").splitlines()[1])
 
+    def test_every_command_in_scripts_is_linked_except_the_linker(self):
+        """A command nobody puts on PATH is a command the docs cannot tell you to run.
+
+        The list is compared against the directory rather than written down twice, so
+        adding ``scripts/iarch-something.sh`` without linking it fails here instead of
+        shipping a name that resolves on a developer's machine and nowhere else.
+        """
+        linked = dict(linker_pairs())
+        on_disk = {path.stem: f"scripts/{path.name}"
+                   for path in sorted((ROOT / "scripts").glob("iarch-*.sh"))}
+        on_disk.pop("iarch-link-cli", None)
+        self.assertEqual(linked, on_disk,
+                         "scripts/ and the linker's COMMANDS disagree, so at least one "
+                         "command is not reachable by name after an install")
+
+    def test_the_settings_command_the_desktop_entry_names_is_linked(self):
+        """``Exec=`` names a program, and this is what makes that program exist."""
+        entry = (ROOT / "iarch" / "settings-app" /
+                 "dev.safari.iarch.settings.desktop").read_text(encoding="utf-8")
+        wanted = next(line.split("=", 1)[1].strip() for line in entry.splitlines()
+                      if line.startswith("Exec="))
+        self.assertIn(wanted, linker_commands(),
+                      f"the desktop entry launches {wanted!r} and nothing installs a "
+                      "program by that name, so the menu entry cannot start the window")
+
     def test_it_links_the_name_the_recovery_bind_looks_for(self):
         """The integration this whole file exists for, in both directions."""
         linked = linker_commands()

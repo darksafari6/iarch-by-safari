@@ -98,6 +98,8 @@ the map. Read it before changing anything.
 │   ├── iarch-common.sh       Logging, timestamped backups, safe install, user resolution.
 │   ├── managed-files.sh      Classifies an installed system file before touching it.
 │   ├── package-audit.sh      Records which packages an install added. Never removes any.
+│   ├── packages.sh           Decides what a package step installs: one -Sy per run, a
+│   │                         printed plan, and --needed so current packages are skipped.
 │   └── stage-v5-config.sh    Builds the v5-only payload in a caller-owned empty directory.
 │
 ├── tools/                    Python helpers. Stdlib only; no desktop is started by tests.
@@ -129,7 +131,7 @@ the map. Read it before changing anything.
 ├── CHANGELOG.md              What changed, newest first.
 ├── SECURITY.md               How to report a problem, given privileged installers.
 │
-├── install.sh                Arch installer: system-wide, root, fresh install.
+├── install.sh                Arch installer: system-wide, root, 24 numbered steps.
 ├── fedora_install.sh         Fedora installer: system-wide, root, fresh install.
 ├── uninstall.sh              Restores timestamped backups; never deletes an active config.
 │
@@ -350,6 +352,7 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `./tests/session-install.sh` | The legacy session installer against a mocked filesystem and mocked sudo |
 | `./tests/managed-files.sh` | System-file classification (absent, identical, symlink, unmanaged, modified) |
 | `./tests/package-audit.sh` | Package-addition recording, with no removal path |
+| `./tests/test_packages.sh` | `lib/packages.sh` against a stubbed pacman, yay and sudo: classification, the one `-Sy`, `--needed`, and that an up-to-date machine opens no transaction |
 | `python3 tools/notices.py --check` | Both credit files match `branding/notices.json` |
 | `python3 tools/iarch_brand.py --check` | Product naming is consistent and referenced files exist |
 | `python3 tools/branding_lint.py` | Everyday-UI surfaces carry no previous product or upstream shell name |

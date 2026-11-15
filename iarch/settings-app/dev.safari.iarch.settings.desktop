@@ -14,11 +14,12 @@
 #          the icon name and the window rule cannot disagree about which window this is.
 #
 # What is not true yet, and is recorded as SET-10 in docs/UNVERIFIED.md rather than left
-# implicit: neither install.sh nor fedora_install.sh copies this file into
-# ~/.local/share/applications, and no icon is installed under that name -- assets/branding
-# carries the two logos and neither is named after the application id. So this entry is
-# correct and is not yet reachable from a menu, and it has never been registered with
-# update-desktop-database on a machine that has one.
+# implicit: no menu has ever been opened to see this entry in it. install.sh's "Menu entry"
+# step copies the file into ~/.local/share/applications, installs assets/branding/
+# iarch-logo.svg as the icon its Icon= key names, runs update-desktop-database when the
+# machine has it, and records all three paths in the install manifest -- but fedora_install.sh
+# does none of that, whether a compositor inherits the session PATH that makes Exec= resolve
+# is INS-07, and the window has only ever been started on a machine that could not draw it.
 [Desktop Entry]
 Version=1.5
 Type=Application

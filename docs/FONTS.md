@@ -76,9 +76,10 @@ exports, and a `hyprctl reload` re-runs `theme.lua`, which re-exports it (whethe
 a live session re-applies that export is TP-10). `iarch-theme` does not switch a
 *differing* cursor at runtime — there is no verified call for it — so a future
 preset that names another cursor would update the static export in `theme.lua`
-rather than rely on a runtime switch. Bibata **is** installed on Arch
-(`bibata-cursor-theme`, `install.sh:424`); the Fedora package is added but its
-name is unverified (`docs/UNVERIFIED.md`, TP-18). An earlier revision of TP-13
+rather than rely on a runtime switch. Bibata **is** installed on Arch: the
+installer's *Icons and cursors* step fetches `bibata-cursor-theme-bin` from the AUR
+through `yay` (2.0.7-1, GPL-3.0-or-later, and it Provides `bibata-cursor-theme`);
+the Fedora package is added but its name is unverified (`docs/UNVERIFIED.md`, TP-18). An earlier revision of TP-13
 wrongly said no installer provided Bibata; that is corrected.
 
 ## Icon theme

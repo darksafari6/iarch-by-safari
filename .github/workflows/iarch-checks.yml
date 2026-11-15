@@ -84,6 +84,7 @@ jobs:
           ./tests/session-install.sh
           ./tests/managed-files.sh
           ./tests/package-audit.sh
+          ./tests/test_packages.sh
           ./tests/test_iarch_common.sh
           ./tests/test_uninstall.sh
 

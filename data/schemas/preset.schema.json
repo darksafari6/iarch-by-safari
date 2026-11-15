@@ -142,9 +142,9 @@
               "theme": { "type": "string", "minLength": 1 },
               "license": { "type": "string", "minLength": 1 },
               "upstream": { "type": "string", "pattern": "^https://" },
-              "package_arch": { "type": "string" },
-              "package_fedora": { "type": "string" },
-              "verified": { "type": "boolean" },
+              "package_arch": { "type": "string", "description": "The Arch package name. `verified` is a claim about this name and nothing else." },
+              "package_fedora": { "type": "string", "description": "The Fedora package name, never covered by `verified`: no dnf, no Fedora registry and no Fedora machine is reachable from the environment these records are written in, so a Fedora name stays a guess until somebody runs it (docs/UNVERIFIED.md TP-13, TP-18)." },
+              "verified": { "type": "boolean", "description": "True only when `package_arch` was read out of Arch's own registry -- the package search JSON API on archlinux.org, or the AUR's RPC interface for an AUR-only name -- with the version, the licence and the date it was read recorded in this entry's `note`. It says the name exists where the installer will look for it. It does not say the theme renders, that any machine installed it, or anything at all about `package_fedora`; an entry that cannot name the registry that confirmed it stays false." },
               "note": { "type": "string" }
             }
           }

@@ -18,6 +18,72 @@
     ],
     "monitor_override_schema": "barMonitorOverrideSchema"
   },
+  "bar_widgets": {
+    "source": "src/shell/bar/widget_factory.cpp:147-360 (kBuiltinWidgets), :431-432 (what an unknown name does)",
+    "note": "The bar's start, center and end arrays name widgets. WidgetFactory::create resolves a name through a [widget.<name>] entry's type when there is one, and otherwise treats the name itself as the type, so a shipped config that declares no widget instances must use the type names below exactly. A name the factory does not know is not an error: it logs 'widget factory: unknown widget' and returns nothing, so the bar draws one widget fewer and the document still validates. That silent failure is why the vocabulary is written down here and why tests/test_noctalia.py refuses a name that is not in it. The types are not uniformly hyphenated -- control-center and settings are, active_window, audio_visualizer, custom_button, debug_indicator, keyboard_layout, lock_keys, power_profile and theme_mode are not -- and the upstream documentation filenames are hyphenated for all of them (docs/user/bar/widgets/power-profile.mdx documents the type power_profile), so a filename is never a safe source for a config value.",
+    "types": [
+      "active_window",
+      "audio_visualizer",
+      "battery",
+      "bluetooth",
+      "brightness",
+      "caffeine",
+      "clipboard",
+      "clock",
+      "control-center",
+      "custom_button",
+      "debug_indicator",
+      "keyboard_layout",
+      "launcher",
+      "lock_keys",
+      "media",
+      "network",
+      "nightlight",
+      "notifications",
+      "power_profile",
+      "privacy",
+      "screenshot",
+      "session",
+      "settings",
+      "spacer",
+      "sysmon",
+      "taskbar",
+      "test",
+      "text",
+      "theme_mode",
+      "tray",
+      "volume",
+      "wallpaper",
+      "weather",
+      "workspaces"
+    ],
+    "rejected": [
+      {
+        "type": "taskbar",
+        "reason": "The dock is enabled with show_running = true, so a taskbar in the bar would draw the same running windows a second time on one screen."
+      },
+      {
+        "type": "theme_mode",
+        "reason": "It changes theme.mode at runtime through the shell's own state, which wins over the config.toml this repository renders (UI-03), so the mode on screen and the mode the preset named would disagree with no way to see which one is in force."
+      },
+      {
+        "type": "keyboard_layout",
+        "reason": "inputs.lua configures exactly one layout (kb_layout = \"us\"), so the indicator would read the same two letters forever and cost bar width."
+      },
+      {
+        "type": "screenshot",
+        "reason": "Four binds already cover it: PRINT for a window, a monitor and a region, and SUPER + A for an annotated region. Note that a control-center shortcut of this name does not exist upstream even though the bar widget does; the two vocabularies are not the same list."
+      },
+      {
+        "type": "test",
+        "reason": "An upstream test widget, registered for the shell's own checks rather than for a person's bar."
+      },
+      {
+        "type": "debug_indicator",
+        "reason": "An upstream debug widget; a shipped profile that draws one is advertising a defect."
+      }
+    ]
+  },
   "color_roles": [
     "primary",
     "on_primary",
@@ -821,13 +887,19 @@
           "range_constant": "kBarCapsuleRadiusRangeD"
         },
         "start": {
-          "type": "array"
+          "type": "array",
+          "widget_list": true,
+          "note": "Widget names, not free text: see bar_widgets for the registered types and for the ones this project refuses."
         },
         "center": {
-          "type": "array"
+          "type": "array",
+          "widget_list": true,
+          "note": "Widget names, not free text: see bar_widgets for the registered types and for the ones this project refuses."
         },
         "end": {
-          "type": "array"
+          "type": "array",
+          "widget_list": true,
+          "note": "Widget names, not free text: see bar_widgets for the registered types and for the ones this project refuses."
         }
       }
     },

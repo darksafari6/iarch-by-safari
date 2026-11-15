@@ -175,10 +175,26 @@ PROFILE: Dict[str, Any] = OrderedDict(
         contact_shadow=False, margin_ends=14, margin_edge=8, padding=12,
         widget_spacing=8, scale=1.0, font_scale=1.0, capsule=True,
         capsule_border_width=1,
+        # Which widgets, and why these. Every name here is a type registered in
+        # Noctalia v5.4.1's kBuiltinWidgets (src/shell/bar/widget_factory.cpp:147-360),
+        # and the whole vocabulary is written down in data/design/noctalia.json under
+        # bar_widgets with the six names this profile refuses and the reason for each.
+        # That record exists because an unknown widget name is not an error upstream:
+        # the factory logs "widget factory: unknown widget" and returns nothing
+        # (:431-432), so the bar draws one widget fewer, the config still validates,
+        # and nothing on screen says a name was misspelled.
+        #
+        # The two additions are the panels nothing else could reach. `clipboard` is a
+        # builtin panel id with no bind in data/keybinds.default.json and no bar entry,
+        # so clipboard history existed in the shell and had no way to be opened.
+        # `privacy` shows which clients are holding the microphone or the camera, which
+        # is the only indicator of that anywhere in the session. Grouping is the reason
+        # for the order: utilities, then status, then alerts, then the session.
         start=["launcher", "workspaces"],
         center=["clock"],
-        end=["media", "tray", "network", "bluetooth", "volume", "brightness",
-             "battery", "notifications", "control-center", "session"],
+        end=["media", "tray", "clipboard", "network", "bluetooth", "volume",
+             "brightness", "battery", "privacy", "notifications", "control-center",
+             "session"],
     ),
     dock=OrderedDict(
         enabled=True, position="bottom", active_monitor_only=False, icon_size=44,
@@ -751,6 +767,11 @@ def validate(doc: Dict[str, Any], surface: Dict[str, Any]) -> List[str]:
     sections = surface["sections"]
     roles = set(surface["color_roles"])
     container_keys = set(surface["bar_container"]["keyed_outside_fields"])
+    # Indexed rather than .get()'d: a surface with no widget vocabulary should
+    # fail loudly here, not quietly stop checking the bar.
+    widget_types = set(surface["bar_widgets"]["types"])
+    widget_refusals = {entry["type"]: entry["reason"]
+                       for entry in surface["bar_widgets"]["rejected"]}
 
     def check_value(path: str, spec: Dict[str, Any], value: Any) -> None:
         kind = spec.get("type")
@@ -784,6 +805,20 @@ def validate(doc: Dict[str, Any], surface: Dict[str, Any]) -> List[str]:
         if spec.get("color") and isinstance(value, str):
             if value and value not in roles and not value.startswith("#"):
                 problems.append(f"{path}: {value!r} is neither a colour role nor a hex colour")
+        if spec.get("widget_list") and isinstance(value, list):
+            # Upstream's own failure mode is a warning in a log and one widget
+            # fewer on screen (widget_factory.cpp:431-432), so the check has to
+            # happen here or it does not happen at all.
+            for item in value:
+                if item in widget_refusals:
+                    problems.append(f"{path}: {item!r} is a registered bar widget this "
+                                    f"project refuses to ship -- {widget_refusals[item]}")
+                elif item not in widget_types:
+                    problems.append(
+                        f"{path}: {item!r} is not a widget type Noctalia "
+                        f"{surface['verified_against']} registers, so the bar would draw "
+                        f"nothing for it and only log 'widget factory: unknown widget' "
+                        f"(src/shell/bar/widget_factory.cpp:431-432)")
 
     def walk(values: Dict[str, Any], spec: Dict[str, Any], path: str,
              allow_container: bool = False) -> None:
