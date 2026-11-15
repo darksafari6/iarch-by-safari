@@ -80,9 +80,10 @@ local function reapply_default_keybinds()
     -- uses.
     if not have_cli then
         io.stderr:write("iarch recovery: iarch-keybinds is not on PATH, so the default "
-            .. "map could not be re-applied from this bind. The iArch installer puts it "
-            .. "in ~/.local/bin; until then run 'python3 <repo>/iarch/cli/"
-            .. "iarch_keybinds.py reset --all'.\n")
+            .. "map could not be re-applied from this bind. Link it with "
+            .. "'<repo>/scripts/iarch-link-cli.sh', which writes ~/.local/bin/"
+            .. "iarch-keybinds and says so if that directory is not on PATH; or run "
+            .. "'python3 <repo>/iarch/cli/iarch_keybinds.py reset --all --yes' directly.\n")
         if terminal then
             hl.dispatch(hl.dsp.exec_cmd(terminal))
         end
@@ -94,7 +95,14 @@ local function reapply_default_keybinds()
     -- validate -- the rollback is not a flag, because a recovery command whose safety
     -- can be switched off is a trap. Blocking on it is what makes the reload below
     -- safe.
-    os.execute("iarch-keybinds reset --all >/dev/null 2>&1")
+    --
+    -- --yes is here because `reset --all` asks first: it discards more than the
+    -- person named, so on a terminal it confirms. This bind cannot answer a prompt
+    -- and must not try to -- it fires while the session may be broken, and a prompt
+    -- on a screen that is not drawing is worse than no prompt. Pressing a dedicated
+    -- recovery combination is the explicit intent, and the backup reset keeps is what
+    -- makes it reversible rather than merely confirmed.
+    os.execute("iarch-keybinds reset --all --yes >/dev/null 2>&1")
     io.stderr:write("iarch recovery: dropped the override at " .. override
         .. " and re-applied the default keyboard map.\n")
     hl.dispatch(hl.dsp.reload_config())

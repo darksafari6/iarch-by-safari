@@ -401,13 +401,19 @@ class MigrationLosesNothing(unittest.TestCase):
                          "the overlay does not need to work on the lock screen, and "
                          "claiming it does would put it in the compositor's locked set")
 
-    def test_the_wheel_binds_are_carried_across_unchanged_and_still_unverified(self):
-        """`mouse_up` is neither a keysym nor a `mouse:N` code, and nothing proved it.
+    def test_the_wheel_binds_are_carried_across_unchanged_and_are_verified_events(self):
+        """`mouse_up` is neither a keysym nor a `mouse:N` code, and it still binds.
 
-        Carried across rather than replaced, because changing a bind that might
-        work into one that certainly does not is not an improvement. The record
-        says so under `rejected`, with a TODO(verify), and this test keeps the two
-        entries honest about still being the unverified spelling.
+        Carried across rather than replaced, because changing a bind that might work
+        into one that certainly does not is not an improvement -- and the bet paid off.
+        Source settled it after the migration: `CKey::isValidEvent` accepts the four
+        wheel names outright (`src/keybinds/Key.cpp:8-10`) and `onAxisEvent` dispatches
+        a wheel delta under exactly that name (`src/keybinds/Manager.cpp:312-335`), so
+        these binds match on an event and never reach `resolveKeycode`. This test used
+        to pin the opposite -- that the record keeps them under `rejected` with a
+        TODO(verify) -- and now pins that they are carried intact *and* documented in
+        `key_forms`, because a rejection that source disproves has to be deleted rather
+        than left beside the correction.
         """
         for key in ("super + mouse_up", "super + mouse_down"):
             entry = self.by_key[key]
@@ -417,8 +423,15 @@ class MigrationLosesNothing(unittest.TestCase):
         record = json.loads((ROOT / "data" / "design" / "keybinds.json").read_text(
             encoding="utf-8"))
         rejected = [item for item in record["rejected"] if "mouse_up" in item["spelling"]]
-        self.assertTrue(rejected, "the wheel spelling is no longer recorded as rejected")
-        self.assertEqual("TODO(verify)", rejected[0]["status"])
+        self.assertEqual([], rejected,
+                         "the record still rejects a spelling it also documents as a "
+                         "key form that works")
+        forms = [f for f in record["key_forms"]["forms"]
+                 if f["form"] == "special event name"]
+        self.assertEqual(1, len(forms),
+                         "the wheel binds are carried across with nothing recording "
+                         "why they are allowed to be")
+        self.assertIn("mouse_up", forms[0]["meaning"])
 
 
 class TheMigratorItself(unittest.TestCase):

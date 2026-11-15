@@ -143,15 +143,35 @@ class GoldenRender(unittest.TestCase):
             self.skipTest("no Lua parser available (luac is not installed either)")
         lua_ast.parse(self.lua)  # raises on a syntax error
 
-    def test_the_fixture_validates_clean_apart_from_the_one_carried_wheel_bind(self):
+    def test_the_fixture_validates_completely_clean(self):
+        """Every key in the fixture resolves, the wheel event among them.
+
+        ``mouse_down`` used to be the one warning this fixture was allowed to carry,
+        on the grounds that it is neither a keysym nor a ``mouse:N`` code and nothing
+        had proved it bound. Source settled it: ``CKey::isValidEvent`` accepts the four
+        wheel names outright (``src/keybinds/Key.cpp:8-10``) and ``onAxisEvent``
+        dispatches a wheel delta under exactly that name
+        (``src/keybinds/Manager.cpp:312-335``), so the bind never reaches the resolver.
+        It is recorded in ``key_forms`` and the fixture is now expected to be clean --
+        a baseline that carries a permanent warning is not a baseline, because the next
+        real one hides inside it.
+        """
         problems = kb.validate(self.bindings, kb.ROOT)
         counts = severities(problems)
         self.assertEqual(0, counts.get(kb.ERROR, 0), [str(p) for p in problems])
         self.assertEqual(0, counts.get(kb.CONFLICT, 0), [str(p) for p in problems])
-        # The single warning is the mouse_down wheel bind, carried from v1 and
-        # recorded as unverified rather than silently kept or silently changed.
-        self.assertEqual(1, counts.get(kb.WARNING, 0), [str(p) for p in problems])
-        self.assertIn("mouse_down", problems[0].message)
+        self.assertEqual(0, counts.get(kb.WARNING, 0), [str(p) for p in problems])
+
+    def test_a_wheel_event_binds_and_an_upper_case_spelling_of_it_does_not(self):
+        """``isValidEvent`` compares the four names with ``==``, so case is not free
+        here in the way it is for a keysym name."""
+        self.assertTrue(kb._key_is_valid("mouse_down", set()))
+        self.assertTrue(kb._key_is_valid("mouse_left", set()))
+        for spelling in ("MOUSE_DOWN", "Mouse_down", "mouse_scroll", "mousewheel"):
+            with self.subTest(spelling=spelling):
+                self.assertFalse(kb._key_is_valid(spelling, set()),
+                                 "an event name the compositor does not dispatch was "
+                                 "accepted, so a bind on it would silently do nothing")
 
     def test_disabled_and_reserved_bindings_render_to_nothing(self):
         reserved = next(b for b in self.bindings if b.get("reserved"))
@@ -377,6 +397,24 @@ class Validation(unittest.TestCase):
         problems = self.validate(make_binding(
             id="reserved", mods=["SUPER", "SHIFT"], key="H", enabled=False,
             action={"type": "none"}, reserved=True))
+        self.assertEqual(0, len([p for p in problems if p.severity == kb.ERROR]),
+                         [str(p) for p in problems])
+
+    def test_a_locked_binding_cannot_be_disabled(self):
+        """``locked`` means rebindable but not deletable, and turning one off is how an
+        override would delete it -- so this is an error, not a warning, and it is
+        reported even though a disabled binding skips every other key check."""
+        problems = self.validate(make_binding(
+            id="applications.terminal", mods=["SUPER"], key="RETURN",
+            enabled=False, locked=True, locked_reason="a shell"))
+        errors = [p for p in problems if p.severity == kb.ERROR]
+        self.assertEqual(1, len(errors), [str(p) for p in problems])
+        self.assertIn("locked and disabled", errors[0].message)
+
+    def test_a_locked_binding_that_is_enabled_is_fine(self):
+        problems = self.validate(make_binding(
+            id="applications.terminal", mods=["SUPER"], key="RETURN",
+            enabled=True, locked=True))
         self.assertEqual(0, len([p for p in problems if p.severity == kb.ERROR]),
                          [str(p) for p in problems])
 
@@ -682,8 +720,14 @@ class StaticBindings(unittest.TestCase):
         self.assertEqual([], [str(p) for p in kb.static_bindings_agree([plain], root)])
 
 
-class Reset(unittest.TestCase):
-    """`reset` is what the recovery combo runs, so it is tested as a command."""
+class IsolatedHome(unittest.TestCase):
+    """A temporary HOME, so a mutating command is tested against a real file layout.
+
+    These commands write two files and back up a third, which is not something a
+    mock can prove: the interesting failures are a backup that was not kept, a
+    session file written to the repository instead, and a refusal that changed
+    something anyway.
+    """
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -705,19 +749,42 @@ class Reset(unittest.TestCase):
     def write_override(self, payload: Dict[str, Any]) -> None:
         self.override.write_text(json.dumps(payload), encoding="utf-8")
 
-    def run_reset(self, *argv: str) -> int:
+    def run_cli(self, *argv: str) -> int:
         os.environ["HOME"] = str(self.home)
         os.environ.pop("IARCH_CONFIG_DIR", None)
         buffer = io.StringIO()
         with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
-            code = kb.main(["reset", *argv])
+            try:
+                code = kb.main(list(argv))
+            except SystemExit as exc:
+                # argparse's own refusal for a missing or contradictory flag,
+                # which is a real outcome of bad input and exits 2 like a UserError.
+                code = exc.code if isinstance(exc.code, int) else 2
         self.output = buffer.getvalue()
         return code
 
+    def saved_entries(self):
+        """The ids in the override file, or None when there is no override file."""
+        if not self.override.is_file():
+            return None
+        document = json.loads(self.override.read_text(encoding="utf-8"))
+        return [e["id"] for e in document["bindings"]]
+
+    def answer(self, reply: str, *, is_tty: bool = True):
+        """Make the confirmation prompt readable, as though a person were there."""
+        fake = unittest.mock.Mock()
+        fake.isatty.return_value = is_tty
+        fake.readline.return_value = reply
+        return unittest.mock.patch.object(kb.sys, "stdin", fake)
+
+
+class Reset(IsolatedHome):
+    """`reset` is what the recovery combo runs, so it is tested as a command."""
+
     def test_reset_all_drops_the_override_and_keeps_a_backup(self):
-        self.write_override({"bindings": [{"id": "window.close", "key": "W",
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
                                            "description": "mine"}]})
-        self.assertEqual(0, self.run_reset("--all"))
+        self.assertEqual(0, self.run_cli("reset", "--all", "--yes"))
         self.assertFalse(self.override.exists(), "the override survived a reset --all")
         self.assertTrue(self.session_lua.is_file(), "no session file was written")
         self.assertIn('hl.bind("SUPER + Q"', self.session_lua.read_text(encoding="utf-8"),
@@ -727,43 +794,43 @@ class Reset(unittest.TestCase):
 
     def test_reset_writes_the_session_copy_and_not_the_repository_artifact(self):
         """The file the compositor reads is a copy, so fixing the repo fixes nothing."""
-        self.write_override({"bindings": [{"id": "window.close", "key": "W",
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
                                            "description": "mine"}]})
         before = kb.GENERATED.read_bytes()
-        self.assertEqual(0, self.run_reset("--all"))
+        self.assertEqual(0, self.run_cli("reset", "--all", "--yes"))
         self.assertEqual(before, kb.GENERATED.read_bytes(),
                          "reset rewrote the checked-in artifact CI keeps fresh")
         self.assertTrue(self.session_lua.is_file())
 
     def test_reset_by_id_leaves_the_other_differences_alone(self):
         self.write_override({"bindings": [
-            {"id": "window.close", "key": "W", "description": "mine"},
+            {"id": "window.close", "key": "Y", "description": "mine"},
             {"id": "applications.terminal", "key": "Return", "mods": ["SUPER", "CTRL"],
              "description": "also mine"},
         ]})
-        self.assertEqual(0, self.run_reset("window.close"))
+        self.assertEqual(0, self.run_cli("reset", "window.close"))
         kept = [e["id"] for e in json.loads(self.override.read_text(encoding="utf-8"))["bindings"]]
         self.assertEqual(["applications.terminal"], kept,
                          "a targeted reset must drop exactly the named difference")
 
     def test_an_id_the_shipped_map_does_not_have_is_refused(self):
-        self.write_override({"bindings": [{"id": "window.close", "key": "W",
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
                                            "description": "mine"}]})
-        self.assertEqual(2, self.run_reset("not.a.binding"))
+        self.assertEqual(2, self.run_cli("reset", "not.a.binding"))
         self.assertTrue(self.override.exists(),
                         "an unknown id changed the person's map")
 
     def test_reset_with_no_target_says_what_it_needs(self):
-        self.assertEqual(2, self.run_reset())
+        self.assertEqual(2, self.run_cli("reset", ))
         self.assertIn("--all", self.output)
 
     def test_a_reset_that_would_not_validate_changes_nothing(self):
         """The safety is the ordering: refuse before touching, not undo after."""
-        self.write_override({"bindings": [{"id": "window.close", "key": "W",
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
                                            "description": "mine"}]})
         with unittest.mock.patch.object(kb, "default_record",
                                         return_value=self.broken_record()) as patched:
-            self.assertEqual(1, self.run_reset("--all"))
+            self.assertEqual(1, self.run_cli("reset", "--all"))
             self.assertTrue(patched.called)
         self.assertTrue(self.override.exists(),
                         "the override was dropped even though the reset was refused")
@@ -776,6 +843,505 @@ class Reset(unittest.TestCase):
         record = kb.default_record(kb.ROOT)
         record["bindings"][0]["key"] = "NotAKeysym"
         return record
+
+
+class Confirmation(IsolatedHome):
+    """Destructive means "discards more than you named", and only that asks.
+
+    ``reset --all`` drops everything; a targeted reset drops what was named and
+    keeps a backup, which is what makes it reversible without a prompt. The
+    interesting failures are a prompt with nobody to answer it being treated as a
+    yes, and a cancellation that changed something anyway.
+    """
+
+    def save_one(self):
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
+                                           "description": "mine"}]})
+
+    def test_reset_all_refuses_when_there_is_nobody_to_ask(self):
+        self.save_one()
+        self.assertEqual(2, self.run_cli("reset", "--all"))
+        self.assertTrue(self.override.exists(),
+                        "a refusal with no answer available still dropped the override")
+        self.assertIn("--yes", self.output)
+        self.assertIn("not a terminal", self.output)
+
+    def test_reset_all_is_cancelled_by_no(self):
+        self.save_one()
+        with self.answer("n\n"):
+            self.assertEqual(1, self.run_cli("reset", "--all"))
+        self.assertTrue(self.override.exists(), "a cancelled reset changed the file")
+        self.assertIn("cancelled", self.output)
+        self.assertFalse(self.session_lua.exists(),
+                         "a cancelled reset wrote a session file")
+
+    def test_reset_all_proceeds_on_yes_at_a_prompt(self):
+        self.save_one()
+        with self.answer("y\n"):
+            self.assertEqual(0, self.run_cli("reset", "--all"))
+        self.assertFalse(self.override.exists())
+        self.assertTrue(self.session_lua.is_file())
+
+    def test_anything_that_is_not_yes_is_no(self):
+        """The default of [y/N] has to be the one that keeps the person's map."""
+        for reply in ("", "\n", "maybe\n", "YESSS\n", "sure\n"):
+            with self.subTest(reply=reply):
+                self.save_one()
+                with self.answer(reply):
+                    self.assertEqual(1, self.run_cli("reset", "--all"))
+                self.assertTrue(self.override.exists())
+
+    def test_a_targeted_reset_does_not_ask(self):
+        self.save_one()
+        self.assertEqual(0, self.run_cli("reset", "window.close"))
+        self.assertIsNone(self.saved_entries(),
+                          "the only difference was the one named, so the file goes")
+
+    def test_reset_all_with_nothing_saved_does_not_ask(self):
+        """Asking to confirm discarding nothing is a prompt that teaches people --yes."""
+        self.assertEqual(0, self.run_cli("reset", "--all"))
+        self.assertIn("dropped every difference", self.output)
+
+
+class Mutating(IsolatedHome):
+    """`set`, `add`, `disable`, `enable`, `export` and `import`."""
+
+    def session_binds(self):
+        return self.session_lua.read_text(encoding="utf-8")
+
+    # ------------------------------------------------------------------ set
+
+    def test_set_changes_one_field_and_keeps_the_rest_from_the_default(self):
+        self.assertEqual(0, self.run_cli("set", "applications.terminal",
+                                         "--mods", "SUPER,SHIFT", "--key", "T"))
+        entry = json.loads(self.override.read_text(encoding="utf-8"))["bindings"][0]
+        self.assertEqual({"id": "applications.terminal", "mods": ["SUPER", "SHIFT"],
+                          "key": "T"}, entry,
+                         "a difference that restates the action stops a later update "
+                         "to that action from ever reaching this machine")
+        self.assertIn('hl.bind("SUPER + SHIFT + T"', self.session_binds())
+        self.assertNotIn('hl.bind("SUPER + RETURN"', self.session_binds())
+
+    def test_the_modifiers_are_canonicalised_into_the_order_the_record_uses(self):
+        self.assertEqual(0, self.run_cli("set", "applications.terminal",
+                                         "--mods", "shift+ctrl+super", "--key", "T"))
+        entry = json.loads(self.override.read_text(encoding="utf-8"))["bindings"][0]
+        self.assertEqual(["SUPER", "SHIFT", "CTRL"], entry["mods"])
+
+    def test_two_sets_on_one_binding_accumulate(self):
+        self.assertEqual(0, self.run_cli("set", "applications.terminal", "--key", "G"))
+        self.assertEqual(0, self.run_cli("set", "applications.terminal",
+                                         "--description", "A shell"))
+        entry = json.loads(self.override.read_text(encoding="utf-8"))["bindings"][0]
+        self.assertEqual("G", entry["key"], "the second set dropped the first")
+        self.assertEqual("A shell", entry["description"])
+
+    def test_set_preserves_a_difference_on_another_binding(self):
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
+                                           "description": "mine"}]})
+        self.assertEqual(0, self.run_cli("set", "applications.terminal", "--key", "G"))
+        self.assertEqual(["window.close", "applications.terminal"], self.saved_entries())
+
+    def test_set_refuses_an_id_that_does_not_ship(self):
+        self.assertEqual(2, self.run_cli("set", "not.a.binding", "--key", "T"))
+        self.assertIn("`add`", self.output)
+        self.assertFalse(self.override.exists(), "a refusal wrote a file")
+
+    def test_set_refuses_a_key_that_is_not_a_keysym_and_says_what_to_use(self):
+        self.assertEqual(2, self.run_cli("set", "applications.terminal", "--key", "."))
+        self.assertIn("period", self.output)
+        self.assertFalse(self.override.exists())
+
+    def test_a_key_in_the_wrong_case_is_snapped_to_the_pinned_spelling(self):
+        """The compositor resolves key names case-insensitively, so one key must not
+        end up written two ways in the same map."""
+        for typed, pinned in (("Backspace", "BackSpace"), ("RETURN", "Return"),
+                              ("escape", "Escape")):
+            with self.subTest(typed=typed):
+                self.assertEqual(0, self.run_cli("set", "applications.terminal",
+                                                 "--key", typed))
+                entry = json.loads(
+                    self.override.read_text(encoding="utf-8"))["bindings"][0]
+                self.assertEqual(pinned, entry["key"])
+                self.override.unlink()
+
+    def test_a_key_already_in_the_pinned_list_is_kept_exactly(self):
+        """Both cases of a letter are keysyms in their own right, so neither is
+        canonicalised away -- only a spelling the list does not contain is snapped."""
+        for typed in ("G", "g"):
+            with self.subTest(typed=typed):
+                self.assertEqual(0, self.run_cli("set", "applications.terminal",
+                                                 "--key", typed))
+                entry = json.loads(
+                    self.override.read_text(encoding="utf-8"))["bindings"][0]
+                self.assertEqual(typed, entry["key"])
+
+    def test_two_spellings_of_one_key_are_a_conflict_not_two_binds(self):
+        """The hole an exact comparison leaves: the compositor folds case, so these
+        are one key with two handlers on it."""
+        problems = kb.validate([
+            make_binding(id="first", mods=["SUPER"], key="Left"),
+            make_binding(id="second", mods=["SUPER"], key="left"),
+        ], kb.ROOT)
+        conflicts = [p for p in problems if p.severity == kb.CONFLICT]
+        self.assertEqual(1, len(conflicts), [str(p) for p in problems])
+        self.assertIn("case-insensitively", conflicts[0].message)
+
+    def test_set_refuses_a_modifier_the_compositor_does_not_have(self):
+        self.assertEqual(2, self.run_cli("set", "applications.terminal",
+                                         "--mods", "HYPER", "--key", "T"))
+        self.assertIn("SUPER", self.output)
+
+    def test_set_refuses_a_repeated_modifier(self):
+        self.assertEqual(2, self.run_cli("set", "applications.terminal",
+                                         "--mods", "SUPER,SUPER", "--key", "T"))
+        self.assertIn("repeated", self.output)
+
+    def test_set_with_nothing_to_change_is_refused_rather_than_a_no_op_write(self):
+        self.assertEqual(2, self.run_cli("set", "applications.terminal"))
+        self.assertIn("nothing to change", self.output)
+        self.assertFalse(self.override.exists())
+
+    def test_set_refuses_a_key_another_binding_already_has(self):
+        """The collision check, reached through the command a person actually runs."""
+        self.assertEqual(1, self.run_cli("set", "applications.terminal",
+                                         "--mods", "SUPER", "--key", "E"))
+        self.assertIn("already bound by", self.output)
+        self.assertIn("nothing was changed", self.output)
+        self.assertFalse(self.override.exists(),
+                         "a refused set left a difference behind")
+
+    def test_set_cannot_disable_a_locked_safety_net_binding(self):
+        self.assertEqual(2, self.run_cli("set", "window.close", "--disable"))
+        self.assertIn("locked", self.output)
+        self.assertFalse(self.override.exists())
+
+    def test_set_can_rebind_a_locked_safety_net_binding(self):
+        """Locked means rebindable but not deletable, so this has to work."""
+        self.assertEqual(0, self.run_cli("set", "window.close", "--key", "BackSpace"))
+        self.assertIn('hl.bind("SUPER + BackSpace"', self.session_binds())
+
+    # ------------------------------------------------------------------ add
+
+    def test_add_creates_a_binding_of_your_own(self):
+        self.assertEqual(0, self.run_cli(
+            "add", "custom.scratchpad", "--mods", "SUPER,SHIFT", "--key", "T",
+            "--description", "Dropdown terminal", "--category", "Custom",
+            "--exec", "kitty --class scratch"))
+        entry = json.loads(self.override.read_text(encoding="utf-8"))["bindings"][0]
+        self.assertEqual("custom.scratchpad", entry["id"])
+        self.assertEqual({"type": "exec", "command": ["kitty", "--class", "scratch"]},
+                         entry["action"])
+        self.assertIn('hl.bind("SUPER + SHIFT + T"', self.session_binds())
+
+    def test_add_accepts_a_dispatch_and_a_noctalia_verb(self):
+        self.assertEqual(0, self.run_cli(
+            "add", "custom.close", "--mods", "SUPER", "--key", "BackSpace",
+            "--description", "Close", "--category", "Custom",
+            "--dispatch", "window.close"))
+        self.assertEqual(0, self.run_cli(
+            "add", "custom.panel", "--mods", "SUPER", "--key", "F14",
+            "--description", "Panel", "--category", "Custom",
+            "--noctalia", "panel-toggle", "--noctalia-arg", "launcher"))
+        lua = self.session_binds()
+        self.assertIn("hl.dsp.window.close()", lua)
+        self.assertIn("noctalia msg panel-toggle launcher", lua)
+
+    def test_add_refuses_an_id_the_shipped_map_already_has(self):
+        self.assertEqual(2, self.run_cli(
+            "add", "window.close", "--mods", "SUPER", "--key", "F13",
+            "--description", "x", "--category", "Custom", "--exec", "true"))
+        self.assertIn("`set`", self.output)
+
+    def test_add_refuses_an_id_that_is_not_category_dot_subject(self):
+        for bad in ("My Binding", "custom", "Custom.Thing", "custom..thing"):
+            with self.subTest(id=bad):
+                self.assertEqual(2, self.run_cli(
+                    "add", bad, "--mods", "SUPER", "--key", "F13",
+                    "--description", "x", "--category", "Custom", "--exec", "true"))
+
+    def test_add_refuses_two_actions_and_no_action(self):
+        with self.subTest(which="two"):
+            self.assertEqual(2, self.run_cli(
+                "add", "custom.x", "--mods", "SUPER", "--key", "F13",
+                "--description", "x", "--category", "Custom",
+                "--exec", "true", "--dispatch", "window.close"))
+        with self.subTest(which="none"):
+            self.assertEqual(2, self.run_cli(
+                "add", "custom.x", "--mods", "SUPER", "--key", "F13",
+                "--description", "x", "--category", "Custom"))
+        self.assertFalse(self.override.exists())
+
+    def test_add_refuses_a_dispatcher_outside_the_verified_tree(self):
+        """Refused at parse time with a suggestion, not at validation with a verdict."""
+        self.assertEqual(2, self.run_cli(
+            "add", "custom.x", "--mods", "SUPER", "--key", "F13",
+            "--description", "x", "--category", "Custom",
+            "--dispatch", "window.explode"))
+        self.assertIn("not in the verified", self.output)
+        self.assertFalse(self.override.exists(),
+                         "an action the compositor cannot resolve was written anyway")
+
+    def test_a_dispatcher_leaf_is_expanded_to_the_path_the_record_stores(self):
+        self.assertEqual("hl.dsp.window.close", kb.parse_dispatcher("window.close"))
+        self.assertEqual("hl.dsp.window.close",
+                         kb.parse_dispatcher("hl.dsp.window.close"))
+
+    def test_a_dispatcher_refusal_names_a_real_alternative(self):
+        with self.assertRaises(kb.UserError) as caught:
+            kb.parse_dispatcher("window.fullscreen_toggle")
+        self.assertIn("hl.dsp.window.fullscreen", str(caught.exception),
+                      "a refusal that does not name something real leaves the person "
+                      "guessing at the vocabulary")
+
+    def test_add_refuses_a_blank_description_or_category(self):
+        for flag, other in (("--description", ["--category", "Custom"]),
+                            ("--category", ["--description", "x"])):
+            with self.subTest(flag=flag):
+                self.assertEqual(2, self.run_cli(
+                    "add", "custom.x", "--mods", "SUPER", "--key", "F13",
+                    flag, "   ", *other, "--exec", "true"))
+                self.assertIn(flag.lstrip("-"), self.output)
+                self.assertFalse(self.override.exists())
+
+    # ------------------------------------------------------- disable / enable
+
+    def test_disable_turns_a_binding_off_and_enable_turns_it_back_on(self):
+        self.assertEqual(0, self.run_cli("disable", "applications.code-editor"))
+        self.assertNotIn('hl.bind("SUPER + C"', self.session_binds())
+        self.assertEqual([{"id": "applications.code-editor", "enabled": False}],
+                         json.loads(self.override.read_text(encoding="utf-8"))["bindings"])
+        self.assertEqual(0, self.run_cli("enable", "applications.code-editor"))
+        self.assertIn('hl.bind("SUPER + C"', self.session_binds())
+
+    def test_disable_keeps_a_rebind_and_only_clears_the_flag(self):
+        self.write_override({"bindings": [{"id": "applications.code-editor", "key": "G",
+                                           "description": "mine"}]})
+        self.assertEqual(0, self.run_cli("disable", "applications.code-editor"))
+        entry = json.loads(self.override.read_text(encoding="utf-8"))["bindings"][0]
+        self.assertEqual("G", entry["key"], "disabling threw away the rebind")
+        self.assertFalse(entry["enabled"])
+
+    def test_disable_refuses_the_locked_static_and_reserved_bindings(self):
+        for binding_id, why in (("window.close", "locked"),
+                                ("recovery.reapply-defaults", "hand-written"),
+                                ("reserved.ctrl-alt-backspace", "reserved")):
+            with self.subTest(id=binding_id):
+                self.assertEqual(2, self.run_cli("disable", binding_id))
+                self.assertIn(why, self.output)
+
+    def test_disable_refuses_an_unknown_id(self):
+        self.assertEqual(2, self.run_cli("disable", "not.a.binding"))
+        self.assertFalse(self.override.exists())
+
+    def test_a_batch_is_refused_as_a_whole_if_any_id_is_unknown(self):
+        """One change, so it lands whole or not at all -- no half-disabled batch."""
+        self.assertEqual(2, self.run_cli("disable", "applications.code-editor",
+                                         "not.a.binding"))
+        self.assertFalse(self.override.exists(),
+                         "a half-applied batch left the first binding off")
+
+    def test_disabling_two_bindings_is_one_change_to_both_files(self):
+        self.assertEqual(0, self.run_cli("disable", "applications.code-editor",
+                                         "applications.browser"))
+        self.assertEqual(["applications.code-editor", "applications.browser"],
+                         self.saved_entries())
+        lua = self.session_binds()
+        self.assertNotIn('hl.bind("SUPER + C"', lua)
+        self.assertNotIn('hl.bind("SUPER + B"', lua)
+        self.assertIn('hl.bind("SUPER + RETURN"', lua,
+                      "an unrelated binding was dropped too")
+
+    # --------------------------------------------------------- export / import
+
+    def test_export_writes_the_differences_by_default(self):
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
+                                           "description": "mine"}]})
+        self.assertEqual(0, self.run_cli("export"))
+        payload = json.loads(self.output.split("export:")[0])
+        self.assertEqual(["window.close"], [e["id"] for e in payload["bindings"]])
+        self.assertNotIn("version", payload)
+
+    def test_export_all_writes_the_effective_map(self):
+        self.assertEqual(0, self.run_cli("export", "--all"))
+        payload = json.loads(self.output.split("export:")[0])
+        self.assertEqual(2, payload["version"])
+        self.assertEqual(80, len(payload["bindings"]))
+
+    def test_export_says_so_when_there_is_nothing_of_yours(self):
+        self.assertEqual(0, self.run_cli("export"))
+        self.assertIn("shipped map unchanged", self.output)
+
+    def test_export_to_a_file(self):
+        target = Path(self.tmp.name) / "mine.json"
+        self.assertEqual(0, self.run_cli("export", str(target)))
+        self.assertTrue(target.is_file())
+        self.assertEqual({"bindings": []}, json.loads(target.read_text(encoding="utf-8")))
+
+    def test_import_merges_into_the_differences_already_saved(self):
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
+                                           "description": "mine"}]})
+        incoming = Path(self.tmp.name) / "incoming.json"
+        incoming.write_text(json.dumps({"bindings": [
+            {"id": "applications.code-editor", "key": "G", "description": "theirs"}]}),
+            encoding="utf-8")
+        self.assertEqual(0, self.run_cli("import", str(incoming)))
+        self.assertEqual(["window.close", "applications.code-editor"],
+                         self.saved_entries())
+
+    def test_import_replace_asks_and_a_no_keeps_what_was_there(self):
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
+                                           "description": "mine"}]})
+        incoming = Path(self.tmp.name) / "incoming.json"
+        incoming.write_text(json.dumps({"bindings": [
+            {"id": "applications.code-editor", "key": "G", "description": "theirs"}]}),
+            encoding="utf-8")
+        with self.answer("n\n"):
+            self.assertEqual(1, self.run_cli("import", str(incoming), "--replace"))
+        self.assertEqual(["window.close"], self.saved_entries(),
+                         "--replace discarded the saved difference after a no")
+        with self.answer("y\n"):
+            self.assertEqual(0, self.run_cli("import", str(incoming), "--replace"))
+        self.assertEqual(["applications.code-editor"], self.saved_entries())
+
+    def test_import_refuses_a_whole_exported_map_that_would_freeze_the_defaults(self):
+        self.assertEqual(0, self.run_cli("export", "--all",
+                                         str(Path(self.tmp.name) / "whole.json")))
+        self.assertEqual(2, self.run_cli("import", str(Path(self.tmp.name) / "whole.json")))
+        self.assertIn("freeze", self.output)
+        self.assertIn("--all", self.output)
+        self.assertFalse(self.override.exists())
+
+    def test_import_accepts_a_whole_map_when_told_that_is_what_it_is(self):
+        whole = Path(self.tmp.name) / "whole.json"
+        self.assertEqual(0, self.run_cli("export", "--all", str(whole)))
+        self.assertEqual(0, self.run_cli("import", str(whole), "--all", "--yes"))
+        self.assertEqual(80, len(self.saved_entries()))
+
+    def test_import_refuses_a_file_that_is_not_json_or_not_a_document(self):
+        broken = Path(self.tmp.name) / "broken.json"
+        broken.write_text("{not json", encoding="utf-8")
+        self.assertEqual(2, self.run_cli("import", str(broken)))
+        self.assertIn("does not parse", self.output)
+
+        not_a_document = Path(self.tmp.name) / "list.json"
+        not_a_document.write_text("[]", encoding="utf-8")
+        self.assertEqual(2, self.run_cli("import", str(not_a_document)))
+        self.assertIn("'bindings'", self.output)
+
+        self.assertEqual(2, self.run_cli("import", str(Path(self.tmp.name) / "absent.json")))
+        self.assertIn("not a file", self.output)
+
+    def test_import_refuses_an_entry_that_would_not_validate(self):
+        incoming = Path(self.tmp.name) / "bad.json"
+        incoming.write_text(json.dumps({"bindings": [
+            {"id": "applications.code-editor", "key": "E", "description": "collides"}]}),
+            encoding="utf-8")
+        self.assertEqual(1, self.run_cli("import", str(incoming)))
+        self.assertIn("already bound by", self.output)
+        self.assertFalse(self.override.exists(),
+                         "an import that would collide was written anyway")
+
+    # --------------------------------------------------------------- failure
+
+    def test_a_write_failure_half_way_through_puts_both_files_back(self):
+        """Validation cannot cover the disk being full, so the backups have to.
+
+        The failure is made to land on the *second* write, after the override has
+        already been replaced on disk. Failing the first write instead would prove
+        nothing at all: there would be nothing to put back, and this test would pass
+        with the whole restore branch deleted.
+        """
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
+                                           "description": "mine"}]})
+        self.assertEqual(0, self.run_cli("set", "applications.terminal", "--key", "G"))
+        settled_override = self.override.read_bytes()
+        settled_session = self.session_lua.read_bytes()
+
+        real_write = kb.configstore.atomic_write
+        written: List[Path] = []
+
+        def fails_on_the_second(path, text, **kwargs):
+            written.append(Path(path))
+            if len(written) == 1:
+                return real_write(path, text, **kwargs)
+            raise OSError(28, "No space left on device")
+
+        with unittest.mock.patch.object(kb.configstore, "atomic_write",
+                                        side_effect=fails_on_the_second):
+            self.assertEqual(1, self.run_cli("set", "applications.terminal",
+                                             "--key", "F13"))
+        self.assertEqual(2, len(written),
+                         "the override was never replaced, so nothing needed restoring")
+        self.assertIn("restored", self.output)
+        self.assertEqual(settled_override, self.override.read_bytes(),
+                         "the override was left holding the map that failed to write")
+        self.assertEqual(settled_session, self.session_lua.read_bytes(),
+                         "the session file changed even though the write failed")
+
+    def test_a_write_failure_before_anything_changed_leaves_nothing_behind(self):
+        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
+                                           "description": "mine"}]})
+        self.assertEqual(0, self.run_cli("set", "applications.terminal", "--key", "G"))
+        settled = self.override.read_bytes()
+        with unittest.mock.patch.object(kb.configstore, "atomic_write",
+                                        side_effect=OSError(28, "No space left")):
+            self.assertEqual(1, self.run_cli("set", "applications.terminal",
+                                             "--key", "F13"))
+        self.assertIn("No space left", self.output,
+                      "the reason has to reach the person, not just the status")
+        self.assertEqual(settled, self.override.read_bytes())
+        self.assertEqual(["window.close", "applications.terminal"], self.saved_entries())
+
+
+    def test_config_home_moves_both_files_and_neither_is_written_elsewhere(self):
+        """The flag used to reach only the generated Lua.
+
+        ``commit_change`` was handed ``config_home`` for the session file while the
+        override path came from an environment that still named the real ``HOME``, so
+        one command wrote two homes and reported one change. Both files have to move
+        together, and the real home has to stay untouched.
+        """
+        # --config-home names the .config directory, the way theme.py means it.
+        config_root = self.home.parent / "elsewhere" / ".config"
+        real_override = self.override
+        self.assertFalse(real_override.exists())
+
+        self.assertEqual(0, self.run_cli("set", "applications.browser", "--key", "G",
+                                         "--config-home", str(config_root)))
+        moved = config_root / "iarch" / "keybinds.json"
+        self.assertTrue(moved.is_file(), "the override was not written under --config-home")
+        self.assertEqual(["applications.browser"],
+                         [e["id"] for e in json.loads(moved.read_text())["bindings"]])
+        self.assertTrue((config_root / "hypr" / "generated" / "keybinds.lua").is_file(),
+                        "the session file was not written under --config-home")
+        self.assertFalse(real_override.exists(),
+                         "--config-home still wrote the home the process was started in")
+        self.assertFalse((self.home / ".config" / "hypr").exists())
+
+    def test_config_home_beats_an_exported_config_dir(self):
+        """Otherwise the command reads one directory and writes another."""
+        config_root = self.home.parent / "elsewhere" / ".config"
+        exported = self.home.parent / "exported" / "iarch"
+        exported.mkdir(parents=True)
+        os.environ["IARCH_CONFIG_DIR"] = str(exported)
+        self.addCleanup(os.environ.pop, "IARCH_CONFIG_DIR", None)
+        try:
+            self.assertEqual(0, self.run_cli("set", "applications.browser", "--key", "G",
+                                             "--config-home", str(config_root)))
+        finally:
+            os.environ.pop("IARCH_CONFIG_DIR", None)
+        self.assertTrue((config_root / "iarch" / "keybinds.json").is_file())
+        self.assertEqual([], list(exported.iterdir()),
+                         "an inherited IARCH_CONFIG_DIR beat the explicit flag")
+
+    def test_a_read_only_command_still_reads_the_home_it_was_started_in(self):
+        """Only the mutating commands take --config-home; the ones that merely read
+        must keep reading the home the process was started in."""
+        self.write_override({"bindings": [{"id": "applications.browser", "key": "G"}]})
+        self.assertEqual(0, self.run_cli("list"))
+        self.assertIn("SUPER + G", self.output,
+                      "a read-only command stopped reading the person's own map")
 
 
 if __name__ == "__main__":

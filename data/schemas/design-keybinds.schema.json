@@ -65,13 +65,15 @@
         "resolved_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
         "forms": {
           "type": "array",
-          "minItems": 4,
+          "minItems": 5,
+          "description": "Five, not four: the wheel-axis event names are a fifth shape the compositor accepts, and they are accepted before resolveKeycode rather than by it. A record that lists only the resolver's four would say a bind on mouse_down cannot work, which is wrong.",
           "items": {
             "type": "object",
             "required": ["form", "example", "meaning", "source"],
             "additionalProperties": false,
             "properties": {
-              "form": { "enum": ["number", "code:", "mouse:", "keysym name"] },
+              "form": { "enum": ["number", "code:", "mouse:", "keysym name",
+                                 "special event name"] },
               "example": { "type": "string", "minLength": 1 },
               "meaning": { "type": "string", "minLength": 10 },
               "source": { "$ref": "#/definitions/cite" },
@@ -651,7 +653,8 @@
 
     "rejected": {
       "type": "array",
-      "minItems": 6,
+      "minItems": 5,
+      "description": "A rejection that source later disproves is deleted rather than kept with a correction attached: this array is read as a list of spellings that do not work, and a row that does work is a false statement no matter what its status says. The wheel-axis row that used to be here moved to key_forms.forms as the 'special event name' form, and docs/UNVERIFIED.md records the closure of KB-04 with the citations.",
       "items": {
         "type": "object",
         "required": ["spelling", "why_rejected"],

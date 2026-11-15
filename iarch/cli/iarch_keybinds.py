@@ -56,6 +56,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -78,12 +79,19 @@ GENERATED = ROOT / ".config" / "hypr" / "generated" / "keybinds.lua"
 #: carries one, so two bindings that mean the same thing cannot look different.
 MODIFIER_ORDER = ["SUPER", "SHIFT", "CTRL", "ALT", "MOD2", "MOD3", "MOD5", "CAPS"]
 
-#: A key that is a relative mouse axis rather than a button. The compositor's
-#: resolver verifies neither form -- it is not a keysym and not a `mouse:N` code
-#: -- so these are carried as warnings, not errors, and the record says why under
-#: `rejected`. Changing them to something certainly wrong would be worse than
-#: leaving something possibly right.
-UNVERIFIED_KEYS = {"mouse_up", "mouse_down", "mouse_left", "mouse_right"}
+#: Wheel-axis *events* rather than keys, and the reason a name that is neither a
+#: keysym nor a `mouse:N` code still binds. `CKey::isValidEvent` accepts them
+#: outright alongside `catchall`, `mouse:` and `switch:` (src/keybinds/Key.cpp:8-10),
+#: and `CKeybindManager::onAxisEvent` builds the name from the scroll delta and
+#: dispatches it as `SResolvedKey{.event = name}` (src/keybinds/Manager.cpp:312-335),
+#: so a bind on one is matched on an event and never reaches resolveKeycode. Verified
+#: in data/design/keybinds.json -> key_forms, as the "special event name" form. The
+#: two wheel binds this project carries were an open question until that was read out
+#: of source; the closure and its two limits are recorded in docs/UNVERIFIED.md.
+#:
+#: Compared exactly, unlike a keysym name: isValidEvent uses == on the four
+#: spellings, so `MOUSE_DOWN` is not the same event and is refused below.
+EVENT_KEYS = {"mouse_up", "mouse_down", "mouse_left", "mouse_right"}
 
 CONFLICT = "conflict"
 ERROR = "error"
@@ -535,6 +543,16 @@ def validate(bindings: Sequence[Dict[str, Any]], root: Path = ROOT,
             problems.append(Problem(ERROR, "no description, so the key does something "
                                     "nobody can name", binding_id, keys))
 
+        if binding.get("locked") and not binding.get("enabled"):
+            # Checked before the disabled shortcut below, which skips the rest of the
+            # loop: a locked binding that is off is the one thing about a disabled
+            # binding that still matters.
+            problems.append(Problem(ERROR, "locked and disabled at once; locked means "
+                                    "rebindable but not deletable, and turning one off "
+                                    "is how an override deletes it. Rebind it, or "
+                                    "unlock it in the record and say why",
+                                    binding_id, keys))
+
         for modifier in binding.get("mods") or ():
             if modifier not in MODIFIER_ORDER:
                 problems.append(Problem(ERROR, f"unknown modifier {modifier!r}",
@@ -550,16 +568,13 @@ def validate(bindings: Sequence[Dict[str, Any]], root: Path = ROOT,
             # resolved; do not hold an unbound key to the keysym check.
             continue
 
-        if key in UNVERIFIED_KEYS:
-            problems.append(Problem(WARNING, f"{key!r} is carried from the v1 map and "
-                                    "is neither a keysym nor a mouse:N code, so the "
-                                    "compositor may answer 'key not found'; see "
-                                    "data/design/keybinds.json -> rejected, "
-                                    "TODO(verify) KB-04",
-                                    binding_id, keys))
-        elif not _key_is_valid(key, keysyms_lower):
+        if not _key_is_valid(key, keysyms_lower):
             problems.append(Problem(ERROR, f"{key!r} is not a keysym in the pinned "
-                                    "xkbcommon and not a mouse:N or bare keycode",
+                                    "xkbcommon, and is not a mouse:N button, a code:N "
+                                    "keycode, a bare keycode over 9, or one of the "
+                                    "wheel events "
+                                    f"{', '.join(sorted(EVENT_KEYS))}; the compositor "
+                                    "would answer 'key not found'",
                                     binding_id, keys))
 
         if mods == ["CTRL"] and len(key) == 1 and key.isalpha():
@@ -577,15 +592,22 @@ def validate(bindings: Sequence[Dict[str, Any]], root: Path = ROOT,
         problems.extend(layer_rule(binding, keys, binding_id))
         problems.extend(confirmation_rule(binding, keys, binding_id))
 
-        if key in seen:
-            pass  # combination conflict is checked below on the full string
-        if keys in seen:
-            problems.append(Problem(CONFLICT, f"already bound by {seen[keys]!r}; two "
+        # Compared case-folded, because the compositor resolves a key name with
+        # xkb_keysym_from_name and XKB_KEYSYM_CASE_INSENSITIVE (src/keybinds/Key.cpp:40,
+        # src/keybinds/Resolver.cpp:58, recorded in data/design/keybinds.json ->
+        # key_forms), so "Left", "left" and "LEFT" are one key and two binds spelling
+        # it differently are still two handlers on it. An exact comparison here would
+        # report a clean map for a collision the compositor really has.
+        folded = keys.lower()
+        if folded in seen:
+            problems.append(Problem(CONFLICT, f"already bound by {seen[folded]!r}; two "
                                     "binds on one combination is two handlers, and "
-                                    "which runs depends on registration order",
+                                    "which runs depends on registration order. The "
+                                    "compositor resolves key names case-insensitively, "
+                                    "so a spelling difference is not a second key",
                                     binding_id, keys))
         else:
-            seen[keys] = binding_id
+            seen[folded] = binding_id
 
         action = binding.get("action") or {}
         kind = action.get("type")
@@ -677,6 +699,17 @@ def static_bindings_agree(bindings: Sequence[Dict[str, Any]],
 
 
 def _key_is_valid(key: str, keysyms_lower: set) -> bool:
+    """Whether the compositor resolves this key at all, in any of its four shapes.
+
+    A keysym name -- resolved with XKB_KEYSYM_CASE_INSENSITIVE, so case does not
+    matter (src/keybinds/Key.cpp:40) -- a ``mouse:N`` button at or above BTN_MOUSE,
+    a ``code:N`` raw keycode or a bare number over 9, and a wheel-axis event name.
+    The event names are the one case-sensitive shape: ``isValidEvent`` compares the
+    four spellings with ``==`` (src/keybinds/Key.cpp:8-10), so an upper-case spelling
+    is a different event and resolves to nothing.
+    """
+    if key in EVENT_KEYS:
+        return True
     if key.lower() in keysyms_lower:
         return True
     if key.startswith("mouse:") and key[6:].isdigit() and int(key[6:]) >= 272:
@@ -763,6 +796,509 @@ def session_generated_path(config_home: Optional[Path] = None,
     return home / "hypr" / "generated" / "keybinds.lua"
 
 
+class UserError(Exception):
+    """A refusal with a sentence for the person, not a traceback.
+
+    Every mutating subcommand raises this for bad input, and ``main`` turns it into
+    an exit status of 2 and one line on stderr. A traceback for a mistyped key is
+    a bug report the person has to read to find out they meant ``Super`` and not
+    ``super``.
+    """
+
+
+def environment(args: argparse.Namespace) -> Dict[str, str]:
+    """The environment a command runs in, with ``--config-home`` honoured everywhere.
+
+    Not just ``os.environ``: a command pointed at another config root has to read its
+    override there, write its override there and back it up from there, and all three go
+    through :mod:`iarch.lib.configstore`, which takes an environment. Passing the flag
+    only to the session-file path -- which is what this used to do -- left a command
+    writing the generated Lua under ``--config-home`` while it changed the override in
+    the real ``~/.config/iarch``, and reporting one change that had happened in two
+    places.
+
+    ``--config-home`` names the ``.config`` directory itself, which is what
+    ``theme.py`` means by the same flag and what ``session_generated_path`` already
+    assumed: ``<config-home>/hypr/generated/...``, so the override belongs at
+    ``<config-home>/iarch/keybinds.json``. ``configstore`` wants that inner directory
+    rather than its parent, and ``IARCH_CONFIG_DIR`` is how it is told -- which also
+    means an exported ``IARCH_CONFIG_DIR`` loses to the flag, as an explicit argument
+    should beat an inherited environment.
+    """
+    env = os.environ.copy()
+    config_home = getattr(args, "config_home", None)
+    if config_home is not None:
+        env["IARCH_CONFIG_DIR"] = str(Path(config_home) / "iarch")
+    return env
+
+
+def override_entries(env: Dict[str, str]) -> List[Dict[str, Any]]:
+    """The person's differences, as the list the override file actually holds.
+
+    The file holds ``{"bindings": [...]}`` where each entry carries its own ``id``
+    and only the fields it changes -- not a mapping keyed by id. Reading it as a
+    mapping silently finds nothing and reports success, which is why this is one
+    function every mutator goes through.
+    """
+    document = user_overrides(env)
+    return [entry for entry in (document.get("bindings") or ())
+            if isinstance(entry, dict) and entry.get("id")]
+
+
+def parse_modifiers(raw: str) -> List[str]:
+    """``--mods`` into the canonical list, refusing a spelling the compositor lacks."""
+    parts = [piece.strip().upper() for piece in re.split(r"[+, ]+", raw) if piece.strip()]
+    if not parts:
+        raise UserError("--mods needs at least one modifier, for example SUPER or "
+                        "SUPER,SHIFT")
+    unknown = [m for m in parts if m not in MODIFIER_ORDER]
+    if unknown:
+        raise UserError(f"not a modifier the compositor knows: {', '.join(unknown)}. "
+                        f"The ones it has are {', '.join(MODIFIER_ORDER)}")
+    if len(set(parts)) != len(parts):
+        raise UserError(f"a modifier is repeated in {raw!r}; hl.bind refuses that "
+                        "case-insensitively")
+    return sorted(set(parts), key=MODIFIER_ORDER.index)
+
+
+def parse_key(raw: str) -> str:
+    """``--key`` into the pinned spelling of a keysym, refusing a name xkbcommon lacks.
+
+    A spelling that is already in the pinned list is kept exactly, so the record's own
+    vocabulary is never rewritten. One that is not, but matches case-insensitively, is
+    snapped to the list's spelling -- ``Backspace`` becomes ``BackSpace`` and ``RETURN``
+    becomes ``Return`` -- because the compositor resolves key names case-insensitively
+    (``src/keybinds/Key.cpp:40``), so accepting both spellings would let one key be
+    written two ways in the same map and the documentation would show whichever the
+    person happened to type.
+    """
+    key = raw.strip()
+    if not key:
+        raise UserError("--key must not be empty")
+    if key in EVENT_KEYS:
+        # A wheel axis, matched exactly: it is an event name, not a keysym, so
+        # canonicalising its case would produce a spelling nothing dispatches.
+        return key
+    names = keysym_names(ROOT)
+    exact = set(names)
+    if key in exact:
+        return key
+    folded = {name.lower(): name for name in names}
+    canonical = folded.get(key.lower())
+    if canonical is not None:
+        return canonical
+    if _key_is_valid(key, set(folded)):
+        return key  # a mouse:N or code: form, or a raw keycode above 9
+    hint = ""
+    # The four punctuation keys a person is most likely to type as the character.
+    # Each name is in the pinned list (comma:1942, period:2426, semicolon:2470,
+    # slash:2481), so the hint names a spelling that will be accepted.
+    punctuation = {".": "period", ",": "comma", "/": "slash", ";": "semicolon"}
+    if key in punctuation:
+        hint = f" The keysym for {key!r} is {punctuation[key]!r}, not the character."
+    elif len(key) == 1 and key.isalpha():
+        hint = " A letter is spelled as itself, in either case."
+    raise UserError(f"{key!r} is not a keysym in the pinned xkbcommon "
+                    f"(data/reference/xkb-keysyms-1.7.0.txt), and is not a mouse:N "
+                    f"or code: form or a bare keycode above 9.{hint} The wheel axes "
+                    "are mouse_up, mouse_down, mouse_left and mouse_right")
+
+
+def _leaf_close(stored: str, typed: str) -> bool:
+    """Whether a stored dispatcher leaf is close enough to suggest for a typed one."""
+    return (stored == typed or stored.startswith(typed) or typed.startswith(stored))
+
+
+def parse_dispatcher(raw: str) -> str:
+    """``--dispatch`` into a path in the verified tree, refusing one it does not have.
+
+    The short form is accepted and expanded -- ``window.close`` becomes
+    ``hl.dsp.window.close`` -- because the record stores the full path and a person
+    typing the leaf should not have to know that. Expanding to the stored spelling
+    rather than keeping what was typed is the same choice ``parse_key`` makes: one
+    thing, one spelling, so the map cannot hold two names for one dispatcher.
+    """
+    name = raw.strip()
+    if not name:
+        raise UserError("--dispatch must not be empty")
+    paths = dispatcher_paths(ROOT)
+    for candidate in (name, f"hl.dsp.{name}"):
+        if candidate in paths:
+            return candidate
+    # Suggest by leaf, accepting a prefix either way: "fullscreen_toggle" should be
+    # pointed at "fullscreen", and "win" at "window.close". An exact-leaf comparison
+    # would miss both and leave the person with a sample of the tree instead.
+    tail = name.rsplit(".", 1)[-1]
+    near = sorted(path for path in paths
+                  if _leaf_close(path.rsplit(".", 1)[-1], tail))[:3]
+    hint = (f" Did you mean {', '.join(near)}?" if near else
+            f" The tree has {len(paths)} paths, for example "
+            f"{', '.join(sorted(paths)[:3])}.")
+    raise UserError(f"{name!r} is not in the verified hl.dsp tree recorded in "
+                    f"data/design/keybinds.json, so the compositor would not resolve "
+                    f"it.{hint}")
+
+
+def confirmed(prompt: str, assume_yes: bool, stdin_is_tty: bool) -> bool:
+    """Ask before discarding something, and refuse when nobody can answer.
+
+    A non-interactive caller gets a refusal rather than a silent yes, because a
+    prompt nobody reads is not a confirmation. The one caller that legitimately
+    cannot answer -- the recovery combo, which fires while the session may be
+    broken -- passes ``--yes``, and pressing a dedicated recovery combination is
+    itself the explicit intent.
+    """
+    if assume_yes:
+        return True
+    if not stdin_is_tty:
+        raise UserError(f"{prompt} -- this is not a terminal, so there is nobody to "
+                        "ask; pass --yes if that is what you mean")
+    print(f"{prompt} [y/N] ", end="", flush=True)
+    answer = sys.stdin.readline().strip().lower()
+    return answer in ("y", "yes")
+
+
+def commit_change(defaults: Dict[str, Any], entries: List[Dict[str, Any]],
+                  env: Dict[str, str], *, config_home: Optional[Path] = None,
+                  confirm: Optional[str] = None, assume_yes: bool = False,
+                  stdin_is_tty: Optional[bool] = None) -> Tuple[int, str]:
+    """Validate, confirm, then write the override and the session file as one change.
+
+    The order is the safety. The map the change would produce is validated before
+    anything on disk is touched, so a change that would leave the compositor with a
+    bind it cannot resolve is refused and changes nothing -- there is nothing to
+    undo. Both files are then backed up before either is written, and a failure
+    halfway puts both back, because "validate first" cannot cover the disk being
+    full.
+
+    Returns the exit status and a one-line summary for the caller to print.
+    """
+    if stdin_is_tty is None:
+        stdin_is_tty = bool(sys.stdin and sys.stdin.isatty())
+    document: Dict[str, Any] = {"bindings": entries} if entries else {}
+    merged = merge(defaults, document)
+
+    problems = validate(merged, ROOT)
+    blocking = [p for p in problems if p.severity in (ERROR, CONFLICT)]
+    for problem in problems:
+        print(problem, file=sys.stderr if problem.severity != WARNING else sys.stdout)
+    if blocking:
+        return 1, (f"refused; the map this change would produce has {len(blocking)} "
+                   "problem(s), and nothing was changed")
+
+    if confirm is not None:
+        if not confirmed(confirm, assume_yes, stdin_is_tty):
+            return 1, "cancelled; nothing was changed"
+
+    override_path = configstore.user_path("keybinds", env)
+    target = session_generated_path(config_home, env)
+    override_backup = (configstore.backup_of(override_path, env)
+                       if override_path.is_file() else None)
+    target_backup = configstore.backup_of(target, env) if target.is_file() else None
+    source_note = "data/keybinds.default.json"
+    if entries:
+        source_note += f" + {override_path}"
+    rendered = render_lua(merged, ROOT, source_note)
+
+    try:
+        if entries:
+            override_path.parent.mkdir(parents=True, exist_ok=True)
+            configstore.atomic_write(
+                override_path,
+                json.dumps(document, indent=2, ensure_ascii=False) + "\n")
+        elif override_path.is_file():
+            override_path.unlink()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        configstore.atomic_write(target, rendered)
+    except OSError as exc:
+        for path, backup in ((override_path, override_backup), (target, target_backup)):
+            if backup is not None:
+                try:
+                    path.write_bytes(backup.read_bytes())
+                except OSError:
+                    print(f"iarch-keybinds: could not restore {path} from {backup}",
+                          file=sys.stderr)
+        return 1, f"failed while writing ({exc}); both files were restored"
+
+    summary = f"wrote {target} ({rendered.count('hl.bind(')} binds)"
+    if override_backup is not None:
+        summary += f"; the previous override is in {override_backup}"
+    return 0, summary
+
+
+def cmd_set(args: argparse.Namespace) -> int:
+    """Change one field of a binding that ships, keeping everything else.
+
+    Only the named fields go into the override, so a rebind does not restate an
+    action and an action change does not restate a key: whatever is not mentioned
+    keeps coming from the shipped record, which is what makes an update that
+    changes a default able to reach the person who changed nothing else about it.
+    """
+    env = environment(args)
+    defaults = default_record(ROOT)
+    known = {b["id"]: b for b in defaults["bindings"]}
+    if args.id not in known:
+        raise UserError(f"{args.id!r} is not in the shipped map, so there is nothing "
+                        "to change; `add` creates a binding of your own")
+
+    difference: Dict[str, Any] = {"id": args.id}
+    if args.mods is not None:
+        difference["mods"] = parse_modifiers(args.mods)
+    if args.key is not None:
+        difference["key"] = parse_key(args.key)
+    if args.description is not None:
+        if not args.description.strip():
+            raise UserError("--description must not be blank: a bind nobody can name "
+                            "is a bind nobody can find in the cheat sheet")
+        difference["description"] = args.description.strip()
+    if args.enable:
+        difference["enabled"] = True
+    if args.disable:
+        if known[args.id].get("locked"):
+            raise UserError(f"{args.id} is locked: rebindable but not deletable, and "
+                            "turning it off is how an override deletes it. Rebind it "
+                            "instead, or unlock it in the record")
+        if known[args.id].get("static"):
+            raise UserError(f"{args.id} is hand-written in .config/hypr/keybind.lua, "
+                            "so it is not this record's to turn off")
+        difference["enabled"] = False
+    if len(difference) == 1:
+        raise UserError("nothing to change: pass --mods, --key, --description, "
+                        "--enable or --disable")
+
+    entries = override_entries(env)
+    replaced = False
+    for index, entry in enumerate(entries):
+        if entry.get("id") == args.id:
+            # Merged into the difference already saved, so two `set` runs on one
+            # binding accumulate rather than the second silently dropping the first.
+            merged_entry = dict(entry)
+            merged_entry.update(difference)
+            entries[index] = merged_entry
+            replaced = True
+            break
+    if not replaced:
+        entries.append(difference)
+
+    status, summary = commit_change(defaults, entries, env,
+                                    config_home=args.config_home,
+                                    assume_yes=args.yes)
+    if status:
+        print(f"set: {summary}", file=sys.stderr)
+        return status
+    changed = next(b for b in merge(defaults, {"bindings": entries})
+                   if b["id"] == args.id)
+    fields = ", ".join(k for k in difference if k != "id")
+    print(f"set: {args.id} is now {key_string(changed)} ({fields})")
+    print(f"set: {summary}")
+    return 0
+
+
+def cmd_add(args: argparse.Namespace) -> int:
+    """Add a binding of your own, which the shipped record does not have."""
+    env = environment(args)
+    defaults = default_record(ROOT)
+    known = {b["id"] for b in defaults["bindings"]}
+    if args.id in known:
+        raise UserError(f"{args.id!r} is already in the shipped map; `set` changes it")
+    if not re.fullmatch(r"[a-z0-9]+(?:[.-][a-z0-9]+)+", args.id):
+        raise UserError(f"{args.id!r} is not an id of the form category.subject: lower "
+                        "case, with at least one dot or hyphen separating the parts, "
+                        "so a bind can be listed under a heading")
+
+    forms = [bool(args.exec), args.dispatch is not None, args.noctalia is not None]
+    if sum(forms) != 1:
+        raise UserError("exactly one action: --exec, --dispatch or --noctalia")
+
+    action: Dict[str, Any]
+    if args.exec:
+        argv = shlex.split(args.exec)
+        if not argv:
+            raise UserError("--exec produced no argv; quote the command as one string")
+        action = {"type": "exec", "command": argv}
+    elif args.dispatch is not None:
+        action = {"type": "dispatch", "dispatcher": parse_dispatcher(args.dispatch)}
+        if args.args_lua:
+            action["args_lua"] = args.args_lua
+    else:
+        action = {"type": "noctalia", "verb": args.noctalia}
+        if args.noctalia_arg:
+            action["args"] = list(args.noctalia_arg)
+
+    entry: Dict[str, Any] = {
+        "id": args.id,
+        "mods": parse_modifiers(args.mods),
+        "key": parse_key(args.key),
+        "action": action,
+        "description": args.description.strip(),
+        "category": args.category.strip(),
+        "enabled": True,
+        "locked": False,
+    }
+    if not entry["description"]:
+        raise UserError("--description must not be blank: the cheat sheet and "
+                        "docs/SHORTCUTS.md are rendered from it")
+    if not entry["category"]:
+        raise UserError("--category must not be blank: it is the heading the bind is "
+                        "listed under")
+
+    entries = override_entries(env)
+    if any(e.get("id") == args.id for e in entries):
+        raise UserError(f"{args.id!r} is already one of your own bindings; `set` "
+                        "changes it, or `reset` drops it first")
+    entries.append(entry)
+
+    status, summary = commit_change(defaults, entries, env,
+                                    config_home=args.config_home,
+                                    assume_yes=args.yes)
+    print(f"add: {summary}", file=sys.stderr if status else sys.stdout)
+    if status == 0:
+        print(f"add: {args.id} on {key_string(entry)}")
+    return status
+
+
+def cmd_disable(args: argparse.Namespace) -> int:
+    """Turn a binding off without deleting the difference that rebinds it."""
+    return _toggle_enabled(args, enabled=False)
+
+
+def cmd_enable(args: argparse.Namespace) -> int:
+    """Turn a binding back on."""
+    return _toggle_enabled(args, enabled=True)
+
+
+def _toggle_enabled(args: argparse.Namespace, *, enabled: bool) -> int:
+    env = environment(args)
+    defaults = default_record(ROOT)
+    known = {b["id"]: b for b in defaults["bindings"]}
+    verb = "enable" if enabled else "disable"
+
+    entries = override_entries(env)
+    own = {e.get("id"): e for e in entries}
+    for binding_id in args.ids:
+        if binding_id not in known and binding_id not in own:
+            raise UserError(f"{binding_id!r} is not in the shipped map and is not one "
+                            "of your own bindings, so there is nothing to "
+                            f"{verb}")
+        shipped = known.get(binding_id) or {}
+        if not enabled and shipped.get("locked"):
+            raise UserError(f"{binding_id} is locked: rebindable but not deletable, "
+                            f"and turning it off is how an override deletes it. This "
+                            f"is one of the {len([b for b in known.values() if b.get('locked')])} "
+                            "safety-net roles -- close window, lock, exit, terminal, "
+                            "settings, cheat sheet, power menu")
+        if not enabled and shipped.get("static"):
+            raise UserError(f"{binding_id} is hand-written in .config/hypr/keybind.lua "
+                            "because it has to survive a broken map; it is not this "
+                            "record's to turn off")
+        if not enabled and shipped.get("reserved"):
+            raise UserError(f"{binding_id} is reserved rather than bound, so it is "
+                            "already off")
+        if binding_id in own:
+            own[binding_id]["enabled"] = enabled
+        else:
+            entries.append({"id": binding_id, "enabled": enabled})
+            own[binding_id] = entries[-1]
+
+    status, summary = commit_change(defaults, entries, env,
+                                    config_home=args.config_home,
+                                    assume_yes=args.yes)
+    print(f"{verb}: {summary}", file=sys.stderr if status else sys.stdout)
+    return status
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    """Write the map out: your differences by default, the whole map with --all.
+
+    The differences are what move to another machine, because they are the only
+    part that is yours. ``--all`` is for reading or reviewing the effective map,
+    and importing one back is a `reset` plus a re-apply, which is why ``import``
+    refuses a document that is not a set of differences unless ``--all`` is passed
+    with it.
+    """
+    env = environment(args)
+    defaults = default_record(ROOT)
+    entries = override_entries(env)
+    if args.all:
+        payload: Any = {"version": 2, "bindings": merge(defaults, {"bindings": entries})}
+        kind = f"the effective map ({len(payload['bindings'])} bindings)"
+    else:
+        payload = {"bindings": entries}
+        kind = (f"{len(entries)} difference(s)" if entries
+                else "no differences -- this is the shipped map unchanged")
+    text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+    if args.file:
+        target = Path(args.file).expanduser()
+        if target.is_dir():
+            raise UserError(f"{target} is a directory, not a file to write")
+        configstore.atomic_write(target, text)
+        print(f"export: wrote {kind} to {target}")
+    else:
+        sys.stdout.write(text)
+        print(f"export: {kind}", file=sys.stderr)
+    return 0
+
+
+def cmd_import(args: argparse.Namespace) -> int:
+    """Read differences back in, merging by default and replacing only when told."""
+    env = environment(args)
+    defaults = default_record(ROOT)
+    source = Path(args.file).expanduser()
+    if not source.is_file():
+        raise UserError(f"{source} is not a file")
+    try:
+        document = json.loads(source.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        raise UserError(f"{source} does not parse as JSON: {exc}") from exc
+    if not isinstance(document, dict) or not isinstance(document.get("bindings"), list):
+        raise UserError(f"{source} is not a keybinds document: it needs a 'bindings' "
+                        "list, which `export` writes")
+
+    incoming = [e for e in document["bindings"] if isinstance(e, dict) and e.get("id")]
+    skipped = len(document["bindings"]) - len(incoming)
+    if not incoming:
+        raise UserError(f"{source} holds no binding with an id, so there is nothing "
+                        "to import")
+
+    # An exported whole map carries every field of every shipped binding. Importing
+    # that as differences would freeze all of them: a later update to a default
+    # could never reach this machine again. Refuse it and say what to do instead.
+    if not args.all and document.get("version") and len(incoming) > 20:
+        frozen = [e["id"] for e in incoming
+                  if e["id"] in {b["id"] for b in defaults["bindings"]}
+                  and len(e) > 4]
+        if frozen:
+            raise UserError(
+                f"{source} looks like a whole exported map, not a set of differences: "
+                f"{len(frozen)} shipped bindings carry every field. Importing it would "
+                "freeze them, so a later change to a default could never reach this "
+                "machine. Export without --all, or pass --all to import it anyway")
+
+    entries = [] if args.replace else override_entries(env)
+    by_id = {e["id"]: e for e in entries}
+    for entry in incoming:
+        if entry["id"] in by_id and not args.replace:
+            by_id[entry["id"]].update(entry)
+        else:
+            by_id[entry["id"]] = dict(entry)
+    merged_entries = list(by_id.values())
+
+    confirm = None
+    if args.replace:
+        existing = override_entries(env)
+        confirm = (f"import --replace discards the {len(existing)} difference(s) "
+                   f"already saved and replaces them with {len(merged_entries)} from "
+                   f"{source.name}.")
+    status, summary = commit_change(defaults, merged_entries, env,
+                                    config_home=args.config_home, confirm=confirm,
+                                    assume_yes=args.yes)
+    detail = f"imported {len(incoming)} binding(s)"
+    if skipped:
+        detail += f" and skipped {skipped} entry/entries with no id"
+    print(f"import: {detail}; {summary}", file=sys.stderr if status else sys.stdout)
+    return status
+
+
 def cmd_reset(args: argparse.Namespace) -> int:
     """Drop the differences a person saved and re-apply the shipped map.
 
@@ -774,7 +1310,7 @@ def cmd_reset(args: argparse.Namespace) -> int:
     nothing. A backup is still taken first and restored if a write fails halfway,
     because "validate first" cannot cover the disk being full.
     """
-    env = os.environ.copy()
+    env = environment(args)
     override_path = configstore.user_path("keybinds", env)
     overrides = user_overrides(env)
     defaults = default_record(ROOT)
@@ -789,8 +1325,8 @@ def cmd_reset(args: argparse.Namespace) -> int:
     # The override file holds a list of partial bindings, each carrying its own id --
     # not a mapping keyed by id -- so the differences are selected by walking that
     # list. Treating it as a mapping silently resets nothing and reports success.
-    entries = [e for e in (overrides.get("bindings") or ()) if isinstance(e, dict)]
-    saved_ids = [e["id"] for e in entries if e.get("id")]
+    entries = override_entries(env)
+    saved_ids = [e["id"] for e in entries]
 
     if args.all:
         dropping = sorted(set(saved_ids))
@@ -805,45 +1341,26 @@ def cmd_reset(args: argparse.Namespace) -> int:
         dropping = [i for i in saved_ids if i in named]
         remaining_entries = [e for e in entries if e.get("id") not in named]
 
-    remaining: Dict[str, Any] = {"bindings": remaining_entries} if remaining_entries else {}
-
-    # Validate the map the reset would produce, before writing any of it.
-    problems = validate(merge(defaults, remaining), ROOT)
-    blocking = [p for p in problems if p.severity in (ERROR, CONFLICT)]
-    for problem in problems:
-        print(problem, file=sys.stderr if problem.severity != WARNING else sys.stdout)
-    if blocking:
-        print(f"reset: refused; the map this reset would produce has {len(blocking)} "
-              "problem(s), and nothing was changed", file=sys.stderr)
-        return 1
-
-    target = session_generated_path(args.config_home, env)
-    backup = configstore.backup_of(override_path, env) if override_path.is_file() else None
-    try:
-        if remaining:
-            configstore.save("keybinds", remaining, env)
-        elif override_path.is_file():
-            override_path.unlink()
-        source_note = "data/keybinds.default.json"
-        if remaining:
-            source_note += f" + {override_path}"
-        rendered = render_lua(merge(defaults, remaining), ROOT, source_note)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        configstore.atomic_write(target, rendered)
-    except OSError as exc:
-        if backup is not None:
-            override_path.write_bytes(backup.read_bytes())
-            print(f"reset: failed while writing ({exc}); the override was restored "
-                  f"from {backup}", file=sys.stderr)
-        else:
-            print(f"reset: failed while writing ({exc})", file=sys.stderr)
-        return 1
+    # --all discards more than the person named, so it is the case that asks first.
+    # A targeted reset discards exactly what was named and keeps a backup, which is
+    # what makes it reversible without a prompt.
+    confirm = None
+    if args.all and dropping:
+        confirm = (f"reset --all drops every difference you have saved: "
+                   f"{len(dropping)} binding(s) -- {', '.join(dropping[:6])}"
+                   f"{' …' if len(dropping) > 6 else ''}. The shipped map comes back "
+                   "and a backup is kept.")
+    status, summary = commit_change(defaults, remaining_entries, env,
+                                    config_home=args.config_home, confirm=confirm,
+                                    assume_yes=args.yes)
+    if status:
+        print(f"reset: {summary}", file=sys.stderr)
+        return status
 
     scope = "every difference" if args.all else ", ".join(dropping) or "nothing"
     print(f"reset: dropped {scope}")
-    if backup is not None:
-        print(f"reset: the override as it was is in {backup}")
-    print(f"reset: wrote {target} ({rendered.count('hl.bind(')} binds)")
+    print(f"reset: {summary}")
+    target = session_generated_path(args.config_home, env)
     if target != GENERATED:
         print("reset: the repository copy at "
               f"{GENERATED.relative_to(ROOT)} was left alone; it is the artifact CI "
@@ -953,13 +1470,81 @@ def main(argv: Optional[List[str]] = None) -> int:
     check.add_argument("--i-know", action="store_true")
     check.set_defaults(func=cmd_check)
 
+    # Every mutating subcommand shares these two, and they mean the same thing in
+    # all of them: --yes is the answer to a confirmation prompt, and --config-home
+    # says which .config the live session reads.
+    def mutating(parser_: argparse.ArgumentParser) -> None:
+        parser_.add_argument("--yes", action="store_true",
+                             help="answer yes to the confirmation instead of being "
+                                  "asked; required when stdin is not a terminal")
+        parser_.add_argument("--config-home", type=Path, default=None,
+                             help="where the live session's .config is (default "
+                                  "~/.config); the repository artifact is never the "
+                                  "target of a mutation")
+
+    set_ = sub.add_parser("set", help="change one field of a binding that ships")
+    set_.add_argument("id")
+    set_.add_argument("--mods", help="modifiers, for example SUPER or SUPER,SHIFT")
+    set_.add_argument("--key", help="a keysym, for example E, Return or BackSpace")
+    set_.add_argument("--description")
+    state = set_.add_mutually_exclusive_group()
+    state.add_argument("--enable", action="store_true")
+    state.add_argument("--disable", action="store_true")
+    mutating(set_)
+    set_.set_defaults(func=cmd_set)
+
+    add = sub.add_parser("add", help="add a binding of your own")
+    add.add_argument("id", help="of the form category.subject")
+    add.add_argument("--mods", required=True)
+    add.add_argument("--key", required=True)
+    add.add_argument("--description", required=True)
+    add.add_argument("--category", required=True,
+                     help="the heading the bind is listed under in the cheat sheet")
+    action = add.add_mutually_exclusive_group(required=True)
+    action.add_argument("--exec", dest="exec",
+                        help="a command line as one quoted string, split with shlex")
+    action.add_argument("--dispatch", help="an hl.dsp path, for example window.close")
+    action.add_argument("--noctalia", help="a shell verb, for example panel-toggle")
+    add.add_argument("--args-lua", help="a Lua table literal for --dispatch")
+    add.add_argument("--noctalia-arg", action="append",
+                     help="an argument for --noctalia; repeat for several")
+    mutating(add)
+    add.set_defaults(func=cmd_add)
+
+    for name, func, helptext in (
+            ("disable", cmd_disable, "turn a binding off without deleting the rebind"),
+            ("enable", cmd_enable, "turn a binding back on"),
+    ):
+        parser_ = sub.add_parser(name, help=helptext)
+        parser_.add_argument("ids", nargs="+")
+        mutating(parser_)
+        parser_.set_defaults(func=func)
+
+    export = sub.add_parser("export", help="write your differences out, or the whole map")
+    export.add_argument("file", nargs="?", help="default: stdout")
+    export.add_argument("--all", action="store_true",
+                        help="the effective map rather than your differences")
+    export.set_defaults(func=cmd_export)
+
+    import_ = sub.add_parser("import", help="read differences back in")
+    import_.add_argument("file")
+    import_.add_argument("--all", action="store_true",
+                         help="accept a whole exported map, freezing every default it "
+                              "restates; refused by default because an update could "
+                              "then never reach this machine")
+    import_.add_argument("--replace", action="store_true",
+                         help="discard the differences already saved instead of "
+                              "merging into them (asks first)")
+    mutating(import_)
+    import_.set_defaults(func=cmd_import)
+
     reset = sub.add_parser("reset", help="drop saved differences and re-apply the "
                                          "shipped map (what Ctrl+Alt+R runs)")
     reset.add_argument("ids", nargs="*", help="binding ids to reset; omit with --all")
     reset.add_argument("--all", action="store_true",
-                       help="drop every difference, not just the named ones")
-    reset.add_argument("--config-home", type=Path, default=None,
-                       help="where the live session's .config is (default ~/.config)")
+                       help="drop every difference, not just the named ones (asks "
+                            "first, because it discards more than you named)")
+    mutating(reset)
     reset.set_defaults(func=cmd_reset)
 
     docs = sub.add_parser("docs", help="regenerate docs/SHORTCUTS.md")
@@ -974,7 +1559,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.check:
             return cmd_check_all(args)
         parser.error("a subcommand is required (or --check for the CI freshness check)")
-    return args.func(args)
+    try:
+        return args.func(args)
+    except UserError as exc:
+        # One sentence and exit 2, rather than a traceback the person has to read to
+        # find out they spelled a modifier wrong.
+        print(f"iarch-keybinds {args.command}: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

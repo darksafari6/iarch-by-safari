@@ -96,22 +96,43 @@ class KeybindsRecord(unittest.TestCase):
             with self.subTest(word=word):
                 self.assertIn(word, known, "the word for a punctuation key is missing")
 
-    def test_the_mouse_wheel_spelling_is_marked_unverified_not_asserted(self):
-        """``mouse_up`` is what the shipped config says and nothing verified it.
+    def test_the_mouse_wheel_is_recorded_as_an_event_form_with_its_limits(self):
+        """``mouse_up`` binds, but not as a key -- and the record has to say which.
 
-        It is not a keysym and it is not a ``mouse:N`` code, so the two key forms
-        this record verified both refuse it. It is kept because replacing it with
-        something certainly wrong is worse than leaving something possibly right,
-        and it is marked so that nobody mistakes the keeping for a verification.
+        This row used to assert the opposite: that the wheel spelling is rejected and
+        carried as TODO(verify), because it is neither a keysym nor a ``mouse:N`` code
+        and both forms this record had verified refuse it. The rejected row's own note
+        pointed at the answer -- "if upstream supports it at all it is not through the
+        key Forms this record verified" -- and it was right: ``CKey::isValidEvent``
+        accepts ``catchall``, ``mouse:``, ``switch:`` and exactly ``mouse_down``,
+        ``mouse_left``, ``mouse_up``, ``mouse_right`` before any keysym lookup, and
+        ``onAxisEvent`` dispatches a wheel delta under that name as
+        ``SResolvedKey{.event = name}``. So the row moved out of ``rejected`` and into
+        ``key_forms`` with citations, and a false statement was deleted rather than
+        annotated.
         """
-        rejected = {entry["spelling"]: entry for entry in self.record["rejected"]}
-        wheel = [text for text in rejected if "mouse_up" in text]
-        self.assertTrue(wheel, "the wheel binds are not recorded as rejected")
-        entry = rejected[wheel[0]]
-        self.assertEqual("TODO(verify)", entry.get("status"),
-                         "the wheel spelling is recorded as settled when it is not")
+        forms = {f["form"]: f for f in self.record["key_forms"]["forms"]}
+        self.assertIn("special event name", forms,
+                      "the wheel events are documented nowhere in the record")
+        event = forms["special event name"]
+        self.assertIn("Key.cpp", event["source"],
+                      "a key form with no source line is an invention")
         self.assertNotIn("mouse_up", self.record["keysyms"]["used_by_this_project"],
-                         "mouse_up is listed as a keysym this project uses")
+                         "mouse_up is listed as a keysym this project uses; it is an "
+                         "event name, and conflating the two is how the wrong "
+                         "conclusion was reached first time")
+        rejected = [e["spelling"] for e in self.record["rejected"]]
+        self.assertFalse([s for s in rejected if "mouse_up" in s],
+                         "key_forms says the wheel binds work and rejected says they "
+                         "do not; a reader cannot tell which to trust")
+        # The two limits are the reason this is not simply "the wheel works".
+        self.assertIn("case-sensitive", event["limit"],
+                      "isValidEvent compares the four names with ==, so an upper-case "
+                      "spelling resolves to nothing and the limit has to be recorded")
+        self.assertIn("WHEEL", event["limit"],
+                      "onAxisEvent returns early unless the axis source is a wheel, so "
+                      "a touchpad scroll never fires these binds and the record must "
+                      "not imply otherwise")
 
     # ------------------------------------------------------- the option surface
 

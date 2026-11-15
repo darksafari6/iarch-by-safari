@@ -206,8 +206,7 @@
       "locked": false,
       "flags": {
         "mouse": true
-      },
-      "unverified": "mouse_down is carried from the v1 map and is neither a keysym nor a mouse:N code, so the compositor may answer 'key not found'."
+      }
     },
     {
       "id": "planned.overlay",

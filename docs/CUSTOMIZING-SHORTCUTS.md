@@ -64,24 +64,65 @@ survive is its own worst output.
 
 The Shortcuts page in Settings shows the map and **does not yet offer to change
 it** — the recorder and action picker that would put the collision check in front
-of you are later work. Today a change is two steps:
+of you are later work. The CLI does it today:
 
 ```sh
-# 1. see what is bound, and what a change would collide with
-python3 iarch/cli/iarch_keybinds.py list
-python3 iarch/cli/iarch_keybinds.py check
-
-# 2. write the difference into ~/.config/iarch/keybinds.json, then render
-python3 iarch/cli/iarch_keybinds.py generate --write
+iarch-keybinds list                              # what is bound, by category
+iarch-keybinds set <id> --mods SUPER --key G     # rebind one entry
+iarch-keybinds add custom.x --mods SUPER --key F13 \
+    --description "Scratch pad" --category Custom --exec "~/.local/bin/pad.sh"
+iarch-keybinds disable <id> [<id> …]             # turn off, keeping any rebind
+iarch-keybinds enable <id> [<id> …]              # turn back on
+iarch-keybinds export [--all] > mine.json        # your differences, to move them
+iarch-keybinds import mine.json [--replace]      # and back again
+iarch-keybinds reset --all                       # drop every difference
+iarch-keybinds check                             # every problem, with severities
 ```
 
-`generate --write` validates the whole map before it writes any of it, so a
-change that would produce a bind the compositor cannot resolve is refused rather
-than half-applied. Then reload the compositor config for the change to take
-effect.
+`iarch-keybinds` is the name once `scripts/iarch-link-cli.sh` has run — that
+script writes `~/.local/bin/iarch-keybinds` and tells you if that directory is
+not on your `PATH`. From a checkout without it, spell any of the above
+`python3 iarch/cli/iarch_keybinds.py …`; it is the same code path either way.
+Every command also takes `--config-home DIR` to work against another home, which
+is what the tests use.
 
-`iarch-keybinds` is not on `PATH` yet — no entry point and no installer wiring
-exists — which is why the commands above are spelled `python3 iarch/cli/...`.
+Then reload the compositor config for the change to take effect.
+
+### What each of them does before it writes
+
+One change, four steps, always in this order — and the order is the safety:
+
+1. **Validate the map the change would produce**: the shipped defaults plus your
+   differences with this edit applied. If it has an error or a conflict, every
+   problem is printed and the command exits **1** having changed nothing. There
+   is nothing to undo, which is the whole point of validating first.
+2. **Confirm**, but only where the change discards more than you named —
+   `reset --all` and `import --replace`. A targeted `reset <id>` keeps a backup
+   and does not ask. The prompt refuses to guess: with no terminal to read an
+   answer from it exits **2** rather than assuming yes, and `--yes` is how a
+   caller that has read what the command does says so. That is what the recovery
+   bind passes, because it fires while the session may be broken and a prompt on
+   a screen that is not drawing is worse than no prompt.
+3. **Back up both files** — your override and the session's generated Lua — into
+   `~/.local/state/iarch/backups/`.
+4. **Write both**, each through a temporary file in its own directory that is
+   renamed into place, so a reader never sees a half-written map. If a write
+   fails halfway — a full disk, a read-only mount — both files are put back from
+   the backups and the command exits **1** saying so.
+
+So: **0** is done, **1** is refused, cancelled or failed to write, **2** is bad
+input. A batch (`disable a b c`) is one change, so it validates as one and lands
+whole or not at all; there is no half-disabled batch.
+
+Two refusals worth knowing about before you hit them. An id is
+`category.subject`, in lower case, so `add custom` is refused and `add custom.x`
+is not. And a key is checked against the keysym list this repository pins: a
+character is refused with the word to use instead (`.` → `period`), a spelling
+the list has in another case is snapped to the pinned one (`Backspace` →
+`BackSpace`, because the compositor resolves key names case-insensitively and one
+key should not end up written two ways), and a dispatcher leaf is expanded to the
+path the record stores (`window.close` → `hl.dsp.window.close`) or refused with a
+suggestion if the tree has nothing close.
 
 ## The layers
 
@@ -150,9 +191,15 @@ separate fields exist to prevent.
 ## Getting back to the map that ships
 
 ```sh
-python3 iarch/cli/iarch_keybinds.py reset --all      # drop every difference
-python3 iarch/cli/iarch_keybinds.py reset <id> …     # drop named ones only
+iarch-keybinds reset --all        # drop every difference
+iarch-keybinds reset <id> …       # drop named ones only
 ```
+
+`reset --all` **asks first**, because it discards more than you named: every
+difference you ever saved, not the one you were thinking about. `--yes` is how a
+caller that has read what it does answers in advance, and with no terminal to ask
+— a script, a bind, CI — the command exits **2** rather than assuming an answer.
+A targeted `reset <id>` does not ask; it drops what you named and keeps a backup.
 
 `reset` backs your override up into `~/.local/state/iarch/backups/` before it
 touches anything, validates the map the reset would produce, and only then
@@ -193,10 +240,15 @@ implementation agree about the key and the command. Two files describing one bin
 is exactly the shape that drifts, and both files being individually valid is not
 evidence they describe the same thing.
 
-**The recovery combo is bound but cannot yet run.** `iarch-keybinds` is not on
-`PATH`, so until the installer puts it in `~/.local/bin` the bind opens a
-terminal and says why on stderr instead of failing silently. The record carries
-this as an `unverified` note.
+**The recovery combo is bound, and the command it calls now exists.**
+`scripts/iarch-link-cli.sh` writes `~/.local/bin/iarch-keybinds`, and
+`tests/test_cli_launchers.py` runs that name end to end. What has not happened is
+the bind *firing*: no installer has been run on a machine and no compositor exists
+here, so whether a session's `PATH` — which a display manager starts without
+reading your shell profile — actually reaches `~/.local/bin` is unobserved. Until
+it does, the bind opens a terminal and says on stderr which command to run rather
+than failing silently. The record carries this as an `unverified` note, and
+`docs/UNVERIFIED.md` keeps it open as KB-01.
 
 ## Keys that are held but not bound
 
@@ -210,29 +262,48 @@ bind a person hand-edits and then loses on the next render.
 
 ## What is not built yet
 
-- **`iarch-cheatsheet` does not exist.** `Super+H` is bound to it and locked, so
-  the key is real and the overlay behind it is not. This is `UI-02`.
-- **The mutating subcommands are absent** — `set`, `add`, `disable`, `import`,
-  `export`. `reset` exists because the recovery combo calls it and a safety net
-  that depends on unwritten code is not a safety net.
+- **The overlay is a terminal drawing, not a glass window.** `Super+H` runs
+  `iarch-cheatsheet`, which merges the record with your override, groups it by
+  category, filters on every term you give it and paints with the shipped
+  `midnight-glass` palette. With no terminal attached — the bind's case — it opens
+  one of the terminals the compositor's own emergency mode probes for, then falls
+  back to `notify-send`, then to stderr, so the key never fails silently. What is
+  not built is the layer-shell glass surface with a box you type into: a plan row
+  in the settings application cannot carry behaviour by design, so that needs a
+  page module of its own. This is `UI-02`.
+- **The Settings page still will not edit the map.** `set`, `add`, `disable`,
+  `enable`, `export`, `import` and `reset` are all here and all tested, but they
+  are a CLI: the Shortcuts page reads the same record and offers no recorder, no
+  action picker and no switch, so the collision check is not yet in front of the
+  person making the change. That page is the reason the CLI validates first and
+  confirms explicitly — the interface inherits those guarantees rather than
+  reimplementing them.
 - **No live reload-and-rollback against a running compositor.** The validation
   and the rollback on a failed write are real; asking a running compositor to
   accept a map and undoing it if the session does not survive needs a compositor,
   and the machine this was written on does not have one.
-- **Two mouse-wheel binds are carried unverified.** `Super+mouse_up` and
-  `Super+mouse_down` come from the older map and are neither a keysym nor a
-  `mouse:N` code, so the compositor may answer `key not found`. `check` warns on
-  both rather than passing them silently.
+- **The mouse-wheel binds work on a wheel and not on a touchpad.**
+  `Super+mouse_up` and `Super+mouse_down` are neither a keysym nor a `mouse:N`
+  code, and they still bind: the compositor accepts them as *events*
+  (`src/keybinds/Key.cpp:8-10`) and turns a scroll-wheel delta into one
+  (`src/keybinds/Manager.cpp:312-335`). That path runs only for
+  `WL_POINTER_AXIS_SOURCE_WHEEL`, so a two-finger touchpad scroll changes nothing,
+  and the four names are compared exactly — `MOUSE_DOWN` is not the same event.
+  Verified from source and never observed on a session, so `docs/UNVERIFIED.md`
+  keeps the live half under TP-10.
 
 ## Reading the map
 
 ```sh
-python3 iarch/cli/iarch_keybinds.py list                # grouped by category
-python3 iarch/cli/iarch_keybinds.py list --json         # what an overlay would read
-python3 iarch/cli/iarch_keybinds.py list --category System
-python3 iarch/cli/iarch_keybinds.py check               # every problem, with severities
-python3 iarch/cli/iarch_keybinds.py --check             # CI: are the renderings current?
+iarch-keybinds list                # grouped by category
+iarch-keybinds list --json         # what an overlay would read
+iarch-keybinds list --category System
+iarch-keybinds check               # every problem, with severities
+iarch-keybinds --check             # CI: are the renderings current?
 ```
+
+From a checkout that has not run `scripts/iarch-link-cli.sh`, each of those is
+`python3 iarch/cli/iarch_keybinds.py …` instead.
 
 `check` exits non-zero on an error or a conflict and zero on warnings, so a
 healthy map with known debt does not look broken — but the warnings are still

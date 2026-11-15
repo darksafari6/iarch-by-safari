@@ -39,10 +39,27 @@ class ConfigError(RuntimeError):
     """Raised when user state or a generated target is not safe to touch."""
 
 
+def home_dir(env: Optional[Mapping[str, str]] = None) -> Path:
+    """The home the given environment names, else this process's own.
+
+    Resolved from ``env`` rather than from :func:`pathlib.Path.home` whenever a caller
+    passed one, because ``Path.home()`` reads the real ``HOME`` out of ``os.environ``.
+    A function that accepts an environment mapping and then ignores it for its default
+    is a trap with a friendly signature: a command told to work against another home
+    reads and writes the developer's own ``~/.config/iarch`` instead, and reports
+    success while doing it.
+    """
+    resolved = os.environ if env is None else env
+    value = resolved.get("HOME")
+    if value:
+        return Path(value).expanduser()
+    return Path.home()
+
+
 def config_dir(env: Optional[Mapping[str, str]] = None) -> Path:
     env = os.environ if env is None else env
     value = env.get("IARCH_CONFIG_DIR")
-    root = Path(value) if value else Path.home() / ".config" / "iarch"
+    root = Path(value) if value else home_dir(env) / ".config" / "iarch"
     if not root.is_absolute():
         raise ConfigError(f"IARCH_CONFIG_DIR must be absolute: {value!r}")
     return root
@@ -51,7 +68,7 @@ def config_dir(env: Optional[Mapping[str, str]] = None) -> Path:
 def state_dir(env: Optional[Mapping[str, str]] = None) -> Path:
     env = os.environ if env is None else env
     value = env.get("IARCH_STATE_DIR")
-    root = Path(value) if value else Path.home() / ".local" / "state" / "iarch"
+    root = Path(value) if value else home_dir(env) / ".local" / "state" / "iarch"
     if not root.is_absolute():
         raise ConfigError(f"IARCH_STATE_DIR must be absolute: {value!r}")
     return root

@@ -50,6 +50,47 @@ reads, the documentation and the Settings page are all rendered from it.
   quoted or a description escaped is a diff a person accepts on purpose instead
   of a silent edit to a file the session reads.
 
+- **The mutating subcommands** — `set`, `add`, `disable`, `enable`, `export` and
+  `import`, beside the `reset` the recovery combo already needed. Each is one
+  change with the same four steps in the same order: validate the map the change
+  would produce, confirm where it discards more than was named, back up both
+  files, then write both through a temporary file renamed into place — restoring
+  both if a write fails halfway, because "validate first" cannot cover a full
+  disk. The exit status is the contract: **0** done, **1** refused, cancelled or
+  failed to write, **2** bad input. A confirmation with no terminal to answer it
+  exits 2 rather than assuming yes, and a batch validates and lands as one change
+  so there is no half-disabled map. Input is canonicalised to the pinned spelling
+  rather than accepted as typed, so one key cannot end up written two ways.
+- **`iarch/cli/iarch_cheatsheet.py`** — the overlay behind `Super+H`, which the
+  record had bound to a command that did not exist. It merges the record with your
+  override through the same function that renders the compositor's Lua, so it
+  cannot show a map the session does not have; groups rows by the record's own
+  categories, with reserved and disabled keys held in their own group at the end
+  rather than dropped; filters on every term at once, where a single character has
+  to be a *key* rather than a letter inside a description, because `super t` has to
+  answer with one row and not most of the map; and paints from the shipped
+  `midnight-glass` preset, refusing a colour role the preset does not define rather
+  than inventing a hex value, so it is the same dark glass and the same neon blue as
+  the session it floats over. Fired from a bind it has no terminal, so it decides
+  where to draw and says why: the terminal it already has, else the first installed
+  of the six the compositor's own emergency mode probes for, in its order, else
+  `notify-send`, else stderr and a non-zero exit. In a terminal it waits — `q`
+  closes, anything else is read as a new filter and redrawn. `--json` gives the same
+  overlay as data. 48 tests cover the model, the grouping, the filter, the palette,
+  both renderings and every fallback branch, injected rather than hoped for.
+- **`scripts/iarch-keybinds.sh` and `scripts/iarch-link-cli.sh`** — the name the
+  recovery bind, the record and the documentation had all been using already. The
+  first is a thin launcher that execs the CLI so the exit status passes through
+  untouched; the second writes `~/.local/bin/iarch-keybinds` as a generated
+  wrapper that names its checkout absolutely. It is idempotent, refuses to touch
+  a file it did not write unless `--force` (and backs that file up when it does),
+  refuses to run as root, creates the directory, says when it is not on `PATH`,
+  and fails loudly with the command to re-run when the checkout is gone.
+  `tests/test_cli_launchers.py` runs both for real, then runs `iarch-keybinds
+  check` *by name* through the wrapper, and asserts that every name
+  `.config/hypr/keybind.lua` probes for with `command -v` is a name the linker
+  provides — so the bind and the linker cannot drift apart.
+
 ### Changed
 
 - **The Lua is generated, not written.** `.config/hypr/generated/keybinds.lua`
@@ -80,6 +121,24 @@ reads, the documentation and the Settings page are all rendered from it.
 - **`Ctrl+Alt+BackSpace` is reserved and never bound.** It is the X11
   kill-server combination; holding the key in the record disabled is what stops
   a future edit taking it.
+- **The two mouse-wheel binds are verified, and were verified by being wrong.**
+  `Super+mouse_up` and `Super+mouse_down` were carried from the v1 map as an open
+  question because neither is a keysym nor a `mouse:N` code. Source settled it:
+  the compositor accepts them as *events* (`src/keybinds/Key.cpp:8-10`) and
+  dispatches a wheel delta under exactly that name
+  (`src/keybinds/Manager.cpp:312-335`), so they bind without ever reaching the
+  resolver. The rejection row in `data/design/keybinds.json` was deleted rather
+  than annotated and the mechanism recorded as a fifth key form; `check` reports
+  two warnings instead of four, and the two limits that came with the finding are
+  recorded as well — the names are compared exactly, and only a scroll wheel
+  produces them, so a touchpad scroll never fires these binds.
+- **`docs/UNVERIFIED.md` now carries a verification log for the keyboard map**,
+  listing every upstream file and line range the record cites, at which ref each
+  was read, and stating plainly that nothing in the pass was observed on a running
+  compositor — there is no Hyprland, no `hyprctl`, no display and no package tool
+  here. KB-04 is closed; KB-01, KB-02, KB-03 and KB-05 remain, because each needs
+  an observation rather than a reading, and TP-10 still owns the live half of all
+  of it.
 
 ### Fixed
 
@@ -93,39 +152,61 @@ reads, the documentation and the Settings page are all rendered from it.
 - **`user_override_path()` asked for `"keybinds.json"`** from a helper that
   appends `.json`, so overrides were written to `keybinds.json.json` and never
   read back. It now passes the bare stem.
+- **The conflict check compared key strings exactly**, so `validate()` reported a
+  clean map for `SUPER + t` beside `SUPER + T` — two handlers on one key, and
+  which runs depends on registration order. The compositor resolves key names with
+  `XKB_KEYSYM_CASE_INSENSITIVE` (`src/keybinds/Key.cpp:40`), a fact this
+  repository's own record already stated at `key_forms.forms[3]` and the checker
+  contradicted. Comparison is case-folded now, and the message says why a spelling
+  difference is not a second key. A dead `if key in seen: pass` sitting above it
+  went with the fix.
+- **`validate()` claimed a check it did not have.** Two docstrings said it refused
+  "a locked binding an override tried to delete"; no such branch existed. Locked
+  and disabled at once is an error now, added after confirming that no shipped
+  entry would newly fail it.
+- **Bad input was accepted in three places.** An id with no separator (`custom`,
+  where ids are `category.subject`); a keysym in a case the pinned list does not
+  contain (`Backspace`, which the compositor resolves but the documentation would
+  then show two ways); and a dispatcher leaf with nothing checking it against the
+  verified tree. Each is now refused or canonicalised, with the pinned spelling or
+  a near-miss suggestion in the message — and each refusal is drift-checked by
+  reintroducing the defect and proving a test notices.
 
 ### Known gaps
 
-- **The recovery combo is bound but cannot yet run.** `Ctrl+Alt+R` is
-  hand-written in `.config/hypr/keybind.lua` — deliberately, because a bind
-  whose job is to repair a broken keyboard map cannot live in the file that
-  might be broken, and the compositor's safe-`require`
+- **The recovery combo is bound, and what it calls now exists — but the bind has
+  not fired.** `Ctrl+Alt+R` is hand-written in `.config/hypr/keybind.lua`
+  deliberately, because a bind whose job is to repair a broken keyboard map
+  cannot live in the file that might be broken, and the compositor's safe-`require`
   (`ConfigManager.cpp:522-527`, `:328-360`) catches a generated file that loads
-  and then errors, so the static one still registers. What it calls,
-  `iarch-keybinds`, is not on `PATH`: no entry point and no installer wiring
-  exists yet, so until then the bind opens a terminal and says why on stderr.
-  The record carries this as an `unverified` note rather than implying a working
-  key.
-- **`UI-02`: `iarch-cheatsheet` does not exist.** `Super+H` is bound to it and
-  locked, and the cheat sheet is carried as unverified. The vendored overlay
-  plugin is v4 QML while noctalia v5.4.1 needs `plugin.toml` plus a `.luau`
-  entry point, so the overlay has to be built as a layer-shell surface rather
-  than ported.
+  and then errors, so the static one still registers. `scripts/iarch-link-cli.sh`
+  now puts `iarch-keybinds` on `PATH` and that is tested end to end, so the
+  remaining gap is installation rather than code: no installer has been run on a
+  machine, and a session started by a display manager does not read a shell
+  profile, so whether its `PATH` reaches `~/.local/bin` is unobserved. Until it
+  does the bind opens a terminal and says on stderr which command to run. The
+  record carries this as an `unverified` note rather than implying a working key,
+  and the installer task owns the session `PATH`.
+- **`UI-02`, narrowed: the overlay draws in a terminal, not in glass.**
+  `Super+H` now runs something real — see Added — but the layer-shell glass
+  surface with a search box you type into is still Part 7. The vendored overlay
+  plugin cannot be ported (v4 QML against noctalia v5.4.1, which needs
+  `plugin.toml` plus a `.luau` entry point), and the settings application cannot
+  host it either: a `PagePlan` row deliberately cannot carry behaviour, so a row
+  that filtered as you typed is not expressible in it. Nothing was observed on a
+  session, because there is no compositor here.
 - **Two bindings in the recovery layer are debt.** `Super+Ctrl+Alt+left` and
   `+right` move a window across workspaces, which is not a system action; every
   sensible destination key is already taken, so `check` reports them as warnings
   on every run instead of an invisible exception, and they move with the next
   laying-out of the default map.
-- **The mutating subcommands are not here.** `reset` is, because the recovery
-  combo calls it and a safety net that depends on unwritten code is not a safety
-  net; `set`, `add`, `disable`, `import` and `export` belong with the Shortcuts
-  page that calls them, and the live reload-and-rollback path needs a compositor
-  this machine does not have.
-- **Two mouse-wheel binds are carried unverified.** `Super+mouse_up` and
-  `Super+mouse_down` come from the v1 map and are neither a keysym nor a
-  `mouse:N` code, so the compositor may answer `key not found`. `check` warns on
-  both rather than passing them silently.
-
+- **The Shortcuts page still will not edit the map.** The CLI can, and the page
+  reads the same record, but there is no recorder, no action picker and no switch,
+  so the collision check is not yet in front of the person making the change.
+- **No live reload-and-rollback against a running compositor.** The validation
+  before a write and the rollback after a failed one are real and tested; asking
+  a running compositor to accept a map, and undoing it if the session does not
+  survive, needs a compositor, and this machine does not have one.
 ## Unreleased — the settings application
 
 This is Part 4 of the roadmap: the glass settings window, the About page's

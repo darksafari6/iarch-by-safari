@@ -65,6 +65,13 @@
         "example": "period",
         "meaning": "Resolved with xkb_keysym_from_name and XKB_KEYSYM_CASE_INSENSITIVE, so case does not matter: Left, left and LEFT are the same key.",
         "source": "src/keybinds/Resolver.cpp:58"
+      },
+      {
+        "form": "special event name",
+        "example": "mouse_down",
+        "meaning": "A name CKey::isValidEvent accepts outright, before any keysym lookup: catchall, a mouse:N button, a switch: state, and exactly mouse_down, mouse_left, mouse_up and mouse_right. Those four are wheel-axis events rather than keys. CKeybindManager::onAxisEvent builds the name from the scroll delta -- delta > 0 is mouse_down and delta < 0 is mouse_up on the vertical axis, mouse_left and mouse_right on the horizontal one -- and dispatches it as SResolvedKey{.event = name} (src/keybinds/Manager.cpp:312-335), so the bind is matched on an event and never reaches resolveKeycode. That is why a spelling that is neither a keysym nor a mouse:N code still binds, and it is what settled the wheel binds this project carries: they are correct, not merely hopeful. A bind on an event counts toward externalKeys rather than ordinaryKeys (src/keybinds/Bind.cpp:140-148).",
+        "source": "src/keybinds/Key.cpp:8-10, :40",
+        "limit": "Exact and case-sensitive, unlike a keysym name: isValidEvent compares the four spellings with ==, so MOUSE_DOWN is not the same event. And only a wheel produces them: onAxisEvent returns early unless the axis source is WL_POINTER_AXIS_SOURCE_WHEEL, so a two-finger touchpad scroll never fires a mouse_up or mouse_down bind. This form is not one of the four resolveKeycode accepts, so resolved_at above does not cover it; it is verified in Key.cpp and Manager.cpp instead."
       }
     ],
     "failures": [
@@ -677,12 +684,6 @@
       "spelling": "SUPER + . -- a punctuation character as a key name",
       "why_rejected": "A full stop is not a keysym. xkb_keysym_from_name('.') returns NoSymbol, and the name for the key is period. The same is true of every other punctuation character: the keysym names are words (comma, slash, semicolon, bracketleft), so a bind written with the character it prints would fail with 'key not found' -- the same answer a keyboard without the key gives, which makes the mistake hard to see.",
       "use_instead": "period, comma, slash, semicolon, apostrophe, bracketleft, bracketright, backslash, grave, minus, equal"
-    },
-    {
-      "spelling": "SUPER + mouse_up and SUPER + mouse_down for scroll-wheel binds",
-      "why_rejected": "Neither is a keysym in xkbcommon-1.7.0 and neither is a mouse:N code, so resolveKeycode answers 'key not found'. The shipped config uses them today at .config/hypr/keybind.lua:57-58 and they are recorded as an open question rather than silently kept: docs/UNVERIFIED.md carries the row.",
-      "status": "TODO(verify)",
-      "note": "The wheel is a relative axis, not a button, so if upstream supports it at all it is not through the key Forms this record verified. The two binds are left exactly as they are until that is read out of source, because changing them to something that certainly does not work is worse than leaving something that might."
     },
     {
       "spelling": "A command stored as one shell string",

@@ -185,25 +185,52 @@ class KeybindsData(unittest.TestCase):
     def test_every_key_is_a_keysym_or_a_form_the_compositor_resolves(self):
         """The check that stops an invented key name reaching a generated file.
 
-        A key is valid if it is a keysym in the pinned xkbcommon, a `mouse:N`
-        button code, a `code:N` keycode, or a bare number over 9. The two wheel
-        binds are the documented exception: `mouse_up` and `mouse_down` are
-        neither, are carried from the v1 map, and are recorded as unverified
-        rather than silently kept or silently changed.
+        A key is valid if it is a keysym in the pinned xkbcommon, a `mouse:N` button
+        code, a `code:N` keycode, a bare number over 9, or one of the four wheel-axis
+        event names. The events are the shape that took source to find: `mouse_up` is
+        neither a keysym nor a `mouse:N` code, so both forms this project had verified
+        refuse it -- and it still binds, because `CKey::isValidEvent` accepts the four
+        names before any keysym lookup (`src/keybinds/Key.cpp:8-10`) and
+        `CKeybindManager::onAxisEvent` dispatches a wheel delta under exactly that name
+        (`src/keybinds/Manager.cpp:312-335`). Listed here rather than skipped, so an
+        invented name still fails.
         """
-        allowed_unverified = {"mouse_up", "mouse_down", "mouse_left", "mouse_right"}
+        events = {"mouse_up", "mouse_down", "mouse_left", "mouse_right"}
         for binding in self.bindings:
             if not is_bound(binding):
                 continue
             key = binding["key"]
             with self.subTest(keys=key_string(binding)):
-                if key in allowed_unverified:
-                    continue
                 valid = (key.lower() in self.keysyms
+                         or key in events
                          or (key.startswith("mouse:") and key[6:].isdigit())
                          or (key.startswith("code:") and key[5:].isdigit())
                          or (key.isdigit() and int(key) > 9))
-                self.assertTrue(valid, f"{key!r} is not a keysym the compositor resolves")
+                self.assertTrue(valid, f"{key!r} is not a key the compositor resolves")
+
+    def test_the_event_names_this_file_accepts_are_the_ones_the_record_documents(self):
+        """So the exception above cannot quietly grow.
+
+        This test and the record are deliberately two independent statements of the
+        same four names; if one is edited without the other, a spelling the compositor
+        does not dispatch would reach a generated file and silently do nothing.
+        """
+        record = json.loads(
+            (ROOT / "data" / "design" / "keybinds.json").read_text(encoding="utf-8"))
+        forms = {f["form"]: f for f in record["key_forms"]["forms"]}
+        self.assertIn("special event name", forms,
+                      "the record no longer documents the wheel events as a key form, "
+                      "so the exception in the test above has nothing behind it")
+        documented = forms["special event name"]["meaning"]
+        for name in ("mouse_up", "mouse_down", "mouse_left", "mouse_right"):
+            with self.subTest(name=name):
+                self.assertIn(name, documented)
+        self.assertIn("Key.cpp", forms["special event name"]["source"],
+                      "a key form with no source line is a second invention")
+        rejected = [e["spelling"] for e in record["rejected"]]
+        self.assertFalse([s for s in rejected if "mouse_up" in s],
+                         "the record still lists the wheel spelling as rejected, which "
+                         "contradicts key_forms")
 
     def test_the_two_meanings_of_locked_are_kept_apart(self):
         """Upstream's locked is a flag; this project's locked is a property."""

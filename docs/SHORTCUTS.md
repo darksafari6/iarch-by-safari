@@ -155,7 +155,7 @@
 | `SUPER + H` | Shortcut overlay — runs `iarch-cheatsheet` |
 | `SUPER + SHIFT + E` | Open the session menu (logout, reboot, shutdown) — sends the shell `panel-toggle session` |
 | `CTRL + ALT + BackSpace` | Reserved: the X11 kill-server combo, deliberately never bound *(not bound yet)* |
-| `CTRL + ALT + R` | Recovery: re-apply the default keyboard map — runs `iarch-keybinds reset --all` |
+| `CTRL + ALT + R` | Recovery: re-apply the default keyboard map — runs `iarch-keybinds reset --all --yes` |
 
 ## Planned
 

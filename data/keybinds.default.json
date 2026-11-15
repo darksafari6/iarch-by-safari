@@ -1345,7 +1345,7 @@
       "description": "Shortcut overlay",
       "category": "System",
       "locked": true,
-      "unverified": "The overlay itself is not built. Binding the key is what makes it reachable the moment it is, and iarch-keybinds check reports the missing program rather than failing silently.",
+      "unverified": "The overlay is built and iarch-cheatsheet is a real command with a launcher and a link onto PATH, but it has never been opened on a session: there is no compositor and no display where it was written, so that a window appears when the key goes down is unobserved. It draws a terminal overlay grouped by category with a filter, and falls back through an installed terminal, then notify-send, then stderr rather than doing nothing silently. The glass *window* overlay -- a layer-shell surface you type into -- is not built; see docs/UNVERIFIED.md UI-02.",
       "mods": [
         "SUPER"
       ],
@@ -1400,7 +1400,8 @@
         "command": [
           "iarch-keybinds",
           "reset",
-          "--all"
+          "--all",
+          "--yes"
         ]
       },
       "description": "Recovery: re-apply the default keyboard map",
@@ -1408,7 +1409,7 @@
       "enabled": true,
       "locked": false,
       "static": true,
-      "unverified": "The bind is written and registered, but it calls iarch-keybinds, which the repository does not yet put on PATH: the CLI is reachable only as python3 iarch/cli/iarch_keybinds.py until the installer task adds the iarch-* commands to ~/.local/bin. Until then the bind opens a terminal and says why on stderr instead of failing silently. TODO(verify) KB-01, KB-02."
+      "unverified": "The bind is written and registered, and scripts/iarch-link-cli.sh now puts the name it calls on PATH (~/.local/bin/iarch-keybinds, a generated wrapper that execs scripts/iarch-keybinds.sh in the checkout). What has not happened is the bind firing: no installer has been run on a machine, no session PATH has been checked, and no compositor exists here, so whether a deployed session resolves iarch-keybinds is unobserved. Until it does the bind opens a terminal and says why on stderr, naming the command to run, instead of failing silently. TODO(verify) KB-01, KB-02."
     },
     {
       "id": "planned.refresh-overlay",
