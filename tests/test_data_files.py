@@ -46,6 +46,12 @@ PAIRS = {
     # The default-application surface: what xdg-settings and xdg-mime can read
     # and write, and the roles the page refuses to offer.
     "data/design/xdg-defaults.json": "data/schemas/xdg-defaults.schema.json",
+    # The keyboard surface: what hl.bind accepts and refuses, what a key name
+    # resolves to, which dispatchers exist, how a command is really spawned, and
+    # what the compositor does by itself when a config fails to parse. The
+    # shortcut generator draws on this record and on nothing else, so a spelling
+    # that is not in here cannot reach a generated file.
+    "data/design/keybinds.json": "data/schemas/design-keybinds.schema.json",
     # The settings application's upstream surface: every GTK, libadwaita and
     # icon name it is allowed to use, each read out of a pinned upstream ref.
     "data/design/adwaita.json": "data/schemas/adwaita.schema.json",

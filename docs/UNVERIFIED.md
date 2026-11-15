@@ -58,7 +58,7 @@ not to exist) and `gtk/gtkcssselector.c` (the pseudo-class names); `meson.build:
 `gtk_api_version = '4.0'`, the introspection version for both `Gtk` and `Gdk`. GLib **`main`**:
 `gio/gappinfo.h:279` for the one call that opens a link. adwaita-icon-theme **`48.1`**: the symbolic
 icon filenames, because an icon a theme does not have renders as a missing-image placeholder.
-Noctalia **`v5.4.1`**: `src/cli/schema_msg.h` for every verb in `data/design/noctalia-ipc.json`.
+Noctalia **`v5.4.1`**: `src/cli/schema_msg.h` for every verb `data/design/noctalia-ipc.json` records, and `src/cli/schema.h:19-27` for the `Positional` field order that says which of them are required. That record is a **curated subset, not the whole command table**: the header declares 119 `inline constexpr Command` values at v5.4.1 and the record carries 41, which are the verbs this project sends plus the ones it refuses with a reason. Counting them is how that gap was found -- the shipped keymap sends two (`settings-toggle` and `window-switcher`) that the record did not carry, so a check that validated a keybind's verb against the record would have condemned a binding that works. The two are recorded now; the other 78 are absent because nothing here sends them, not because they were checked and rejected.
 Tooling: `python3 -m unittest discover -s tests`.
 
 ## How to close an item

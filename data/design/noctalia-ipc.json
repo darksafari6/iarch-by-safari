@@ -445,6 +445,45 @@
       ]
     },
     {
+      "verb": "settings-toggle",
+      "description": "Toggle the settings window, optionally at a specific section",
+      "arguments": [
+        {
+          "name": "context",
+          "required": false,
+          "note": "The positional is named context here and section on settings-open, and neither declares a choice list, so an unknown word is not refused at the CLI -- it is passed through and lands on whatever the window does with a section name it does not have. This project sends the verb with no argument, so it never depends on that."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:780-788 and kMsgSettingsTogglePositionals (:226-228)",
+      "used_by": [
+        ".config/hypr/keybind.lua:70 SUPER + T and :72 SUPER + SHIFT + I"
+      ],
+      "note": "This is the shell's own settings window and not this project's application, which is the same distinction settings-open carries. Recorded because the session's keybinds send it and a record that omits a verb the shipped keymap sends would make the keymap look wrong. iArch's own Settings is a desktop application started with its own launcher, so a key that should open it is an exec action and not this verb -- the difference matters to the shortcut map, where Super + S is meant to reach this project's window."
+    },
+    {
+      "verb": "window-switcher",
+      "description": "Open or close the window switcher overlay",
+      "arguments": [
+        {
+          "name": "action",
+          "required": false,
+          "choices": ["close", "hide", "hold"],
+          "note": "Optional: with no argument the verb opens or closes the overlay. This project sends hold, which is the form the shell's own documentation gives for a bind on a held modifier -- the overlay stays open while the modifier is down and closes when it is released, which is what makes Alt + Tab cycle rather than toggle."
+        },
+        {
+          "name": "scope",
+          "required": false,
+          "choices": ["all", "output", "workspace", "current"],
+          "note": "Which windows the overlay draws. This project sends no scope, so the shell's own default decides; docs/UNVERIFIED.md UI-06 records that the behaviour was read out of source and never observed."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:882-889, kMsgWindowSwitcherActionChoices (:263), kMsgWindowSwitcherScopeChoices (:264-266), kMsgWindowSwitcherPositionals (:267-270)",
+      "used_by": [
+        ".config/hypr/keybind.lua:104 ALT + tab, the window switcher overlay"
+      ],
+      "note": "Both positionals are optional: in the header each is declared Positional{name, description, choices, required, variadic, joinRemaining} with the fourth field false (src/cli/schema.h:19-27), which is what makes a bare `window-switcher` a valid call and not a CLI error."
+    },
+    {
       "verb": "screenshot-region",
       "description": "Start an interactive region screenshot",
       "arguments": [],

@@ -1,0 +1,583 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "_note": "The keyboard surface: what hl.bind accepts, what it refuses, how a key name becomes a keycode, which modifiers exist, which dispatchers exist, and how a command is actually spawned. Everything here was read out of a pinned Hyprland release rather than out of the wiki, because the wiki documents main and this session pins v0.57.2, and because the spelling that matters most here is not in the wiki at all: this repository configures the compositor in Lua, so a bind is hl.bind(keys, handler, options) with a table of named booleans, and not the bind=FLAGS,KEY,DISPATCHER,ARG line the manual leads with. The classic flag letters are recorded under rejected with the option each one corresponds to, so a person who knows the manual can find the equivalent without guessing. Two consequences are worth stating where they cannot be missed. First, a key name is resolved with XKB_KEYSYM_CASE_INSENSITIVE and then looked up in the keyboard's own keymap, so a name can be a valid keysym and still not be bindable on a given keyboard -- 'key not found' is a real answer and not a typo. Second, there is no argv form of exec: every command this session spawns runs as /bin/sh -c with one string, so a command is stored here as a list and quoted by the renderer, because the alternative is asking a person to write shell quoting into a text field.",
+  "verified_against": "v0.57.2",
+  "keysyms_verified_against": "xkbcommon-1.7.0",
+  "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp (hl.bind, its options table and the four exclusivity rules, parseKeyString), src/config/lua/bindings/LuaBindingsDispatchers.cpp (the hl.dsp tree, exec_cmd, exec_raw), src/config/lua/bindings/LuaBindingsInternal.hpp (setDispatcherFn's maxArgs), src/keybinds/Resolver.cpp (modifier names, key forms, keysym resolution), src/config/supplementary/executor/Executor.cpp (how a command is spawned), include/xkbcommon/xkbcommon-keysyms.h from xkbcommon/libxkbcommon (the keysym names)",
+  "fetched": "2026-11-15",
+  "entry_point": {
+    "static_file": ".config/hypr/keybind.lua",
+    "generated_file": ".config/hypr/generated/keybinds.lua",
+    "required_by": ".config/hypr/hyprland.lua:17",
+    "module_name": "keybind",
+    "generated_module_name": "generated.keybinds",
+    "cache_cleared_on_reload": true,
+    "note": "hyprland.lua clears package.loaded for the modules whose binds have to re-register on a reload (.config/hypr/hyprland.lua:9-11), and keybind is one of them. A generated keybinds module has to be added to that same list or a reload will keep the previous parse's binds: the module is cached, so require() returns without re-executing and nothing re-registers. generated.animations and generated.glass are already in the list for exactly this reason."
+  },
+  "key_string": {
+    "parsed_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:34-62",
+    "separator": "+",
+    "rules": [
+      {
+        "rule": "The string is split on '+', and each part is trimmed.",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:35-40"
+      },
+      {
+        "rule": "An empty part is a config error: 'Empty key in key list'.",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:41-42"
+      },
+      {
+        "rule": "No parts at all is a config error: 'A bind requires a key'.",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:47-48"
+      },
+      {
+        "rule": "The same key twice is a config error, compared case-insensitively: 'Repeated key in the key string'. SUPER + shift + SUPER and SUPER + shift + super both fail, and so does a bind that lists one letter twice.",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:50-59"
+      }
+    ],
+    "note": "The whole string is kept as displayKey, so what a person wrote is what the compositor reports back -- the trimmed parts are what it resolves. That is why the generated file spells a bind the way the cheat sheet prints it."
+  },
+  "key_forms": {
+    "resolved_at": "src/keybinds/Resolver.cpp:43-85",
+    "forms": [
+      {
+        "form": "number",
+        "example": "61",
+        "meaning": "A bare number greater than 9 is taken as a raw keycode.",
+        "source": "src/keybinds/Resolver.cpp:45-46",
+        "limit": "A number 9 or below is not a keycode: it falls through to keysym resolution, where it is not a name either."
+      },
+      {
+        "form": "code:",
+        "example": "code:61",
+        "meaning": "An explicit raw keycode.",
+        "source": "src/keybinds/Resolver.cpp:48-49"
+      },
+      {
+        "form": "mouse:",
+        "example": "mouse:272",
+        "meaning": "A mouse button by its Linux input event code. 272 is the left button and 273 the right.",
+        "source": "src/keybinds/Resolver.cpp:51-56",
+        "limit": "A code below 272 is refused with 'invalid mouse button', because that range is BTN_MOUSE and up."
+      },
+      {
+        "form": "keysym name",
+        "example": "period",
+        "meaning": "Resolved with xkb_keysym_from_name and XKB_KEYSYM_CASE_INSENSITIVE, so case does not matter: Left, left and LEFT are the same key.",
+        "source": "src/keybinds/Resolver.cpp:58"
+      }
+    ],
+    "failures": [
+      {
+        "answer": "no keyboard",
+        "when": "There is no keyboard on the seat yet, so there is no keymap to search.",
+        "source": "src/keybinds/Resolver.cpp:60-62"
+      },
+      {
+        "answer": "key not found",
+        "when": "The name is a keysym, or is not, and no keycode on this keyboard's keymap produces it. Upstream scans every keycode from xkb_keymap_min_keycode to xkb_keymap_max_keycode and compares the symbol.",
+        "source": "src/keybinds/Resolver.cpp:70-84",
+        "why_it_matters": "A name that is not a keysym at all and a keysym this keyboard cannot produce give the same answer, so 'key not found' does not distinguish a typo from a keyboard without the key. XF86AudioRaiseVolume on a keyboard with no media keys is the common case. This is why an unbindable key is reported as unverified rather than as a mistake: the generator cannot tell them apart either."
+      }
+    ],
+    "cache": {
+      "note": "Resolved keycodes are cached per keyboard pointer and key name, and the cache is cleared when the keymap changes.",
+      "source": "src/keybinds/Resolver.cpp:64-67, :87-89"
+    }
+  },
+  "modifiers": {
+    "declared_at": "src/keybinds/Resolver.cpp:17-20",
+    "names": ["SHIFT", "CAPS", "CTRL", "CONTROL", "ALT", "MOD1", "MOD2", "MOD3", "SUPER", "WIN", "LOGO", "MOD4", "META", "MOD5"],
+    "equivalences": {
+      "CTRL": "CONTROL",
+      "ALT": "MOD1",
+      "SUPER": "WIN, LOGO, MOD4, META"
+    },
+    "matched_by": "modifierFromString compares the whole token exactly (:23-30); modMaskFromString uppercases its input and tests whether it contains each name (:32-41), which is the path a whole key string takes.",
+    "chosen_spelling": {
+      "SUPER": "The name this project writes, because it is what the shipped config already says and what a person reads on a keyboard.",
+      "CTRL": "Written rather than CONTROL, and rather than MOD1.",
+      "ALT": "Written rather than MOD1.",
+      "SHIFT": "Written rather than CAPS or nothing at all."
+    },
+    "note": "CAPS, MOD2, MOD3 and MOD5 exist and are not used here. Binding CAPS as a modifier is a way to lose the ability to type a capital letter, and no layer in this project needs it."
+  },
+  "bind": {
+    "registered_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:472",
+    "implemented_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:64-230",
+    "signature": "hl.bind(keys, handler, options)",
+    "arguments": [
+      {
+        "position": 1,
+        "name": "keys",
+        "type": "string",
+        "note": "One key string, not a list: modifiers and the key joined with '+'. A non-string is a config error before anything else is looked at (:67-70)."
+      },
+      {
+        "position": 2,
+        "name": "handler",
+        "type": "dispatcher function or Lua function",
+        "note": "Either the value a hl.dsp call returns, which is a closure, or a plain Lua function. pushDispatcherFunction refuses anything else (:79-80). The handler's own text is kept as metadata.handler, so the compositor can report what a bind was written as (:75-77)."
+      },
+      {
+        "position": 3,
+        "name": "options",
+        "type": "table, optional",
+        "note": "Read at index 3 (:101-103). An absent table means no flags and no description."
+      }
+    ],
+    "options": {
+      "repeating": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_REPEAT",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:130, :142",
+        "meaning": "Fires again while the key is held. This is the classic 'e' flag, and it is what a resize or a volume step needs.",
+        "incompatible_with": ["release", "long_press", "mouse"]
+      },
+      "locked": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_LOCKED",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:131, :143",
+        "meaning": "Works while the session is locked or inhibited. This is the classic 'l' flag, and it is why a media key still changes volume on the lock screen.",
+        "incompatible_with": ["mouse"],
+        "note": "Not the same thing as this project's locked field. Upstream's locked says the bind keeps working when the session is locked; this project's locked says a person may rebind the entry but not delete it. The two are recorded separately and the generated file only ever emits the upstream one."
+      },
+      "release": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_RELEASE",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:132, :144",
+        "meaning": "Fires on key release instead of press. The classic 'r' flag.",
+        "incompatible_with": ["repeating", "long_press", "mouse"]
+      },
+      "non_consuming": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_NON_CONSUMING",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:133, :145",
+        "meaning": "The key is also passed to the focused window. This is the mechanism that would let a global bind coexist with an application's own use of the same combination, and it is the reason a plain Ctrl+letter is not merely rude but unnecessary: a bind that does not consume is a bind that does not steal."
+      },
+      "auto_consuming": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_AUTO_CONSUMING",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:134, :146"
+      },
+      "transparent": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_TRANSPARENT",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:135, :147",
+        "meaning": "The bind does not block other binds on the same key, so two can fire."
+      },
+      "ignore_mods": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_IGNORE_MODS",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:136, :148"
+      },
+      "dont_inhibit": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_DONT_INHIBIT",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:137, :149",
+        "meaning": "Works while an application has keyboard shortcuts inhibited, which is what a fullscreen game or a remote desktop does."
+      },
+      "long_press": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_LONG_PRESS",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:138, :150",
+        "incompatible_with": ["repeating", "release"]
+      },
+      "submap_universal": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_SUBMAP_UNIVERSAL",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:139, :151",
+        "meaning": "Stays bound inside every submap, which is how an escape hatch out of a submap is written."
+      },
+      "mouse": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_MOUSE",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:140, :152",
+        "meaning": "The key string is a mouse button rather than a key. The classic 'm' flag.",
+        "incompatible_with": ["repeating", "release", "locked"],
+        "note": "Upstream refuses the combination outright (:179-180), so a mouse bind cannot also repeat and cannot work on the lock screen. The two drag binds in the shipped config carry mouse = true and nothing else."
+      },
+      "click": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_CLICK",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:163-166, :185",
+        "meaning": "A mouse click rather than a hold. Sets release as well, because a click is a press and a release.",
+        "incompatible_with": ["drag"]
+      },
+      "drag": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_DRAG",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:168-171, :186",
+        "meaning": "A mouse hold and move. Sets release as well.",
+        "incompatible_with": ["click"]
+      },
+      "allow_input_capture": {
+        "type": "boolean",
+        "flag": "BIND_FLAG_ALLOW_INPUT_CAPTURE",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:203-204",
+        "note": "Read outside the device block and after a lua_pop, so it is an option of the bind and not of the device."
+      },
+      "description": {
+        "type": "string",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:154-156",
+        "meaning": "The text the compositor reports for the bind. This is where a generated bind's description goes, and it is why the cheat sheet can be rendered from the compositor's own list rather than from a second copy of it.",
+        "alias": "desc",
+        "alias_source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:156-158",
+        "note_on_alias": "description is read first and desc only if it is absent, so a table carrying both uses description. This project writes description and never desc, so there is one spelling in the generated file."
+      },
+      "device": {
+        "type": "table",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:185-202",
+        "fields": {
+          "inclusive": {
+            "type": "boolean",
+            "default": true,
+            "note": "Absent means inclusive, so a list on its own restricts the bind to those devices (:188-190)."
+          },
+          "list": {
+            "type": "array of strings",
+            "note": "Device names. Non-string entries are skipped rather than refused (:193-199)."
+          }
+        }
+      }
+    },
+    "exclusions": [
+      {
+        "refused": "click and drag together",
+        "message": "hl.bind: click and drag are exclusive",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:173-174"
+      },
+      {
+        "refused": "repeating with release or long_press",
+        "message": "hl.bind: long_press / release is incompatible with repeat",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:176-177"
+      },
+      {
+        "refused": "mouse with repeating, release or locked",
+        "message": "hl.bind: mouse is exclusive",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:179-180"
+      }
+    ],
+    "special_keys": {
+      "catchall": {
+        "allowed_in": "a submap only",
+        "message": "hl.bind: catchall keybinds are only allowed in submaps.",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:82-83, :207-208",
+        "note": "Not used here. A catchall outside a submap would swallow every key on the desktop."
+      }
+    },
+    "submaps": {
+      "declared_with": "hl.define_submap(name, reset, function)",
+      "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:232-262",
+      "switched_with": "hl.dsp.submap",
+      "used_by_this_project": false,
+      "note": "The shipped resize mode is a bind that opens the compositor's own resize behaviour, not a submap. A submap is recorded here because it is the honest way to build a modal layer -- one where a bare letter does something -- and if a later part wants a resize mode where h j k l move edges, this is the mechanism and catchall becomes available inside it."
+    }
+  },
+  "dispatchers": {
+    "registered_at": "src/config/lua/bindings/LuaBindingsDispatchers.cpp:1320-1390",
+    "namespace": "hl.dsp",
+    "max_args_meaning": "The third argument to setDispatcherFn (src/config/lua/bindings/LuaBindingsInternal.hpp:189) is the most arguments the dispatcher takes. Zero means it is called with no arguments at all, which is how the shipped config writes hl.dsp.window.close().",
+    "groups": {
+      "cursor": {
+        "source": "src/config/lua/bindings/LuaBindingsDispatchers.cpp:1324-1327",
+        "members": {
+          "move_to_corner": 1,
+          "move": 1
+        }
+      },
+      "group": {
+        "source": "src/config/lua/bindings/LuaBindingsDispatchers.cpp:1329-1337",
+        "members": {
+          "toggle": 1,
+          "next": 1,
+          "prev": 1,
+          "active": 1,
+          "move_window": 1,
+          "lock": 1,
+          "lock_active": 1
+        }
+      },
+      "window": {
+        "source": "src/config/lua/bindings/LuaBindingsDispatchers.cpp:1339-1361",
+        "members": {
+          "close": 1,
+          "kill": 1,
+          "signal": 1,
+          "float": 1,
+          "fullscreen": 1,
+          "fullscreen_state": 1,
+          "pseudo": 1,
+          "move": 1,
+          "swap": 1,
+          "center": 1,
+          "cycle_next": 1,
+          "tag": 1,
+          "clear_tags": 1,
+          "toggle_swallow": 0,
+          "pin": 1,
+          "bring_to_top": 0,
+          "alter_zorder": 1,
+          "set_prop": 1,
+          "deny_from_group": 1,
+          "drag": 0,
+          "resize": 1
+        }
+      },
+      "workspace": {
+        "source": "src/config/lua/bindings/LuaBindingsDispatchers.cpp:1363-1369",
+        "members": {
+          "rename": 1,
+          "change_id": 1,
+          "move": 1,
+          "swap_monitors": 1,
+          "toggle_special": 1
+        }
+      }
+    },
+    "toplevel": {
+      "source": "src/config/lua/bindings/LuaBindingsDispatchers.cpp:1371-1387",
+      "members": {
+        "exec_cmd": 2,
+        "exec_raw": 1,
+        "exit": 0,
+        "reload_config": 0,
+        "submap": 1,
+        "pass": 1,
+        "send_shortcut": 1,
+        "send_key_state": 1,
+        "layout": 1,
+        "dpms": 1,
+        "event": 1,
+        "global": 1,
+        "force_renderer_reload": 0,
+        "force_idle": 1,
+        "release_input_capture": 0,
+        "focus": 1,
+        "no_op": 0
+      }
+    },
+    "used_by_this_project": {
+      "hl.dsp.exec_cmd": "Every action that runs a program, because it is the one that can carry a window rule for the process it starts (:267-284).",
+      "hl.dsp.window.close": "Close the focused window.",
+      "hl.dsp.window.kill": "Force close, which is what a force-quit picker needs.",
+      "hl.dsp.window.float": "Toggle floating.",
+      "hl.dsp.window.fullscreen": "Toggle fullscreen.",
+      "hl.dsp.window.fullscreen_state": "Fullscreen while keeping the bar, which is the state the shell draws around.",
+      "hl.dsp.window.pseudo": "Pseudotiling, which is what 'maximize but keep the layout' means on a tiling compositor.",
+      "hl.dsp.window.pin": "Pin a floating window above the rest.",
+      "hl.dsp.window.move": "Move to a workspace.",
+      "hl.dsp.window.swap": "Swap with a neighbour.",
+      "hl.dsp.window.center": "Center a floating window.",
+      "hl.dsp.window.drag": "Mouse drag to move.",
+      "hl.dsp.window.resize": "Mouse drag to resize, and the resize mode.",
+      "hl.dsp.focus": "Focus a direction or a workspace.",
+      "hl.dsp.layout": "Keyboard layout switching.",
+      "hl.dsp.exit": "Exit the compositor, which is the one action that has to be behind a confirmation.",
+      "hl.dsp.reload_config": "Reload the configuration.",
+      "hl.dsp.dpms": "Screen on and off.",
+      "hl.dsp.force_idle": "Idle inhibition.",
+      "hl.dsp.submap": "Recorded, not used: see bind.submaps.",
+      "hl.dsp.no_op": "A bind that exists to hold a key down and do nothing, which is how a key is taken away from every application. Recorded because it is the only honest way to implement a 'this key does nothing here' entry."
+    },
+    "not_used_and_why": {
+      "hl.dsp.exec_raw": "Spawns without a window rule, so a program started by it cannot be matched by the glass rules this project renders. exec_cmd with no rule argument does the same job and keeps the option open.",
+      "hl.dsp.pass": "Forwards a key to the focused window, which is what a non_consuming bind already does without a second mechanism.",
+      "hl.dsp.send_shortcut": "Sends a synthetic shortcut to a window. A shortcut system that sends keys it does not bind is a way to lose track of what a key does.",
+      "hl.dsp.global": "Global shortcuts for a portal-backed application, which is the shell's business and not this project's.",
+      "hl.dsp.event": "Emits a custom event, which nothing here listens for.",
+      "hl.dsp.window.signal": "Signals a window; no consumer here.",
+      "hl.dsp.cursor.move": "Moves the pointer, which is how a bind can steal the mouse from a person mid-gesture.",
+      "hl.dsp.group.*": "Window grouping is a layout decision the shell's own layout handles."
+    }
+  },
+  "exec": {
+    "the_only_form": "one string",
+    "spawned_at": "src/config/supplementary/executor/Executor.cpp:173-213",
+    "spawned_as": "execl(\"/bin/sh\", \"/bin/sh\", \"-c\", args.c_str(), nullptr)",
+    "source": "src/config/supplementary/executor/Executor.cpp:205",
+    "paths": {
+      "hl.dsp.exec_cmd(string)": "CExecutor::spawn(args) at Executor.cpp:82-84, which reaches spawnRawProc.",
+      "hl.dsp.exec_cmd(string, rule)": "CExecutor::spawn(SExecRequest) at Executor.cpp:86-91: with a rule it takes spawnWithRules, and without one it takes spawnRaw. Both end at spawnRawProc.",
+      "hl.dsp.exec_raw(string)": "CExecutor::spawnRaw(args) at Executor.cpp:93-95."
+    },
+    "consequence": {
+      "statement": "There is no argv form. Every command this session spawns is one string handed to /bin/sh -c.",
+      "what_this_project_does": "A command is stored as a list of arguments and the renderer quotes the list into one string with shlex.quote. The list is what a person edits and what the cheat sheet prints, because it cannot contain a quoting mistake; the string is an artefact of the compositor's interface.",
+      "why_not_a_string_in_the_data": "A string in the data model is a string a person has to get right, and the failure is silent: /bin/sh -c with unbalanced quotes is a command that does not run and, per docs/UNVERIFIED.md START-01, a spawned command's exit status is reported nowhere.",
+      "and_why_no_shell_true_here": "This project's own Python never spawns anything for a keybind. It writes Lua; the compositor spawns. shell=True in our code would be a second place a string becomes a command, and there is no need for a first."
+    },
+    "shell_action": {
+      "what_it_is": "An action whose command is deliberately a shell pipeline rather than an argv list, for a person who needs one.",
+      "marked": "advanced",
+      "note": "Recorded because the data model has to be able to say 'this one is a string on purpose', and because a UI that cannot distinguish the two would either refuse every pipeline or accept every typo."
+    }
+  },
+  "recovery": {
+    "note": "What the compositor does by itself when a Lua config fails, recorded because a shortcut system has to survive its own worst output and because upstream already has an opinion about which keys mean what in that situation.",
+    "emergency_mode": {
+      "tripped_when": "There is at least one config error and the bind registry is empty: `!m_errors.empty() && Keybinds::mgr()->registry().empty()`.",
+      "source": "src/config/lua/ConfigManager.cpp:743",
+      "what_runs": "A literal Lua string compiled into the binary is executed with luaL_dostring.",
+      "run_at": "src/config/lua/ConfigManager.cpp:746-747",
+      "defined_at": "src/config/lua/Emergency.hpp:4-46",
+      "binds_it_registers": [
+        {
+          "keys": "SUPER + Q",
+          "does": "Launches the first terminal found installed, trying kitty, alacritty, foot, wezterm, gnome-terminal and xterm in that order, with a `command -v` probe for each.",
+          "source": "src/config/lua/Emergency.hpp:30-32"
+        },
+        {
+          "keys": "SUPER + R",
+          "does": "Runs hyprland-run, which is not a binary in this release's source tree -- it is expected on PATH.",
+          "source": "src/config/lua/Emergency.hpp:34",
+          "status": "TODO(verify)"
+        },
+        {
+          "keys": "SUPER + M",
+          "does": "Exits the compositor.",
+          "source": "src/config/lua/Emergency.hpp:35"
+        }
+      ],
+      "window_rule_it_adds": "A floating rule matching class hyprland-run, moved to 20 monitor_h-120 (src/config/lua/Emergency.hpp:37-43).",
+      "reported_as": "An overlay reading 'Emergency mode tripped: A lua config error resulted in no binds being registered.' followed by the errors (src/config/lua/ConfigManager.cpp:752-756).",
+      "why_it_matters": [
+        "It is a real safety net and it is upstream's, so this project does not have to build one from nothing: a config that fails so hard that no bind registers still leaves a terminal, a launcher and a way out.",
+        "It only trips when the registry is empty. A config that registers some binds and then errors leaves the session with a partial keyboard and no emergency binds, which is the worse case and the one this project's own rollback has to cover.",
+        "It reassigns SUPER + Q, SUPER + R and SUPER + M. This project binds SUPER + Q to close the focused window, so the day the config breaks is the day SUPER + Q opens a terminal instead. That is not a bug to fix in the generator; it is a fact to put in the documentation, because a person who learns SUPER + Q means close and then meets a broken config will otherwise conclude the keyboard has failed.",
+        "The order modules are required in decides which case applies. A generated keybinds module that fails after the static one has registered binds leaves the registry non-empty, so emergency mode does not trip. Loading the generated module first means a failure in it leaves nothing registered and emergency mode does. That ordering is a decision with a consequence, and it is why generated.keybinds is required before keybind."
+      ]
+    },
+    "errors_are_shown": {
+      "behaviour": "Config errors are collected during the parse and, unless debug.suppress_errors is set, shown in an overlay listing up to fifteen of them before '... more'.",
+      "source": "src/config/lua/ConfigManager.cpp:749-768",
+      "over_hyprctl": "hyprctl configerrors is a registered command (src/ipc/s1/Commands.cpp:2104), so the same list is readable from a script, which is what lets the generator ask the compositor whether it is happy rather than assuming."
+    },
+    "safe_mode": {
+      "flag": "--safe-mode",
+      "source": "src/main.cpp:161-162, :278-279",
+      "behaviour": "Sets m_safeMode, which makes the config path resolve to recoverycfg.lua in the compositor's instance directory instead of the user's config (src/config/supplementary/jeremy/Jeremy.cpp:26-27).",
+      "why_it_matters": "It is the last resort a person has when a config will not parse at all, and it does not read the user's file. Worth naming in the documentation for the same reason the recovery combination is worth binding: a person locked out of their own desktop needs to be told the door exists."
+    }
+  },
+  "validation": {
+    "note": "How a generated file is checked before it is trusted. There are three levels and they answer different questions, so the generator uses all three rather than the most convenient one.",
+    "levels": [
+      {
+        "level": "the model",
+        "checks": "That a combination is not bound twice, that a modifier is one upstream recognises, that a key is a keysym in the pinned xkbcommon, that an action names a dispatcher that exists, that a command is a non-empty list, and that an option combination is not one hl.bind refuses.",
+        "tool": "iarch-keybinds check",
+        "answers": "Is this a keymap this project is willing to ship?",
+        "limit": "It cannot know whether a keysym is produceable on the keyboard in front of the person, because that is answered at parse time by a keymap scan (src/keybinds/Resolver.cpp:70-84)."
+      },
+      {
+        "level": "the syntax",
+        "checks": "That the rendered file is Lua at all.",
+        "tool": "luac -p, or a Lua parser where no toolchain is installed",
+        "answers": "Will the compositor get as far as running it?",
+        "limit": "A syntactically valid file can still call a dispatcher that does not exist, and that is a config error rather than a syntax error."
+      },
+      {
+        "level": "the compositor",
+        "checks": "That Hyprland itself parses the configuration and reports no error.",
+        "tool": "Hyprland --verify-config",
+        "source": "src/main.cpp:39, :158-159, :291-295",
+        "behaviour": "Does not run the compositor. It constructs it with the verify flag, parses the config, then asks configVerifPassed() and returns 0 when it passed and 1 when it did not.",
+        "answers": "Is this file the compositor will actually accept?",
+        "limit": "It needs the compositor installed and a seat to resolve keysyms against, so it cannot run in a build container. Where it is absent the generator says so rather than pretending the file was verified -- the same distinction docs/UNVERIFIED.md TP-10 keeps between a claim read out of source and a claim observed on a machine."
+      }
+    ],
+    "the_order_they_run_in": "Model, then syntax, then the compositor. A file that fails the model is never written, so the compositor is never asked about a keymap this project already knew it did not want.",
+    "and_what_happens_on_failure": "The generated file is written to a temporary path beside its destination and moved into place only after the checks pass, with the previous file kept as a backup. A reload is then asked for and configerrors read back; if the compositor is unhappy the backup is restored and the reload asked for again. That is the whole pipeline, and every step of it is a step whose failure a person can see rather than a session that stops answering the keyboard."
+  },
+  "keysyms": {
+    "verified_against": "xkbcommon-1.7.0, include/xkbcommon/xkbcommon-keysyms.h",
+    "total_names_in_that_release": 2582,
+    "resolution": "XKB_KEYSYM_CASE_INSENSITIVE, so any of these names in any case is accepted (Resolver.cpp:58)",
+    "used_by_this_project": [
+      "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+      "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+      "Left", "Right", "Up", "Down",
+      "Return", "space", "Tab", "Escape", "Print", "Menu",
+      "BackSpace", "Delete", "Home", "End", "Page_Up", "Page_Down", "Insert",
+      "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+      "period", "comma", "slash", "semicolon", "apostrophe",
+      "bracketleft", "bracketright", "backslash", "grave", "minus", "equal",
+      "XF86AudioRaiseVolume", "XF86AudioLowerVolume", "XF86AudioMute", "XF86AudioMicMute",
+      "XF86AudioPlay", "XF86AudioPause", "XF86AudioNext", "XF86AudioPrev", "XF86AudioStop",
+      "XF86MonBrightnessUp", "XF86MonBrightnessDown", "XF86MonBrightnessCycle",
+      "XF86KbdBrightnessUp", "XF86KbdBrightnessDown",
+      "XF86ScreenSaver", "XF86Display", "XF86Search", "XF86Explorer", "XF86Calculator", "XF86Eject",
+      "XF86TouchpadToggle", "XF86Copy", "XF86Paste", "XF86Cut"
+    ],
+    "mouse_buttons": {
+      "mouse:272": "left button, used for the drag-to-move bind",
+      "mouse:273": "right button, used for the drag-to-resize bind",
+      "mouse_up": "not a keysym and not a mouse:N code -- see rejected",
+      "mouse_down": "not a keysym and not a mouse:N code -- see rejected"
+    },
+    "note": "Every name in used_by_this_project was checked against the header rather than assumed, and the check is a test: a name added to the defaults that is not in this list, or not in the header, fails. A keysym is a name for a symbol, not a promise that a keyboard has a key for it, which is what key_forms.failures records."
+  },
+  "reserved": {
+    "note": "Combinations this project refuses to bind automatically. Refusing is a decision recorded here so the generator can enforce it and a person can see why, rather than a habit each contributor rediscovers.",
+    "combinations": [
+      {
+        "keys": "CTRL + ALT + BackSpace",
+        "policy": "never bound",
+        "reason": "It is the X server's kill sequence and, on a session where it is enabled, it ends the display. A desktop that binds it to something useful is a desktop that can be ended by a person reaching for a text editor's undo."
+      },
+      {
+        "keys": "CTRL + <letter>",
+        "policy": "refused unless a person explicitly overrides it",
+        "reason": "A global Ctrl+C, Ctrl+V, Ctrl+Z or Ctrl+S takes those keys from every application at once. Upstream has a mechanism for a bind that does not steal the key -- non_consuming, at LuaBindingsToplevel.cpp:133 -- and this project still refuses the plain combination by default, because a bind that both fires globally and reaches the window is two behaviours on one key and neither is predictable. What is offered instead is CTRL + ALT + <letter> for system and emergency actions and SUPER + CTRL + <letter> for appearance and toggles, both of which no application owns."
+      },
+      {
+        "keys": "SUPER + SHIFT + E",
+        "policy": "bound, locked, and behind a confirmation",
+        "reason": "Exiting the session is the one action that has to be reachable and has to be hard to reach by accident. It is locked in this project's sense: a person may move it but may not delete it, because a session with no way out is a session that needs a reboot."
+      }
+    ]
+  },
+  "rejected": [
+    {
+      "spelling": "bind=SUPER,T,exec,kitty -- the manual's line format, with flag letters such as l, e, m and r before the modifier",
+      "why_rejected": "This repository configures the compositor in Lua, and the Lua API has no flag string. hl.bind takes a table of named booleans, so the equivalent of bind=le,SUPER,T,exec,kitty is hl.bind('SUPER + T', hl.dsp.exec_cmd('kitty'), { locked = true, repeating = true }). Emitting a line format into a Lua file would be emitting a syntax the config provider does not parse.",
+      "correspondence": {
+        "l": "options.locked",
+        "e": "options.repeating",
+        "r": "options.release",
+        "m": "options.mouse",
+        "n": "options.non_consuming",
+        "t": "options.transparent",
+        "i": "options.ignore_mods",
+        "d": "options.dont_inhibit",
+        "p": "options.long_press",
+        "s": "options.submap_universal",
+        "c": "options.click",
+        "g": "options.drag"
+      },
+      "correspondence_note": "The letters are recorded because a person arriving from the manual will reach for them, and because the manual is right about what they mean -- it is wrong only about whether this release parses the format at all. The flags each letter names are verified here (src/config/lua/bindings/LuaBindingsToplevel.cpp:130-152). The letters themselves are not, because the code that mapped a letter to a flag belonged to the parser this release no longer has, and guessing at a deleted table is exactly the invention this record exists to prevent. So the correspondence is a reading aid and is marked TODO(verify): the generated file never emits a letter, and nothing in this project depends on the mapping being right.",
+      "status": "TODO(verify)",
+      "verified_against": "src/config/lua/bindings/LuaBindingsToplevel.cpp:130-152 (the flags); src/config/ConfigManager.cpp:31-36 and src/config/supplementary/jeremy/Jeremy.cpp:34-42 (no line parser exists to map letters to them)"
+    },
+    {
+      "spelling": "SUPER + . -- a punctuation character as a key name",
+      "why_rejected": "A full stop is not a keysym. xkb_keysym_from_name('.') returns NoSymbol, and the name for the key is period. The same is true of every other punctuation character: the keysym names are words (comma, slash, semicolon, bracketleft), so a bind written with the character it prints would fail with 'key not found' -- the same answer a keyboard without the key gives, which makes the mistake hard to see.",
+      "use_instead": "period, comma, slash, semicolon, apostrophe, bracketleft, bracketright, backslash, grave, minus, equal"
+    },
+    {
+      "spelling": "SUPER + mouse_up and SUPER + mouse_down for scroll-wheel binds",
+      "why_rejected": "Neither is a keysym in xkbcommon-1.7.0 and neither is a mouse:N code, so resolveKeycode answers 'key not found'. The shipped config uses them today at .config/hypr/keybind.lua:57-58 and they are recorded as an open question rather than silently kept: docs/UNVERIFIED.md carries the row.",
+      "status": "TODO(verify)",
+      "note": "The wheel is a relative axis, not a button, so if upstream supports it at all it is not through the key Forms this record verified. The two binds are left exactly as they are until that is read out of source, because changing them to something that certainly does not work is worse than leaving something that might."
+    },
+    {
+      "spelling": "A command stored as one shell string",
+      "why_rejected": "See exec.consequence. Upstream only accepts a string, so the renderer produces one, but the data model holds a list: a list cannot carry a quoting mistake, and it is what the cheat sheet and the Settings page can print without parsing."
+    },
+    {
+      "spelling": "A second source of keybinds",
+      "why_rejected": "The shipped static file and a generated one cannot both own a combination. Two binds on one key is not a conflict upstream refuses -- it is two handlers, and which one runs depends on registration order. That is why the generator writes every bind it owns and the static file keeps only what the model cannot represent, with the split recorded rather than left to chance."
+    }
+  ]
+}
