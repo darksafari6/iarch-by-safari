@@ -7,8 +7,9 @@
   "type": "object",
   "required": [
     "_copyright", "_note", "verified_against", "keysyms_verified_against", "source", "fetched",
-    "entry_point", "key_string", "key_forms", "modifiers", "bind", "dispatchers", "exec",
-    "recovery", "validation", "keysyms", "reserved", "rejected"
+    "entry_point", "key_string", "key_forms", "modifiers", "bind", "toplevel",
+    "dispatchers", "exec", "query", "recovery", "validation", "keysyms",
+    "reserved", "rejected"
   ],
   "additionalProperties": false,
   "properties": {
@@ -410,6 +411,86 @@
       }
     },
 
+    "toplevel": {
+      "type": "object",
+      "required": ["note", "registered_at", "members"],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "type": "string", "minLength": 40 },
+        "registered_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+        "members": {
+          "type": "object",
+          "required": [
+            "hl.on", "hl.bind", "hl.define_submap", "hl.timer", "hl.dispatch",
+            "hl.version", "hl.get_loaded_plugins", "hl.exec_cmd",
+            "hl.clear_crashed_lockscreen",
+            "hl.exec_scheduled_prop_refresh_immediately", "hl.unbind",
+            "hl.is_key_down"
+          ],
+          "additionalProperties": false,
+          "description": "Every function registered on hl itself. additionalProperties false is the point: this is the whole list, so a call the generator emits that is not here is a call the compositor does not have.",
+          "patternProperties": {
+            "^hl\\.[a-z_]+$": {
+              "type": "object",
+              "required": ["registered_with", "source", "used_by_this_project"],
+              "additionalProperties": false,
+              "properties": {
+                "registered_with": { "enum": ["setMgrFn", "setFn"] },
+                "source": { "$ref": "#/definitions/cite" },
+                "implemented_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+                "used_by_this_project": { "type": "boolean" },
+                "takes": { "type": "string", "minLength": 10 },
+                "why_that_matters": { "type": "string", "minLength": 40 },
+                "note": { "type": "string", "minLength": 20 }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "query": {
+      "type": "object",
+      "required": ["note", "registered_at", "members", "used_by_this_project", "window_fields", "not_used_and_why"],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "type": "string", "minLength": 60 },
+        "registered_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+        "members": {
+          "type": "array",
+          "minItems": 20,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^hl\\.get_[a-z_]+$" },
+          "description": "Every read function registered on hl. additionalProperties has no meaning in an array, so the count is the floor: a member dropped from this list would drop below it and fail."
+        },
+        "used_by_this_project": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "minLength": 20 }
+        },
+        "window_fields": {
+          "type": "object",
+          "required": ["source", "fields", "note"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "string", "pattern": "^src/.*\\.cpp$" },
+            "fields": {
+              "type": "array",
+              "minItems": 12,
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[a-z_]+$" }
+            },
+            "note": { "type": "string", "minLength": 60 }
+          }
+        },
+        "not_used_and_why": {
+          "type": "object",
+          "minProperties": 3,
+          "additionalProperties": { "type": "string", "minLength": 15 }
+        }
+      }
+    },
+
     "recovery": {
       "type": "object",
       "required": ["note", "emergency_mode", "errors_are_shown", "safe_mode"],
@@ -510,15 +591,18 @@
 
     "keysyms": {
       "type": "object",
-      "required": ["verified_against", "total_names_in_that_release", "resolution", "used_by_this_project", "mouse_buttons", "note"],
+      "required": ["verified_against", "total_names_in_that_release", "declared_lines_in_that_release", "names_declared_more_than_once", "name_list", "on_the_duplicates", "resolution", "used_by_this_project", "mouse_buttons", "note"],
       "additionalProperties": false,
       "properties": {
         "verified_against": { "type": "string", "minLength": 20 },
         "total_names_in_that_release": {
-          "type": "integer",
-          "minimum": 2000,
-          "description": "How many XKB_KEY_ names the header declares. Recorded so that a re-fetch against a different xkbcommon can be compared rather than assumed equal."
+          "const": 2577,
+          "description": "Distinct XKB_KEY_ names the header declares. Pinned as a constant so that a re-fetch against a different xkbcommon is a visible change to this record rather than a silent one: the keysym list beside it is generated from that release and would have to be regenerated with it."
         },
+        "declared_lines_in_that_release": { "const": 2590 },
+        "names_declared_more_than_once": { "const": 11 },
+        "name_list": { "const": "data/reference/xkb-keysyms-1.7.0.txt" },
+        "on_the_duplicates": { "type": "string", "minLength": 80 },
         "resolution": { "type": "string", "minLength": 20 },
         "used_by_this_project": {
           "type": "array",
@@ -567,7 +651,7 @@
 
     "rejected": {
       "type": "array",
-      "minItems": 5,
+      "minItems": 6,
       "items": {
         "type": "object",
         "required": ["spelling", "why_rejected"],
@@ -578,6 +662,22 @@
           "use_instead": { "type": "string", "minLength": 10 },
           "status": { "enum": ["TODO(verify)"] },
           "note": { "type": "string", "minLength": 20 },
+          "replacements": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "required": ["from", "to", "source", "note"],
+              "additionalProperties": false,
+              "properties": {
+                "from": { "type": "string", "minLength": 8 },
+                "to": { "type": "string", "minLength": 8 },
+                "source": { "type": "string", "pattern": "^src/" },
+                "note": { "type": "string", "minLength": 40 }
+              }
+            },
+            "description": "The verified replacement for a rejected spelling. Required to carry a source per entry: a replacement with no line behind it is a second invention, and the whole point of rejecting the first was to stop inventing."
+          },
           "correspondence": {
             "type": "object",
             "minProperties": 1,

@@ -413,6 +413,115 @@
       "note": "Recorded because the data model has to be able to say 'this one is a string on purpose', and because a UI that cannot distinguish the two would either refuse every pipeline or accept every typo."
     }
   },
+  "toplevel": {
+    "note": "Every function registered on hl itself, not only the ones this project calls. Recorded whole for the same reason the dispatcher tree is: a generator that can only emit what is listed here cannot invent a call, and a person reading this can see what was available and not used.",
+    "registered_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:470-487",
+    "members": {
+      "hl.on": {
+        "registered_with": "setMgrFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:471",
+        "used_by_this_project": false,
+        "note": "Event subscription. The startup record owns it: data/design/startup.json."
+      },
+      "hl.bind": {
+        "registered_with": "setMgrFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:472",
+        "used_by_this_project": true,
+        "note": "The only way a key becomes a behaviour. See bind."
+      },
+      "hl.define_submap": {
+        "registered_with": "setMgrFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:473",
+        "used_by_this_project": false,
+        "note": "Opens a named block of binds, with an optional reset submap, and takes the function that declares them. See bind.submaps for why this project does not use one yet."
+      },
+      "hl.timer": {
+        "registered_with": "setMgrFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:474",
+        "used_by_this_project": false,
+        "note": "opts.timeout in milliseconds and opts.type of 'repeat' or 'oneshot', both required and both refused with a config error if absent or wrong (src/config/lua/bindings/LuaBindingsToplevel.cpp:412-437). Not used: a keybind that needs a timer needs it inside the shell it spawns, where a person can see it."
+      },
+      "hl.dispatch": {
+        "registered_with": "setFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:476",
+        "implemented_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:328-345",
+        "used_by_this_project": false,
+        "takes": "a dispatcher function, not a string",
+        "why_that_matters": "Its first act is pushDispatcherFunction(L, 1), the same check hl.bind applies to its handler (:329-330), so passing a string is a config error rather than a lookup. This is the function hyprctl dispatch reaches on a Lua config: the client's request is wrapped as `return hl.dispatch(<the text after 'dispatch '>)` and evaluated (src/ipc/s1/Commands.cpp:1332-1346). A pre-Lua spelling such as `hyprctl dispatch resizeactive 30 0` therefore becomes `hl.dispatch(resizeactive 30 0)`, which is not Lua at all, and upstream appends its own hint that the syntax may need updating (:1345-1346). Recorded here because the shipped keymap contains eight binds of exactly that shape -- see rejected."
+      },
+      "hl.version": {
+        "registered_with": "setFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:477",
+        "used_by_this_project": false,
+        "note": "Returns HYPRLAND_VERSION (:265-268). The honest way for a generated file to say which release it was rendered against, if a later part wants the check at runtime rather than at generation."
+      },
+      "hl.get_loaded_plugins": {
+        "registered_with": "setFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:478",
+        "used_by_this_project": false,
+        "note": "Returns a table of name, author, version and description per loaded plugin (:270-292). Not used: nothing in this session depends on a plugin being loaded, and a keymap that did would fail on every machine without it."
+      },
+      "hl.exec_cmd": {
+        "registered_with": "setFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:479",
+        "used_by_this_project": true,
+        "note": "The same spawn as hl.dsp.exec_cmd, reachable at the top level so a Lua function body can call it. The shipped keymap uses it inside eight function() wrappers. It takes a string and spawns it the one way exec.spawned_as records."
+      },
+      "hl.clear_crashed_lockscreen": {
+        "registered_with": "setFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:481",
+        "used_by_this_project": false
+      },
+      "hl.exec_scheduled_prop_refresh_immediately": {
+        "registered_with": "setFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:483",
+        "used_by_this_project": false
+      },
+      "hl.unbind": {
+        "registered_with": "setFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:485",
+        "implemented_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:370-382",
+        "used_by_this_project": false,
+        "takes": "the literal 'all' as its only argument, or a key string",
+        "note": "hl.unbind('all') clears every bind; hl.unbind('SUPER + T') removes the binds on that key string. Not used, and the reason is the emergency-mode entry: a generated file that cleared binds before re-registering them would leave the registry empty mid-parse, and an error anywhere after that point trips emergency mode and reassigns SUPER + Q. Requiring both files to register and never to clear keeps the registry non-empty through a failed parse."
+      },
+      "hl.is_key_down": {
+        "registered_with": "setFn",
+        "source": "src/config/lua/bindings/LuaBindingsToplevel.cpp:487",
+        "implemented_at": "src/config/lua/bindings/LuaBindingsToplevel.cpp:384-409",
+        "used_by_this_project": false,
+        "note": "Takes a keycode or a keysym name and answers whether it is currently down. Recorded for one inconsistency that would otherwise cost an afternoon: it parses a name with XKB_KEYSYM_NO_FLAGS (:394), which is case-sensitive, while hl.bind resolves through the resolver's XKB_KEYSYM_CASE_INSENSITIVE (src/keybinds/Resolver.cpp:58). So 'left' binds and 'left' does not test as down. It also carries a special error for 'Enter' suggesting 'Return' (:397-399), which is the one keysym name a person is most likely to write from memory of another toolkit."
+      }
+    }
+  },
+  "query": {
+    "note": "The read side of the API, recorded because a keybind that has to ask the compositor a question should ask it in Lua rather than spawn a program to scrape the answer out of JSON. The shipped move-or-swap binds do the latter today, and need jq and bash to do it.",
+    "registered_at": "src/config/lua/bindings/LuaBindingsQuery.cpp:450-471",
+    "members": [
+      "hl.get_devices", "hl.get_windows", "hl.get_window", "hl.get_active_window",
+      "hl.get_urgent_window", "hl.get_workspaces", "hl.get_workspace",
+      "hl.get_active_workspace", "hl.get_active_special_workspace", "hl.get_monitors",
+      "hl.get_monitor", "hl.get_active_monitor", "hl.get_monitor_at",
+      "hl.get_monitor_at_cursor", "hl.get_layers", "hl.get_workspace_windows",
+      "hl.get_cursor_pos", "hl.get_last_window", "hl.get_last_workspace",
+      "hl.get_current_submap"
+    ],
+    "used_by_this_project": {
+      "hl.get_active_window": "The move-or-swap binds, to ask whether the focused window is floating before deciding which of two dispatchers to call."
+    },
+    "window_fields": {
+      "source": "src/config/lua/objects/LuaWindow.cpp",
+      "fields": ["floating", "name", "x", "y", "width", "column", "index",
+                 "index_in_column", "is_master", "perc_master", "perc_size", "windows"],
+      "note": "Read by name off the window object, so window.floating is a boolean (:101-102). get_windows takes a query table and floating is one of the fields it filters on (LuaBindingsQuery.cpp:31, :54, :91-92), which is how a bind could act on every floating window at once rather than only the focused one."
+    },
+    "not_used_and_why": {
+      "hl.get_windows": "No bind here acts on more than the focused window.",
+      "hl.get_monitors": "The monitor record owns that surface: data/design/monitors.json.",
+      "hl.get_cursor_pos": "Nothing binds on where the pointer is.",
+      "hl.get_current_submap": "This project has no submaps; see bind.submaps."
+    }
+  },
   "recovery": {
     "note": "What the compositor does by itself when a Lua config fails, recorded because a shortcut system has to survive its own worst output and because upstream already has an opinion about which keys mean what in that situation.",
     "emergency_mode": {
@@ -492,7 +601,11 @@
   },
   "keysyms": {
     "verified_against": "xkbcommon-1.7.0, include/xkbcommon/xkbcommon-keysyms.h",
-    "total_names_in_that_release": 2582,
+    "total_names_in_that_release": 2577,
+    "declared_lines_in_that_release": 2590,
+    "names_declared_more_than_once": 11,
+    "name_list": "data/reference/xkb-keysyms-1.7.0.txt",
+    "on_the_duplicates": "The header declares 2590 XKB_KEY_ names of which 2577 are distinct, because eleven are declared more than once with different codes -- space, KP_Space, quoteleft, guillemetleft and the misspelled guillemotleft among them. A name is therefore enough to resolve a key and the code is not needed to validate one, which is what makes the committed list a sound thing to check a keybind against: xkb_keysym_from_name answers from the name alone. The list is the distinct names, sorted, and a test checks every keysym the defaults bind against it.",
     "resolution": "XKB_KEYSYM_CASE_INSENSITIVE, so any of these names in any case is accepted (Resolver.cpp:58)",
     "used_by_this_project": [
       "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
@@ -541,7 +654,7 @@
   "rejected": [
     {
       "spelling": "bind=SUPER,T,exec,kitty -- the manual's line format, with flag letters such as l, e, m and r before the modifier",
-      "why_rejected": "This repository configures the compositor in Lua, and the Lua API has no flag string. hl.bind takes a table of named booleans, so the equivalent of bind=le,SUPER,T,exec,kitty is hl.bind('SUPER + T', hl.dsp.exec_cmd('kitty'), { locked = true, repeating = true }). Emitting a line format into a Lua file would be emitting a syntax the config provider does not parse.",
+      "why_rejected": "There is no line-format config parser in this release, so this is not a second way to write the same thing: it is a syntax the compositor cannot read. Config::initConfigManager constructs Config::Lua::CConfigManager on both branches of its only conditional, and the branch for a regular config and the branch for an explicit or special one lead to the same manager (src/config/ConfigManager.cpp:31-36). The path search asks findConfig for 'lua' and nothing else, across the XDG config directories and /etc/xdg, and finding neither is an error rather than a fallback to a .conf (src/config/supplementary/jeremy/Jeremy.cpp:34-42). eConfigManagerType then has one real value, CONFIG_LUA, and its stringifier answers 'error' for anything else (src/config/ConfigManager.cpp:64-68). The Lua API has no flag string either: hl.bind takes a table of named booleans (src/config/lua/bindings/LuaBindingsToplevel.cpp:101-204), so the equivalent of a locked, repeating bind is hl.bind('SUPER + T', hl.dsp.exec_cmd('kitty'), { locked = true, repeating = true }).",
       "correspondence": {
         "l": "options.locked",
         "e": "options.repeating",
@@ -574,6 +687,37 @@
     {
       "spelling": "A command stored as one shell string",
       "why_rejected": "See exec.consequence. Upstream only accepts a string, so the renderer produces one, but the data model holds a list: a list cannot carry a quoting mistake, and it is what the cheat sheet and the Settings page can print without parsing."
+    },
+    {
+      "spelling": "function() hl.exec_cmd(\"hyprctl dispatch resizeactive 30 0\") end -- a pre-Lua dispatcher spelling inside a shell command",
+      "why_rejected": "It cannot work on this release, and it fails twice over. `resizeactive` is not a member of the hl.dsp tree at all, so there is nothing by that name to dispatch; and the text reaches hl.dispatch unquoted, because hyprctl dispatch on a Lua config evaluates `return hl.dispatch(<everything after 'dispatch '>)` (src/ipc/s1/Commands.cpp:1332-1346), so the compositor is asked to parse `resizeactive 30 0` as Lua and cannot. Upstream anticipates exactly this and appends a note that the syntax may need updating (:1345-1346). The shipped keymap carries eight binds of this shape -- SUPER + SHIFT + an arrow to resize, and SUPER + SHIFT + CTRL + an arrow to swap -- so all eight are recorded as broken rather than migrated verbatim into a generated file, where they would be broken identically and look maintained.",
+      "use_instead": "The verified dispatcher calls below. All three argument tables were read out of source, so these are replacements and not guesses.",
+      "replacements": {
+        "resize": {
+          "from": "hyprctl dispatch resizeactive <dx> <dy>",
+          "to": "hl.dsp.window.resize({ x = <dx>, y = <dy>, relative = true })",
+          "source": "src/config/lua/bindings/LuaBindingsDispatchers.cpp:1360 (registration) and :1050-1080 (the argument table)",
+          "note": "resize takes no arguments for a mouse resize, a table { x, y, relative?, window? }, or a table { keep_aspect_ratio }. With both x and y present it builds the exact-resize closure, and relative defaults to false, so relative = true is what makes 30 mean '30 more' rather than '30 wide'."
+        },
+        "move_a_floating_window": {
+          "from": "hyprctl dispatch moveactive <dx> <dy>",
+          "to": "hl.dsp.window.move({ x = <dx>, y = <dy>, relative = true })",
+          "source": "src/config/lua/bindings/LuaBindingsDispatchers.cpp:1347 (registration) and :802-900 (the argument table)",
+          "note": "move takes { direction = 'left|right|up|down' }, or { x, y, relative? }, or { workspace = <selector>, follow? }. The x and y branch is the one a floating window needs."
+        },
+        "swap_a_tiled_window": {
+          "from": "hyprctl dispatch movewindow l",
+          "to": "hl.dsp.window.swap({ direction = 'left' })",
+          "source": "src/config/lua/bindings/LuaBindingsDispatchers.cpp:1348 (registration) and :902-947 (the argument table)",
+          "note": "The old spelling's single letters are gone: parseDirectionStr is handed a word and refuses anything that is not left, right, up or down, with a config error that names the four it expects. swap also accepts a window selector as target, with or other, or { next = true }."
+        },
+        "is_the_active_window_floating": {
+          "from": "hyprctl activewindow -j | jq -r .floating, compared against the string true by grep",
+          "to": "hl.get_active_window().floating",
+          "source": "src/config/lua/bindings/LuaBindingsQuery.cpp:454 (registration) and :129-138 (the function), src/config/lua/objects/LuaWindow.cpp:101-102 (the field)",
+          "note": "A real boolean from the compositor rather than a string scraped out of JSON by two external programs. get_active_window returns nil when nothing is focused, so the honest form is a local with a nil test. This is the part of the old binds that mattered most: it needed jq, which is a dependency a keybind has no business having, and it needed bash to run a conditional that Lua can already evaluate."
+        }
+      }
     },
     {
       "spelling": "A second source of keybinds",
