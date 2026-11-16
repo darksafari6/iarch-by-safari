@@ -484,10 +484,15 @@ def layer_rule(binding: Dict[str, Any], keys: str, binding_id: str) -> List[Prob
     The severities differ on purpose. Bare ``Ctrl+Alt`` is an error because the
     recovery combo and the deliberately-reserved X11 kill-server key both live there,
     so anything else in that layer can stop the safety net from firing.
-    ``Super+Ctrl+Alt`` is a warning: the two workspace moves in it are carried from
-    the v1 map and every sensible destination key is already taken, so relocating
-    them belongs with the next laying-out of the default map rather than with this
-    check -- but the debt is printed every run instead of being quietly accepted.
+    ``Super+Ctrl+Alt`` is a warning rather than an error because the two workspace
+    moves carried into it from the v1 map both worked, and refusing a bind that works
+    is not the same thing as reporting one. They have since moved, to ``Super+Ctrl+N``
+    and ``Super+Ctrl+P`` -- the layer this checker offers when it refuses a plain
+    ``Ctrl+letter``, and the layer that already owns workspace navigation on the
+    arrows -- so the warning is now a guard on the next bind that reaches for the
+    recovery layer rather than a debt printed on every run. The relocation, and the
+    allocation of all 78 letter cells it was part of, is recorded in
+    ``data/design/keybinds.json`` under ``alphabet``.
     """
     mods = frozenset(binding.get("mods") or ())
     category = binding.get("category", "")
@@ -506,9 +511,10 @@ def layer_rule(binding: Dict[str, Any], keys: str, binding_id: str) -> List[Prob
                                 binding_id, keys))
     elif mods == {"SUPER", "CTRL", "ALT"} and category not in SYSTEM_CATEGORIES:
         problems.append(Problem(WARNING, f"Super+Ctrl+Alt is the recovery and system "
-                                f"layer and this is category {category!r}; carried "
-                                "from the v1 map, and it should move when the default "
-                                "map is next laid out",
+                                f"layer and this is category {category!r}: the two "
+                                "workspace moves the v1 map carried here moved to "
+                                "Super+Ctrl+N and Super+Ctrl+P, so the layer to use is "
+                                "Super+Ctrl, which no application owns",
                                 binding_id, keys))
     return problems
 

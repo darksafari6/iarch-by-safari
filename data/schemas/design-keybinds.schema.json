@@ -9,7 +9,7 @@
     "_copyright", "_note", "verified_against", "keysyms_verified_against", "source", "fetched",
     "entry_point", "key_string", "key_forms", "modifiers", "bind", "toplevel",
     "dispatchers", "exec", "query", "recovery", "validation", "keysyms",
-    "reserved", "rejected"
+    "reserved", "alphabet", "rejected"
   ],
   "additionalProperties": false,
   "properties": {
@@ -651,6 +651,87 @@
       }
     },
 
+    "alphabet": {
+      "type": "object",
+      "required": ["note", "settles", "statuses", "layers"],
+      "additionalProperties": false,
+      "description": "The A-Z allocation of the three letter layers, 78 cells, each one decided. Pinned as three layers in a fixed order with their modifiers as const, because which layers a letter may live in is a decision and not a description: Super+Alt cannot be spelled here at all, so the table cannot grow a fourth layer that the checker refuses. What the table is, what enforces it and what it does not constrain (an override file) is in its own note.",
+      "properties": {
+        "note": { "type": "string", "minLength": 200 },
+        "settles": { "type": "string", "minLength": 80 },
+        "statuses": {
+          "type": "object",
+          "required": ["bound", "declared", "reserved", "free"],
+          "additionalProperties": false,
+          "properties": {
+            "bound": { "type": "string", "minLength": 40 },
+            "declared": { "type": "string", "minLength": 40 },
+            "reserved": { "type": "string", "minLength": 40 },
+            "free": { "type": "string", "minLength": 40 }
+          }
+        },
+        "layers": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "additionalItems": false,
+          "items": [
+        {
+          "type": "object",
+          "required": ["mods", "name", "purpose", "free_reason", "cells"],
+          "additionalProperties": false,
+          "properties": {
+            "mods": { "const": ["SUPER"] },
+            "name": { "const": "primary" },
+            "purpose": { "type": "string", "minLength": 80 },
+            "free_reason": { "type": "string", "minLength": 40 },
+            "cells": {
+              "type": "array",
+              "minItems": 26,
+              "maxItems": 26,
+              "items": { "$ref": "#/definitions/alphabet_cell" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["mods", "name", "purpose", "free_reason", "cells"],
+          "additionalProperties": false,
+          "properties": {
+            "mods": { "const": ["SUPER", "SHIFT"] },
+            "name": { "const": "secondary" },
+            "purpose": { "type": "string", "minLength": 80 },
+            "free_reason": { "type": "string", "minLength": 40 },
+            "cells": {
+              "type": "array",
+              "minItems": 26,
+              "maxItems": 26,
+              "items": { "$ref": "#/definitions/alphabet_cell" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["mods", "name", "purpose", "free_reason", "cells"],
+          "additionalProperties": false,
+          "properties": {
+            "mods": { "const": ["SUPER", "CTRL"] },
+            "name": { "const": "tertiary" },
+            "purpose": { "type": "string", "minLength": 80 },
+            "free_reason": { "type": "string", "minLength": 40 },
+            "cells": {
+              "type": "array",
+              "minItems": 26,
+              "maxItems": 26,
+              "items": { "$ref": "#/definitions/alphabet_cell" }
+            }
+          }
+        }
+          ]
+        }
+      }
+    },
+
     "rejected": {
       "type": "array",
       "minItems": 5,
@@ -707,6 +788,38 @@
         "rule": { "type": "string", "minLength": 15 },
         "source": { "$ref": "#/definitions/cite" }
       }
+    },
+
+    "alphabet_cell": {
+      "type": "object",
+      "required": ["key", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "pattern": "^[A-Z]$" },
+        "status": { "enum": ["bound", "declared", "reserved", "free"] },
+        "binding": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*\\.[a-z0-9-]+$",
+          "description": "The id of the binding in data/keybinds.default.json that owns this cell. The shape is the category.subject shape tools/migrate_keybinds_v2.py mints, so an id that could not have come out of the migration cannot be written into the table either."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 120,
+          "description": "Why nothing may bind here. The floor is high on purpose: a reservation is an argument with a mechanism, a verb or a command in it, and 'not yet' is not one."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "enum": ["bound", "declared"] } } },
+          "then": { "required": ["binding"] },
+          "else": { "not": { "required": ["binding"] } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "reserved" } } },
+          "then": { "required": ["reason"] },
+          "else": { "not": { "required": ["reason"] } }
+        }
+      ]
     }
   }
 }

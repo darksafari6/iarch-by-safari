@@ -107,7 +107,7 @@ the map. Read it before changing anything.
 │   ├── notices.py            Renders and checks THIRD_PARTY_NOTICES.md and data/licenses.json.
 │   ├── branding_lint.py      Fails when the everyday UI shows an upstream or previous name.
 │   ├── naming_audit.py       Repo-wide search for previous names, against a reasoned allowlist.
-│   ├── render_shortcuts.py   Renders docs/SHORTCUTS.md out of data/keybinds.default.json.
+│   ├── render_shortcuts.py   Renders docs/SHORTCUTS.md out of the keybind record and the A to Z table.
 │   ├── profile_preset.py     Applies or reverts an effect preset, backup first.
 │   ├── preflight.py          Read-only host checks before an install.
 │   ├── diagnose.py           Read-only session diagnostics (legacy v4 session).
@@ -115,7 +115,9 @@ the map. Read it before changing anything.
 │   ├── glass_preset.py       Experimental glass preset for the legacy v4 session.
 │   └── v5_profile.py         Stages the shell profile or restores an explicit backup.
 │
-├── scripts/                  Runtime helpers a user runs inside the session.
+├── scripts/                  Runtime helpers a user runs inside the session, and the thin
+│                             launchers scripts/iarch-link-cli.sh puts on PATH by name —
+│                             every iarch-* command the keyboard map execs is one of them.
 │   ├── iarch-healthcheck.sh  Read-only diagnostics; changes nothing.
 │   └── iarch-control-center.sh  Allowlisted IPC shortcuts for the shell.
 │

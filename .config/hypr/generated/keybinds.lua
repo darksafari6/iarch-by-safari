@@ -123,8 +123,15 @@ hl.bind("SUPER + CTRL + left", hl.dsp.focus({ workspace = "r-1" }), { descriptio
 hl.bind("SUPER + CTRL + down", hl.dsp.focus({ workspace = "empty" }), { description = "Open empty workspace" })
 
 -- Move Window Across Workspaces
-hl.bind("SUPER + CTRL + ALT + right", hl.dsp.window.move({ workspace = "r+1" }), { description = "Move to next workspace" })
-hl.bind("SUPER + CTRL + ALT + left", hl.dsp.window.move({ workspace = "r-1" }), { description = "Move to previous workspace" })
+hl.bind("SUPER + CTRL + N", hl.dsp.window.move({ workspace = "r+1" }), { description = "Move to next workspace" })
+hl.bind("SUPER + CTRL + P", hl.dsp.window.move({ workspace = "r-1" }), { description = "Move to previous workspace" })
+
+-- Modes
+hl.bind("SUPER + CTRL + F", hl.dsp.exec_cmd("iarch-focus toggle"), { description = "Focus mode: Do Not Disturb, caffeine and a dimmed background" })
+hl.bind("SUPER + CTRL + G", hl.dsp.exec_cmd("iarch-gamemode toggle"), { description = "Game mode: drop the compositor's effects for latency" })
+
+-- Appearance
+hl.bind("SUPER + CTRL + L", hl.dsp.exec_cmd("noctalia msg nightlight-toggle"), { description = "Toggle night light" })
 
 -- Mouse Workspace Navigation
 hl.bind("SUPER + mouse_down", hl.dsp.focus({ workspace = "e+1" }), { description = "Scroll to next workspace" })

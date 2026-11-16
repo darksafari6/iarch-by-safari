@@ -133,9 +133,9 @@ desktop feel arbitrary, so each one has a job and the checker enforces it:
 | --- | --- | --- |
 | `Super` | The primary layer: the things you reach for constantly | — |
 | `Super+Shift` | The secondary layer: the counterpart of a primary bind | — |
-| `Super+Ctrl` | Workspace navigation, and the remedy for a plain `Ctrl+letter` | — |
+| `Super+Ctrl` | The session's own state: workspace navigation on the arrows, the two modes and appearance on letters, and the remedy for a plain `Ctrl+letter` | — |
 | `Ctrl+Alt` | **Recovery and system only** | error for anything else |
-| `Super+Ctrl+Alt` | **Recovery and system only** | warning; two v1 binds are debt |
+| `Super+Ctrl+Alt` | **Recovery and system only** | warning; nothing is bound there |
 | `Super+Alt` | **Deliberately empty** | error for anything at all |
 
 `Super+Alt` being empty is not an oversight. An empty layer is somewhere a later
@@ -144,9 +144,15 @@ than filling it now.
 
 `Ctrl+Alt` is an error rather than a warning because the recovery combo lives on
 exactly that layer, and a collision there is a safety net that does not fire when
-it is needed. The two `Super+Ctrl+Alt` binds that predate the rule — moving a
-window to the next and previous workspace — are reported on every run instead of
-being quietly exempted, because an invisible exception rots.
+it is needed. `Super+Ctrl+Alt` is a warning rather than an error because the two
+binds that predated the rule both worked, and refusing a working bind is not the
+same thing as reporting one. Those two — moving a window to the next and previous
+workspace, carried over from the v1 map — were reported on every run instead of
+being quietly exempted, and they have now moved to `Super+Ctrl+N` and
+`Super+Ctrl+P`: the layer this checker offers when it refuses a plain
+`Ctrl+letter`, and the layer that already owns workspace navigation on the
+arrows. The shipped map reports nothing at all, so a warning from it means
+something reached for the recovery layer again.
 
 A plain `Ctrl+letter` is refused outright: a global `Ctrl+C` or `Ctrl+S` takes
 that key from every application at once. The message offers `Super+Ctrl` and
@@ -293,6 +299,14 @@ bind a person hand-edits and then loses on the next render.
   and the four names are compared exactly — `MOUSE_DOWN` is not the same event.
   Verified from source and never observed on a session, so `docs/UNVERIFIED.md`
   keeps the live half under TP-10.
+- **The two mode keys have never been pressed.** `Super+Ctrl+F` and `Super+Ctrl+G`
+  run `iarch-focus toggle` and `iarch-gamemode toggle` through launchers that
+  `scripts/iarch-link-cli.sh` puts on `PATH`, and both CLIs are tested here —
+  focus mode against a stand-in shell, game mode against a temporary config root
+  — but no compositor and no display exist on the machine this was written on, so
+  what has been proved is the logic and not the key. That is `KB-06`, and it sits
+  inside the gap `INS-07` leaves for every bind that names an `iarch-*` command:
+  whether a session greetd started has `~/.local/bin` on its `PATH` at all.
 
 ## Reading the map
 
@@ -307,10 +321,35 @@ iarch-keybinds --check             # CI: are the renderings current?
 From a checkout that has not run `scripts/iarch-link-cli.sh`, each of those is
 `python3 iarch/cli/iarch_keybinds.py …` instead.
 
-`check` exits non-zero on an error or a conflict and zero on warnings, so a
-healthy map with known debt does not look broken — but the warnings are still
-printed, because a warning nobody sees is a warning nobody can act on.
+`check` exits non-zero on an error or a conflict and zero on warnings, so a map
+with debt in it does not look broken — but the warnings are still printed,
+because a warning nobody sees is a warning nobody can act on. The shipped map has
+none: the last two were the `Super+Ctrl+Alt` binds above, and allocating the
+letters found them a home.
 
 The full table of what is bound is [SHORTCUTS.md](SHORTCUTS.md), which is
 generated from the same record and cannot disagree with your session unless one
 of them is stale.
+
+## The A to Z table
+
+A modifier layer is a budget, so every letter of the three layers a letter may
+live in is allocated before anything is bound to it: 78 cells in
+`data/design/keybinds.json` under `alphabet`, rendered as a grid at the end of
+[SHORTCUTS.md](SHORTCUTS.md). A cell is one of four things — a binding, a key the
+record has claimed and not bound, a refusal with the mechanism that makes it a
+bad idea, or empty on purpose — and `tests/test_keybinds_alphabet.py` checks the
+table against the map in both directions, so a bind added to a letter nobody
+allocated fails there instead of quietly making the grid a story about the past.
+
+The refusals are the cells worth reading, and each one names the verb, file or
+command behind it: brightness has no relative verb, theme mode is written
+by a generator that a runtime toggle would disagree with, Do Not Disturb and
+caffeine belong to focus mode because it reads both back before it changes them,
+`Super+R` is the compositor's own emergency launcher, and `Super+Ctrl+R` would be
+a second spelling of the recovery combo.
+
+The table describes the shipped defaults and nothing else. Your
+`~/.config/iarch/keybinds.json` may use any empty cell it likes — `check` does
+not read the table, because a validator that policed your own map would be
+policing the wrong file.

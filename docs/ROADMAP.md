@@ -152,11 +152,15 @@ surfaces read out of a pinned upstream release rather than out of documentation 
   documents that a reader would otherwise take the wrong way from say so where they are: `docs/MOTION.md`
   names the switch the wallpaper crossfade ignores, `docs/WALLPAPERS.md` no longer sends anybody to a
   directory the shell does not scan, `SECURITY.md` says a startup command's failure is silent by
-  construction, and `README.md` says plainly that the two modes are commands with no key bound and no
-  measured saving.
+  construction, and `README.md` says plainly what each surface cannot do -- at the time, that the two
+  modes were commands with no key bound and no measured saving, and now that both are bound and
+  neither key has been watched (`KB-06`).
 
-**Explicitly not done in Part 3:** no key binds either mode — `Super+H` and the overlay behind it are
-Part 7, and until then both modes are commands you run (`python3 iarch/cli/iarch_gamemode.py toggle`).
+**Explicitly not done in Part 3:** no key bound either mode — `Super+H` and the overlay behind it were
+Part 7 work, and at the time both modes were commands you ran (`python3 iarch/cli/iarch_gamemode.py
+toggle`). The shortcut work has since bound both, to `Super+Ctrl+F` and `Super+Ctrl+G`, through
+launchers `scripts/iarch-link-cli.sh` puts on `PATH`; neither key has been pressed on a session, which
+is `KB-06`.
 There is still no settings GUI, which is Part 4, so the coarse `preset` and `effects` switches in
 `data/settings.default.json` are read by no renderer and Part 4 has to reconcile them. No greeter file
 is emitted. `.config/hypr/hypridle.conf` ships unlaunched, because the shell owns
@@ -293,3 +297,19 @@ and the three keys `docs/SHORTCUTS.md` already reserves so they are not reassign
 `Super+H`, `Super+Shift+H` and `Super+K`. Acceptance will have to include: the overlay lists every bind
 that has a description; a bind without a description fails a test; the overlay opens and closes with
 animation; and the surface is chosen from a verified API rather than a guessed one (`UI-02`).
+
+**Landed so far** — this is how far the shortcut work has got, not the whole part. The direction of
+truth is reversed from what this part proposed: the record is the source and the session file is
+generated, so `data/keybinds.default.json` renders `.config/hypr/generated/keybinds.lua`,
+`docs/SHORTCUTS.md` and the Shortcuts page's rows, and a bind without a description is refused by
+`iarch-keybinds check` rather than by a test that reads a document. `Super+H` runs `iarch-cheatsheet`,
+which draws the map in a terminal with a filter and falls back to `notify-send` and then stderr, and the
+three keys this part reserves are still where it says they are — `Super+H` bound, `Super+Shift+H` and
+`Super+K` declared and not bound. All 78 letter cells of the three layers a letter may live in are
+allocated in `data/design/keybinds.json -> alphabet` and rendered as a grid at the end of
+`docs/SHORTCUTS.md`, where a cell is a binding, a claimed-but-unbound key, a refusal that names the verb
+or file or command behind it, or empty on purpose; `tests/test_keybinds_alphabet.py` checks the grid
+against the map in both directions. The two workspace moves the v1 map carried into `Super+Ctrl+Alt`
+moved to `Super+Ctrl+N` and `Super+Ctrl+P`, so the shipped map reports no warning at all. Still open:
+the glass overlay surface with a box you type into (`UI-02`), a Shortcuts page that edits the map rather
+than reading it, and every claim that needs a session (`KB-01`, `KB-03`, `KB-06`).

@@ -2,10 +2,11 @@
 
 <!-- GENERATED FILE - do not edit by hand.
      Source: data/keybinds.default.json (the source iarch-keybinds renders the session from)
+             and data/design/keybinds.json -> alphabet (the A to Z allocation)
      Regenerate: python3 tools/render_shortcuts.py --write
      Verify: python3 tools/render_shortcuts.py --check -->
 
-77 shortcuts, generated from `data/keybinds.default.json`, which `iarch-keybinds` renders into `.config/hypr/generated/keybinds.lua`. The record is the source and the Lua is generated, so if this table and your session disagree, one of them is stale: run `python3 tools/render_shortcuts.py --write` for this file, or `iarch-keybinds generate --write` for the session.
+80 shortcuts, generated from `data/keybinds.default.json`, which `iarch-keybinds` renders into `.config/hypr/generated/keybinds.lua`. The record is the source and the Lua is generated, so if this table and your session disagree, one of them is stale: run `python3 tools/render_shortcuts.py --write` for this file, or `iarch-keybinds generate --write` for the session.
 
 `SUPER` is the Super key — the Windows key on most keyboards, Command on an Apple one. A bind marked *(mouse)* is a button or a scroll, and *(locked)* media keys keep working while the screen is locked.
 
@@ -18,11 +19,14 @@
 - [Workspace Switching](#workspace-switching)
 - [Workspace Navigation](#workspace-navigation)
 - [Move Window Across Workspaces](#move-window-across-workspaces)
+- [Modes](#modes)
+- [Appearance](#appearance)
 - [Mouse Workspace Navigation](#mouse-workspace-navigation)
 - [Mouse Window Management](#mouse-window-management)
 - [Media](#media)
 - [System](#system)
 - [Planned](#planned)
+- [The A to Z table](#the-a-to-z-table)
 
 ## Applications
 
@@ -120,8 +124,21 @@
 
 | Keys | What it does |
 | :--- | :--- |
-| `SUPER + CTRL + ALT + right` | Move to next workspace — compositor action `window.move` |
-| `SUPER + CTRL + ALT + left` | Move to previous workspace — compositor action `window.move` |
+| `SUPER + CTRL + N` | Move to next workspace — compositor action `window.move` |
+| `SUPER + CTRL + P` | Move to previous workspace — compositor action `window.move` |
+
+## Modes
+
+| Keys | What it does |
+| :--- | :--- |
+| `SUPER + CTRL + F` | Focus mode: Do Not Disturb, caffeine and a dimmed background — runs `iarch-focus toggle` |
+| `SUPER + CTRL + G` | Game mode: drop the compositor's effects for latency — runs `iarch-gamemode toggle` |
+
+## Appearance
+
+| Keys | What it does |
+| :--- | :--- |
+| `SUPER + CTRL + L` | Toggle night light — sends the shell `nightlight-toggle` |
 
 ## Mouse Workspace Navigation
 
@@ -165,6 +182,63 @@ Declared in the record but not bound, so nothing happens when you press them. Th
 | :--- | :--- |
 | `SUPER + SHIFT + H` | Refresh the shortcut overlay (Part 7) *(not bound yet)* |
 | `SUPER + K` | Hyprland key panel (Part 7) *(not bound yet)* |
+
+## The A to Z table
+
+Every letter of all three layers a letter may live in — 78 cells — each one decided before anything was bound to it. A modifier layer is a budget, and an undecided letter is where an arbitrary bind lands later, so the allocation is written down in `data/design/keybinds.json` under `alphabet` and rendered here. `tests/test_keybinds_alphabet.py` proves the table and the map agree in both directions. It describes the shipped defaults only: your own `~/.config/iarch/keybinds.json` may use any empty cell it likes, and `iarch-keybinds check` does not consult this table, because a person's map is theirs and a checker that policed it would be policing the wrong file.
+
+`SUPER` — **primary**. What a person reaches for constantly: the applications this session installs, launched by name, plus the four window actions that are in use all day (close, float, fullscreen, resize mode) and the two surfaces that answer a question about the session itself (the shortcut overlay on H, the control centre on I).
+
+`SUPER + SHIFT` — **secondary**. The counterpart of a primary bind, and it never launches a program: every row here opens a control-centre context (audio, Bluetooth, network, notifications, power) or one of the session's own decisions (the settings window, the session menu that stands between a key and a logout).
+
+`SUPER + CTRL` — **tertiary**. The state of the session rather than a program in it: workspace navigation on the arrows (next, previous, empty), moving the focused window between workspaces on N and P, the two modes this project builds on F and G, and appearance on L. It is also the layer the checker offers when it refuses a plain Ctrl+letter, because no application owns Super+Ctrl — a global Ctrl+C takes that key from every terminal and editor at once, and this one does not.
+
+| Letter | `SUPER` | `SUPER + SHIFT` | `SUPER + CTRL` |
+| :--- | :--- | :--- | :--- |
+| A | Annotate screenshot | Open audio controls | — |
+| B | Browser | Open Bluetooth controls | *reserved* |
+| C | Code editor | — | *reserved* |
+| D | Toggle launcher | — | *reserved* |
+| E | File manager | Open the session menu (logout, reboot, shutdown) | — |
+| F | Toggle fullscreen | — | Focus mode: Do Not Disturb, caffeine and a dimmed background |
+| G | — | — | Game mode: drop the compositor's effects for latency |
+| H | Shortcut overlay | Refresh the shortcut overlay (Part 7) *(not bound yet)* | — |
+| I | Open Control Center | Open Settings | — |
+| J | — | — | — |
+| K | Hyprland key panel (Part 7) *(not bound yet)* | — | — |
+| L | Lock screen | — | Toggle night light |
+| M | Music player | — | *reserved* |
+| N | — | Open notification center | Move to next workspace |
+| O | — | — | *reserved* |
+| P | — | Open power controls | Move to previous workspace |
+| Q | Close window | — | — |
+| R | *reserved* | — | *reserved* |
+| S | Steam | — | *reserved* |
+| T | Toggle settings | — | *reserved* |
+| U | — | — | — |
+| V | Video player | — | — |
+| W | Toggle floating | Open network controls | *reserved* |
+| X | Resize mode | — | — |
+| Y | — | — | — |
+| Z | — | — | — |
+
+### Why a cell is empty
+
+*reserved* is a refusal with a mechanism behind it, and an em dash is a cell left empty on purpose. Every refusal is listed first, in letter order, then the reason each layer leaves the rest of its letters alone.
+
+- **`SUPER + CTRL + B`** — Brightness. brightness-set is recorded and deliberately not sent: brightness is the compositor's, so the Display page changes it through hyprctl, and the verb's optional target argument would mean naming a monitor the shell's own IPC cannot enumerate (data/design/noctalia-ipc.json). A key that set an absolute level would also need somewhere to remember the last one, and stepping needs a pair of cells, which a table that allocates one at a time does not promise. Reserved; note that this map binds no XF86 brightness keys either, so the honest fix is a pair beside the media row rather than a letter here.
+- **`SUPER + CTRL + C`** — Caffeine. iarch-focus on saves what caffeine was and puts it back on off, so a key that flips the idle inhibitor underneath a running focus session breaks the restore and leaves the session awake after focus mode ends. Super+Ctrl+F is the switch that owns caffeine, and caffeine-toggle is allowlisted in scripts/iarch-control-center.sh, so the toggle itself is reachable — the key is not what is missing.
+- **`SUPER + CTRL + D`** — Do Not Disturb, for the same reason as C: focus mode reads the flag with notification-dnd-status before it changes it and restores what it read, and a blind notification-dnd-toggle would leave the recorded state and the shell's real state disagreeing about who is allowed to interrupt. Notification silence is Super+Ctrl+F.
+- **`SUPER + CTRL + M`** — Mute. volume-mute is recorded and deliberately not sent, because mute is a state of the compositor's mixer and this project changes that state where the level is changed as well, so the switch and the level cannot drift apart (data/design/noctalia-ipc.json). This map binds no mute key at all, which is a gap this cell does not fill: the honest row is a pamixer toggle beside the two pamixer volume steps on the media keys, with the flag read out of pamixer's own source rather than remembered. Reserved so that the row lands on the media row and not on a letter.
+- **`SUPER + CTRL + O`** — Monitors off. dpms-off is in the verb record and the Power & Idle page offers it as a row a person clicks, but a key is not a click: nothing here has observed a monitor come back on input, and a combination one Super key away from the rest of the map is a screen that goes black by accident. Reserved until the wake path is verified on a session.
+- **`SUPER + R`** — The compositor's own emergency mode binds Super+R to hyprland-run, a program this project neither ships nor installs (recovery.emergency_mode in this record, and KB-05 in docs/UNVERIFIED.md). The cell stays empty rather than collide with the one layer that has to work when the configuration does not.
+- **`SUPER + CTRL + R`** — Recovery. Ctrl+Alt+R re-applies the default map and it is the one action that has to survive a configuration that will not load, which is why it is written by hand in .config/hypr/keybind.lua rather than generated. A second spelling of it is a second way to lose a custom map by accident, one Super key closer to the rest of the map.
+- **`SUPER + CTRL + S`** — Screenshots. Print Screen already carries three hyprshot binds — window, monitor and region — and the shell's own screenshot-region and screenshot-window verbs are what the settings application's Features page triggers, so the shell's capture is already reachable and a fourth path would mean a second picker and a second answer to where the file went (data/design/noctalia-ipc.json). Reserved rather than left free because this is the first cell anybody reaches for, and what goes there should be written down before the reaching.
+- **`SUPER + CTRL + T`** — Theme mode. theme-mode-toggle is recorded and deliberately not sent: the Appearance page offers dark, light and auto as three choices and sends theme-mode-set with the one that was chosen, because a toggle cannot say which mode it landed on and it would drop auto, which is the mode most people run (data/design/noctalia-ipc.json). The generated configuration agrees with that: render_noctalia.py writes theme.mode and shell_mode into .config/noctalia/config.toml out of the preset, so a runtime toggle would set a value the generator does not know about and the next iarch-theme run would quietly revert it. Reserved until dark and light is a key on a state the record carries.
+- **`SUPER + CTRL + W`** — Wallpaper. wallpaper-set takes a required path and there is no wallpaper-next in v5.4.1, so a single key cannot cycle the six desktop wallpapers in assets/wallpapers/desktop without this project inventing an order the shell does not have and a place to remember where it got to. Reserved for a verified cycling verb, or for the picker the Appearance page already draws.
+- *Every other letter of `SUPER`* — Nothing is planned for it. An empty cell is worth more than a filled one, because it is where a later bind goes without taking a key away from anything else — the same reasoning that keeps the whole Super+Alt layer empty.
+- *Every other letter of `SUPER + SHIFT`* — This layer holds counterparts, and the primary letter beside it has no counterpart worth a key. Empty until one exists, which is a cheaper thing to add later than to move out of the way.
+- *Every other letter of `SUPER + CTRL`* — The state it would change is already reachable, from the control centre on Super+I, the settings window on Super+T or a command in a terminal, and a second key for one action is a second place to keep in step. Empty until the cell has an action nothing else offers.
 
 ## Changing a shortcut
 

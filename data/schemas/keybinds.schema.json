@@ -94,6 +94,11 @@
           "type": "boolean",
           "description": "Declared so nothing reassigns the key by accident, but not bound. A reserved binding is disabled and its action type is `none`."
         },
+        "relocated_from": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Za-z+ <>]*$",
+          "description": "The combination this binding had before the map was last laid out, spelled the way docs/SHORTCUTS.md spells a key. History rather than state: it survives a later rebind, because what it records is where the binding came from, and the person whose hands still reach for the old combination is the one who needs to see it written down. The two workspace moves carry it, from the Super+Ctrl+Alt layer that iarch-keybinds check reported as debt on every run until they moved to Super+Ctrl+N and Super+Ctrl+P."
+        },
         "unverified": {
           "type": "string",
           "minLength": 20,

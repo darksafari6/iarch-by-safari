@@ -23,7 +23,9 @@ What they pin, and why each is worth a test:
   to re-run, when that checkout is gone -- a wrapper that silently ran some other copy of
   the CLI would repair a session with the wrong map;
 * the name the recovery bind looks for is the name the link script provides, so the two
-  cannot drift apart.
+  cannot drift apart;
+* every ``iarch-*`` command the keyboard map execs is one the link script puts on PATH,
+  which is the same guarantee for the binds that are not the recovery one.
 """
 
 from __future__ import annotations
@@ -235,6 +237,32 @@ class TheLinker(IsolatedRun):
                         if b["id"] == "recovery.reapply-defaults")
         self.assertIn(recovery["action"]["command"][0], linked,
                       "the record names a command the link script does not provide")
+
+    def test_it_links_every_iarch_command_the_keyboard_map_execs(self):
+        """The check above, for every bind instead of only the recovery one.
+
+        A bind that execs a name nothing installs is a key that does nothing, and it
+        fails quietly: the compositor spawns ``/bin/sh -c`` with one string, so the only
+        report is a "command not found" in a log nobody is reading. ``Super+Ctrl+F`` and
+        ``Super+Ctrl+G`` are the rows this exists for -- the two modes Part 3 of the
+        roadmap left as commands with no key bound, which the A to Z table in
+        ``data/design/keybinds.json`` then allocated to the ``Super+Ctrl`` layer.
+        """
+        import json
+        linked = set(linker_commands())
+        record = json.loads(DEFAULTS.read_text(encoding="utf-8"))
+        named = sorted({action["command"][0]
+                        for b in record["bindings"]
+                        for action in [b.get("action") or {}]
+                        if action.get("type") == "exec"
+                        and (action.get("command") or [""])[0].startswith("iarch-")})
+        self.assertTrue(named, "the map execs no iarch-* command, so this test has "
+                               "nothing left to guarantee")
+        for name in named:
+            with self.subTest(command=name):
+                self.assertIn(name, linked,
+                              f"the map binds {name!r} and nothing puts that name on "
+                              "PATH, so the key does nothing on an installed session")
 
     def test_every_command_it_promises_has_a_launcher_that_exists(self):
         pairs = linker_pairs()

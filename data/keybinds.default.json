@@ -1122,10 +1122,9 @@
       "id": "move.next",
       "mods": [
         "SUPER",
-        "CTRL",
-        "ALT"
+        "CTRL"
       ],
-      "key": "right",
+      "key": "N",
       "action": {
         "type": "dispatch",
         "dispatcher": "hl.dsp.window.move",
@@ -1134,16 +1133,16 @@
       "description": "Move to next workspace",
       "category": "Move Window Across Workspaces",
       "enabled": true,
-      "locked": false
+      "locked": false,
+      "relocated_from": "SUPER + CTRL + ALT + right"
     },
     {
       "id": "move.previous",
       "mods": [
         "SUPER",
-        "CTRL",
-        "ALT"
+        "CTRL"
       ],
-      "key": "left",
+      "key": "P",
       "action": {
         "type": "dispatch",
         "dispatcher": "hl.dsp.window.move",
@@ -1152,7 +1151,65 @@
       "description": "Move to previous workspace",
       "category": "Move Window Across Workspaces",
       "enabled": true,
-      "locked": false
+      "locked": false,
+      "relocated_from": "SUPER + CTRL + ALT + left"
+    },
+    {
+      "id": "modes.focus",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "F",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-focus",
+          "toggle"
+        ]
+      },
+      "description": "Focus mode: Do Not Disturb, caffeine and a dimmed background",
+      "category": "Modes",
+      "enabled": true,
+      "locked": false,
+      "unverified": "Neither half of this row has been observed: there is no compositor and no display where it was written, so the key has never been pressed. What is real is the command -- scripts/iarch-focus.sh is a thin launcher over iarch/cli/iarch_focus.py, scripts/iarch-link-cli.sh puts that name on PATH, and tests/test_focus.py drives the CLI's own reading and restoring of the Do Not Disturb flag against a stand-in shell, which proves the logic and not the session. Whether the name resolves inside a session greetd started is INS-07, and whether the silence and the dim actually arrive is the gap NOT-01 to NOT-05 already record for notifications. TODO(verify) KB-06."
+    },
+    {
+      "id": "modes.game",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "G",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-gamemode",
+          "toggle"
+        ]
+      },
+      "description": "Game mode: drop the compositor's effects for latency",
+      "category": "Modes",
+      "enabled": true,
+      "locked": false,
+      "unverified": "The command is real -- scripts/iarch-gamemode.sh launches iarch/cli/iarch_gamemode.py, whose toggle applies the performance intensity and the motion preset that intensity is paired with, then asks for one reload -- but it has never been run on a session, and this is the one row in the map whose action writes generated files: the glass, animation and GTK payloads are re-rendered and backed up before the reload, and a reload that arrives mid-game is a stutter nobody asked for. That is why the CLI carries --no-reload and --dry-run, why this row is not locked, and why the reload itself is still TP-10. TODO(verify) KB-06."
+    },
+    {
+      "id": "appearance.night-light",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "L",
+      "action": {
+        "type": "noctalia",
+        "verb": "nightlight-toggle"
+      },
+      "description": "Toggle night light",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "nightlight-toggle is read out of noctalia v5.4.1 (src/cli/schema_msg.h:619, recorded in data/design/noctalia-ipc.json) and the settings application already sends it from the Features page's and the Home page's Night light button, so the verb and a caller both exist. What has not happened is a screen warming: no shell runs here, and a verb read out of a header is not a verb an installed shell answers. TODO(verify) KB-06."
     },
     {
       "id": "mouse.scroll-next",

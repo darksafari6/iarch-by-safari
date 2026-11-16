@@ -20,9 +20,13 @@ puts both back.
 
 Three things this page says plainly rather than leaving to a reader to discover:
 
-* **No key is bound to either mode.** ``Super+H`` and the overlay behind it are Part 7, so
-  until then both modes are commands you run, and this window is the only surface that
-  offers them.
+* **Both modes are bound, and neither key has been watched.** The A to Z table in
+  ``data/design/keybinds.json`` allocates the cells and ``data/keybinds.default.json`` binds
+  them, so this page reads the combination out of the record instead of spelling it out -- a
+  sentence that named a key would be a third copy of it, and the third copy is the one that
+  goes stale. What has not happened is a key going down on a session, which is KB-06 in
+  ``docs/UNVERIFIED.md``, and this window is still the only surface that says what a mode
+  changes.
 * **No saving has been measured.** The frame-time and latency claim is still open in
   ``docs/UNVERIFIED.md`` as MODE-01 to MODE-04, because nothing in a sandbox can measure a
   live session. A switch that says "improves performance" without a measurement behind it
@@ -40,8 +44,10 @@ Appearance, because the clipboard and telemetry are features and corner radii ar
 """
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional, Tuple
 
+from .. import paths
 from ..services import noctalia, runner, themes
 from . import page as registry_page
 from . import shellkeys
@@ -97,11 +103,45 @@ def focus_mode_text() -> str:
             f"it sets are {leaves}")
 
 
-def no_keybind_text() -> str:
-    """Why neither mode has a shortcut."""
-    return ("no key is bound to either mode: Super+H and the overlay behind it are Part 7, "
-            "so until then both are commands you run and this window is the only surface "
-            "that offers them")
+#: The two rows of the keyboard map this page's switches are bound to.
+MODE_BINDINGS = ("modes.focus", "modes.game")
+
+
+def mode_keys() -> Dict[str, str]:
+    """The combination each mode is bound to, spelled the way the map spells it.
+
+    Read out of ``data/keybinds.default.json`` rather than written down here, which is the
+    rule every reader in a plan module keeps: a fact from a record cannot disagree with the
+    record. An empty answer means the record could not be read, and the text below says so
+    rather than naming a key it did not see.
+    """
+    try:
+        text = paths.data_file("keybinds.default.json").read_text(encoding="utf-8")
+        found = json.loads(text).get("bindings") or ()
+    except (OSError, ValueError, paths.PathError):
+        return {}
+    keys = {}
+    for item in found:
+        if isinstance(item, dict) and item.get("id") in MODE_BINDINGS:
+            keys[item["id"]] = " + ".join([*(item.get("mods") or ()), str(item.get("key", ""))])
+    return keys
+
+
+def keybind_text() -> str:
+    """Where each mode is bound, and what nobody has watched a key do."""
+    keys = mode_keys()
+    focus, game = keys.get("modes.focus"), keys.get("modes.game")
+    if not focus or not game:
+        return ("both modes are bound in the keyboard map, and this window could not read "
+                "data/keybinds.default.json to say which keys -- so press Super+H for the "
+                "map rather than guessing at a combination")
+    return (f"{focus} runs iarch-focus toggle and {game} runs iarch-gamemode toggle, both "
+            "through launchers scripts/iarch-link-cli.sh puts on PATH. Neither key has been "
+            "pressed on a session -- no compositor and no display exist where this was "
+            "written -- so what pressing either of them does is the gap KB-06 records in "
+            "docs/UNVERIFIED.md, and this "
+            "window stays the surface that says what a mode changes rather than what "
+            "pressing a key did")
 
 
 def no_measurement_text() -> str:
@@ -175,9 +215,10 @@ def build(context: Context) -> PagePlan:
             keywords=("focus", "mode", "dim", "concentration", "distraction")),
         Row("state", "What it changes", icon="dialog-information-symbolic",
             source="features.focus_mode_text", keywords=("focus mode", "dim", "strength")),
-        Row("state", "No key is bound", icon="dialog-warning-symbolic",
-            source="features.no_keybind_text",
-            keywords=("keybind", "super+h", "part 7", "command", "shortcut")),
+        Row("state", "Bound, and never watched", icon="dialog-warning-symbolic",
+            source="features.keybind_text",
+            keywords=("keybind", "shortcut", "super", "ctrl", "launcher", "kb-06",
+                      "iarch-focus", "iarch-gamemode")),
         Row("state", "Nothing has been measured", icon="dialog-warning-symbolic",
             source="features.no_measurement_text",
             subtitle="MODE-01 to MODE-04 in docs/UNVERIFIED.md",

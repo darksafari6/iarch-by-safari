@@ -5,6 +5,90 @@ Notable changes to iArch by Safari, newest first. The format follows
 six-part plan in [`docs/ROADMAP.md`](docs/ROADMAP.md) rather than semantic
 versioning, because nothing here is a library anyone links against.
 
+## Unreleased — the A to Z shortcut table, and the layer debt it settled
+
+This is the first slice of Part 7 of the roadmap: the keyboard map laid out as a plan rather than
+grown one bind at a time. Before it, `data/keybinds.default.json` said what was bound and nothing
+said what was not — a letter with no bind was indistinguishable from a letter nobody had thought
+about — two bindings the v1 map had carried into the recovery layer were printed as debt on every
+`iarch-keybinds check` run, and the two modes this project builds were commands with no key at
+all, which is exactly what Part 3 left for this work.
+
+### Added
+
+- **The A to Z table** — `data/design/keybinds.json -> alphabet` allocates all 78 letter cells of
+  the three layers a letter may live in (`Super`, `Super+Shift`, `Super+Ctrl`), and
+  `tools/render_shortcuts.py` renders it as a grid at the end of `docs/SHORTCUTS.md`. A cell is
+  one of four things: a binding, a key the record has claimed and not bound, a refusal with the
+  mechanism behind it, or empty on purpose. Ten of them are refusals, and each names a verb, a
+  file or a command rather than a mood: brightness has no relative verb in noctalia v5.4.1,
+  `theme-mode-toggle` would set a value `render_noctalia.py` generates and the next `iarch-theme`
+  run would quietly revert, Do Not Disturb and caffeine belong to focus mode because it reads
+  both back before it changes them, mute belongs on the media row where the volume steps are,
+  `Super+R` is the compositor's own emergency launcher (`KB-05`), and `Super+Ctrl+R` would be a
+  second spelling of the recovery combo. The schema pins the three layers and their modifiers as
+  constants, so the table cannot grow a fourth layer that the checker refuses — `Super+Alt`
+  cannot be spelled in it at all.
+- **`tests/test_keybinds_alphabet.py`** — seventeen tests that hold the table and the map
+  together in both directions: a cell that says bound has to name a binding enabled at exactly
+  those keys, a cell left empty has to have nothing bound at it, every letter binding in the map
+  has to have a cell so a bind cannot land on a letter nobody allocated, every refusal has to
+  cite something this repository actually has, and the three keys `docs/ROADMAP.md` reserves are
+  read out of the roadmap rather than written down a second time here. The renderer refuses to
+  write a table that disagrees with the map, for the same reason from the other side.
+  `iarch-keybinds check` deliberately does not read the table: an override in
+  `~/.config/iarch/keybinds.json` may use any empty cell it likes, and a validator that policed
+  a person's own map would be policing the wrong file.
+- **`scripts/iarch-focus.sh` and `scripts/iarch-gamemode.sh`** — the two thin launchers that make
+  `iarch-focus` and `iarch-gamemode` real names, which `scripts/iarch-link-cli.sh` now links. A
+  bind that execs a name nothing installs is a key that does nothing, and it fails quietly: the
+  compositor spawns `/bin/sh -c` with one string, so the only report is a "command not found" in
+  a log nobody is reading. `tests/test_cli_launchers.py` gained the check that turns the
+  guarantee from one bind into all of them — every `iarch-*` command the map execs has to be a
+  name the linker puts on `PATH`.
+- **Three binds in the `Super+Ctrl` layer** — `Super+Ctrl+F` for focus mode, `Super+Ctrl+G` for
+  game mode and `Super+Ctrl+L` for night light through the shell's own `nightlight-toggle`. Each
+  carries an `unverified` note in the record and all three are `KB-06`: the launchers, the verbs
+  and the CLIs' own logic are exercised here, and no key has been pressed on a session, because
+  there is no compositor and no display where this was written.
+
+### Changed
+
+- **The `Super+Ctrl+Alt` layer debt is settled.** `move.next` and `move.previous` — moving the
+  focused window to the next and the previous workspace, carried into the recovery layer by the
+  v1 map — moved to `Super+Ctrl+N` and `Super+Ctrl+P`: the layer the checker itself offers when
+  it refuses a plain `Ctrl+letter`, and the layer that already owns workspace navigation on the
+  arrows. `iarch-keybinds check` reports nothing at all on the shipped map now, where it used to
+  print those two on every run; the rule that printed them stays, and its message says where they
+  went. Both rows carry a `relocated_from` field, new in `data/schemas/keybinds.schema.json`,
+  because the person whose hands still reach for the old combination is the one who needs it
+  written down — and an override that rebinds either row keeps working, since the id is the
+  identity and the keys are not.
+- **`docs/SHORTCUTS.md` has two sources and says so.** The banner names the A to Z allocation
+  beside the keybind record, `--check` compares the document against both, and the prose the
+  table renders keeps the record's ASCII dashes but reads as Markdown, because the document it
+  lands in is not the file it was written in.
+- **The documents that said the modes had no key now say what they have.** `README.md` said "no
+  key is bound to it" and `docs/ROADMAP.md` Part 3 said "no key binds either mode"; both were
+  true when they were written, and a true sentence left behind a change is a false one, so each
+  now names the key and the row in `docs/UNVERIFIED.md` that says it has not been observed.
+  `docs/CUSTOMIZING-SHORTCUTS.md` gained the table, the settled layer and the two keys that have
+  never been pressed.
+
+### Known gaps
+
+- **Nothing in the new layer has been watched on a session.** `KB-06` is the row, and it sits
+  inside `INS-07`: whether a session greetd started has `~/.local/bin` on its `PATH` at all is
+  the question every bind that names an `iarch-*` command depends on, and no installer has run
+  here. The game-mode key is the one to be careful with, because its action writes generated
+  files and asks for a reload — a reload that arrives mid-game is a stutter nobody asked for,
+  which is why the CLI carries `--no-reload` and why the row is not locked.
+- **The table allocates letters and nothing else.** Arrows, digits, function keys, media keys and
+  the mouse binds are governed by the layer rules in `iarch_keybinds.py` and by the reserved
+  combinations in the design record, but they have no grid, so a new bind on `Super+Ctrl+up` is
+  still a decision nobody has written down. The map binds no mute key and no brightness keys, and
+  both gaps are recorded in the table's refusals rather than filled with a guessed flag.
+
 ## Unreleased — the installer wizard, the bar's widget vocabulary, and the desktop art
 
 This is the first slice of Part 6 of the roadmap: an installer that is safe to run twice and
@@ -63,7 +147,8 @@ whose widget list nobody had checked against the shell that draws it.
   stays refused: `dock.show_running` already draws running windows.
 - `scripts/iarch-link-cli.sh` links five commands instead of two — `iarch-keybinds`,
   `iarch-cheatsheet`, `iarch-settings`, `iarch-control-center` and `iarch-healthcheck` — which
-  is every name the session configuration calls.
+  was every name the session configuration called at that point. The shortcut section above
+  adds two more, because the keyboard map now execs them.
 - Papirus dark and light are `verified: true` in all six colour presets, with the registry
   evidence in the entry's note, and `data/schemas/preset.schema.json` now says what `verified`
   certifies: that `package_arch` was read out of Arch's own registry, and nothing about

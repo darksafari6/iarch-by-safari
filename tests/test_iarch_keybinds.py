@@ -626,29 +626,56 @@ class LayerRule(unittest.TestCase):
                                  if p.severity in (kb.ERROR, kb.CONFLICT)]),
                          [str(p) for p in problems])
 
-    def test_super_ctrl_alt_outside_the_system_layer_is_reported_as_debt(self):
-        """A warning that names the two v1 binds, so the debt is printed every run.
+    def test_super_ctrl_alt_outside_the_system_layer_is_reported(self):
+        """A warning, and the message names the layer to use instead.
 
-        Not an error, because both binds work and every sensible destination key is
-        already taken; relocating them belongs with the next laying-out of the map.
-        An invisible exception would be worse than a printed one.
+        Not an error, because a bind in this layer still works: reporting it is not the
+        same thing as refusing it. The shipped map has nothing here any more -- the two
+        workspace moves the v1 map carried into it moved to Super+Ctrl+N and
+        Super+Ctrl+P -- so what this rule guards now is the next bind that reaches for
+        the recovery layer, and the remedy it prints has to be one the checker accepts.
         """
         problems = self.problems(mods=["SUPER", "CTRL", "ALT"],
                                  category="Move Window Across Workspaces")
         matching = [p for p in problems if "Super+Ctrl+Alt" in p.message]
         self.assertEqual(1, len(matching), [str(p) for p in problems])
         self.assertEqual(kb.WARNING, matching[0].severity)
+        self.assertIn("Super+Ctrl+N", matching[0].message,
+                      "the warning has to say where the two moves went, or the next "
+                      "person to see it has to go and read the record to find out")
 
-    def test_the_shipped_map_has_no_errors_and_only_the_known_layer_debt(self):
+    def test_the_shipped_map_is_clean_now_that_the_layer_debt_is_settled(self):
+        """Nothing at all: no error, no conflict and no warning.
+
+        This test used to pin the debt -- two warnings, named, printed on every run --
+        because the two workspace moves the v1 map carried into ``Super+Ctrl+Alt`` both
+        worked and every sensible destination key was taken. Allocating all 78 letter
+        cells found the destination: ``Super+Ctrl+N`` and ``Super+Ctrl+P``, the layer the
+        checker itself offers when it refuses a plain ``Ctrl+letter`` and the layer that
+        already owns workspace navigation on the arrows. So the assertion is now that the
+        shipped map is silent, and a warning from it means something moved back into the
+        recovery layer rather than that a known exception is still being printed.
+        """
         bindings = kb.merge(kb.default_record(kb.ROOT), {})
-        problems = kb.validate(bindings, kb.ROOT)
-        self.assertEqual(0, len([p for p in problems
-                                 if p.severity in (kb.ERROR, kb.CONFLICT)]),
-                         [str(p) for p in problems])
-        debt = [p for p in problems if "Super+Ctrl+Alt" in p.message]
-        self.assertEqual({"move.next", "move.previous"}, {p.binding_id for p in debt},
-                         "the layer debt is exactly the two v1 workspace moves; a third "
-                         "means something else moved into the recovery layer")
+        self.assertEqual([], [str(p) for p in kb.validate(bindings, kb.ROOT)],
+                         "the shipped map reports a problem; the layer debt it used to "
+                         "carry was settled by moving the two workspace moves")
+
+        moves = {b["id"]: b for b in bindings if b["id"] in ("move.next", "move.previous")}
+        self.assertEqual({"move.next": "N", "move.previous": "P"},
+                         {name: b["key"] for name, b in moves.items()})
+        for name, binding in sorted(moves.items()):
+            with self.subTest(binding=name):
+                self.assertEqual(["SUPER", "CTRL"], binding["mods"])
+                self.assertEqual("SUPER + CTRL + ALT + " + ("right" if name.endswith("next")
+                                                            else "left"),
+                                 binding.get("relocated_from"),
+                                 "the row has to say where it came from: the person whose "
+                                 "hands still reach for the old combination is the one who "
+                                 "needs it written down")
+        self.assertEqual([], [b["id"] for b in bindings
+                              if b.get("mods") == ["SUPER", "CTRL", "ALT"]],
+                         "the recovery layer is empty again")
 
     def test_the_primary_and_secondary_layers_are_ungoverned(self):
         for mods in (["SUPER"], ["SUPER", "SHIFT"], ["SUPER", "CTRL"]):
@@ -1166,7 +1193,10 @@ class Mutating(IsolatedHome):
         self.assertEqual(0, self.run_cli("export", "--all"))
         payload = json.loads(self.output.split("export:")[0])
         self.assertEqual(2, payload["version"])
-        self.assertEqual(80, len(payload["bindings"]))
+        self.assertEqual(len(kb.default_record(kb.ROOT)["bindings"]),
+                         len(payload["bindings"]),
+                         "--all exports the whole effective map, so its length is the "
+                         "record's and not a number written down here")
 
     def test_export_says_so_when_there_is_nothing_of_yours(self):
         self.assertEqual(0, self.run_cli("export"))
@@ -1216,7 +1246,8 @@ class Mutating(IsolatedHome):
         whole = Path(self.tmp.name) / "whole.json"
         self.assertEqual(0, self.run_cli("export", "--all", str(whole)))
         self.assertEqual(0, self.run_cli("import", str(whole), "--all", "--yes"))
-        self.assertEqual(80, len(self.saved_entries()))
+        self.assertEqual(len(kb.default_record(kb.ROOT)["bindings"]),
+                         len(self.saved_entries()))
 
     def test_import_refuses_a_file_that_is_not_json_or_not_a_document(self):
         broken = Path(self.tmp.name) / "broken.json"

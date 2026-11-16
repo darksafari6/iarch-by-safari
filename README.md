@@ -41,18 +41,18 @@ A short video tour of the session is on YouTube: <https://www.youtube.com/watch?
 | :--- | :--- | :--- |
 | Glass surfaces | Blurred translucent bar, dock, Control Center, Settings and notifications; rounded corners, 2 px borders, inactive windows at 90% opacity | Ships today |
 | Animations | Eight animation leaves on four hand-tuned bezier curves for window open, close, move, border, fade and workspace switches | Ships today |
-| Keyboard shortcuts | 74 bindings, each with a description the compositor can report | Ships today |
-| Shortcut overlay (Super+H) | Press a key, see every shortcut on screen | Key is reserved, overlay is Part 7 |
+| Keyboard shortcuts | Every letter of the three layers a letter may live in is allocated, and every binding carries a description the compositor can report | Ships today; the table is [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md) |
+| Shortcut overlay (Super+H) | Press a key, see every shortcut on screen | `Super+H` runs `iarch-cheatsheet`, which draws the map in a terminal; the glass window you type into is Part 7 (`UI-02`) |
 | Settings app | GTK4 + libadwaita window that edits `~/.config/iarch/`, regenerates your configuration and reloads the session | Part 4 |
 | Presets | A lower-cost Performance overlay that only ever changes values of settings the shipped profile already has | CLI ships today (`tools/profile_preset.py`); switching in-session is later |
-| Game mode | One switch that turns off blur, glow, inactive dimming and every animation, saves what they were, and puts them back | Command ships today (`python3 iarch/cli/iarch_gamemode.py toggle`); no key is bound to it and the latency saving is not measured (`PERF-01`) |
-| Focus mode | Do Not Disturb, caffeine, and every unfocused window dimmed | Command ships today (`python3 iarch/cli/iarch_focus.py toggle`); it is runtime state, so a reload, a relogin or a theme change ends the dim |
+| Game mode | One switch that turns off blur, glow, inactive dimming and every animation, saves what they were, and puts them back | Ships today on `Super+Ctrl+G` (`iarch-gamemode toggle`); the latency saving is not measured (`PERF-01`) and no key has been watched on a session (`KB-06`) |
+| Focus mode | Do Not Disturb, caffeine, and every unfocused window dimmed | Ships today on `Super+Ctrl+F` (`iarch-focus toggle`); it is runtime state, so a reload, a relogin or a theme change ends the dim |
 | Contact page | Your name, role and links, rendered by the settings app | Defaults ship in `data/contacts.default.json`; the page is Part 4 |
 
 Honest summary: the session, the installers, the configuration data and the
-checks are real. The settings app and the shortcut overlay are not built yet, and
-game mode and focus mode are commands you run rather than buttons you click: no
-key is bound to either, and neither has been watched on a live session. The
+checks are real. The glass shortcut overlay is not built yet, and game mode and
+focus mode are keys that run commands rather than buttons you click: both are
+bound, and neither has been watched on a live session. The
 installer does offer a gaming package selection (Steam, MangoHud, Lutris, Proton
 tools), which is a package list and not a mode. Everything this project claims but
 cannot yet prove is listed with an id in
