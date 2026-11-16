@@ -13,9 +13,9 @@ So these tests check the render against ``data/design/startup.json`` -- the
 bindings, the event names and the reason beside every command -- and then check
 the two things a renderer could get right and still break:
 
-* the lines both installers rewrite with ``sed``. ``install.sh:1169-1171`` and
-  ``fedora_install.sh:845-847`` flip ``local enable_nvidia_optional = false`` as a
-  whole line, and ``fedora_install.sh:834`` replaces *every* line containing
+* the lines both installers rewrite with ``sed``. ``install.sh:1197-1199`` and
+  ``fedora_install.sh:858-860`` flip ``local enable_nvidia_optional = false`` as a
+  whole line, and ``fedora_install.sh:847`` replaces *every* line containing
   ``polkit-gnome-authentication-agent-1`` with a quoted table entry. A render that
   turned the command table into calls, or that quoted the agent's name in a
   comment, would leave the record valid and the Fedora install unparseable -- so
@@ -359,7 +359,7 @@ class WhatTheInstallersRewrite(Sandbox):
                 window = '\n'.join(lines[int(start) - 1:int(end or start)])
                 self.assertIn(anchor['anchor'], window,
                               'the anchor is no longer on the cited lines')
-                # A sed expression escapes what it replaces -- fedora_install.sh:834
+                # A sed expression escapes what it replaces -- fedora_install.sh:847
                 # carries \\& and \\/ -- so the replacement is looked for both as
                 # written and with the escapes taken out.
                 unescaped = window.replace('\\', '')
@@ -374,7 +374,7 @@ class WhatTheInstallersRewrite(Sandbox):
 
     @unittest.skipUnless(HAVE_LUAPARSER, 'luaparser is not installed')
     def test_the_fedora_rewrite_leaves_a_file_that_still_parses(self):
-        # The real check behind the two above: apply fedora_install.sh:834 to the
+        # The real check behind the two above: apply fedora_install.sh:847 to the
         # render, in memory, and parse the result. A renderer that moved the polkit
         # command out of a table, or quoted the agent name in a comment, fails here
         # rather than on somebody's Fedora install.

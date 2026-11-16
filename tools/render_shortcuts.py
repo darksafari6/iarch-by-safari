@@ -259,7 +259,8 @@ def render(data: Dict[str, Any], design: Optional[Dict[str, Any]] = None) -> str
                 if does:
                     note += f" — {does}"
             flags = binding.get("flags") or {}
-            marks = " ".join(name for name in ("mouse", "locked") if flags.get(name))
+            marks = " ".join(name for name in ("mouse", "locked", "repeating")
+                             if flags.get(name))
             if marks:
                 note += f" *({marks})*"
             lines.append(f"| `{key_string(binding)}` | {note} |")

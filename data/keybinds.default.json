@@ -355,6 +355,43 @@
       "locked": false
     },
     {
+      "id": "applications.run",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "R",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-run"
+        ]
+      },
+      "description": "Run a command: pick one out of everything on PATH",
+      "category": "Applications",
+      "enabled": true,
+      "locked": false,
+      "unverified": "The picker is the shell's own and its contract is read out of source rather than observed: `noctalia dmenu` reads newline-separated candidates from stdin, prints the selected line and exits 0, and on a cancel prints nothing and exits 1 (src/launcher/dmenu_cli.h), over a socket at $XDG_RUNTIME_DIR/noctalia-dmenu-$WAYLAND_DISPLAY.sock that the shell binds at startup and leaves unbound when it cannot (src/launcher/dmenu_socket_path.cpp:8-19, src/launcher/dmenu_ipc.h:13-23). No shell, no display and no socket exist here, so no prompt has opened. The key is SUPER + R on purpose: the compositor's own emergency mode binds the same combination to hyprland-run, which is a program runner too, and it only does so when the bind registry is empty and the configuration has errors (data/design/keybinds.json -> recovery.emergency_mode), so the two never fire together and both mean the same thing. TODO(verify) KB-10."
+    },
+    {
+      "id": "applications.clipboard",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "Y",
+      "action": {
+        "type": "noctalia",
+        "verb": "panel-toggle",
+        "args": [
+          "clipboard"
+        ]
+      },
+      "description": "Open the clipboard history",
+      "category": "Applications",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`clipboard` is one of the nine builtin panel ids at noctalia v5.4.1 (src/launcher/panel_catalog.cpp:25-35), and the shell keeps a history behind it: clipboard-text prints the most recent entry and clipboard-clear erases the history (src/cli/schema_msg.h:433-446). No shell and no display exist here, so the panel has never been opened and whether it draws the history or only the last entry is unobserved. TODO(verify) KB-09."
+    },
+    {
       "id": "window.close",
       "mods": [
         "SUPER"
@@ -516,6 +553,41 @@
       "category": "Window Navigation & Layout",
       "enabled": true,
       "locked": false
+    },
+    {
+      "id": "window.switcher",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "J",
+      "action": {
+        "type": "noctalia",
+        "verb": "window-switcher"
+      },
+      "description": "Jump to a window: open or close the switcher overlay",
+      "category": "Window Navigation & Layout",
+      "enabled": true,
+      "locked": false,
+      "unverified": "The same verb ALT + tab holds, sent here with no argument at all, which is the open-or-close half of it (src/cli/schema_msg.h:882-889; both positionals are declared with required false, so a bare window-switcher is a valid call and not a CLI error). No shell exists here, so neither the overlay nor the difference between opening it and holding it has been observed, and UI-06 already records that this verb's behaviour was read out of source. TODO(verify) KB-09."
+    },
+    {
+      "id": "layout.gaps",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "G",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-gaps",
+          "toggle"
+        ]
+      },
+      "description": "Toggle the gaps between windows",
+      "category": "Window Navigation & Layout",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-gaps.sh sends `hyprctl eval 'hl.config({ general = { ... } })'` with the three values read out of data/design/tokens.json -> layout, and the leaves are ones that record already lists: general:gaps_in, general:gaps_out and general:float_gaps, all three MS<CssGap>. The eval idiom and its two refusal channels -- a reply beginning `error:` and exit 7 -- are the ones iarch/cli/iarch_focus.py uses for its dim. No compositor exists here, so no gap has closed, and two limits are written into the script rather than hidden: hl.config writes and cannot read a leaf back, so `toggle` remembers which way it went in a one-word file, and the change is runtime state that the next reload or relogin puts back. TODO(verify) KB-08."
     },
     {
       "id": "window.resize-right",
@@ -1195,6 +1267,41 @@
       "unverified": "The command is real -- scripts/iarch-gamemode.sh launches iarch/cli/iarch_gamemode.py, whose toggle applies the performance intensity and the motion preset that intensity is paired with, then asks for one reload -- but it has never been run on a session, and this is the one row in the map whose action writes generated files: the glass, animation and GTK payloads are re-rendered and backed up before the reload, and a reload that arrives mid-game is a stutter nobody asked for. That is why the CLI carries --no-reload and --dry-run, why this row is not locked, and why the reload itself is still TP-10. TODO(verify) KB-06."
     },
     {
+      "id": "modes.power-profile",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "P",
+      "action": {
+        "type": "noctalia",
+        "verb": "power-cycle"
+      },
+      "description": "Cycle the power profile",
+      "category": "Modes",
+      "enabled": true,
+      "locked": false,
+      "unverified": "power-cycle is recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:706-712, with an optional direction whose choices are next and prev (:78), and the Power & Idle page names it in profile_read_text() while sending power-set with a named profile instead. Neither has been run here: there is no shell and no UPower, so no profile has changed and nothing has reported which one it landed on. TODO(verify) KB-09."
+    },
+    {
+      "id": "modes.zen",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "Z",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-zen",
+          "toggle"
+        ]
+      },
+      "description": "Zen mode: hide the bar, the dock and the desktop widgets",
+      "category": "Modes",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-zen.sh sends six verbs the shell's own command table declares with no argument at all -- bar-hide, dock-hide and desktop-widgets-hide, and the three show verbs that undo them (src/cli/schema_msg.h:358, :512, :479 and :375, :514, :489). Sending the three together is the whole of the feature, because one bind carries one action and a zen mode that hid the bar but left the dock and the widgets is not zen. No shell and no display exist here, so nothing has disappeared, and two limits are in the script rather than hidden: none of the six reports the state it left behind, so `toggle` remembers which way it went in a one-word file, and dock-hide persists its override while desktop-widgets-hide is runtime only, so a shell restart leaves the dock hidden and the widgets back. TODO(verify) KB-08."
+    },
+    {
       "id": "appearance.night-light",
       "mods": [
         "SUPER",
@@ -1210,6 +1317,59 @@
       "enabled": true,
       "locked": false,
       "unverified": "nightlight-toggle is read out of noctalia v5.4.1 (src/cli/schema_msg.h:619, recorded in data/design/noctalia-ipc.json) and the settings application already sends it from the Features page's and the Home page's Night light button, so the verb and a caller both exist. What has not happened is a screen warming: no shell runs here, and a verb read out of a header is not a verb an installed shell answers. TODO(verify) KB-06."
+    },
+    {
+      "id": "appearance.osd",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "O",
+      "action": {
+        "type": "noctalia",
+        "verb": "osd-toggle"
+      },
+      "description": "Toggle the shell's OSD popups",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "osd-toggle is recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:665 and takes no argument. osd-enable and osd-disable are its explicit halves and are not bound, because one key can only toggle and a key that merely turned popups off would need a second one to turn them back on. No shell exists here, so no popup has been silenced. TODO(verify) KB-09."
+    },
+    {
+      "id": "appearance.theme-mode",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "T",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-cycle",
+          "theme"
+        ]
+      },
+      "description": "Cycle the theme mode: dark, light, auto",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-cycle.sh reads the live mode with theme-mode-get, steps dark to light to auto -- the three choices the verb itself declares (src/cli/schema_msg.h:83 and :232-234) -- sends theme-mode-set with the one it landed on, and writes the same choice into ~/.config/iarch/settings.json so iarch/cli/render_noctalia.py renders the mode the shell is actually in. That write is the half that makes the key safe: a mode only the running shell knows is put back by the next `iarch-theme apply`, and a key that is silently reverted is a key nobody can trust. No shell exists here, so no screen has changed. TODO(verify) KB-08."
+    },
+    {
+      "id": "appearance.wallpaper-next",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "W",
+      "action": {
+        "type": "noctalia",
+        "verb": "wallpaper-next"
+      },
+      "description": "Next wallpaper",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "wallpaper-next is recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:842-849 with an optional connector, so sending it bare means every output, which is what a key press should do. The shell owns the order and the place it got to, and that is why this project cycles with a verb instead of listing assets/wallpapers itself and inventing both. No shell and no display exist here, so no wallpaper has changed. TODO(verify) KB-09."
     },
     {
       "id": "mouse.scroll-next",
@@ -1358,9 +1518,8 @@
       "action": {
         "type": "exec",
         "command": [
-          "pamixer",
-          "-i",
-          "5"
+          "iarch-audio",
+          "up"
         ]
       },
       "description": "Volume up",
@@ -1368,8 +1527,10 @@
       "enabled": true,
       "locked": false,
       "flags": {
-        "locked": true
-      }
+        "locked": true,
+        "repeating": true
+      },
+      "unverified": "The row used to exec `pamixer -i 5` / `pamixer -d 5`, and no step of install.sh ever installed pamixer: the name appeared in no package array, so on a machine this repository built the key was dead and the only thing that said so was a shell's 'command not found'. It now runs scripts/iarch-audio.sh, which drives `wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ -l 1.0` -- the limit is why a held key cannot walk the volume into amplification, since wpctl(1) says values may exceed 1.0 to amplify -- and the `repeating` flag is what makes holding the key step instead of firing once per press. wireplumber is the package that provides wpctl and install.sh now installs it. No PipeWire session exists here, so no volume has changed. TODO(verify) KB-07."
     },
     {
       "id": "media.volume-down",
@@ -1378,9 +1539,8 @@
       "action": {
         "type": "exec",
         "command": [
-          "pamixer",
-          "-d",
-          "5"
+          "iarch-audio",
+          "down"
         ]
       },
       "description": "Volume down",
@@ -1388,8 +1548,92 @@
       "enabled": true,
       "locked": false,
       "flags": {
+        "locked": true,
+        "repeating": true
+      },
+      "unverified": "The row used to exec `pamixer -i 5` / `pamixer -d 5`, and no step of install.sh ever installed pamixer: the name appeared in no package array, so on a machine this repository built the key was dead and the only thing that said so was a shell's 'command not found'. It now runs scripts/iarch-audio.sh, which drives `wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- -l 1.0` -- the limit is why a held key cannot walk the volume into amplification, since wpctl(1) says values may exceed 1.0 to amplify -- and the `repeating` flag is what makes holding the key step instead of firing once per press. wireplumber is the package that provides wpctl and install.sh now installs it. No PipeWire session exists here, so no volume has changed. TODO(verify) KB-07."
+    },
+    {
+      "id": "media.mute",
+      "mods": [],
+      "key": "XF86AudioMute",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-audio",
+          "mute"
+        ]
+      },
+      "description": "Mute",
+      "category": "Media",
+      "enabled": true,
+      "locked": false,
+      "flags": {
         "locked": true
-      }
+      },
+      "unverified": "scripts/iarch-audio.sh runs `wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle`, which is the form wpctl's own manual gives as its example (wpctl(1), SET-MUTE), and passes the exit status through rather than flattening it: 2 is 'could not connect to PipeWire' and 3 a command-specific error such as an object that was not found, and a caller that cannot tell those apart cannot say anything useful. No PipeWire session and no wpctl exist here, so nothing has been muted. The row carries no `repeating` flag on purpose: a toggle the compositor fires again while the key is held flips back and forth and ends wherever the release happened to land. TODO(verify) KB-07. The speaker side is @DEFAULT_AUDIO_SINK@, resolved at runtime to a node id, which is what lets one key work on whichever device is default instead of on an id that changes every boot."
+    },
+    {
+      "id": "media.mic-mute",
+      "mods": [],
+      "key": "XF86AudioMicMute",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-audio",
+          "mic-mute"
+        ]
+      },
+      "description": "Mute the microphone",
+      "category": "Media",
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true
+      },
+      "unverified": "scripts/iarch-audio.sh runs `wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle`, which is the form wpctl's own manual gives as its example (wpctl(1), SET-MUTE), and passes the exit status through rather than flattening it: 2 is 'could not connect to PipeWire' and 3 a command-specific error such as an object that was not found, and a caller that cannot tell those apart cannot say anything useful. No PipeWire session and no wpctl exist here, so nothing has been muted. The row carries no `repeating` flag on purpose: a toggle the compositor fires again while the key is held flips back and forth and ends wherever the release happened to land. TODO(verify) KB-07. The capture side is @DEFAULT_AUDIO_SOURCE@, which wpctl(1) lists under SPECIAL IDENTIFIERS as the current default capture device."
+    },
+    {
+      "id": "brightness.up",
+      "mods": [],
+      "key": "XF86MonBrightnessUp",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-brightness",
+          "up"
+        ]
+      },
+      "description": "Brightness up",
+      "category": "Brightness",
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true,
+        "repeating": true
+      },
+      "unverified": "scripts/iarch-brightness.sh runs `brightnessctl set +5% --min-value=1`, and the floor is the reason the row is a script rather than a bare brightnessctl call: without --min-value the compiled floor is 0, because p.min is zero-initialised and only `-n` raises it (brightnessctl.c:146-150, and calc_value clamps to it at :402-403), so a key the compositor repeats while it is held walks the backlight all the way to a black screen. The `=` in --min-value=1 is not a style choice either: the option is declared optional_argument, so a separate word is never consumed and would be taken for the operation. Arch builds the package with `make ENABLE_SYSTEMD=1`, which is the build whose non-root `set` falls back to logind's Session.SetBrightness (brightnessctl.c:217-228 and :371-395), so the key needs no root, no setuid bit and no `video` group. No machine here has a backlight, so no level has changed. TODO(verify) KB-07."
+    },
+    {
+      "id": "brightness.down",
+      "mods": [],
+      "key": "XF86MonBrightnessDown",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-brightness",
+          "down"
+        ]
+      },
+      "description": "Brightness down",
+      "category": "Brightness",
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true,
+        "repeating": true
+      },
+      "unverified": "The mirror of brightness.up and the same script, with the suffix form `5%-` rather than the prefix form `+5%`: brightnessctl's parse_value accepts the sign on either side, but a leading `-` would be read by getopt as an option. The --min-value=1 floor is what stops a held key reaching a black screen, and calc_value forces the delta to -1 when a non-zero percentage request would round to zero (brightnessctl.c:397-398), so the step can never be a silent no-op on a backlight whose maximum is small. No machine here has a backlight, so no level has changed. TODO(verify) KB-07."
     },
     {
       "id": "overlay.cheatsheet",
@@ -1408,6 +1652,57 @@
       ],
       "key": "H",
       "enabled": true
+    },
+    {
+      "id": "input.keyboard-layout",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "K",
+      "action": {
+        "type": "noctalia",
+        "verb": "keyboard-layout-cycle"
+      },
+      "description": "Cycle the keyboard layout",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "unverified": "keyboard-layout-cycle is recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:561-563 and takes no argument, so a key can cycle without knowing how many layouts are configured or which one comes next. Nothing here has run it: there is no shell, and whether the layouts it steps through are the compositor's own input:kb_layout list or one the shell keeps is a question the header does not answer. TODO(verify) KB-09."
+    },
+    {
+      "id": "notifications.clear",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "N",
+      "action": {
+        "type": "noctalia",
+        "verb": "notification-clear-active"
+      },
+      "description": "Dismiss every active notification",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "unverified": "notification-clear-active is recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:621-623 and takes no argument. It dismisses what is on screen and leaves the history alone; notification-clear-history is the other half and is deliberately not bound, because a key that erases the record of what interrupted you loses information on a mis-press. No shell exists here, so nothing has been dismissed. TODO(verify) KB-09."
+    },
+    {
+      "id": "session.reload",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "U",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-reload",
+          "session"
+        ]
+      },
+      "description": "Reload the session: the shell's configuration and the compositor's",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-reload.sh sends `noctalia msg config-reload` and then `hyprctl reload`, which is the same pair iarch/cli/theme.py sends after it renders and the same reload the recovery bind in .config/hypr/keybind.lua ends with. Neither has been watched: there is no shell and no compositor here. The shell is asked first and both answers are reported rather than the first refusal short-circuiting the rest, because a compositor reload that re-requires a broken generated file is exactly the case CTRL + ALT + R exists for and a script that stopped at the first failure would leave the shell unreloaded and say nothing about which half failed. TODO(verify) KB-08."
     },
     {
       "id": "session.exit-menu",
@@ -1479,21 +1774,6 @@
         "type": "none"
       },
       "description": "Refresh the shortcut overlay (Part 7)",
-      "category": "Planned",
-      "enabled": false,
-      "locked": false,
-      "reserved": true
-    },
-    {
-      "id": "planned.hyprland-key",
-      "mods": [
-        "SUPER"
-      ],
-      "key": "K",
-      "action": {
-        "type": "none"
-      },
-      "description": "Hyprland key panel (Part 7)",
       "category": "Planned",
       "enabled": false,
       "locked": false,

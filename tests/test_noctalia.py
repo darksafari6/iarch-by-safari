@@ -1746,19 +1746,30 @@ class TheBarWidgetVocabulary(unittest.TestCase):
     def test_the_two_panels_nothing_else_could_open_are_in_the_bar(self):
         """Why the layout changed: clipboard history and the mic/camera indicator.
 
-        Neither has a bind in ``data/keybinds.default.json``, so before this the
-        shell had a clipboard panel nobody could open and no indication at all of
-        a client holding the microphone.
+        Neither had a bind in ``data/keybinds.default.json`` when the bar layout was
+        decided, so before this the shell had a clipboard panel nobody could open and
+        no indication at all of a client holding the microphone.
+
+        The clipboard half has since changed and the bar entry stays. ``applications
+        .clipboard`` on ``SUPER + Y`` opens the same panel, and that is not a duplicate
+        of the widget: a bar widget is a thing you can see and click, a keybind is a
+        thing you have to already know, and a person who has not read the shortcut
+        table has only the bar. What the mic indicator still has is no key at all, and
+        that is asserted rather than assumed, because an indicator nobody can reach is
+        the reason the widget is in the bar in the first place.
         """
         for name in ("clipboard", "privacy"):
             with self.subTest(widget=name):
                 self.assertIn(name, self.bar["end"])
         bindings = json.loads((ROOT / "data" / "keybinds.default.json").read_text(encoding="utf-8"))
         text = json.dumps(bindings).lower()
-        for name in ("clipboard", "privacy"):
-            self.assertNotIn(name, text,
-                             f"{name} now has a bind too, so the bar entry is a "
-                             "duplicate and this test should be re-read")
+        self.assertIn("clipboard", text,
+                      "the clipboard panel stopped being reachable only from the bar, so "
+                      "the widget is now a second way in rather than the only one, and "
+                      "this test should be re-read if that changes back")
+        self.assertNotIn("privacy", text,
+                         "privacy now has a bind too, so the bar entry is a second way in "
+                         "rather than the only one and this test should be re-read")
 
     def test_the_dock_is_why_there_is_no_taskbar(self):
         parsed = tomllib.loads(noctalia.REPO_CONFIG.read_text(encoding="utf-8"))

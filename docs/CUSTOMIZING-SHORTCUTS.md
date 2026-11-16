@@ -241,6 +241,13 @@ terminal, `Super+R` for a launcher and `Super+M` to exit
 `data/design/keybinds.json → recovery.emergency_mode`). A total failure gets
 upstream's net and a partial failure gets this one.
 
+Those three keys are also this map's, and that is not a collision: emergency mode
+only trips when the bind registry is *empty*, which is the state in which this map
+is not loaded at all. `Super+R` runs the run prompt when the map is up and the
+compositor's own `hyprland-run` when it is not — and `hyprland-run` is a name this
+project neither ships nor installs, so the emergency launcher is the one key of the
+three that may not exist (`KB-05`).
+
 `iarch-keybinds check` reads the static file back and proves the record and the
 implementation agree about the key and the command. Two files describing one bind
 is exactly the shape that drifts, and both files being individually valid is not
@@ -343,11 +350,27 @@ table against the map in both directions, so a bind added to a letter nobody
 allocated fails there instead of quietly making the grid a story about the past.
 
 The refusals are the cells worth reading, and each one names the verb, file or
-command behind it: brightness has no relative verb, theme mode is written
-by a generator that a runtime toggle would disagree with, Do Not Disturb and
-caffeine belong to focus mode because it reads both back before it changes them,
-`Super+R` is the compositor's own emergency launcher, and `Super+Ctrl+R` would be
-a second spelling of the recovery combo.
+command behind it. There are seven of them left, all in the `Super+Ctrl` layer,
+and every one of them is a reason not to bind a key rather than a key nobody got
+round to: brightness and mute belong on the media row, where the XF86 keys this
+map now binds are; theme mode is written by a generator that a runtime toggle
+would disagree with, so the cycle goes through `iarch-cycle theme` instead; Do
+Not Disturb and caffeine belong to focus mode because it reads both back before
+it changes them; monitors off is a switch nobody has watched come back on input;
+screenshots are already three `hyprshot` binds on Print Screen; and
+`Super+Ctrl+R` would be a second spelling of the recovery combo.
+
+Two refusals this list used to carry are gone, and the reason is worth keeping
+because it is how a refusal should end. `Super+R` was refused as the
+compositor's own emergency launcher — emergency mode registers that key for
+`hyprland-run`, which is not a binary this project ships (`KB-05`) — and it is
+now the run prompt, `scripts/iarch-run.sh`, which offers everything on `PATH` to
+the shell's own dmenu picker. The two cannot collide: emergency mode only trips
+when the bind registry is empty, which is exactly when this map is not loaded.
+`Super+K` was held for a Hyprland key panel, and the shell has no such panel —
+its control centre has twelve tabs and none of them is a keyboard — so the cell
+is the keyboard layout cycle instead. A placeholder that names a surface which
+does not exist is worse than a bind that names a verb which does.
 
 The table describes the shipped defaults and nothing else. Your
 `~/.config/iarch/keybinds.json` may use any empty cell it likes — `check` does

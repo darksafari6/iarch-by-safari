@@ -26,6 +26,8 @@ hl.bind("SUPER + SHIFT + P", hl.dsp.exec_cmd("noctalia msg panel-toggle control-
 hl.bind("SUPER + S", hl.dsp.exec_cmd("steam"), { description = "Steam" })
 hl.bind("SUPER + M", hl.dsp.exec_cmd("quodlibet"), { description = "Music player" })
 hl.bind("SUPER + V", hl.dsp.exec_cmd("mpv --player-operation-mode=pseudo-gui --force-window=immediate"), { description = "Video player" })
+hl.bind("SUPER + R", hl.dsp.exec_cmd("iarch-run"), { description = "Run a command: pick one out of everything on PATH" })
+hl.bind("SUPER + Y", hl.dsp.exec_cmd("noctalia msg panel-toggle clipboard"), { description = "Open the clipboard history" })
 
 -- Window Management
 hl.bind("SUPER + Q", hl.dsp.window.close(), { description = "Close window" })
@@ -40,6 +42,8 @@ hl.bind("SUPER + right", hl.dsp.focus({ direction = "right" }), { description = 
 hl.bind("SUPER + up", hl.dsp.focus({ direction = "up" }), { description = "Focus up" })
 hl.bind("SUPER + down", hl.dsp.focus({ direction = "down" }), { description = "Focus down" })
 hl.bind("ALT + tab", hl.dsp.exec_cmd("noctalia msg window-switcher hold"), { description = "Window switcher overlay" })
+hl.bind("SUPER + J", hl.dsp.exec_cmd("noctalia msg window-switcher"), { description = "Jump to a window: open or close the switcher overlay" })
+hl.bind("SUPER + G", hl.dsp.exec_cmd("iarch-gaps toggle"), { description = "Toggle the gaps between windows" })
 hl.bind("SUPER + SHIFT + right", hl.dsp.window.resize({ x = 30, y = 0, relative = true }), { description = "Resize window right" })
 hl.bind("SUPER + SHIFT + left", hl.dsp.window.resize({ x = -30, y = 0, relative = true }), { description = "Resize window left" })
 hl.bind("SUPER + SHIFT + up", hl.dsp.window.resize({ x = 0, y = -30, relative = true }), { description = "Resize window up" })
@@ -129,9 +133,14 @@ hl.bind("SUPER + CTRL + P", hl.dsp.window.move({ workspace = "r-1" }), { descrip
 -- Modes
 hl.bind("SUPER + CTRL + F", hl.dsp.exec_cmd("iarch-focus toggle"), { description = "Focus mode: Do Not Disturb, caffeine and a dimmed background" })
 hl.bind("SUPER + CTRL + G", hl.dsp.exec_cmd("iarch-gamemode toggle"), { description = "Game mode: drop the compositor's effects for latency" })
+hl.bind("SUPER + P", hl.dsp.exec_cmd("noctalia msg power-cycle"), { description = "Cycle the power profile" })
+hl.bind("SUPER + Z", hl.dsp.exec_cmd("iarch-zen toggle"), { description = "Zen mode: hide the bar, the dock and the desktop widgets" })
 
 -- Appearance
 hl.bind("SUPER + CTRL + L", hl.dsp.exec_cmd("noctalia msg nightlight-toggle"), { description = "Toggle night light" })
+hl.bind("SUPER + O", hl.dsp.exec_cmd("noctalia msg osd-toggle"), { description = "Toggle the shell's OSD popups" })
+hl.bind("SUPER + CTRL + T", hl.dsp.exec_cmd("iarch-cycle theme"), { description = "Cycle the theme mode: dark, light, auto" })
+hl.bind("SUPER + CTRL + W", hl.dsp.exec_cmd("noctalia msg wallpaper-next"), { description = "Next wallpaper" })
 
 -- Mouse Workspace Navigation
 hl.bind("SUPER + mouse_down", hl.dsp.focus({ workspace = "e+1" }), { description = "Scroll to next workspace" })
@@ -146,11 +155,20 @@ hl.bind("SUPER + X", hl.dsp.window.resize(), { description = "Resize mode" })
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true, description = "Play or pause" })
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true, description = "Next track" })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true, description = "Previous track" })
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("pamixer -i 5"), { locked = true, description = "Volume up" })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("pamixer -d 5"), { locked = true, description = "Volume down" })
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("iarch-audio up"), { locked = true, repeating = true, description = "Volume up" })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("iarch-audio down"), { locked = true, repeating = true, description = "Volume down" })
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("iarch-audio mute"), { locked = true, description = "Mute" })
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("iarch-audio mic-mute"), { locked = true, description = "Mute the microphone" })
+
+-- Brightness
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("iarch-brightness up"), { locked = true, repeating = true, description = "Brightness up" })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("iarch-brightness down"), { locked = true, repeating = true, description = "Brightness down" })
 
 -- System
 hl.bind("SUPER + H", hl.dsp.exec_cmd("iarch-cheatsheet"), { description = "Shortcut overlay" })
+hl.bind("SUPER + K", hl.dsp.exec_cmd("noctalia msg keyboard-layout-cycle"), { description = "Cycle the keyboard layout" })
+hl.bind("SUPER + N", hl.dsp.exec_cmd("noctalia msg notification-clear-active"), { description = "Dismiss every active notification" })
+hl.bind("SUPER + U", hl.dsp.exec_cmd("iarch-reload session"), { description = "Reload the session: the shell's configuration and the compositor's" })
 hl.bind("SUPER + SHIFT + E", hl.dsp.exec_cmd("noctalia msg panel-toggle session"), { description = "Open the session menu (logout, reboot, shutdown)" })
 
 return true

@@ -45,6 +45,24 @@ FIXTURES = ROOT / "tests" / "fixtures"
 GOLDEN_RECORD = FIXTURES / "keybinds.golden.json"
 GOLDEN_LUA = FIXTURES / "keybinds.golden.lua"
 
+#: A modifier layer with letters to spare, as the `set` flag spells it and as an override
+#: entry does. Every cell of the three layers the A to Z table allocates -- Super,
+#: Super+Shift and Super+Ctrl -- is decided, and all twenty-six of the Super layer are
+#: bound, so a test that needs a combination nothing else holds cannot reach for a bare
+#: letter any more. Super+Shift+Ctrl is the layer the record already uses for the four
+#: window swaps on the arrows, the table does not allocate it, and the checker has no rule
+#: against it, so its letters are free by construction rather than by luck.
+#:
+#: The fixtures that do *not* use it are deliberate and worth not "fixing". `reset` and
+#: `export` never render the difference they are holding -- `reset --all` validates the
+#: defaults it is about to restore, not the override it is about to drop -- so the key in
+#: those fixtures is scenery, and `test_import_refuses_an_entry_that_would_not_validate`
+#: needs a literal that collides with the shipped map in order to have something to refuse.
+#: The rule is narrower than it looks: a fixture whose key reaches `validate` has to land
+#: on a combination the shipped map does not hold.
+FREE_MODS = "SUPER,SHIFT,CTRL"
+FREE_MODS_LIST = ["SUPER", "SHIFT", "CTRL"]
+
 
 def make_binding(**over: Any) -> Dict[str, Any]:
     """A minimal valid v2 binding, with any field overridden for one rule test."""
@@ -956,7 +974,8 @@ class Mutating(IsolatedHome):
         self.assertEqual(["SUPER", "SHIFT", "CTRL"], entry["mods"])
 
     def test_two_sets_on_one_binding_accumulate(self):
-        self.assertEqual(0, self.run_cli("set", "applications.terminal", "--key", "G"))
+        self.assertEqual(0, self.run_cli("set", "applications.terminal",
+                                         "--mods", FREE_MODS, "--key", "G"))
         self.assertEqual(0, self.run_cli("set", "applications.terminal",
                                          "--description", "A shell"))
         entry = json.loads(self.override.read_text(encoding="utf-8"))["bindings"][0]
@@ -964,9 +983,10 @@ class Mutating(IsolatedHome):
         self.assertEqual("A shell", entry["description"])
 
     def test_set_preserves_a_difference_on_another_binding(self):
-        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
-                                           "description": "mine"}]})
-        self.assertEqual(0, self.run_cli("set", "applications.terminal", "--key", "G"))
+        self.write_override({"bindings": [{"id": "window.close", "mods": FREE_MODS_LIST,
+                                           "key": "Y", "description": "mine"}]})
+        self.assertEqual(0, self.run_cli("set", "applications.terminal",
+                                         "--mods", FREE_MODS, "--key", "G"))
         self.assertEqual(["window.close", "applications.terminal"], self.saved_entries())
 
     def test_set_refuses_an_id_that_does_not_ship(self):
@@ -998,7 +1018,7 @@ class Mutating(IsolatedHome):
         for typed in ("G", "g"):
             with self.subTest(typed=typed):
                 self.assertEqual(0, self.run_cli("set", "applications.terminal",
-                                                 "--key", typed))
+                                                 "--mods", FREE_MODS, "--key", typed))
                 entry = json.loads(
                     self.override.read_text(encoding="utf-8"))["bindings"][0]
                 self.assertEqual(typed, entry["key"])
@@ -1142,7 +1162,8 @@ class Mutating(IsolatedHome):
         self.assertIn('hl.bind("SUPER + C"', self.session_binds())
 
     def test_disable_keeps_a_rebind_and_only_clears_the_flag(self):
-        self.write_override({"bindings": [{"id": "applications.code-editor", "key": "G",
+        self.write_override({"bindings": [{"id": "applications.code-editor",
+                                           "mods": FREE_MODS_LIST, "key": "G",
                                            "description": "mine"}]})
         self.assertEqual(0, self.run_cli("disable", "applications.code-editor"))
         entry = json.loads(self.override.read_text(encoding="utf-8"))["bindings"][0]
@@ -1209,22 +1230,24 @@ class Mutating(IsolatedHome):
         self.assertEqual({"bindings": []}, json.loads(target.read_text(encoding="utf-8")))
 
     def test_import_merges_into_the_differences_already_saved(self):
-        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
-                                           "description": "mine"}]})
+        self.write_override({"bindings": [{"id": "window.close", "mods": FREE_MODS_LIST,
+                                           "key": "Y", "description": "mine"}]})
         incoming = Path(self.tmp.name) / "incoming.json"
         incoming.write_text(json.dumps({"bindings": [
-            {"id": "applications.code-editor", "key": "G", "description": "theirs"}]}),
+            {"id": "applications.code-editor", "mods": FREE_MODS_LIST, "key": "G",
+             "description": "theirs"}]}),
             encoding="utf-8")
         self.assertEqual(0, self.run_cli("import", str(incoming)))
         self.assertEqual(["window.close", "applications.code-editor"],
                          self.saved_entries())
 
     def test_import_replace_asks_and_a_no_keeps_what_was_there(self):
-        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
-                                           "description": "mine"}]})
+        self.write_override({"bindings": [{"id": "window.close", "mods": FREE_MODS_LIST,
+                                           "key": "Y", "description": "mine"}]})
         incoming = Path(self.tmp.name) / "incoming.json"
         incoming.write_text(json.dumps({"bindings": [
-            {"id": "applications.code-editor", "key": "G", "description": "theirs"}]}),
+            {"id": "applications.code-editor", "mods": FREE_MODS_LIST, "key": "G",
+             "description": "theirs"}]}),
             encoding="utf-8")
         with self.answer("n\n"):
             self.assertEqual(1, self.run_cli("import", str(incoming), "--replace"))
@@ -1283,9 +1306,10 @@ class Mutating(IsolatedHome):
         nothing at all: there would be nothing to put back, and this test would pass
         with the whole restore branch deleted.
         """
-        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
-                                           "description": "mine"}]})
-        self.assertEqual(0, self.run_cli("set", "applications.terminal", "--key", "G"))
+        self.write_override({"bindings": [{"id": "window.close", "mods": FREE_MODS_LIST,
+                                           "key": "Y", "description": "mine"}]})
+        self.assertEqual(0, self.run_cli("set", "applications.terminal",
+                                         "--mods", FREE_MODS, "--key", "G"))
         settled_override = self.override.read_bytes()
         settled_session = self.session_lua.read_bytes()
 
@@ -1311,9 +1335,10 @@ class Mutating(IsolatedHome):
                          "the session file changed even though the write failed")
 
     def test_a_write_failure_before_anything_changed_leaves_nothing_behind(self):
-        self.write_override({"bindings": [{"id": "window.close", "key": "Y",
-                                           "description": "mine"}]})
-        self.assertEqual(0, self.run_cli("set", "applications.terminal", "--key", "G"))
+        self.write_override({"bindings": [{"id": "window.close", "mods": FREE_MODS_LIST,
+                                           "key": "Y", "description": "mine"}]})
+        self.assertEqual(0, self.run_cli("set", "applications.terminal",
+                                         "--mods", FREE_MODS, "--key", "G"))
         settled = self.override.read_bytes()
         with unittest.mock.patch.object(kb.configstore, "atomic_write",
                                         side_effect=OSError(28, "No space left")):
@@ -1338,7 +1363,8 @@ class Mutating(IsolatedHome):
         real_override = self.override
         self.assertFalse(real_override.exists())
 
-        self.assertEqual(0, self.run_cli("set", "applications.browser", "--key", "G",
+        self.assertEqual(0, self.run_cli("set", "applications.browser",
+                                         "--mods", FREE_MODS, "--key", "G",
                                          "--config-home", str(config_root)))
         moved = config_root / "iarch" / "keybinds.json"
         self.assertTrue(moved.is_file(), "the override was not written under --config-home")
@@ -1358,7 +1384,8 @@ class Mutating(IsolatedHome):
         os.environ["IARCH_CONFIG_DIR"] = str(exported)
         self.addCleanup(os.environ.pop, "IARCH_CONFIG_DIR", None)
         try:
-            self.assertEqual(0, self.run_cli("set", "applications.browser", "--key", "G",
+            self.assertEqual(0, self.run_cli("set", "applications.browser",
+                                             "--mods", FREE_MODS, "--key", "G",
                                              "--config-home", str(config_root)))
         finally:
             os.environ.pop("IARCH_CONFIG_DIR", None)
@@ -1369,9 +1396,10 @@ class Mutating(IsolatedHome):
     def test_a_read_only_command_still_reads_the_home_it_was_started_in(self):
         """Only the mutating commands take --config-home; the ones that merely read
         must keep reading the home the process was started in."""
-        self.write_override({"bindings": [{"id": "applications.browser", "key": "G"}]})
+        self.write_override({"bindings": [{"id": "applications.browser",
+                                           "mods": FREE_MODS_LIST, "key": "G"}]})
         self.assertEqual(0, self.run_cli("list"))
-        self.assertIn("SUPER + G", self.output,
+        self.assertIn("SUPER + SHIFT + CTRL + G", self.output,
                       "a read-only command stopped reading the person's own map")
 
 

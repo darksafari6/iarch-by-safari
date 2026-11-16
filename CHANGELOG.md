@@ -5,6 +5,92 @@ Notable changes to iArch by Safari, newest first. The format follows
 six-part plan in [`docs/ROADMAP.md`](docs/ROADMAP.md) rather than semantic
 versioning, because nothing here is a library anyone links against.
 
+## Unreleased — every Super+letter cell, and the eight scripts that filled them
+
+The second slice of Part 7, and it exists because the first one left a sentence behind that
+turned out to be a design error rather than a tidy outcome. The A to Z table allocated all 78
+letter cells and called the empty ones *free on purpose* — a budget kept for a later bind. Read
+as a plan that is defensible; read as a keyboard it is not, because a person pressing `Super+G`
+and getting nothing has no way to tell a decision from an omission, and the table could not tell
+them either. So every cell of the primary layer is now bound, and the cells that had no mechanism
+behind them got one: eight new launchers under `scripts/`, ten verbs read back out of the shell's
+own command table, and one compositor configuration call the design record already documented.
+
+### Added
+
+- **Sixteen bindings, and the `Super` layer is full.** `data/keybinds.default.json` went from 83
+  rows to 98 and from 14 categories to 15 — `Brightness` is the new one — and all twenty-six
+  letters of the primary layer are bound. Ten of the sixteen are letters that were refused or left
+  empty a slice ago: `Super+G` for the gaps, `Super+J` for the window switcher, `Super+K` for the
+  keyboard layout, `Super+N` to dismiss what is on screen, `Super+O` for the shell's OSD, `Super+P`
+  to cycle the power profile, `Super+R` for a run prompt, `Super+U` to reload the session,
+  `Super+Y` for the clipboard history and `Super+Z` for zen mode. The other six are rows the map
+  had no business being without: the two mute keys, the two brightness keys, and — in the tertiary
+  layer — `Super+Ctrl+T` for the theme mode and `Super+Ctrl+W` for the next wallpaper.
+- **Eight launchers under `scripts/`** — `iarch-audio`, `iarch-brightness`, `iarch-cycle`,
+  `iarch-doctor`, `iarch-gaps`, `iarch-reload`, `iarch-run` and `iarch-zen`. Each one exists
+  because a cell needed a mechanism rather than a placeholder, and each carries its evidence in its
+  header: the wpctl and brightnessctl flags are read out of those tools' own manuals and, for
+  brightnessctl, out of the source that implements them; the six hide and show verbs zen sends are
+  quoted from the shell's command table with the line each came from; the run prompt's contract is
+  `noctalia dmenu`'s, down to the socket path and the two environment variables it needs.
+  `scripts/iarch-link-cli.sh` now links fifteen names instead of seven, because a bind that execs a
+  command nothing puts on `PATH` is a key that does nothing and fails quietly.
+- **Ten verbs in `data/design/noctalia-ipc.json`**, which went from 41 to 51: the wallpaper cycle,
+  `keyboard-layout-cycle`, `notification-clear-active`, `osd-toggle`, `power-cycle`, and the six
+  bar, dock and desktop-widget verbs. All ten are read out of `src/cli/schema_msg.h` at v5.4.1 with
+  the line they came from, and `iarch-keybinds check` validates a noctalia action against the
+  record — so an invented verb is refused at the gate rather than at the key. The typed wrapper in
+  `iarch/settings-app/iarch_settings/services/noctalia.py` carries the same fifty-one, because a
+  second copy of a list agrees with itself after the first one changes.
+- **Four rows in `docs/UNVERIFIED.md`** — `KB-07` for the six keys that reach a third-party binary,
+  `KB-08` for the four that drive a compositor or shell switch, `KB-09` for the seven that send a
+  shell verb, and `KB-10` for the run prompt. Each says what was read, what was never run, and what
+  the gap blocks, and every one of the sixteen new rows carries an `unverified` note pointing at
+  the row that explains it.
+
+### Changed
+
+- **The two XF86 volume keys no longer call `pamixer`.** They exec `iarch-audio up` and
+  `iarch-audio down`, which drive `wpctl` — and the reason is a bug, not a preference: no step of
+  either installer ever installed `pamixer`, so on a machine this repository built those two keys
+  were dead and the only report was a shell's "command not found" in a log nobody reads.
+  `wireplumber` and `brightnessctl` are now named in both installers' package arrays, with the Arch
+  repository, version and licence recorded beside them (`extra`, `0.5.19-1` and `0.5.1-3`, both MIT,
+  read out of Arch's package search JSON API on 2026-11-09) and two new entries in
+  `branding/notices.json` crediting them. `TP-11` is narrower for it and says which half of it is
+  still open: the Fedora spellings were mirrored, not resolved.
+- **`data/schemas/keybinds.schema.json` grew the `repeating` flag** and the conditional that goes
+  with it, because a held key is a different thing from a pressed one and the record had no way to
+  say so. The two volume steps and the two brightness steps carry it; the two mutes deliberately do
+  not, since a repeated toggle is a strobe.
+- **`Super+K` stopped being a placeholder for a panel that does not exist.** The cell was reserved
+  for a Hyprland key panel, and the shell's control centre has twelve tabs — home, media, audio,
+  monitor, system, power, network, bluetooth, weather, calendar, notifications and screen time —
+  none of which is a keyboard. The row that claimed it, `planned.hyprland-key`, is deleted rather
+  than disabled, and the `Planned` category now holds exactly one row: `planned.refresh-overlay`,
+  the overlay refresh that Part 7's glass window will need.
+- **`docs/ROADMAP.md` Part 7 and `docs/CUSTOMIZING-SHORTCUTS.md` say what changed instead of what
+  was true before it.** Both named three reserved keys and both listed `Super+R` and `Super+K`
+  among the table's refusals; a true sentence left behind a change is a false one, so each now
+  names the bind and keeps the reason the refusal was dropped. The emergency-mode paragraph gained
+  the sentence a reader needs now that `Super+R` is also the run prompt: emergency mode only trips
+  when the bind registry is empty, which is the state in which this map is not loaded at all.
+
+### Known gaps
+
+- **None of the sixteen has been pressed.** There is no compositor, no shell, no display, no sound
+  server and no backlight where this was written, so every flag is a reading and every behaviour is
+  unobserved — which is what `KB-07` to `KB-10` are for, and why each row says it in the record
+  rather than leaving a reader to guess. The two scripts that cannot ask what state they left
+  behind, `iarch-gaps` and `iarch-zen`, keep a one-word memory of it and say so out loud.
+- **Zen mode drifts across a shell restart, by its verbs' own design.** `dock-hide` persists its
+  override and `desktop-widgets-hide` does not, so a restart leaves the dock hidden and the widgets
+  back. `off` puts both away; nothing here claims otherwise.
+- **The gaps and the reload are runtime state.** `hl.config` writes and does not read, and a
+  `hyprctl reload`, an `iarch-theme apply` or a relogin re-renders `theme.lua` and puts the tokens'
+  gaps back. That is the honest reading of the cell rather than a bug in it.
+
 ## Unreleased — the A to Z shortcut table, and the layer debt it settled
 
 This is the first slice of Part 7 of the roadmap: the keyboard map laid out as a plan rather than
@@ -20,13 +106,14 @@ all, which is exactly what Part 3 left for this work.
   the three layers a letter may live in (`Super`, `Super+Shift`, `Super+Ctrl`), and
   `tools/render_shortcuts.py` renders it as a grid at the end of `docs/SHORTCUTS.md`. A cell is
   one of four things: a binding, a key the record has claimed and not bound, a refusal with the
-  mechanism behind it, or empty on purpose. Ten of them are refusals, and each names a verb, a
-  file or a command rather than a mood: brightness has no relative verb in noctalia v5.4.1,
-  `theme-mode-toggle` would set a value `render_noctalia.py` generates and the next `iarch-theme`
-  run would quietly revert, Do Not Disturb and caffeine belong to focus mode because it reads
-  both back before it changes them, mute belongs on the media row where the volume steps are,
-  `Super+R` is the compositor's own emergency launcher (`KB-05`), and `Super+Ctrl+R` would be a
-  second spelling of the recovery combo. The schema pins the three layers and their modifiers as
+  mechanism behind it, or empty on purpose. Ten of them were refusals at this point, and each
+  named a verb, a file or a command rather than a mood: brightness had no relative verb in
+  noctalia v5.4.1, `theme-mode-toggle` would set a value `render_noctalia.py` generates and the
+  next `iarch-theme` run would quietly revert, Do Not Disturb and caffeine belong to focus mode
+  because it reads both back before it changes them, mute belongs on the media row where the
+  volume steps are, `Super+R` is the compositor's own emergency launcher (`KB-05`), and
+  `Super+Ctrl+R` would be a second spelling of the recovery combo. Seven of the ten are still
+  refusals; the other three were wrong, and the slice below says so. The schema pins the three layers and their modifiers as
   constants, so the table cannot grow a fourth layer that the checker refuses — `Super+Alt`
   cannot be spelled in it at all.
 - **`tests/test_keybinds_alphabet.py`** — seventeen tests that hold the table and the map
@@ -86,8 +173,13 @@ all, which is exactly what Part 3 left for this work.
 - **The table allocates letters and nothing else.** Arrows, digits, function keys, media keys and
   the mouse binds are governed by the layer rules in `iarch_keybinds.py` and by the reserved
   combinations in the design record, but they have no grid, so a new bind on `Super+Ctrl+up` is
-  still a decision nobody has written down. The map binds no mute key and no brightness keys, and
-  both gaps are recorded in the table's refusals rather than filled with a guessed flag.
+  still a decision nobody has written down.
+- **The map bound no mute key and no brightness keys**, and both gaps were recorded in the table's
+  refusals rather than filled with a guessed flag. That was the right call at the time — a guessed
+  flag is worse than a refusal — and the slice below closes both gaps by reading the flags out of
+  `wpctl(1)` and `brightnessctl(1)` instead of guessing them. It also closes the larger one the
+  refusals were standing in for: that a cell left empty on purpose is indistinguishable, to the
+  person pressing it, from a cell nobody thought about.
 
 ## Unreleased — the installer wizard, the bar's widget vocabulary, and the desktop art
 

@@ -48,6 +48,16 @@ RECORD = ROOT / "data" / "keybinds.default.json"
 PRESET = ROOT / "data" / "design" / "presets" / f"{sheet.PRESET}.json"
 KEYBIND_LUA = ROOT / ".config" / "hypr" / "keybind.lua"
 
+#: A combination the shipped map does not hold, for the fixtures that write an override.
+#: All twenty-six letters of the Super layer are bound now and every cell of the three
+#: layers the A to Z table allocates is decided, so a fixture that rebinds something onto
+#: a bare letter is a fixture that collides with the map it is testing against. It would
+#: still pass -- `overlay_rows` reads and does not validate -- and a fixture that only
+#: works because nothing checks it is one that stops meaning what it says the day
+#: something does. Super+Shift+Ctrl is the layer the record uses for the four window swaps
+#: on the arrows and the table does not allocate it, so its letters are free.
+FREE_MODS = ["SUPER", "SHIFT", "CTRL"]
+
 
 def bindings() -> List[Dict[str, Any]]:
     return json.loads(RECORD.read_text(encoding="utf-8"))["bindings"]
@@ -96,12 +106,12 @@ class TheModel(unittest.TestCase):
         self.addCleanup(shutil.rmtree, tmp, True)
         (tmp / ".config" / "iarch").mkdir(parents=True)
         (tmp / ".config" / "iarch" / "keybinds.json").write_text(json.dumps(
-            {"bindings": [{"id": "applications.browser", "key": "G",
+            {"bindings": [{"id": "applications.browser", "mods": FREE_MODS, "key": "G",
                           "description": "My browser"}]}), encoding="utf-8")
 
         rows = sheet.overlay_rows({"HOME": str(tmp)})
         row = next(r for r in rows if r["id"] == "applications.browser")
-        self.assertEqual("SUPER + G", row["keys"])
+        self.assertEqual("SUPER + SHIFT + CTRL + G", row["keys"])
         self.assertEqual("My browser", row["description"])
 
     def test_a_disabled_override_takes_the_row_out_of_the_bound_groups(self):
@@ -179,10 +189,18 @@ class Filtering(unittest.TestCase):
         self.assertEqual(self.shown("LOCK"), self.shown("lock"))
 
     def test_a_single_character_has_to_be_a_key_not_a_letter(self):
-        """The rule that makes `super t` answer with one row instead of most of the
-        map: on an overlay of shortcuts a lone character names a key."""
+        """The rule that makes `super t` answer with the rows that key instead of most
+        of the map: on an overlay of shortcuts a lone character names a key.
+
+        Compared as a set rather than a list because what the rule guarantees is which
+        rows answer, not the order the categories happen to render in.
+        """
         rows = self.shown("super t")
-        self.assertEqual(["applications.settings"], [r["id"] for r in rows])
+        self.assertEqual({"applications.settings", "appearance.theme-mode"},
+                         {r["id"] for r in rows},
+                         "Super+T and Super+Ctrl+T are the two combinations that are both "
+                         "`super` and `t`; a row whose description merely contains the "
+                         "letter is not one of them")
         for row in rows:
             self.assertIn("t", sheet.key_tokens(row["keys"]))
 

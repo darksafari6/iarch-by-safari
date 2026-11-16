@@ -137,6 +137,22 @@ Pointer theme the session exports to Hyprland, XWayland and Qt.
 - **Notes:** Bibata-Modern-Classic at size 24 is set through HYPRCURSOR_THEME, XCURSOR_THEME and QT_CURSOR_THEME. Arch's install.sh fetches it in its 'Icons and cursors' step through yay, as bibata-cursor-theme-bin: the AUR's own RPC interface gives version 2.0.7-1, GPL-3.0-or-later, and says that package both Provides and Conflicts bibata-cursor-theme. Neither name is in Arch's repositories -- the package search JSON API returns no result for either, checked 2026-11-09 -- so the step installs the binary package unless a Bibata theme is already present, and warns instead of aborting if it cannot. Fedora's package is added but its name is unverified (TP-18).
 - **Open verification items:** `TP-18` in `docs/UNVERIFIED.md`
 
+### brightnessctl
+
+sysfs backlight control, which the two XF86 brightness keys drive through `scripts/iarch-brightness.sh`: a five percent step up in the prefix form and down in the suffix form, with a floor of one unit above off so that a key the compositor repeats while it is held cannot walk the backlight to a black screen.
+
+- **License:** MIT
+- **Copyright:** See upstream source headers
+- **Version checked:** 0.5.1-3 (Arch extra)
+- **Upstream:** https://github.com/Hummer12007/brightnessctl
+- **Used by:**
+  - `scripts/iarch-brightness.sh`
+  - `data/keybinds.default.json`
+  - `install.sh`
+  - `fedora_install.sh`
+- **Notes:** Repository, version and licence were read out of Arch's package search JSON API on 2026-11-09, and the flags were read against brightnessctl(1) and the source at tag 0.5.1: `--min-value` is declared an `optional_argument`, so its value has to be attached with `=` rather than passed as a separate word, and a non-root `set` falls back to logind's `Session.SetBrightness` only in a build with `ENABLE_SYSTEMD` -- which is the build Arch's own PKGBUILD makes for both build() and package(), so on this distribution the key needs neither root nor the `video` group nor a setuid binary. No machine in the development sandbox has a backlight, so no step was ever sent.
+- **Open verification items:** `TP-11`, `KB-07` in `docs/UNVERIFIED.md`
+
 ### DejaVu fonts
 
 Wide-coverage fallback typeface installed by the Arch installer (ttf-dejavu).
@@ -311,16 +327,16 @@ Screenshot annotation tool bound to a keybind.
 
 ### Session helper utilities
 
-Small tools the session calls for screenshots, clipboard, media keys, volume and policy authentication: hyprshot, grim, slurp, wl-clip-persist, pamixer, playerctl, polkit-gnome-authentication-agent-1, gnome-keyring-daemon, EasyEffects, ddcutil.
+Small tools the session calls for screenshots, clipboard, media keys and policy authentication: hyprshot, grim, slurp, wl-clip-persist, playerctl, polkit-gnome-authentication-agent-1, gnome-keyring-daemon, EasyEffects, ddcutil. Two names this list used to carry are now their own entries, because their repository, version and licence were resolved rather than assumed: `pamixer`, which the volume keys called and nothing installed, is gone from the map altogether, and WirePlumber and brightnessctl are credited below.
 
 - **License:** Varies per package
 - **Copyright:** See each package
 - **Upstream:** Each project's own repository
 - **Used by:**
-  - `.config/hypr/keybind.lua`
+  - `data/keybinds.default.json`
   - `.config/hypr/startup.lua`
   - `install.sh`
-- **Notes:** Installed from the distribution or AUR; each package ships its own license. Nothing from these projects is stored in this repository.
+- **Notes:** Installed from the distribution or AUR; each package ships its own license. Nothing from these projects is stored in this repository. `ddcutil` is called by the installer's DDC branch rather than by a keybind, and the rest by the keyboard map in `data/keybinds.default.json` or by the startup module.
 - **Open verification items:** `TP-11` in `docs/UNVERIFIED.md`
 
 ### Starship
@@ -334,6 +350,22 @@ Cross-shell prompt.
   - `.config/starship.toml`
   - `legacy/config/minimalinux/starship-detailed.toml`
   - `legacy/config/minimalinux/starship-minimal.toml`
+
+### WirePlumber (wpctl)
+
+The PipeWire session manager, and the `wpctl` control CLI that the two XF86 volume keys and the two mute keys drive through `scripts/iarch-audio.sh`: a percentage step capped below 1.0, a mute toggle on the default sink and on the default source, and the output switch that reads `list audio sinks` and hands the following id to `set-default`.
+
+- **License:** MIT
+- **Copyright:** See upstream source headers
+- **Version checked:** 0.5.19-1 (Arch extra)
+- **Upstream:** https://gitlab.freedesktop.org/pipewire/wireplumber
+- **Used by:**
+  - `scripts/iarch-audio.sh`
+  - `data/keybinds.default.json`
+  - `install.sh`
+  - `fedora_install.sh`
+- **Notes:** Repository, version and licence were read out of Arch's package search JSON API on 2026-11-09 and recorded beside the entry in `install.sh`'s package array; the Fedora spelling was mirrored into `fedora_install.sh` by reading the array around it rather than by querying a Fedora package database. It replaced `pamixer`, which the volume keys used to exec and which no step of either installer ever installed, so on a machine this repository built those two keys were dead and the only report was a shell's "command not found" in a log nobody reads. Every flag below is wpctl(1) as WirePlumber 0.5.19 documents it; no PipeWire session exists in the development sandbox, so none of them was ever sent.
+- **Open verification items:** `TP-11`, `KB-07` in `docs/UNVERIFIED.md`
 
 ## Artwork and audio assets stored in this repository
 

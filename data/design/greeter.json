@@ -6,7 +6,7 @@
   "shell_verified_against": "Noctalia v5.4.1, fetched 2026-11-09",
   "source": "noctalia-dev/noctalia-greeter at v1.7.0: src/greeter/greeter_config_store.h, src/greeter/greeter_config_io.cpp, src/greeter/greeter_preferences.h, src/greeter/greeter_preferences.cpp, src/greeter/appearance_sync.h, src/greeter/appearance_sync.cpp, src/greeter/appearance_config.cpp, src/greeter/session_config.cpp, src/compositor/noctalia_compositor.c, src/compositor/system_keyboard_config.c, src/config/config_types.h, src/render/animation/animation.h, src/main.cpp, examples/greeter.toml, docs/user/configuration.md, docs/user/sync.md, docs/user/input.md, data/org.noctalia.greeter.apply-appearance.policy.in, scripts/greetd_setup_lib.sh, scripts/setup_greetd_pam.sh. noctalia-dev/noctalia at v5.4.1: src/shell/greeter/greeter_appearance_sync.cpp, src/shell/greeter/greeter_appearance_sync.h, src/config/schema/config_schema.cpp, src/config/config_types.h, src/cli/schema_msg.h, src/ui/palette.h, docs/user/theming/palette.mdx.",
   "_note": "The login screen, recorded so that nothing has to be guessed about it. This project generates no file from this record: the greeter's declarative config is a root-owned system file that wins over Sync key by key, and Sync is the only supported way appearance reaches the login screen. What this record is for is the opposite of a generator — it is the evidence for the three keys this project deliberately does not emit (not_shipped), the palette contract that makes Sync work at all (palette_contract), and the four places where the greeter's own documentation disagrees with its code (doc_disagreements). Every default, enumeration and range below was read out of the v1.7.0 source, not out of the manual, because the manual is wrong in four places.",
-  "release_note": "install.sh:1736 installs the AUR package noctalia-greeter-git, which builds the main branch rather than a tag. At the fetch date main's meson.build still says version 1.7.0, so this record and the package an installer gets describe the same release, but that is a fact about today and not a guarantee. main carries two keys v1.7.0 does not; they are listed under main_only_keys and no test depends on either.",
+  "release_note": "install.sh:1764 installs the AUR package noctalia-greeter-git, which builds the main branch rather than a tag. At the fetch date main's meson.build still says version 1.7.0, so this record and the package an installer gets describe the same release, but that is a fact about today and not a guarantee. main carries two keys v1.7.0 does not; they are listed under main_only_keys and no test depends on either.",
   "main_only_keys": {
     "note": "Present in examples/greeter.toml and docs/user/configuration.md at main on 2026-11-09, absent from the same two files at v1.7.0, and absent from the v1.7.0 parser's isKnownClockKey (src/greeter/greeter_config_io.cpp:93-95), which would warn 'unrecognized key clock.time_font_size (ignored)' if it saw one.",
     "keys": {
@@ -24,7 +24,7 @@
   },
   "greetd_config": {
     "path": "/etc/greetd/config.toml",
-    "note": "greetd is a separate project and has a configuration surface of its own; only the two tables the greeter's own helper writes are recorded here, because those are the only two this repository's installers write. Upstream generates exactly this block in scripts/greetd_setup_lib.sh:100-108, and install.sh:1485-1492 and fedora_install.sh:577-584 write the same three keys.",
+    "note": "greetd is a separate project and has a configuration surface of its own; only the two tables the greeter's own helper writes are recorded here, because those are the only two this repository's installers write. Upstream generates exactly this block in scripts/greetd_setup_lib.sh:100-108, and install.sh:1513-1520 and fedora_install.sh:590-597 write the same three keys.",
     "source": "scripts/greetd_setup_lib.sh:93-120 (print_greetd_config_commands)",
     "upstream_template": [
       "[terminal]",
@@ -51,13 +51,13 @@
           "command": {
             "type": "string",
             "default": "/usr/bin/noctalia-greeter-session",
-            "note": "The greeter session wrapper. Upstream resolves it through a candidate list (NOCTALIA_GREETER_SESSION_BIN, /usr/bin, /usr/local/bin, the script directory, a build directory) at scripts/greetd_setup_lib.sh:7-24 and falls back to /usr/bin/noctalia-greeter-session; install.sh:1460-1462 resolves it with command -v instead and falls back to the same path.",
+            "note": "The greeter session wrapper. Upstream resolves it through a candidate list (NOCTALIA_GREETER_SESSION_BIN, /usr/bin, /usr/local/bin, the script directory, a build directory) at scripts/greetd_setup_lib.sh:7-24 and falls back to /usr/bin/noctalia-greeter-session; install.sh:1488-1490 resolves it with command -v instead and falls back to the same path.",
             "pinned_session_note": "Upstream documents an optional pinned desktop session as command = \"<session_bin> -- --session niri\" (scripts/greetd_setup_lib.sh:118-119). Neither installer pins one, so the greeter shows its session picker and remembers the last choice in sync.toml."
           },
           "user": {
             "type": "string",
             "default": "greeter",
-            "note": "The unprivileged account greetd runs the greeter as. Upstream asks the packaged apply helper for the real name (--print-greeter-user) and only then falls back to 'greeter', warning on stderr (scripts/greetd_setup_lib.sh:45-62). Both installers hardcode 'greeter' and create the account themselves when it is missing (install.sh:1464-1467), which is upstream's fallback value, so the two agree on every distribution whose package uses that name and disagree on any that does not."
+            "note": "The unprivileged account greetd runs the greeter as. Upstream asks the packaged apply helper for the real name (--print-greeter-user) and only then falls back to 'greeter', warning on stderr (scripts/greetd_setup_lib.sh:45-62). Both installers hardcode 'greeter' and create the account themselves when it is missing (install.sh:1492-1495), which is upstream's fallback value, so the two agree on every distribution whose package uses that name and disagree on any that does not."
           }
         }
       }
@@ -555,7 +555,7 @@
       "matches_only": "noctalia-greeter-apply-appearance --sync <staging-directory>",
       "note": "Administrator authentication is the default and is a supported long-term mode, not a migration step. Passwordless sync is opt-in per account: 'sudo noctalia-greeter passwordless-sync enable <user>' writes a narrow rule limited to the exact packaged helper, the root target account, and that user in an active local session. It never covers the legacy positional helper mode, never creates a general passwordless sudo rule, and does not turn on Auto-Sync Greeter.",
       "legacy_action_warning": "Releases through 1.3.1 used org.noctalia.greeter.apply-appearance, scoped only by executable path. A passwordless rule must never be pointed at that action, because it would also authorize the legacy helper mode.",
-      "agent_requirement": "The authenticated flow needs a polkit authentication agent running in the desktop session. This repository starts one in .config/hypr/startup.lua:22 — the exec_once entry recorded in data/design/startup.json, polkit-gnome-authentication-agent-1 on Arch, replaced with xfce-polkit on Fedora by fedora_install.sh:823-841 — so the prompt has somewhere to appear. The shell's own agent stays off; see not_shipped.shell_polkit_agent.",
+      "agent_requirement": "The authenticated flow needs a polkit authentication agent running in the desktop session. This repository starts one in .config/hypr/startup.lua:22 — the exec_once entry recorded in data/design/startup.json, polkit-gnome-authentication-agent-1 on Arch, replaced with xfce-polkit on Fedora by fedora_install.sh:836-854 — so the prompt has somewhere to appear. The shell's own agent stays off; see not_shipped.shell_polkit_agent.",
       "trusted_install_requirement": "The helper is only elevated when it is a root-owned regular executable reached through a root-owned, non-user-writable directory chain. A helper in a user checkout or build directory is rejected on purpose, and the passwordless-sync commands refuse to write a rule for such an installation.",
       "version_requirement": "Passwordless sync needs Noctalia Greeter 1.5.0 or newer together with the Noctalia release after 5.0.1. When either component is older, Sync uses the retained administrator-authenticated legacy path, and it never grants that path passwordless access."
     },
@@ -600,7 +600,7 @@
     "note": "Authentication at the login screen is greetd's, through PAM, and the greeter only drives the conversation. Two scripts matter to this repository because both installers call one of them.",
     "setup_greetd_pam": {
       "path": "/usr/share/noctalia-greeter/setup_greetd_pam.sh",
-      "source": "scripts/setup_greetd_pam.sh at v1.7.0, called from install.sh:1494-1501 and fedora_install.sh:586-593",
+      "source": "scripts/setup_greetd_pam.sh at v1.7.0, called from install.sh:1522-1529 and fedora_install.sh:599-606",
       "behaviour": "Requires root. Exits 0 without touching anything when /etc/pam.d/greetd is missing, which is how it behaves when greetd is not installed. Looks for pam_systemd.so and then pam_elogind.so under /usr/lib/security, /usr/lib64/security, /lib/security and /lib64/security, and exits 0 with a warning when neither exists. When the module is already named in the file it does nothing. Otherwise it backs the file up to /etc/pam.d/greetd.bak.noctalia.<timestamp>, inserts 'session    required     <module>' after the last existing session line (or appends it when there is none), and installs the result as 0644.",
       "why_it_matters": "Without a session module in the greeter's PAM stack, a session started from the login screen is not registered with logind, so the desktop that follows has no session to lock, suspend or inhibit. This is the same subsystem the lock screen and the idle behaviors depend on: loginctl lock-session in .config/hypr/hypridle.conf's before_sleep_cmd only means something if logind knows the session exists."
     },
@@ -665,7 +665,7 @@
       "what": "[shell] polkit_agent",
       "default": false,
       "source": "src/config/config_types.h:1364 in Noctalia v5.4.1, schema at src/config/schema/config_schema.cpp:1824",
-      "why": "Enabling it would run the shell's own authentication agent beside the one .config/hypr/startup.lua:22 already starts — the exec_once entry recorded in data/design/startup.json, polkit-gnome-authentication-agent-1 on Arch, xfce-polkit on Fedora after fedora_install.sh:823-841 rewrites that line. Two agents on one seat compete for the same request. The key is also at its upstream default, so emitting it would restate a default and buy nothing. The consequence worth knowing is a positive one: because an agent is already running, Sync's administrator prompt has somewhere to appear, and 'ok: staged (run legacy privilege install manually)' is not the outcome a Hyprland session gets.",
+      "why": "Enabling it would run the shell's own authentication agent beside the one .config/hypr/startup.lua:22 already starts — the exec_once entry recorded in data/design/startup.json, polkit-gnome-authentication-agent-1 on Arch, xfce-polkit on Fedora after fedora_install.sh:836-854 rewrites that line. Two agents on one seat compete for the same request. The key is also at its upstream default, so emitting it would restate a default and buy nothing. The consequence worth knowing is a positive one: because an agent is already running, Sync's administrator prompt has somewhere to appear, and 'ok: staged (run legacy privilege install manually)' is not the outcome a Hyprland session gets.",
       "inert_payload_note": "The glass payload does carry a window rule for the shell's own polkit panel, namespace ^noctalia-polkit$ (data/design/tokens.json:441-446, rendered into .config/hypr/generated/glass.lua:159-161), and [shell.panel] ships polkit_placement and polkit_position. With the agent off that panel never exists, so those three values are inert unless a user turns the agent on in the shell's own settings — in which case they are already correct."
     }
   },
@@ -715,8 +715,8 @@
   "installer": {
     "note": "What this repository's installers do to the login screen, recorded next to what upstream's own helper does, because the two were written independently and one line had drifted.",
     "functions": {
-      "install.sh": "install.sh:1453-1502, called at :1740 after the AUR package is installed at :1736",
-      "fedora_install.sh": "fedora_install.sh:545-594, a byte-identical copy of the Arch one, called at :1037"
+      "install.sh": "install.sh:1481-1530, called at :1740 after the AUR package is installed at :1736",
+      "fedora_install.sh": "fedora_install.sh:558-607, a byte-identical copy of the Arch one, called at :1037"
     },
     "steps": [
       "resolve the session wrapper with command -v, falling back to /usr/bin/noctalia-greeter-session",
@@ -735,12 +735,12 @@
     "drift_found": {
       "what": "The state directory was created with mkdir -p and left at the umask default of 0755, world-readable, while upstream tightens it to 0750 in two places (kSyncedDirMode at src/greeter/greeter_preferences.cpp:29 and src/greeter/appearance_sync.cpp:30, applied at :481, and ensure_greeter_paths at scripts/greetd_setup_lib.sh:67-79, whose chmod 0750 is line 72).",
       "why_it_matters": "The directory holds sync.toml, greeter.toml and the synced wallpaper images. Nothing in it is a secret — there is no password, no hash and no key material — but the greeter's own installer treats it as private to the greeter account, and a directory any local user can list is a directory any local user can read a machine's wallpaper and layout from.",
-      "fix": "Both installers now chmod 0750 the directory between creating it and handing it to the greeter account (install.sh:1470-1477, fedora_install.sh:563-569), and tests/test_greeter.py asserts the line is present in both and that the two setup_noctalia_greeter functions remain byte-identical, so the next drift between them is a test failure rather than a surprise."
+      "fix": "Both installers now chmod 0750 the directory between creating it and handing it to the greeter account (install.sh:1498-1505, fedora_install.sh:576-582), and tests/test_greeter.py asserts the line is present in both and that the two setup_noctalia_greeter functions remain byte-identical, so the next drift between them is a test failure rather than a surprise."
     },
     "not_changed": [
       "The greeter account name stays hardcoded as 'greeter' rather than resolved through the apply helper's --print-greeter-user. Upstream's own resolution falls back to the same name, the installers create the account when it is missing, and calling a root-owned helper to ask for a name during install is a larger change than the drift it would remove.",
       "No session is pinned with --session, so the greeter keeps its picker and remembers the last choice in sync.toml.",
-      "The display manager switch stays as it is: install.sh:1745-1749 disables sddm and enables greetd unconditionally. That is the riskiest operation in the installer and it belongs to the installer-safety work, not to this record."
+      "The display manager switch stays as it is: install.sh:1773-1777 disables sddm and enables greetd unconditionally. That is the riskiest operation in the installer and it belongs to the installer-safety work, not to this record."
     ]
   }
 }
