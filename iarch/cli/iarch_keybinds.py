@@ -326,14 +326,16 @@ def _lua_table(table: Dict[str, Any]) -> str:
 def options_for(binding: Dict[str, Any]) -> str:
     """The third argument to hl.bind: the compositor's options plus the description.
 
-    Only the compositor's own options go in here -- ``mouse`` and ``locked`` from
-    ``flags``. The entry-level ``locked`` is this project's meaning (rebindable
-    but not deletable) and is never emitted, because there is no hl.bind option
-    for it; it is enforced by the settings page and by ``validate``.
+    Only the compositor's own options go in here -- ``mouse``, ``locked`` and
+    ``repeating`` from ``flags``. The entry-level ``locked`` is this project's
+    meaning (rebindable but not deletable) and is never emitted, because there
+    is no hl.bind option for it; it is enforced by the settings page and by
+    ``validate``. ``repeating`` is BIND_FLAG_REPEAT and is emitted last so the
+    two flags a media key carries read in the order the record lists them.
     """
     parts = []
     flags = binding.get("flags") or {}
-    for name in ("mouse", "locked"):
+    for name in ("mouse", "locked", "repeating"):
         if flags.get(name):
             parts.append(f"{name} = true")
     parts.append(f"description = {lua_string(binding['description'])}")

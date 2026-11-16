@@ -32,9 +32,9 @@ system state. As of this revision the privileged operations are:
 | Edits `/etc/pacman.conf`: uncomments `[multilib]`, appends and reorders `[chaotic-aur]` | `install.sh`, `ensure_multilib_repo_enabled` and `reorder_pacman_conf` | Backs the file up to `/etc/pacman.conf.bak.<epoch>` first |
 | `pacman-key --recv-key 3056513887B78AEB` from `keyserver.ubuntu.com`, then `pacman -U --noconfirm` of `chaotic-keyring` and `chaotic-mirrorlist` from `cdn-mirror.chaotic.cx` | `install.sh`, `install_chaotic_aur` | Trusts a third-party packager and fetches packages over the network (`TP-05`) |
 | `dnf -y copr enable` for three COPRs | `fedora_install.sh:92-104` | Adds third-party build repositories system-wide |
-| `sudo systemctl disable sddm` then `sudo systemctl enable greetd` | `install.sh:1745-1749` | Replaces the display manager; this is the change most likely to leave a machine unbootable into a graphical session (`INS-03`) |
-| `systemctl enable --now cups`, `systemctl enable bluetooth`, `accounts-daemon` | `install.sh:923`, `install.sh:939`, `fedora_install.sh:510-529` | Changes which services start at boot |
-| `chown -R` on `/var/lib/noctalia-greeter` | `fedora_install.sh:569`, `install.sh:1477` | Ownership change, scoped to one directory the installer created |
+| `sudo systemctl disable sddm` then `sudo systemctl enable greetd` | `install.sh:1773-1777` | Replaces the display manager; this is the change most likely to leave a machine unbootable into a graphical session (`INS-03`) |
+| `systemctl enable --now cups`, `systemctl enable bluetooth`, `accounts-daemon` | `install.sh:951`, `install.sh:967`, `fedora_install.sh:523-542` | Changes which services start at boot |
+| `chown -R` on `/var/lib/noctalia-greeter` | `fedora_install.sh:582`, `install.sh:1505` | Ownership change, scoped to one directory the installer created |
 | `rm -rf` on the staging directory it created | both installers | Scoped to a temporary directory the script owns |
 | Offers `ttf-ms-fonts` and other AUR packages whose redistribution terms were not verified | `install.sh` printer-support step | See `TP-12` in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
 

@@ -340,13 +340,16 @@ def build(context: Context) -> PagePlan:
     groups.extend(category_groups())
     groups.append(Group(
         "Planned and reserved",
-        Row("expander", "Keys that are not bound yet", rows=tuple(planned_rows()),
+        Row("expander", "Keys claimed and not bound", rows=tuple(planned_rows()),
             icon="dialog-information-symbolic",
-            subtitle="Reserved in the record so that the overlay behind Super+H does "
-                     "not reassign one by accident when it arrives",
+            subtitle="Reserved in the record so that a later bind cannot take one of "
+                     "these keys by accident, and so the list Super+H opens shows them "
+                     "as what they are instead of leaving a hole",
             keywords=("planned", "reserved", "super+h", "cheatsheet", "part 7")),
-        description="The shortcut system -- the searchable glass overlay -- is Part 7. "
-                    "Until then these keys are reserved and nothing opens them.",
+        description="Super+H already lists every shortcut; what is still Part 7 is the "
+                    "glass window you type into rather than a terminal. These are the "
+                    "keys the record has claimed and not bound, and pressing one does "
+                    "nothing -- claiming it is what stops something else taking it.",
     ))
     groups.append(Group(
         "Where this comes from",

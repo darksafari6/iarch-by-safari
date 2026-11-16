@@ -2,8 +2,8 @@
   "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
   "version": 1,
   "name": "noctalia-ipc",
-  "description": "The shell IPC verbs this project sends, with the arguments each one takes and the line of the pinned release each was read from. data/design/noctalia.json records the configuration keys the shell has; this record is the other half of the same surface -- the commands that read and write them while the session is running -- and the settings application may not send a verb that is not listed here.",
-  "_note": "Kept apart from noctalia.json because the two answer different questions and are verified differently: a config key is a field in a schema struct, a verb is an entry in the command table, and a key can exist with no verb that reaches it (Do Not Disturb is exactly that case -- IPC only, no key at all in v5.4.1). One trap this record exists to prevent: the command table's header also declares positional-argument names and choice values as string literals, so extracting every quoted string from src/cli/schema_msg.h yields 204 names of which only some are commands. `monitor-selector` is the clearest example -- it is a positional several bar commands accept, not a verb, and sending it would be refused at runtime rather than caught here. Every entry below was matched against an `inline constexpr Command` definition.",
+  "description": "The shell IPC verbs this project sends, with the arguments each one takes and the line of the pinned release each was read from. data/design/noctalia.json records the configuration keys the shell has; this record is the other half of the same surface -- the commands that read and write them while the session is running -- and the settings application, the session's own keybinds and the scripts under scripts/ may not send a verb that is not listed here.",
+  "_note": "Kept apart from noctalia.json because the two answer different questions and are verified differently: a config key is a field in a schema struct, a verb is an entry in the command table, and a key can exist with no verb that reaches it (Do Not Disturb is exactly that case -- IPC only, no key at all in v5.4.1). One trap this record exists to prevent: the command table's header also declares positional-argument names and choice values as string literals, so extracting every quoted string from src/cli/schema_msg.h yields 204 names of which only some are commands. `monitor-selector` is the clearest example -- it is a positional several bar commands accept, not a verb, and sending it would be refused at runtime rather than caught here. Every entry below was matched against an `inline constexpr Command` definition. The table declares 119 of them at this ref, so what follows is a curated subset and not a census, and the distinction has already cost something: a cell of the A to Z table in data/design/keybinds.json was reserved for a wallpaper step on the grounds that noctalia v5.4.1 had no wallpaper verb, when `wallpaper-next` was at :842 all along with an optional connector and two siblings beside it. A verb missing from this file is a gap in this file until the header says otherwise.",
   "verified_against": {
     "project": "noctalia-dev/noctalia",
     "ref": "v5.4.1",
@@ -11,7 +11,7 @@
     "invocation": "noctalia msg <verb> [argument...]",
     "reply_note": "The handler prints one line and exits non-zero when it refuses. iarch/lib/modes.py reads the reply text rather than trusting the exit code, because a handler that answers 'ok' as a no-op -- caffeine already in that state, src/idle/idle_inhibitor.cpp:175-212 -- and a handler that could not be reached are different facts and only the text tells them apart."
   },
-  "source": "noctalia-dev/noctalia at v5.4.1: src/cli/schema_msg.h (the Command table, its Positional declarations and its choice lists), src/app/application_ipc.cpp:158-159 (what a handler prints for Do Not Disturb) and src/idle/idle_inhibitor.cpp:175-212 (what caffeine answers, including the no-op ok)",
+  "source": "noctalia-dev/noctalia at v5.4.1: src/cli/schema_msg.h (the Command table, its Positional declarations and its choice lists), src/app/application_ipc.cpp:158-159 (what a handler prints for Do Not Disturb) and src/idle/idle_inhibitor.cpp:175-212 (what caffeine answers, including the no-op ok), src/launcher/panel_catalog.cpp:25-35 (the nine builtin panel ids a panel verb may name) and src/launcher/dmenu_cli.h (the `noctalia dmenu` stdin/stdout picker, which is a subcommand of the binary and not a `msg` verb, so it is not listed below; scripts/iarch-run.sh is what sends it and docs/UNVERIFIED.md KB-10 carries its unobserved behaviour)",
   "verbs": [
     {
       "verb": "config-get",
@@ -156,6 +156,26 @@
       ]
     },
     {
+      "verb": "notification-clear-active",
+      "description": "Dismiss all currently active notifications",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:621-623",
+      "used_by": [
+        "data/keybinds.default.json: notifications.clear on SUPER + N"
+      ],
+      "note": "Dismisses what is on screen and leaves the history alone; notification-clear-history is the other half and is deliberately not bound, because a key that erases the record of what interrupted you is a key that loses information on a mis-press. Distinct from notification-dnd-set, which stops notifications arriving rather than clearing the ones that did."
+    },
+    {
+      "verb": "osd-toggle",
+      "description": "Toggle OSD popups",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:665",
+      "used_by": [
+        "data/keybinds.default.json: appearance.osd on SUPER + O"
+      ],
+      "note": "Switches the shell's own popup layer -- the volume, brightness and media overlays volume-osd and brightness-osd draw. osd-enable and osd-disable are the explicit halves and are not bound: a toggle is what one key can do, and a key that only turned popups off would need a second one to turn them back on."
+    },
+    {
       "verb": "caffeine-enable",
       "description": "Enable caffeine (idle inhibitor)",
       "arguments": [],
@@ -222,6 +242,16 @@
       "used_by": []
     },
     {
+      "verb": "keyboard-layout-cycle",
+      "description": "Switch to the next keyboard layout",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:561-563",
+      "used_by": [
+        "data/keybinds.default.json: input.keyboard-layout on SUPER + K, the cell the A to Z table allocated to the keyboard and the only layout switch this map has"
+      ],
+      "note": "Takes no argument at all, so a key can cycle without knowing how many layouts are configured or which one is next -- the shell owns the order. The compositor's own hl.dsp.layout is a different thing (a tiling layout, one argument) and is recorded as unused in data/design/keybinds.json."
+    },
+    {
       "verb": "power-set",
       "description": "Set the UPower power profile (e.g. performance, balanced, power-saver)",
       "arguments": [
@@ -250,8 +280,10 @@
         }
       ],
       "evidence": "src/cli/schema_msg.h:706-712 and :78 (choices)",
-      "used_by": [],
-      "not_used_note": "Recorded and deliberately not sent: the Power & Idle page names it in profile_read_text() and offers power-set with a named profile instead, because cycling cannot report which profile it landed on and the page has no way to store that either."
+      "used_by": [
+        "data/keybinds.default.json: modes.power-profile on SUPER + P, the counterpart of the power controls SUPER + SHIFT + P opens"
+      ],
+      "note": "Bound and still not offered by the Power & Idle page, and the two are not in disagreement: a page has to show which profile is selected before it can change it, and this verb answers nothing about where it landed, so the page keeps sending power-set with a named profile. A key has no state to display. direction is optional and defaults to forward, which is what one key can ask for; a second key for `prev` would be a second cell for one cycle."
     },
     {
       "verb": "session",
@@ -310,6 +342,22 @@
       "used_by": [
         "iarch/settings-app: the Appearance page reads the current wallpaper back"
       ]
+    },
+    {
+      "verb": "wallpaper-next",
+      "description": "Switch to the next wallpaper immediately",
+      "arguments": [
+        {
+          "name": "connector",
+          "required": false,
+          "note": "One output; omitted means every output, which is what a key press should do, since a person cycling wallpapers is not thinking about one monitor."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:842-849 (Command) and :250-252 (positionals)",
+      "used_by": [
+        "data/keybinds.default.json: appearance.wallpaper-next on SUPER + CTRL + W"
+      ],
+      "note": "This verb is why the SUPER + CTRL + W cell is bound rather than reserved. An earlier pass recorded that v5.4.1 had no wallpaper-next and that a single key therefore could not cycle without this project inventing an order the shell does not have; re-reading the command table at :842 shows the shell has had the order all along, along with wallpaper-previous (:850-859) and wallpaper-random (:860-867), and inventing one here would have been a second source of truth for it. wallpaper-set stays the way to name a file, and the picker stays panel-toggle wallpaper."
     },
     {
       "verb": "volume-set",
@@ -425,9 +473,89 @@
       ],
       "evidence": "src/cli/schema_msg.h:683-690",
       "used_by": [
-        ".config/hypr/keybind.lua:68 the launcher key, :71 SUPER+I for the control centre, :73 SUPER+SHIFT+N for the notification centre"
+        ".config/hypr/keybind.lua:68 the launcher key, :71 SUPER+I for the control centre, :73 SUPER+SHIFT+N for the notification centre",
+        "data/keybinds.default.json: applications.clipboard on SUPER + Y sends the id `clipboard`, one of the nine builtin panel ids at src/launcher/panel_catalog.cpp:25-35 and the UI behind clipboard-text and clipboard-clear"
       ],
       "note": "Sent by the session's own keybinds and not by the settings application: a panel that could open the launcher would be a second mechanism for a decision the keybind file already owns, and the Shortcuts page shows those bindings rather than pressing them."
+    },
+    {
+      "verb": "bar-hide",
+      "description": "Hide one or all bars and release their layout gaps",
+      "arguments": [
+        {
+          "name": "bar-name",
+          "required": false,
+          "note": "Which bar; omitted means every bar, which is what a zen switch wants."
+        },
+        {
+          "name": "monitor-selector",
+          "required": false,
+          "note": "Not a verb -- see not_commands. Omitted means every output."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:358-361 (Command) and :94-97 (positionals)",
+      "used_by": [
+        "scripts/iarch-zen.sh: the zen switch sends the three hide verbs together and the three show verbs together, because one bind carries one action and a zen mode that hid the bar but left the dock and the desktop widgets is not zen"
+      ],
+      "note": "Releasing the layout gaps is the half that makes this worth a key rather than a config edit: a bar hidden without it still reserves its strip and leaves a band of nothing at the edge of every window."
+    },
+    {
+      "verb": "bar-show",
+      "description": "Show one or all bars",
+      "arguments": [
+        {
+          "name": "bar-name",
+          "required": false,
+          "note": "Which bar; omitted means every bar, which is what a zen switch wants."
+        },
+        {
+          "name": "monitor-selector",
+          "required": false,
+          "note": "Not a verb -- see not_commands. Omitted means every output."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:375 (Command) and :107-110 (positionals)",
+      "used_by": [
+        "scripts/iarch-zen.sh: the zen switch sends the three hide verbs together and the three show verbs together, because one bind carries one action and a zen mode that hid the bar but left the dock and the desktop widgets is not zen"
+      ]
+    },
+    {
+      "verb": "dock-hide",
+      "description": "Hide the dock (persists override)",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:512",
+      "used_by": [
+        "scripts/iarch-zen.sh: the zen switch sends the three hide verbs together and the three show verbs together, because one bind carries one action and a zen mode that hid the bar but left the dock and the desktop widgets is not zen"
+      ],
+      "note": "Persists its override, which desktop-widgets-hide does not, so after a shell restart the dock is still hidden and the widgets are back. That is the two verbs' own documented difference and not something scripts/iarch-zen.sh can equalise; its `off` puts both back."
+    },
+    {
+      "verb": "dock-show",
+      "description": "Show the dock (persists override)",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:514",
+      "used_by": [
+        "scripts/iarch-zen.sh: the zen switch sends the three hide verbs together and the three show verbs together, because one bind carries one action and a zen mode that hid the bar but left the dock and the desktop widgets is not zen"
+      ]
+    },
+    {
+      "verb": "desktop-widgets-hide",
+      "description": "Hide desktop widgets now (runtime only; does not change the saved setting)",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:479-488",
+      "used_by": [
+        "scripts/iarch-zen.sh: the zen switch sends the three hide verbs together and the three show verbs together, because one bind carries one action and a zen mode that hid the bar but left the dock and the desktop widgets is not zen"
+      ],
+      "note": "Runtime only, and the description says so: the saved setting is left alone, which is exactly what a temporary zen mode needs. desktop-widgets-toggle is the one-key form and is not bound, for the reason the zen switch gives -- a toggle cannot be sent as one of three and still leave the script knowing which way it went."
+    },
+    {
+      "verb": "desktop-widgets-show",
+      "description": "Show desktop widgets now (runtime only; does not change the saved setting)",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:489-498",
+      "used_by": [
+        "scripts/iarch-zen.sh: the zen switch sends the three hide verbs together and the three show verbs together, because one bind carries one action and a zen mode that hid the bar but left the dock and the desktop widgets is not zen"
+      ]
     },
     {
       "verb": "settings-open",
@@ -479,7 +607,8 @@
       ],
       "evidence": "src/cli/schema_msg.h:882-889, kMsgWindowSwitcherActionChoices (:263), kMsgWindowSwitcherScopeChoices (:264-266), kMsgWindowSwitcherPositionals (:267-270)",
       "used_by": [
-        ".config/hypr/keybind.lua:104 ALT + tab, the window switcher overlay"
+        ".config/hypr/keybind.lua:104 ALT + tab, the window switcher overlay",
+        "data/keybinds.default.json: window.switcher on SUPER + J sends it with no argument at all, which is the open-or-close half of the same verb ALT + tab holds"
       ],
       "note": "Both positionals are optional: in the header each is declared Positional{name, description, choices, required, variadic, joinRemaining} with the fourth field false (src/cli/schema.h:19-27), which is what makes a bare `window-switcher` a valid call and not a CLI error."
     },

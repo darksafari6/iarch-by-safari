@@ -40,7 +40,7 @@ local exec_once = {
 }
 
 -- Optional nvidia environment, off unless an installer was asked for it:
--- install.sh:1169-1171 and fedora_install.sh:845-847 flip the next line, and nothing
+-- install.sh:1197-1199 and fedora_install.sh:858-860 flip the next line, and nothing
 -- else may.
 local enable_nvidia_optional = false
 

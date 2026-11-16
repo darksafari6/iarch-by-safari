@@ -86,9 +86,10 @@
           "additionalProperties": false,
           "properties": {
             "mouse": { "type": "boolean" },
-            "locked": { "type": "boolean" }
+            "locked": { "type": "boolean" },
+            "repeating": { "type": "boolean" }
           },
-          "description": "The compositor's hl.bind options, rendered verbatim into the options table. `mouse` marks a bind whose key is a mouse button and is exclusive upstream -- it cannot ride with repeating, release or the compositor's locked. `locked` here is the compositor's option (works while the session is locked), not the entry-level locked above."
+          "description": "The compositor's hl.bind options, rendered verbatim into the options table. `mouse` marks a bind whose key is a mouse button and is exclusive upstream -- it cannot ride with repeating, release or the compositor's locked. `locked` here is the compositor's option (works while the session is locked), not the entry-level locked above. `repeating` is BIND_FLAG_REPEAT, the classic 'e' flag: the bind fires again while the key is held, which is what a step needs and what a step without it denies -- a volume or brightness key that fires once per press makes holding it do nothing, so the two volume steps and the two brightness steps carry it. The two mutes deliberately do not: a repeated toggle is a strobe, and one press is one change of state. It cannot ride with mouse for the same upstream reason mouse cannot ride with it."
         },
         "reserved": {
           "type": "boolean",
@@ -126,6 +127,15 @@
               "flags": { "not": { "required": ["locked"], "properties": { "locked": { "const": true } } } }
             },
             "description": "mouse is exclusive upstream: a mouse bind cannot also carry the compositor's locked option (data/design/keybinds.json -> bind.exclusions)."
+          }
+        },
+        {
+          "if": { "required": ["flags"], "properties": { "flags": { "required": ["mouse"], "properties": { "mouse": { "const": true } } } } },
+          "then": {
+            "properties": {
+              "flags": { "not": { "required": ["repeating"], "properties": { "repeating": { "const": true } } } }
+            },
+            "description": "The same exclusion the other way round: 'mouse with repeating, release or locked' is refused at hl.bind with 'hl.bind: mouse is exclusive' (data/design/keybinds.json -> bind.exclusions, LuaBindingsToplevel.cpp:179-180). Written as its own clause rather than folded into the one above because a JSON Schema `not` names one shape, and two shapes need two clauses."
           }
         },
         {

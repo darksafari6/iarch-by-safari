@@ -293,8 +293,9 @@ installer writes (`INS-07`), and a runtime mechanism for the icon theme (`TP-19`
 
 Provisional scope: a single source of shortcut truth derived from the `description` fields already in
 `.config/hypr/keybind.lua` and mirrored into `data/keybinds.default.json`, a renderer for the overlay,
-and the three keys `docs/SHORTCUTS.md` already reserves so they are not reassigned by accident —
-`Super+H`, `Super+Shift+H` and `Super+K`. Acceptance will have to include: the overlay lists every bind
+and the three keys `docs/SHORTCUTS.md` already reserved so they are not reassigned by accident —
+`Super+H`, `Super+Shift+H` and the letter K, which the map has since taken back for the keyboard
+layout. Acceptance will have to include: the overlay lists every bind
 that has a description; a bind without a description fails a test; the overlay opens and closes with
 animation; and the surface is chosen from a verified API rather than a guessed one (`UI-02`).
 
@@ -303,13 +304,23 @@ truth is reversed from what this part proposed: the record is the source and the
 generated, so `data/keybinds.default.json` renders `.config/hypr/generated/keybinds.lua`,
 `docs/SHORTCUTS.md` and the Shortcuts page's rows, and a bind without a description is refused by
 `iarch-keybinds check` rather than by a test that reads a document. `Super+H` runs `iarch-cheatsheet`,
-which draws the map in a terminal with a filter and falls back to `notify-send` and then stderr, and the
-three keys this part reserves are still where it says they are — `Super+H` bound, `Super+Shift+H` and
-`Super+K` declared and not bound. All 78 letter cells of the three layers a letter may live in are
+which draws the map in a terminal with a filter and falls back to `notify-send` and then stderr, and of
+the three keys this part reserved two are still where it says they are — `Super+H` bound to the overlay
+and `Super+Shift+H` declared and not bound. The third is not, and the reason is worth keeping here
+rather than quietly dropping the sentence: the cell on the letter K was held for a Hyprland key panel,
+and the shell has no such panel. Its control centre has twelve tabs — home, media, audio, monitor,
+system, power, network, bluetooth, weather, calendar, notifications and screen time
+(`src/shell/control_center/control_center_panel.h:133-145` at v5.4.1) — and none of them is a keyboard,
+so there was nothing for the placeholder to become. SUPER + K is now the keyboard layout cycle
+(`noctalia msg keyboard-layout-cycle`), and a cell that names a surface which does not exist is worse
+than one that names a verb which does. All 78 letter cells of the three layers a letter may live in are
 allocated in `data/design/keybinds.json -> alphabet` and rendered as a grid at the end of
 `docs/SHORTCUTS.md`, where a cell is a binding, a claimed-but-unbound key, a refusal that names the verb
 or file or command behind it, or empty on purpose; `tests/test_keybinds_alphabet.py` checks the grid
-against the map in both directions. The two workspace moves the v1 map carried into `Super+Ctrl+Alt`
+against the map in both directions. The Super layer is bound across — all twenty-six of its letters —
+which the third pass of that table did by giving each empty cell a mechanism rather than a placeholder:
+eight launchers under `scripts/`, ten verbs read back out of the shell's command table, and one
+compositor configuration call whose leaves `data/design/tokens.json` already records. The two workspace moves the v1 map carried into `Super+Ctrl+Alt`
 moved to `Super+Ctrl+N` and `Super+Ctrl+P`, so the shipped map reports no warning at all. Still open:
 the glass overlay surface with a box you type into (`UI-02`), a Shortcuts page that edits the map rather
 than reading it, and every claim that needs a session (`KB-01`, `KB-03`, `KB-06`).

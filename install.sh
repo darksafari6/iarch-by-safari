@@ -401,6 +401,32 @@ while true; do
 done
 fi
 
+#: Two of the names below are here because a key binds them, and a bind that calls a
+#: program nothing installs is a key that does nothing. The failure is quiet by design of
+#: the compositor: it spawns one string through /bin/sh -c, so the only report is a
+#: "command not found" in a log nobody is reading.
+#:
+#:   wireplumber    extra, 0.5.19-1, MIT, verified against the Arch package search JSON
+#:                  API on 2026-11-09. It provides `wpctl`, which is what
+#:                  scripts/iarch-audio.sh drives for the two volume steps and the two
+#:                  mutes, and it conflicts pipewire-media-session while providing
+#:                  pipewire-session-manager -- so it is the session manager and not an
+#:                  extra one. pipewire itself arrives as a dependency rather than being
+#:                  named here: scripts/iarch-healthcheck.sh already asks whether the
+#:                  pipewire, pipewire-pulse and wireplumber user units are active, and
+#:                  naming pipewire-pulse in this array would put the installer into
+#:                  pulseaudio's conflict on a machine that still has it, for a socket
+#:                  this session was already expected to have.
+#:   brightnessctl  extra, 0.5.1-3, MIT, verified the same way on the same day, and it
+#:                  needs no privilege on this distribution: Arch's own PKGBUILD builds it
+#:                  with `make ENABLE_SYSTEMD=1`, which is the build whose non-root `set`
+#:                  falls back to logind's Session.SetBrightness instead of asking for
+#:                  root, so there is no setuid bit to grant and no `video` group to add
+#:                  (the one group this installer grants is `i2c`, for DDC).
+#:
+#: The two XF86 volume keys used to call `pamixer`, which no step of this installer ever
+#: installed and which no package array named; that is TP-11 in docs/UNVERIFIED.md, and
+#: the keys now call wpctl through scripts/iarch-audio.sh instead.
 # Define the list of packages to install using pacman
 PACKAGES=(
     # Core Components
@@ -410,6 +436,8 @@ PACKAGES=(
     hyprlock                  # Locks screen, obviously. 
     hypridle                  # Turns off screen after set time
     pavucontrol               # PulseAudio/PipeWire volume control
+    wireplumber               # PipeWire session manager; provides wpctl
+    brightnessctl             # sysfs backlight control for the brightness keys
     playerctl                 # Media player controller
     wlsunset                  # Nightlight for quickshell
     fish                      # Shell

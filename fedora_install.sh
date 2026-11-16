@@ -316,6 +316,17 @@ done
 
 # Define the list of core packages to install using dnf.
 # Some packages are provided by COPR or third-party repositories.
+#
+# `wireplumber` and `brightnessctl` mirror two names install.sh added to the Arch array,
+# because a key binds the program each one provides and a bind that calls a program
+# nothing installs is a key that does nothing: scripts/iarch-audio.sh drives `wpctl` for
+# the volume and mute keys and scripts/iarch-brightness.sh drives `brightnessctl` for the
+# two XF86 brightness keys. The Arch names and licences were read out of Arch's own
+# package search JSON API on 2026-11-09; these two Fedora spellings were not resolved
+# against Fedora's package database from the machine that wrote them, which is the same
+# gap the rest of this array has and TP-11 in docs/UNVERIFIED.md records. Fedora already
+# ships PipeWire as its default audio stack, so the session manager is likely present
+# before this installer runs, and dnf --best will say so rather than guessing.
 PACKAGES=(
     # Core Components
     dbus                     # D-Bus for greetd / greeter session plumbing
@@ -331,6 +342,8 @@ PACKAGES=(
     xfce-polkit               # PolicyKit authentication agent
     gnome-keyring             # Credential storage   
     pavucontrol               # PulseAudio/PipeWire volume control
+    wireplumber               # PipeWire session manager; provides wpctl
+    brightnessctl             # sysfs backlight control for the brightness keys
     playerctl                 # Media player controller
     wlsunset                  # Nightlight for quickshell
     fish                      # Shell
