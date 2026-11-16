@@ -2,12 +2,20 @@
 # Copyright (C) 2026 Safari — GPL-3.0-or-later
 """Tests for the shell's IPC: what may be sent, and what a machine without it must say.
 
-``data/design/noctalia-ipc.json`` records 39 verbs read out of one header in the shell's
+``data/design/noctalia-ipc.json`` records 41 verbs read out of one header in the shell's
 own tree, and every one of them is accounted for in one of three ways: sent, by something
 named in ``used_by``; recorded and refused, with a ``not_used_note`` or a note on the
 argument that explains what this project does instead; or listed in ``not_used``. A verb in
 none of the three is a gap nobody can see, which is why the first test class here counts
 them rather than spot-checking a few.
+
+The count is a number and not ``len(VERBS)`` on purpose, and the reason is worth keeping
+where the number is: the header declares 119 commands at v5.4.1, so this record is a
+curated subset. A test that derived its expectation from the record could never notice a
+verb disappearing, and the shipped keymap sends two -- ``settings-toggle`` and
+``window-switcher`` -- that this record did not carry until the count was checked against
+the header rather than against itself. A shortcut system that validates a keybind's verb
+against this record would have condemned both.
 
 The distinction that the tests keep pulling on is between **not answering** and
 **answering no**. On this machine the shell binary is absent, so every read comes back
@@ -69,9 +77,9 @@ def outcome(verdict: str, *, stdout: str = "", reason: str = "",
 class TestEveryVerbIsAccountedFor(unittest.TestCase):
     """Sent, refused with a reason, or listed -- the fourth state is a gap nobody sees."""
 
-    def test_the_record_carries_thirty_nine_verbs_and_the_module_sees_the_same_thirty_nine(self):
-        self.assertEqual(39, len(VERBS))
-        self.assertEqual(39, len(noctalia.verb_names()))
+    def test_the_record_carries_forty_one_verbs_and_the_module_sees_the_same_forty_one(self):
+        self.assertEqual(41, len(VERBS))
+        self.assertEqual(41, len(noctalia.verb_names()))
         self.assertEqual(sorted(VERB_NAMES), sorted(noctalia.verb_names()),
                          "the module's verb list and the record's are two copies of one "
                          "decision, and they have drifted")

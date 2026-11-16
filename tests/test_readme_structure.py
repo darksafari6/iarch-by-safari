@@ -68,7 +68,14 @@ class ReadmeStructure(unittest.TestCase):
         section = self.section("Shortcuts")
         self.assertIn("docs/SHORTCUTS.md", section)
         self.assertIn("SUPER + H", section, "the overlay key must be mentioned")
-        self.assertIn("reserved", section, "and it must be described as not bound yet")
+        # Part 5 bound SUPER + H to the overlay's launcher, so the key is no longer
+        # "reserved" -- but the overlay program itself ships in a later part, and the
+        # row must still say so rather than imply a working window. The point of the
+        # assertion is the anti-overclaim, not the specific word the old map used.
+        row = next(l for l in section.splitlines() if l.startswith("| `SUPER + H`"))
+        self.assertRegex(row, r"ships in a later part|not built|Part \d",
+                         "the overlay key is bound but the overlay is not built yet, "
+                         "and the row must not claim otherwise")
 
     def test_features_do_not_overclaim(self):
         """Anything not built must say so in the same row."""
@@ -83,35 +90,42 @@ class ReadmeStructure(unittest.TestCase):
             if row.startswith("| Contact page"):
                 self.assertRegex(row, r"Part \d")
 
-    def test_the_two_modes_say_they_are_commands_and_say_what_they_cannot_do(self):
-        """A mode that ships as a command must not read like a button, or like a proof.
+    def test_the_two_modes_say_how_they_are_reached_and_what_they_cannot_do(self):
+        """A mode that ships as a key must not read like a button, or like a proof.
 
-        Both rows name the file you run, and both carry the limitation that makes
-        the claim honest: game mode has no key bound and no measured saving, focus
-        mode is runtime state that a reload ends. A row that said only "one switch
-        that drops effects for latency" would be the overclaim this test exists to
-        catch, in the other direction from "Not built".
+        Both rows name the key and the command behind it, and both carry the
+        limitation that makes the claim honest: game mode has no measured saving and
+        no key anybody has watched, focus mode is runtime state that a reload ends.
+        A row that said only "one switch that drops effects for latency" would be the
+        overclaim this test exists to catch, in the other direction from "Not built".
+        The command is named rather than the file, because the launcher
+        scripts/iarch-link-cli.sh links is what a person types.
         """
         section = self.section("Features")
         rows = {row.split("|")[1].strip(): row for row in section.splitlines()
                 if row.startswith("|") and row.count("|") >= 4}
         game, focus = rows["Game mode"], rows["Focus mode"]
-        self.assertIn("iarch/cli/iarch_gamemode.py", game)
-        self.assertIn("iarch/cli/iarch_focus.py", focus)
+        self.assertIn("iarch-gamemode toggle", game)
+        self.assertIn("iarch-focus toggle", focus)
+        self.assertIn("Super+Ctrl+G", game)
+        self.assertIn("Super+Ctrl+F", focus)
         self.assertRegex(game, r"PERF-01")
-        self.assertIn("no key is bound", game)
+        self.assertIn("no key has been watched on a session", game)
         self.assertIn("runtime state", focus)
         self.assertIn("relogin", focus)
         for row in (game, focus):
             self.assertNotIn("Not built", row)
-            self.assertIn("Command ships today", row)
+            self.assertIn("Ships today", row)
 
     def test_the_honest_summary_does_not_claim_a_mode_nobody_has_watch(self):
         section = self.section("Features")
         summary = section.split("| Contact page")[1]
-        self.assertIn("commands you run rather than buttons you click", summary)
+        self.assertIn("keys that run commands rather than buttons you click", summary)
         self.assertIn("neither has been watched on a live session", summary)
         self.assertNotIn("game mode are not built yet", summary)
+        self.assertNotIn("no key is bound to either", summary,
+                         "both modes are bound now, so the summary cannot still say "
+                         "they are not")
 
     def test_credits_section_is_the_short_factual_one(self):
         section = self.section("Credits & License")

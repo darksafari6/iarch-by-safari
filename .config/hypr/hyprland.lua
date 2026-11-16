@@ -6,13 +6,17 @@ package.path = table.concat({
 }, ";")
 
 -- Clear cached modules so they re-execute on reload (ensures binds/rules re-register)
-for _, mod in ipairs({"monitors", "inputs", "keybind", "windowrules", "animations", "generated.animations", "themes.theme", "generated.glass"}) do
+for _, mod in ipairs({"monitors", "inputs", "generated.keybinds", "keybind", "windowrules", "animations", "generated.animations", "themes.theme", "generated.glass"}) do
     package.loaded[mod] = nil
 end
 
 require("monitors")
 require("startup")
 require("inputs")
+-- generated.keybinds is required before keybind so that a render that does not
+-- parse leaves the registry empty and the compositor's emergency binds trip; see
+-- .config/hypr/keybind.lua and data/design/keybinds.json -> recovery.
+require("generated.keybinds")
 require("keybind")
 require("windowrules")
 require("animations")

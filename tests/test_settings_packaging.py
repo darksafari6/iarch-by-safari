@@ -285,16 +285,40 @@ class TestThePackageMetadataNamesTheSameThings(unittest.TestCase):
 
 
 class TestWhatIsNotTrueYetIsWrittenDown(unittest.TestCase):
-    """The entry is correct and is not yet reachable; that is a claim, not a shrug."""
+    """The entry is installed and has never been seen in a menu; that is a claim."""
 
-    def test_neither_installer_copies_the_desktop_entry(self):
-        for installer in ("install.sh", "fedora_install.sh"):
-            text = (ROOT / installer).read_text(encoding="utf-8")
-            with self.subTest(installer=installer):
-                self.assertNotIn(DESKTOP.name, text,
-                                 f"{installer} now installs the desktop entry, so "
-                                 f"docs/UNVERIFIED.md SET-10 is describing a state that has "
-                                 f"changed")
+    def test_archs_installer_registers_it_and_fedoras_still_does_not(self):
+        """Arch's installer copies the entry and its icon; Fedora's does not.
+
+        install.sh spells the file name as "$app_id.desktop" from a variable, so
+        the assertion is on the pieces it does contain literally: the application
+        id, the settings-app directory it reads the entry from, and the four
+        things a copied entry needs to actually appear in a menu.
+        """
+        arch = (ROOT / "install.sh").read_text(encoding="utf-8")
+        fedora = (ROOT / "fedora_install.sh").read_text(encoding="utf-8")
+        for needle, why in (
+                (APP_ID, "install.sh no longer names the application id, so it is "
+                         "not installing this entry any more"),
+                ("iarch/settings-app/", "the Menu entry step stopped reading the "
+                                        "entry out of the repository"),
+                ("Menu entry", "the step lost its title in the wizard flow"),
+                (".local/share/applications", "the entry is copied somewhere a menu "
+                                              "does not read"),
+                ("scalable/apps", "no icon is installed under the name Icon= gives, "
+                                  "so the menu draws a placeholder"),
+                ("update-desktop-database", "the desktop database is never refreshed, "
+                                            "and a menu that caches will not see the "
+                                            "new entry"),
+                ("record_installed_file", "nothing records the files as installed, so "
+                                          "the manifest cannot say what an install "
+                                          "left behind"),
+        ):
+            self.assertTrue(needle in arch, f"{needle!r} is gone from install.sh: {why}")
+        for needle in (APP_ID, "settings-app", DESKTOP.name):
+            self.assertTrue(needle not in fedora,
+                            f"fedora_install.sh now mentions {needle!r}, so the half of "
+                            f"SET-10 about Fedora is closed and the row must be rewritten")
 
     def test_the_gap_is_recorded_as_set_10_and_not_left_implicit(self):
         unverified = (ROOT / "docs" / "UNVERIFIED.md").read_text(encoding="utf-8")
@@ -306,6 +330,16 @@ class TestWhatIsNotTrueYetIsWrittenDown(unittest.TestCase):
         self.assertIn(DESKTOP.name, row)
         self.assertIn("update-desktop-database", row,
                       "the record does not name the thing that has never been run")
+        self.assertIn("install.sh", row,
+                      "the row does not say which installer registers the entry and which "
+                      "one does not, so a reader cannot tell what is installed from what is "
+                      "merely unobserved")
+        self.assertIn("INS-07", row,
+                      "the row still implies the entry is unreachable rather than pointing "
+                      "at the session PATH question it actually turns on")
+        self.assertNotIn("neither `install.sh` nor", row,
+                      "the row still says no installer copies the entry, which install.sh "
+                      "now does, so it is describing a state that has changed")
 
     def test_the_desktop_entry_points_at_the_record_itself(self):
         text = DESKTOP.read_text(encoding="utf-8")

@@ -101,6 +101,15 @@ caffeine and asks the compositor to dim every unfocused window at
 `tokens.modes.focus.dim_strength`, which is Hyprland's own default for that leaf
 handed back to it while this profile's intensities lower it to a whisper.
 
+Both are on `PATH` by name once `scripts/iarch-link-cli.sh` has run, through
+`scripts/iarch-gamemode.sh` and `scripts/iarch-focus.sh`, which is what the
+`Super+Ctrl+G` and `Super+Ctrl+F` binds in `data/keybinds.default.json` call. A bind
+that names a program nothing installs is a key that does nothing, and it fails
+quietly — the compositor spawns `/bin/sh -c` with one string, so the only report is a
+"command not found" in a log nobody is reading — which is why
+`tests/test_cli_launchers.py` compares every `iarch-*` name the map execs against the
+names the linker provides.
+
 Both keep the honesty rules the rest of this directory keeps, and add two of their
 own. A missing `hyprctl` or `noctalia` is a check that could not run, never a
 pass and never a failure, and `getoption` answering `no such option` is quoted

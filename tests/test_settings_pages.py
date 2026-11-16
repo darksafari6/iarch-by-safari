@@ -467,5 +467,55 @@ class TestTheSearchIndexIsBuiltFromThePlans(unittest.TestCase):
                 self.assertEqual(f"{spec.label} page", registry.icon_sentence(spec.id))
 
 
+class TestTheFeaturesPageReadsTheKeyboardMap(unittest.TestCase):
+    """The two mode rows say which keys are bound, and the map is where they get it.
+
+    The page used to state that no key was bound to either mode, which was true when it
+    was written and became false the day the A to Z table allocated the cells. A sentence
+    that spells out a combination is a copy of the record, and the copy is what goes
+    stale, so the page reads the combination instead -- and this is the test that the
+    reading agrees with the map, in the direction the page cannot check for itself.
+    """
+
+    def test_the_row_names_the_keys_the_record_binds(self):
+        from iarch_settings.pages import features, shortcuts
+
+        keys = features.mode_keys()
+        self.assertEqual(set(features.MODE_BINDINGS), set(keys),
+                         "the page could not read one of the two mode rows out of the map")
+        record = {item["id"]: item for item in shortcuts.bindings()}
+        for binding_id, spelled in sorted(keys.items()):
+            with self.subTest(binding=binding_id):
+                binding = record[binding_id]
+                self.assertEqual(spelled,
+                                 " + ".join([*(binding.get("mods") or ()), binding["key"]]))
+                self.assertTrue(shortcuts.is_bound(binding),
+                                "the page names a key the session does not bind")
+                self.assertEqual(["SUPER", "CTRL"], binding["mods"],
+                                 "the modes live in the Super+Ctrl layer, which is what "
+                                 "the A to Z table allocates them to")
+                self.assertEqual("exec", binding["action"]["type"])
+                self.assertIn(binding["action"]["command"][0],
+                              ("iarch-focus", "iarch-gamemode"))
+
+    def test_the_sentence_it_draws_carries_both_keys_and_the_row_that_says_what_is_open(self):
+        from iarch_settings.pages import features
+
+        text = features.keybind_text()
+        for spelled in features.mode_keys().values():
+            self.assertIn(spelled, text)
+        self.assertIn("KB-06", text,
+                      "a key nobody has watched has to say so where a person reads it")
+        self.assertNotIn("no key is bound", text.lower())
+
+    def test_the_row_the_page_draws_points_at_that_reader(self):
+        rows = [row for group in PLANS["features"].groups for row in group.rows
+                if row.source == "features.keybind_text"]
+        self.assertEqual(1, len(rows), "the keybind row is gone, or there are two")
+        self.assertNotIn("No key is bound", rows[0].title)
+        self.assertEqual([], PLANS["features"].problems(CONTEXT),
+                         "a page whose reader does not resolve is a row that draws nothing")
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

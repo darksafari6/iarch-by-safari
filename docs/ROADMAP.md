@@ -47,7 +47,7 @@ Global rules that apply to every part:
 | Performance preset that cannot invent keys | `profiles/performance.toml`, `tools/profile_preset.py` | `tests/test_profile_preset.py` |
 | Root cleaned, historical docs marked | `legacy/`, `assets/screenshots/`, banners | `tests/test_payload_map.py` |
 | One place owns user state: defaults in `data/`, settings in `~/.config/iarch/`, atomic generated writes, five backups | `iarch/lib/configstore.py`, `data/*.default.json` | `tests/test_config_store.py` |
-| Keyboard map is data, not prose | `data/keybinds.default.json`, `tools/extract_keybinds.py` | `tests/test_keybinds_data.py`, `--check` in CI |
+| Keyboard map is data, not prose; the session reads Lua generated from it | `data/keybinds.default.json`, `iarch/cli/iarch_keybinds.py` | `tests/test_keybinds_data.py`, `iarch-keybinds --check` in CI |
 | Glass design tokens recorded with their source | `data/design/glass.tokens.json` | `data/schemas/design-tokens.schema.json` |
 | Credit rendered twice from one source, no license guessed | `branding/notices.json`, `tools/notices.py`, `THIRD_PARTY_NOTICES.md`, `data/licenses.json` | `tests/test_licenses_data.py` |
 | Copyright header defined once and applied to new files | `branding/product.env`, `docs/BRANDING.md` | `tests/test_copyright_headers.py` |
@@ -152,11 +152,15 @@ surfaces read out of a pinned upstream release rather than out of documentation 
   documents that a reader would otherwise take the wrong way from say so where they are: `docs/MOTION.md`
   names the switch the wallpaper crossfade ignores, `docs/WALLPAPERS.md` no longer sends anybody to a
   directory the shell does not scan, `SECURITY.md` says a startup command's failure is silent by
-  construction, and `README.md` says plainly that the two modes are commands with no key bound and no
-  measured saving.
+  construction, and `README.md` says plainly what each surface cannot do -- at the time, that the two
+  modes were commands with no key bound and no measured saving, and now that both are bound and
+  neither key has been watched (`KB-06`).
 
-**Explicitly not done in Part 3:** no key binds either mode — `Super+H` and the overlay behind it are
-Part 7, and until then both modes are commands you run (`python3 iarch/cli/iarch_gamemode.py toggle`).
+**Explicitly not done in Part 3:** no key bound either mode — `Super+H` and the overlay behind it were
+Part 7 work, and at the time both modes were commands you ran (`python3 iarch/cli/iarch_gamemode.py
+toggle`). The shortcut work has since bound both, to `Super+Ctrl+F` and `Super+Ctrl+G`, through
+launchers `scripts/iarch-link-cli.sh` puts on `PATH`; neither key has been pressed on a session, which
+is `KB-06`.
 There is still no settings GUI, which is Part 4, so the coarse `preset` and `effects` switches in
 `data/settings.default.json` are read by no renderer and Part 4 has to reconcile them. No greeter file
 is emitted. `.config/hypr/hypridle.conf` ships unlaunched, because the shell owns
@@ -269,6 +273,20 @@ second run changes nothing; a failed run reports exactly what it touched and whe
 `tools/preflight.py` runs before any privileged step; and every `INS-` item is either closed with
 evidence or still listed.
 
+**Landed so far** — this is how far the installer work has got, not the whole part. `lib/packages.sh`
+decides what every package step installs: one `-Sy` per run, each target classified from the local
+database, the plan printed before anything is fetched, `--needed` on every named transaction, and no
+transaction at all on a machine that is already current, which is the reviewed half of `INS-01`.
+`install.sh` runs 24 numbered steps that each print a verdict, ends with a summary that fails the run
+when a step failed, and records every path it creates outside the repository in
+`~/.local/state/iarch/install-manifest.txt`. The icon and cursor themes the presets name are installed
+at last, in a step that warns rather than aborting, and three package names that are not in Arch's
+repositories came out of the transaction whose failure stops everything (`TP-20`). Still open:
+`--noconfirm` on `pacman -Syu` and on the removal path (`INS-01`), narrow ownership changes
+(`INS-02`), a reversible and logged display-manager switch (`INS-03`), `tools/preflight.py`, a
+manifest-driven `uninstall.sh` (`INS-08`), whether a greetd-started session inherits the `PATH` the
+installer writes (`INS-07`), and a runtime mechanism for the icon theme (`TP-19`).
+
 ## Part 7 — Shortcut system
 
 **Goal:** `Super+H` shows every shortcut, searchable, in glass.
@@ -279,3 +297,19 @@ and the three keys `docs/SHORTCUTS.md` already reserves so they are not reassign
 `Super+H`, `Super+Shift+H` and `Super+K`. Acceptance will have to include: the overlay lists every bind
 that has a description; a bind without a description fails a test; the overlay opens and closes with
 animation; and the surface is chosen from a verified API rather than a guessed one (`UI-02`).
+
+**Landed so far** — this is how far the shortcut work has got, not the whole part. The direction of
+truth is reversed from what this part proposed: the record is the source and the session file is
+generated, so `data/keybinds.default.json` renders `.config/hypr/generated/keybinds.lua`,
+`docs/SHORTCUTS.md` and the Shortcuts page's rows, and a bind without a description is refused by
+`iarch-keybinds check` rather than by a test that reads a document. `Super+H` runs `iarch-cheatsheet`,
+which draws the map in a terminal with a filter and falls back to `notify-send` and then stderr, and the
+three keys this part reserves are still where it says they are — `Super+H` bound, `Super+Shift+H` and
+`Super+K` declared and not bound. All 78 letter cells of the three layers a letter may live in are
+allocated in `data/design/keybinds.json -> alphabet` and rendered as a grid at the end of
+`docs/SHORTCUTS.md`, where a cell is a binding, a claimed-but-unbound key, a refusal that names the verb
+or file or command behind it, or empty on purpose; `tests/test_keybinds_alphabet.py` checks the grid
+against the map in both directions. The two workspace moves the v1 map carried into `Super+Ctrl+Alt`
+moved to `Super+Ctrl+N` and `Super+Ctrl+P`, so the shipped map reports no warning at all. Still open:
+the glass overlay surface with a box you type into (`UI-02`), a Shortcuts page that edits the map rather
+than reading it, and every claim that needs a session (`KB-01`, `KB-03`, `KB-06`).

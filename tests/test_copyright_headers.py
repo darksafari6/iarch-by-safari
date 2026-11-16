@@ -23,7 +23,6 @@ PART_ONE_TO_THREE_FILES = (
     "iarch/lib/__init__.py",
     "iarch/lib/configstore.py",
     "iarch/lib/renderers.py",
-    "tools/extract_keybinds.py",
     "tools/profile_preset.py",
     "profiles/performance.toml",
     "tests/test_config_store.py",

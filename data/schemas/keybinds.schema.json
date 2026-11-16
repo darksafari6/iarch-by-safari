@@ -2,105 +2,249 @@
   "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/keybinds.schema.json",
-  "title": "iArch by Safari keyboard map defaults",
+  "title": "The iArch keyboard map, version 2: the source the generator renders from",
+  "description": "Schema for data/keybinds.default.json. This is the single source of the session's keyboard map. iarch-keybinds renders .config/hypr/generated/keybinds.lua from it merged with a person's ~/.config/iarch/keybinds.json, so a binding is written here or there and nowhere else. Version 1 was the other way round -- a report tools/extract_keybinds.py read out of a hand-written Lua file -- and a report cannot be edited, which is why the Shortcuts page was read-only. Every spelling a binding may use is recorded against the pinned compositor in data/design/keybinds.json, and iarch-keybinds check validates this file against that record. Two field names carry a warning. `locked` at the top level of a binding is this project's meaning: a person may rebind the entry but not delete it. The compositor's own `locked`, which means the bind still works while the session is locked, is an option and lives in `flags` -- the five media keys carry it there. Merging the two would make deleting the cheat sheet and muting the lock screen the same decision.",
   "type": "object",
-  "required": [
-    "version",
-    "modifier",
-    "bindings"
-  ],
+  "required": ["_copyright", "_note", "version", "bindings"],
   "additionalProperties": false,
   "properties": {
-    "_copyright": {
-      "type": "string"
-    },
-    "_generated": {
-      "type": "string"
-    },
-    "generated_by": {
-      "type": "string"
-    },
-    "source_file": {
-      "type": "string"
-    },
-    "version": {
-      "const": 1
-    },
-    "modifier": {
-      "type": "string"
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string", "minLength": 80 },
+    "version": { "const": 2 },
+    "migrated_from": {
+      "type": "object",
+      "required": ["version", "by", "bindings", "rewritten", "why_rewritten"],
+      "additionalProperties": false,
+      "properties": {
+        "version": { "const": 1 },
+        "by": { "const": "tools/migrate_keybinds_v2.py" },
+        "source": { "type": "string" },
+        "bindings": { "type": "integer", "minimum": 1 },
+        "rewritten": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The key combinations whose action this migration rewrote rather than carried across, because the v1 form reached for a dispatcher name the pinned release does not have."
+        },
+        "rewritten_note": { "type": "string" },
+        "why_rewritten": { "type": "string", "minLength": 40 },
+        "bound_here": { "type": "array", "items": { "type": "string" } },
+        "why_bound_here": { "type": "string" }
+      }
     },
     "bindings": {
       "type": "array",
       "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": [
-          "keys",
-          "description",
-          "action",
-          "category",
-          "status"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "keys": {
-            "type": "string",
-            "minLength": 1
+      "items": { "$ref": "#/definitions/binding" }
+    }
+  },
+  "definitions": {
+    "modifier": {
+      "type": "string",
+      "enum": ["SUPER", "SHIFT", "CTRL", "ALT", "MOD2", "MOD3", "MOD5", "CAPS"],
+      "description": "The canonical spelling of a modifier this project writes. Upstream accepts fourteen spellings (data/design/keybinds.json -> modifiers); the migration folds CONTROL to CTRL and WIN/LOGO/MOD4/META to SUPER, so a record carries one spelling per modifier and two bindings that mean the same thing cannot look different."
+    },
+    "key": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One key: a keysym name (resolved case-insensitively by the compositor), a `mouse:N` button code, or a bare keycode over 9. A punctuation character is not a key -- the keysym for `.` is `period` -- and iarch-keybinds check validates every key here against data/reference/xkb-keysyms-1.7.0.txt.",
+      "not": { "pattern": "[.+]" }
+    },
+    "binding": {
+      "type": "object",
+      "required": ["id", "mods", "key", "action", "description", "category", "enabled", "locked"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(\\.[a-z0-9-]+)+$",
+          "description": "A stable identity, as category.subject. Built from the category and description rather than the keys, so rebinding a key does not change the id -- which is what lets ~/.config/iarch/keybinds.json store a difference by id and a rebind not orphan it."
+        },
+        "mods": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/modifier" },
+          "description": "Modifiers in a fixed order, Super first. Empty for a key with no modifier, such as a media key. A repeated modifier is refused here and by hl.bind."
+        },
+        "key": { "$ref": "#/definitions/key" },
+        "action": { "$ref": "#/definitions/action" },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Required on every binding. It is the text the compositor reports for the bind and the text the cheat sheet and the Shortcuts page show, so a binding with no description is a key that does something nobody can name."
+        },
+        "category": { "type": "string", "minLength": 1 },
+        "enabled": {
+          "type": "boolean",
+          "description": "A disabled binding is kept in the record, with its id and description, and renders to nothing. That is how a person turns a default off without losing the ability to turn it back on, and how a reserved key is carried without being bound."
+        },
+        "locked": {
+          "type": "boolean",
+          "description": "This project's locked: rebindable but not deletable. Not the compositor's locked option, which lives in flags. The safety-net bindings -- close window, lock, exit, open terminal, open settings, cheat sheet, power menu -- carry it, because a session with no way to close a window or get back into the keyboard map is a session that needs a reboot."
+        },
+        "flags": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mouse": { "type": "boolean" },
+            "locked": { "type": "boolean" }
           },
-          "description": {
-            "type": "string",
-            "minLength": 1
-          },
-          "status": {
-            "enum": [
-              "bound",
-              "reserved"
-            ]
-          },
-          "options": {
-            "type": "object",
-            "additionalProperties": false,
+          "description": "The compositor's hl.bind options, rendered verbatim into the options table. `mouse` marks a bind whose key is a mouse button and is exclusive upstream -- it cannot ride with repeating, release or the compositor's locked. `locked` here is the compositor's option (works while the session is locked), not the entry-level locked above."
+        },
+        "reserved": {
+          "type": "boolean",
+          "description": "Declared so nothing reassigns the key by accident, but not bound. A reserved binding is disabled and its action type is `none`."
+        },
+        "relocated_from": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Za-z+ <>]*$",
+          "description": "The combination this binding had before the map was last laid out, spelled the way docs/SHORTCUTS.md spells a key. History rather than state: it survives a later rebind, because what it records is where the binding came from, and the person whose hands still reach for the old combination is the one who needs to see it written down. The two workspace moves carry it, from the Super+Ctrl+Alt layer that iarch-keybinds check reported as debt on every run until they moved to Super+Ctrl+N and Super+Ctrl+P."
+        },
+        "unverified": {
+          "type": "string",
+          "minLength": 20,
+          "description": "Present when the binding points at something not yet built or not yet observed, so the record says so rather than implying a working bind. The cheat sheet carries it until the overlay exists."
+        },
+        "static": {
+          "type": "boolean",
+          "description": "Rendered by hand into .config/hypr/keybind.lua instead of into the generated file, because this bind has to work when the record or its render does not. The recovery combo is the only one: it re-applies the defaults, so it must survive the broken file it exists to fix, and a bind inside a file that failed to generate cannot do that. It is still described here so the cheat sheet and docs/SHORTCUTS.md show it, and iarch-keybinds check reads the static file back and proves the two agree rather than trusting either one."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["reserved"], "properties": { "reserved": { "const": true } } },
+          "then": {
             "properties": {
-              "mouse": {
-                "type": "boolean"
-              },
-              "locked": {
-                "type": "boolean"
-              }
+              "enabled": { "const": false },
+              "action": { "properties": { "type": { "const": "none" } } }
             }
-          },
-          "action": {
-            "type": "object",
-            "required": [
-              "kind"
-            ],
-            "additionalProperties": false,
+          }
+        },
+        {
+          "if": { "required": ["flags"], "properties": { "flags": { "required": ["mouse"], "properties": { "mouse": { "const": true } } } } },
+          "then": {
             "properties": {
-              "kind": {
-                "enum": [
-                  "exec",
-                  "dispatcher",
-                  "lua-function",
-                  "reserved"
-                ]
-              },
-              "command": {
-                "type": "string"
-              },
-              "lua": {
-                "type": "string"
-              },
-              "workspace": {
-                "type": "string"
-              }
-            }
-          },
-          "category": {
-            "type": "string",
-            "minLength": 1
+              "flags": { "not": { "required": ["locked"], "properties": { "locked": { "const": true } } } }
+            },
+            "description": "mouse is exclusive upstream: a mouse bind cannot also carry the compositor's locked option (data/design/keybinds.json -> bind.exclusions)."
+          }
+        },
+        {
+          "if": { "required": ["static"], "properties": { "static": { "const": true } } },
+          "then": {
+            "required": ["unverified"],
+            "properties": {
+              "enabled": { "const": true }
+            },
+            "description": "A static binding is a real bind, so it is enabled and its action is not none; and because the only one this project has names a program the repository does not yet put on PATH, it carries an unverified note saying so rather than implying a working key."
           }
         }
-      }
+      ]
+    },
+    "action": {
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        {
+          "title": "exec: run a program, stored as an argv list",
+          "properties": {
+            "type": { "const": "exec" },
+            "command": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "description": "The argv list. Upstream spawns one string through /bin/sh -c whatever the record says, so the generator joins this with shlex.quote; the list is what a person edits and what the cheat sheet prints, because a list cannot carry a quoting mistake and a string can."
+            }
+          },
+          "required": ["type", "command"],
+          "additionalProperties": false
+        },
+        {
+          "title": "shell: a pipeline or substitution, stored as one string and marked advanced",
+          "properties": {
+            "type": { "const": "shell" },
+            "script": { "type": "string", "minLength": 1 },
+            "why_shell": {
+              "type": "string",
+              "minLength": 10,
+              "description": "Required, so a shell action is a decision somebody made and wrote down rather than an argv list somebody could not be bothered to split. The settings page shows this and marks the action advanced."
+            }
+          },
+          "required": ["type", "script", "why_shell"],
+          "additionalProperties": false
+        },
+        {
+          "title": "dispatch: call a verified hl.dsp dispatcher",
+          "properties": {
+            "type": { "const": "dispatch" },
+            "dispatcher": {
+              "type": "string",
+              "pattern": "^hl\\.dsp\\.[a-z_.]+$",
+              "description": "A path in the verified hl.dsp tree (data/design/keybinds.json -> dispatchers). iarch-keybinds check refuses a dispatcher that is not in that tree, which is the check that stops an invented call reaching a generated file."
+            },
+            "args": {
+              "type": "object",
+              "description": "A structured argument table, rendered as a Lua table. Preferred over args_lua because a validator can read it."
+            },
+            "args_lua": {
+              "type": "string",
+              "description": "A Lua fragment emitted verbatim as the dispatcher's argument, for an argument the structured form cannot carry -- a workspace selector such as `r+1`, or a reference to a local such as `scrPath .. \"/workspace.sh\"`. Kept honest by being named args_lua rather than pretending to be data."
+            },
+            "workspace": {
+              "type": ["string", "integer"],
+              "description": "A workspace number or selector, rendered as `{ workspace = N }`. Numbers are emitted bare, non-numbers quoted."
+            }
+          },
+          "required": ["type", "dispatcher"],
+          "additionalProperties": false
+        },
+        {
+          "title": "lua: a function body, for a bind that has to ask the compositor something first",
+          "properties": {
+            "type": { "const": "lua" },
+            "lua": { "type": "string", "minLength": 1 },
+            "why_lua": {
+              "type": "string",
+              "minLength": 20,
+              "description": "Required. A Lua function body is the escape hatch for a bind a single dispatcher call cannot express, and it has to say why -- otherwise every awkward bind becomes a function body and the record stops being checkable."
+            }
+          },
+          "required": ["type", "lua", "why_lua"],
+          "additionalProperties": false
+        },
+        {
+          "title": "iarch: run one of this project's own CLIs",
+          "properties": {
+            "type": { "const": "iarch" },
+            "cli": {
+              "type": "string",
+              "pattern": "^iarch-[a-z-]+$",
+              "description": "The name of a CLI this project ships. iarch-keybinds check verifies a file by that name exists under iarch/cli or on PATH, so a bind cannot point at a program nobody wrote."
+            },
+            "args": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["type", "cli"],
+          "additionalProperties": false
+        },
+        {
+          "title": "noctalia: send a verified shell IPC verb",
+          "properties": {
+            "type": { "const": "noctalia" },
+            "verb": {
+              "type": "string",
+              "description": "A verb recorded in data/design/noctalia-ipc.json. iarch-keybinds check refuses a verb that is not in that record -- which is the check that would have caught the two verbs the shipped keymap sent before they were recorded."
+            },
+            "args": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["type", "verb"],
+          "additionalProperties": false
+        },
+        {
+          "title": "none: a reserved key, declared and not bound",
+          "properties": { "type": { "const": "none" } },
+          "required": ["type"],
+          "additionalProperties": false
+        }
+      ]
     }
   }
 }

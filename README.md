@@ -41,18 +41,18 @@ A short video tour of the session is on YouTube: <https://www.youtube.com/watch?
 | :--- | :--- | :--- |
 | Glass surfaces | Blurred translucent bar, dock, Control Center, Settings and notifications; rounded corners, 2 px borders, inactive windows at 90% opacity | Ships today |
 | Animations | Eight animation leaves on four hand-tuned bezier curves for window open, close, move, border, fade and workspace switches | Ships today |
-| Keyboard shortcuts | 74 bindings, each with a description the compositor can report | Ships today |
-| Shortcut overlay (Super+H) | Press a key, see every shortcut on screen | Key is reserved, overlay is Part 7 |
+| Keyboard shortcuts | Every letter of the three layers a letter may live in is allocated, and every binding carries a description the compositor can report | Ships today; the table is [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md) |
+| Shortcut overlay (Super+H) | Press a key, see every shortcut on screen | `Super+H` runs `iarch-cheatsheet`, which draws the map in a terminal; the glass window you type into is Part 7 (`UI-02`) |
 | Settings app | GTK4 + libadwaita window that edits `~/.config/iarch/`, regenerates your configuration and reloads the session | Part 4 |
 | Presets | A lower-cost Performance overlay that only ever changes values of settings the shipped profile already has | CLI ships today (`tools/profile_preset.py`); switching in-session is later |
-| Game mode | One switch that turns off blur, glow, inactive dimming and every animation, saves what they were, and puts them back | Command ships today (`python3 iarch/cli/iarch_gamemode.py toggle`); no key is bound to it and the latency saving is not measured (`PERF-01`) |
-| Focus mode | Do Not Disturb, caffeine, and every unfocused window dimmed | Command ships today (`python3 iarch/cli/iarch_focus.py toggle`); it is runtime state, so a reload, a relogin or a theme change ends the dim |
+| Game mode | One switch that turns off blur, glow, inactive dimming and every animation, saves what they were, and puts them back | Ships today on `Super+Ctrl+G` (`iarch-gamemode toggle`); the latency saving is not measured (`PERF-01`) and no key has been watched on a session (`KB-06`) |
+| Focus mode | Do Not Disturb, caffeine, and every unfocused window dimmed | Ships today on `Super+Ctrl+F` (`iarch-focus toggle`); it is runtime state, so a reload, a relogin or a theme change ends the dim |
 | Contact page | Your name, role and links, rendered by the settings app | Defaults ship in `data/contacts.default.json`; the page is Part 4 |
 
 Honest summary: the session, the installers, the configuration data and the
-checks are real. The settings app and the shortcut overlay are not built yet, and
-game mode and focus mode are commands you run rather than buttons you click: no
-key is bound to either, and neither has been watched on a live session. The
+checks are real. The glass shortcut overlay is not built yet, and game mode and
+focus mode are keys that run commands rather than buttons you click: both are
+bound, and neither has been watched on a live session. The
 installer does offer a gaming package selection (Steam, MangoHud, Lutris, Proton
 tools), which is a package list and not a mode. Everything this project claims but
 cannot yet prove is listed with an id in
@@ -95,25 +95,36 @@ On Fedora, the same three steps with `sudo dnf install git -y` and
 
 Both scripts are interactive: they ask about a default install, NVIDIA, printer
 support, gaming packages, which packages to remove, browser, audio stack and
-whether to reboot. Every file they replace is backed up first with a
-`.bak.<timestamp>` suffix, and additions are recorded so nothing is removed
-silently later.
+whether to reboot. `install.sh` then runs 24 numbered steps — repositories,
+packages, the configuration payload, icon and cursor themes, the session
+commands on `PATH`, the menu entry, the wallpapers and the login manager — and
+each one prints `✓ done`, `– skipped: <reason>` or `✗ failed: <reason>`, with a
+summary at the end. Every file it replaces is backed up first with a
+`.bak.<timestamp>` suffix, every file it creates outside the repository is
+recorded in `~/.local/state/iarch/install-manifest.txt`, and additions are
+recorded so nothing is removed silently later.
 
-**`--dry-run` does not exist yet.** It is scheduled for Part 6, together with the
-rest of the installer hardening (the `--noconfirm` package installs, the
-`/etc/pacman.conf` edits and the display-manager switch). Until then, the way to
-see what will happen is to read the script and [`SECURITY.md`](SECURITY.md), and
-to run it on a machine you can reinstall.
+**A run on a machine that is already up to date installs nothing.** Every
+package step goes through `lib/packages.sh`, which refreshes the sync databases
+once, asks `pacman -Qu` which of its targets are actually out of date, prints
+the plan (`install 3, update 1, current 84`) and passes `--needed`, so pacman
+skips targets that are already current instead of reinstalling them.
+
+**`--dry-run` does not exist yet.** It is scheduled for the rest of Part 6,
+together with the remaining installer hardening (the `/etc/pacman.conf` edits and
+the display-manager switch, `INS-03`). Until then, the way to see what will
+happen is to read the script and [`SECURITY.md`](SECURITY.md), and to run it on a
+machine you can reinstall.
 
 ## Shortcuts
 
 The full table is in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md). It is generated
-from the session's own keybind file, so it cannot drift from what your keyboard
-actually does:
+from the same record the session's own keyboard map is generated from, so neither
+can drift from what your keyboard actually does:
 
 ```
-.config/hypr/keybind.lua  →  data/keybinds.default.json  →  docs/SHORTCUTS.md
-        (tools/extract_keybinds.py)      (tools/render_shortcuts.py)
+data/keybinds.default.json  →  .config/hypr/generated/keybinds.lua   (iarch-keybinds generate)
+        (the source)        →  docs/SHORTCUTS.md                     (tools/render_shortcuts.py)
 ```
 
 The ones worth knowing first:
@@ -128,7 +139,7 @@ The ones worth knowing first:
 | `SUPER + L` | Lock screen |
 | `SUPER + 1`–`0` | Switch workspace (`SUPER + SHIFT + 1`–`0` moves the window) |
 | `SUPER + A` | Annotate a screenshot |
-| `SUPER + H` | Shortcut overlay — reserved, not bound yet |
+| `SUPER + H` | Shortcut overlay — the key is bound; the overlay itself ships in a later part |
 
 ## Customization
 
@@ -139,7 +150,7 @@ never the checkout — an edit to the repository is lost at the next update.
 | To change | Edit |
 | :--- | :--- |
 | Monitors, resolution, scaling | `.config/hypr/monitors.lua` |
-| Keybindings | `.config/hypr/keybind.lua`, then `python3 tools/extract_keybinds.py --write` |
+| Keybindings | `~/.config/iarch/keybinds.json` (your differences), then `iarch-keybinds generate --write` |
 | Border, rounding, gaps, blur, opacity | `.config/hypr/themes/theme.lua` |
 | Shell colours | `.config/noctalia/palettes/iarch-midnight.json` |
 | Terminal colours and font | `.config/kitty/` and `.config/starship.toml` |
@@ -182,11 +193,12 @@ manager back. Those are listed in the installer output and in
 | Nothing to check against | `bash scripts/iarch-healthcheck.sh` reports the shell, compositor and audio without changing anything |
 | Black screen or no login prompt after install | Switch to a TTY, then `sudo systemctl disable greetd && sudo systemctl enable sddm` |
 | Shell looks wrong or refuses a setting | Run `noctalia config validate`; GUI overrides in `~/.local/state/noctalia/settings.toml` win over the shipped profile |
-| Terminal font or cursor theme is not what the config says | Neither installer provides `JetBrainsMono Nerd Font Mono` yet (`TP-13`), so the terminal falls back to a system monospace. Bibata is installed on Arch (`install.sh:424`) and added on Fedora, its name unverified (`TP-18`). Install a Nerd Font package, or let the defaults stand |
+| Terminal font or cursor theme is not what the config says | Neither installer provides `JetBrainsMono Nerd Font Mono` yet (`TP-13`), so the terminal falls back to a system monospace. Bibata is installed on Arch by the installer's *Icons and cursors* step, as `bibata-cursor-theme-bin` from the AUR, and added on Fedora, its name unverified (`TP-18`). Install a Nerd Font package, or let the defaults stand |
 | Screen does not lock by itself | Idle is the shell's, not `hypridle`'s: `[idle.behavior.lock]` in `~/.config/noctalia/config.toml` locks after 900 s and `screen_off` follows at 960 s, both only while the shell runs. `SUPER + L` locks immediately. `.config/hypr/hypridle.conf` ships **unlaunched** on purpose — starting it beside the shell means two daemons racing to lock and suspend the same session — so if the shell is not running, add `hypridle` to the `exec_once` list in `.config/hypr/startup.lua` *and* disable every `[idle.behavior.*]` entry. See [`docs/glass-experience.md`](docs/glass-experience.md) |
 | Login screen does not match the session | Appearance only reaches it through Sync, which is manual: `noctalia msg greeter-sync`, or Settings → Security → Noctalia Greeter → **Sync Now**, then log out. Auto-sync ships off because each sync needs an administrator prompt unless you opt in with `sudo noctalia-greeter passwordless-sync enable <user>` |
 | Numeric keypad is off at the login screen | The greeter does not read Hyprland's `input {}`, and it locks Num Lock only when `/var/lib/noctalia-greeter/greeter.toml` says `numlock = true` — whatever its own documentation claims. The session's `numlock_by_default = true` does not reach it |
-| A shortcut does nothing | Check it in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md) — reserved keys are listed as not bound yet |
+| A shortcut does nothing | Check it in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md) — reserved keys are listed as not bound yet, and two binds carry an *unverified* note saying the thing they call is not built. To change a key, or to get the shipped map back, see [`docs/CUSTOMIZING-SHORTCUTS.md`](docs/CUSTOMIZING-SHORTCUTS.md) |
+| The whole keyboard map broke after a change | `Ctrl+Alt+R` re-applies the shipped map, or `python3 iarch/cli/iarch_keybinds.py reset --all` from a terminal — it backs your override up first. If the config fails so hard that no bind registers, the compositor trips its own emergency mode: `Super+Q` for a terminal, `Super+M` to exit. See [`docs/CUSTOMIZING-SHORTCUTS.md`](docs/CUSTOMIZING-SHORTCUTS.md#getting-back-to-the-map-that-ships) |
 | Something else | [`InstallNotes.md`](InstallNotes.md) has the long-form notes, including Arch ISO Wi-Fi before `archinstall` |
 
 Please open an issue with the output of the healthcheck script. Hardware
@@ -211,6 +223,7 @@ match on and in the historical documents under [`legacy/`](legacy/).
 | Reporting a security problem | [`SECURITY.md`](SECURITY.md) |
 | What changed, newest first | [`CHANGELOG.md`](CHANGELOG.md) |
 | The settings window, and the rules it is built under | [`docs/SETTINGS-APP.md`](docs/SETTINGS-APP.md) |
+| Changing a key, and what the checker refuses | [`docs/CUSTOMIZING-SHORTCUTS.md`](docs/CUSTOMIZING-SHORTCUTS.md) |
 | Where the design numbers live | [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) |
 | Claims not proven yet | [`docs/UNVERIFIED.md`](docs/UNVERIFIED.md) |
 | The frozen legacy v4 session | [`legacy/docs/V4-SESSION.md`](legacy/docs/V4-SESSION.md) |

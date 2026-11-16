@@ -45,6 +45,7 @@ EXPECTED_PAYLOAD = {
     'hypr/animations/default.lua',
     'hypr/generated/animations.lua',
     'hypr/generated/glass.lua',
+    'hypr/generated/keybinds.lua',
     # hyprlock and hypridle are not Hyprland: each is its own binary that searches
     # for a fixed filename under $XDG_CONFIG_HOME/hypr/. They live beside the Lua
     # payload because that is the only place those two daemons look, not because
@@ -115,13 +116,43 @@ class HyprlandLoadGraph(unittest.TestCase):
         self.assertEqual(shipped, reached,
                          'Lua files that ship but are never required, or vice versa')
 
+    def test_every_lua_file_the_session_requires_is_in_the_staged_payload(self):
+        """A require() the installer does not ship is a session that fails at login.
+
+        The check above compares the load graph against the ``.config/hypr`` tree in
+        the repository; this one compares it against the payload the staging script
+        actually copies. They are not the same set, and the difference is the bug
+        this catches: a generated file can exist in the checkout, be required by
+        ``hyprland.lua``, and still be absent from the installer's explicit copy
+        list. That is how ``generated/keybinds.lua`` would have shipped missing --
+        and required -- on every install, because adding it to the load graph and
+        adding it to ``EXPECTED_PAYLOAD`` are two edits and only this test asks
+        whether both happened.
+        """
+        reached, _ = load_graph(HYPR / 'hyprland.lua')
+        required = {str(p.relative_to(ROOT / '.config')) for p in reached}
+        staged_lua = {path for path in EXPECTED_PAYLOAD if path.endswith('.lua')}
+        self.assertEqual(set(), required - staged_lua,
+                         'hyprland.lua requires a Lua file the installer does not stage')
+
     def test_scripts_executed_by_keybindings_exist(self):
-        keybind = (HYPR / 'keybind.lua').read_text(encoding='utf-8')
-        scripts = set(re.findall(r'scrPath\s*\.\.\s*"/([^"]+)"', keybind))
-        self.assertTrue(scripts, 'keybind.lua is expected to exec helper scripts')
+        """Every helper script a keybinding runs is shipped.
+
+        The binds live in the generated file now, so that is what is read; the
+        static keybind.lua is checked too, in case a hand-written bind ever
+        returns there. A script is referenced two ways -- ``scrPath .. "/name"``
+        in a dispatcher argument, and a literal ``~/.config/hypr/Scripts/name``
+        inside a shell command -- and both are followed, because a bind that
+        execs a script nobody shipped fails at run time and not at parse time.
+        """
+        sources = [HYPR / 'generated/keybinds.lua', HYPR / 'keybind.lua']
+        text = "\n".join(p.read_text(encoding='utf-8') for p in sources if p.is_file())
+        scripts = set(re.findall(r'scrPath\s*\.\.\s*"/([^"]+)"', text))
+        scripts |= set(re.findall(r'\.config/hypr/Scripts/([^\s"\']+)', text))
+        self.assertTrue(scripts, 'the keybindings are expected to exec helper scripts')
         for script in sorted(scripts):
             path = HYPR / 'Scripts' / script
-            self.assertTrue(path.is_file(), f'keybind.lua execs a missing script: {script}')
+            self.assertTrue(path.is_file(), f'a keybinding execs a missing script: {script}')
 
     # .conf files that are *not* Hyprlang: each belongs to a separate binary in
     # the Hypr ecosystem that searches for its own fixed filename under

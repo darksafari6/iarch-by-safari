@@ -65,13 +65,15 @@ the map. Read it before changing anything.
 │   │   │                      notifications in Part 3, the rest of the session in Part 5.
 │   │   ├── iarch_gamemode.py  iarch-gamemode: run iarch-theme and iarch-anim as one switch, save
 │   │   │                      the state they replaced, and read four leaves back to check.
-│   │   └── iarch_focus.py     iarch-focus: Do Not Disturb, caffeine and a runtime dim on every
+│   │   ├── iarch_focus.py     iarch-focus: Do Not Disturb, caffeine and a runtime dim on every
 │   │                          unfocused window. Writes no file, so a reload ends it.
+│   └── iarch_keybinds.py  iarch-keybinds: render .config/hypr/generated/keybinds.lua from
+│                              data/keybinds.default.json, validate the map, and list it for a UI.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
 ├── data/                     Repository defaults. A user never edits these after install.
 │   ├── settings.default.json Default effects, preset and theme selection.
-│   ├── keybinds.default.json Keyboard map, extracted from .config/hypr/keybind.lua.
+│   ├── keybinds.default.json Keyboard map. The source: iarch-keybinds renders the Lua from it.
 │   ├── contacts.default.json Contact page defaults for the Part 4 settings app.
 │   ├── design/               Glass design tokens and the six colour presets.
 │   │   ├── tokens.json     Radii, spacing, motion, blur per intensity, class groups.
@@ -96,6 +98,8 @@ the map. Read it before changing anything.
 │   ├── iarch-common.sh       Logging, timestamped backups, safe install, user resolution.
 │   ├── managed-files.sh      Classifies an installed system file before touching it.
 │   ├── package-audit.sh      Records which packages an install added. Never removes any.
+│   ├── packages.sh           Decides what a package step installs: one -Sy per run, a
+│   │                         printed plan, and --needed so current packages are skipped.
 │   └── stage-v5-config.sh    Builds the v5-only payload in a caller-owned empty directory.
 │
 ├── tools/                    Python helpers. Stdlib only; no desktop is started by tests.
@@ -103,8 +107,7 @@ the map. Read it before changing anything.
 │   ├── notices.py            Renders and checks THIRD_PARTY_NOTICES.md and data/licenses.json.
 │   ├── branding_lint.py      Fails when the everyday UI shows an upstream or previous name.
 │   ├── naming_audit.py       Repo-wide search for previous names, against a reasoned allowlist.
-│   ├── extract_keybinds.py   Renders data/keybinds.default.json out of keybind.lua.
-│   ├── render_shortcuts.py   Renders docs/SHORTCUTS.md out of that data.
+│   ├── render_shortcuts.py   Renders docs/SHORTCUTS.md out of the keybind record and the A to Z table.
 │   ├── profile_preset.py     Applies or reverts an effect preset, backup first.
 │   ├── preflight.py          Read-only host checks before an install.
 │   ├── diagnose.py           Read-only session diagnostics (legacy v4 session).
@@ -112,7 +115,9 @@ the map. Read it before changing anything.
 │   ├── glass_preset.py       Experimental glass preset for the legacy v4 session.
 │   └── v5_profile.py         Stages the shell profile or restores an explicit backup.
 │
-├── scripts/                  Runtime helpers a user runs inside the session.
+├── scripts/                  Runtime helpers a user runs inside the session, and the thin
+│                             launchers scripts/iarch-link-cli.sh puts on PATH by name —
+│                             every iarch-* command the keyboard map execs is one of them.
 │   ├── iarch-healthcheck.sh  Read-only diagnostics; changes nothing.
 │   └── iarch-control-center.sh  Allowlisted IPC shortcuts for the shell.
 │
@@ -128,7 +133,7 @@ the map. Read it before changing anything.
 ├── CHANGELOG.md              What changed, newest first.
 ├── SECURITY.md               How to report a problem, given privileged installers.
 │
-├── install.sh                Arch installer: system-wide, root, fresh install.
+├── install.sh                Arch installer: system-wide, root, 24 numbered steps.
 ├── fedora_install.sh         Fedora installer: system-wide, root, fresh install.
 ├── uninstall.sh              Restores timestamped backups; never deletes an active config.
 │
@@ -182,7 +187,8 @@ display manager (greetd) ──> Hyprland ──> .config/hypr/hyprland.lua
                                               ├── monitors.lua   displays and scaling
                                               ├── startup.lua    environment, autostart, shell launch (rendered)
                                               ├── inputs.lua     keyboard and pointer
-                                              ├── keybind.lua    every shortcut, each with a description
+                                              ├── generated/keybinds.lua  every shortcut (generated)
+                                              ├── keybind.lua    static residue the record cannot express
                                               ├── windowrules.lua  per-application rules
                                               ├── animations.lua  static curves, then generated/animations.lua
                                               └── themes/theme.lua  accent colors
@@ -200,10 +206,14 @@ screen for a session without the shell -- which is also why hypridle.conf ships 
 declares no listener: a second idle daemon would race the shell's [idle.behavior.*] timers.
 ```
 
-Keybind descriptions in `keybind.lua` are the data source for the shortcut overlay planned in
-[ROADMAP.md](ROADMAP.md). Keep them short, accurate and free of upstream names; the lint checks
-all three. `python3 tools/extract_keybinds.py --write` regenerates `data/keybinds.default.json`
-from that Lua file, and `--check` is how CI proves the two agree.
+`data/keybinds.default.json` is the source of the keyboard map, and every description in it is
+the data the shortcut overlay planned in [ROADMAP.md](ROADMAP.md) will be drawn from. Keep them
+short, accurate and free of upstream names; the lint checks all three. `iarch-keybinds generate
+--write` renders `.config/hypr/generated/keybinds.lua` from that record, and `iarch-keybinds
+--check` is how CI proves the generated Lua and `docs/SHORTCUTS.md` still match it. Until Part 5
+the direction was the other way round -- a now-removed `tools/extract_keybinds.py` read the record
+out of a hand-written `keybind.lua` -- and the reversal is what makes a bind editable in a window:
+a generated file has one writer, a hand-written one has two.
 
 ## User state and the single source of truth
 
@@ -344,11 +354,12 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `./tests/session-install.sh` | The legacy session installer against a mocked filesystem and mocked sudo |
 | `./tests/managed-files.sh` | System-file classification (absent, identical, symlink, unmanaged, modified) |
 | `./tests/package-audit.sh` | Package-addition recording, with no removal path |
+| `./tests/test_packages.sh` | `lib/packages.sh` against a stubbed pacman, yay and sudo: classification, the one `-Sy`, `--needed`, and that an up-to-date machine opens no transaction |
 | `python3 tools/notices.py --check` | Both credit files match `branding/notices.json` |
 | `python3 tools/iarch_brand.py --check` | Product naming is consistent and referenced files exist |
 | `python3 tools/branding_lint.py` | Everyday-UI surfaces carry no previous product or upstream shell name |
 | `python3 tools/naming_audit.py --check` | Old names survive only in allowlisted files, each with a recorded reason |
-| `python3 tools/extract_keybinds.py --check` | `data/keybinds.default.json` still matches `keybind.lua` |
+| `python3 iarch/cli/iarch_keybinds.py --check` | `generated/keybinds.lua` and `docs/SHORTCUTS.md` still match `data/keybinds.default.json` |
 | `python3 tools/render_shortcuts.py --check` | `docs/SHORTCUTS.md` still matches the keybind data |
 | `python3 iarch/cli/contrast_check.py --quiet` | Every preset clears 4.5:1 for text and 3:1 for non-text UI |
 | `python3 iarch/cli/gen_wallpapers.py --check` | Generated wallpapers exist, are 4K WebP and inside 600 KB; nothing orphaned |

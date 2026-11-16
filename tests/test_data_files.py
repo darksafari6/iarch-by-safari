@@ -46,6 +46,12 @@ PAIRS = {
     # The default-application surface: what xdg-settings and xdg-mime can read
     # and write, and the roles the page refuses to offer.
     "data/design/xdg-defaults.json": "data/schemas/xdg-defaults.schema.json",
+    # The keyboard surface: what hl.bind accepts and refuses, what a key name
+    # resolves to, which dispatchers exist, how a command is really spawned, and
+    # what the compositor does by itself when a config fails to parse. The
+    # shortcut generator draws on this record and on nothing else, so a spelling
+    # that is not in here cannot reach a generated file.
+    "data/design/keybinds.json": "data/schemas/design-keybinds.schema.json",
     # The settings application's upstream surface: every GTK, libadwaita and
     # icon name it is allowed to use, each read out of a pinned upstream ref.
     "data/design/adwaita.json": "data/schemas/adwaita.schema.json",
@@ -94,6 +100,50 @@ class DataFiles(unittest.TestCase):
         self.assertEqual(set(), unmapped, "data/ ships a JSON file nothing validates")
         for schema in schemas:
             self.assertIn(schema, PAIRS.values(), f"schema is not used by any document: {schema}")
+
+    def test_the_workflow_validates_the_same_pairs_this_test_does(self):
+        """PAIRS is written twice, and the copy that broke CI is the one in YAML.
+
+        Step 11 of .github/workflows/iarch-checks.yml carries its own literal copy
+        of this table. A schema added here and not there passes every local test
+        and then fails in CI on the step that asserts no schema goes unused --
+        which is what happened when data/schemas/design-keybinds.schema.json was
+        added. The two lists are compared by evaluating the workflow's own
+        dictionary literal, glob expansions included, so this fails locally,
+        before the push, instead of after it.
+        """
+        import ast
+        import re
+
+        workflow = (ROOT / ".github" / "workflows" / "iarch-checks.yml").read_text(
+            encoding="utf-8")
+        step = workflow[workflow.index(
+            "- name: Validate every JSON file in data/ against its schema"):]
+        step = step[:step.index("- name: Check every colour preset")]
+        body = step[step.index("python - <<'PY'") + len("python - <<'PY'"):step.rindex("PY")]
+        # The heredoc is indented ten spaces inside the YAML block scalar.
+        script = "\n".join(line[10:] if line.startswith(" " * 10) else line
+                           for line in body.split("\n"))
+
+        tree = ast.parse(script)
+        found = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and any(
+                    isinstance(target, ast.Name) and target.id == "PAIRS"
+                    for target in node.targets):
+                found = node.value
+        self.assertIsNotNone(found, "the workflow step no longer builds a PAIRS dict")
+
+        # The workflow's dict uses **{} comprehensions over the preset families and
+        # plain literals for the rest; both evaluate fine with data/ on disk, which
+        # is the same requirement the step itself has.
+        workflow_pairs = eval(  # noqa: S307 - a literal from this repository's own CI
+            compile(ast.Expression(found), "<workflow PAIRS>", "eval"),
+            {"Path": Path, "sorted": sorted},
+        )
+        self.assertEqual(set(PAIRS.items()), set(workflow_pairs.items()),
+                         "the workflow and this test validate different documents, so "
+                         "one of them can pass while the other fails")
 
     def test_schemas_are_wellformed_draft7(self):
         for schema_path in PAIRS.values():

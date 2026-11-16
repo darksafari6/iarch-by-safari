@@ -1,0 +1,825 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/design-keybinds.schema.json",
+  "title": "The keyboard surface of Hyprland v0.57.2, and the parts of it this session uses",
+  "description": "Schema for data/design/keybinds.json. This is the record the shortcut generator is allowed to draw on: what hl.bind accepts and refuses, what a key name resolves to, which modifiers exist, which dispatchers exist, and the fact that a command is spawned as one string by /bin/sh -c. It is pinned to a release rather than to the manual for two reasons. The manual documents main, and this session pins v0.57.2. And the spelling that matters most is not in the manual at all: v0.57.2 has no line-format config parser. Config::initConfigManager constructs Config::Lua::CConfigManager on both branches of its only conditional (src/config/ConfigManager.cpp:31-36), findConfig is asked for 'lua' and nothing else (src/config/supplementary/jeremy/Jeremy.cpp:34-42), and eConfigManagerType has one real value, CONFIG_LUA (src/config/ConfigManager.cpp:64-68). So bind=FLAGS,KEY,DISPATCHER,ARG is not a second way to write the same thing here; it is a syntax this compositor does not parse. Fields that are decisions rather than descriptions are pinned with const, so that editing the record cannot quietly change what the generator emits.",
+  "type": "object",
+  "required": [
+    "_copyright", "_note", "verified_against", "keysyms_verified_against", "source", "fetched",
+    "entry_point", "key_string", "key_forms", "modifiers", "bind", "toplevel",
+    "dispatchers", "exec", "query", "recovery", "validation", "keysyms",
+    "reserved", "alphabet", "rejected"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": { "type": "string" },
+    "_note": { "type": "string", "minLength": 200 },
+    "verified_against": { "type": "string", "pattern": "^v\\d+\\.\\d+\\.\\d+$" },
+    "keysyms_verified_against": { "type": "string", "pattern": "^xkbcommon-\\d+\\.\\d+\\.\\d+$" },
+    "source": { "type": "string", "minLength": 60 },
+    "fetched": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+
+    "entry_point": {
+      "type": "object",
+      "required": [
+        "static_file", "generated_file", "required_by", "module_name",
+        "generated_module_name", "cache_cleared_on_reload", "note"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "static_file": { "const": ".config/hypr/keybind.lua" },
+        "generated_file": { "const": ".config/hypr/generated/keybinds.lua" },
+        "required_by": { "type": "string", "pattern": "^\\.config/hypr/hyprland\\.lua:\\d+$" },
+        "module_name": { "const": "keybind" },
+        "generated_module_name": { "const": "generated.keybinds" },
+        "cache_cleared_on_reload": {
+          "const": true,
+          "description": "Pinned as a constant because it is the opposite of startup's false, and for a reason with a consequence: a keybind module that is left in package.loaded does not re-execute on a reload, so nothing re-registers and the binds that are live are the ones from the previous parse."
+        },
+        "note": { "type": "string", "minLength": 80 }
+      }
+    },
+
+    "key_string": {
+      "type": "object",
+      "required": ["parsed_at", "separator", "rules", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "parsed_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+        "separator": { "const": "+" },
+        "rules": {
+          "type": "array",
+          "minItems": 4,
+          "items": { "$ref": "#/definitions/rule" }
+        },
+        "note": { "type": "string", "minLength": 40 }
+      }
+    },
+
+    "key_forms": {
+      "type": "object",
+      "required": ["resolved_at", "forms", "failures", "cache"],
+      "additionalProperties": false,
+      "properties": {
+        "resolved_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+        "forms": {
+          "type": "array",
+          "minItems": 5,
+          "description": "Five, not four: the wheel-axis event names are a fifth shape the compositor accepts, and they are accepted before resolveKeycode rather than by it. A record that lists only the resolver's four would say a bind on mouse_down cannot work, which is wrong.",
+          "items": {
+            "type": "object",
+            "required": ["form", "example", "meaning", "source"],
+            "additionalProperties": false,
+            "properties": {
+              "form": { "enum": ["number", "code:", "mouse:", "keysym name",
+                                 "special event name"] },
+              "example": { "type": "string", "minLength": 1 },
+              "meaning": { "type": "string", "minLength": 10 },
+              "source": { "$ref": "#/definitions/cite" },
+              "limit": { "type": "string" }
+            }
+          }
+        },
+        "failures": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["answer", "when", "source"],
+            "additionalProperties": false,
+            "properties": {
+              "answer": { "enum": ["no keyboard", "key not found"] },
+              "when": { "type": "string", "minLength": 20 },
+              "source": { "$ref": "#/definitions/cite" },
+              "why_it_matters": { "type": "string" }
+            }
+          }
+        },
+        "cache": {
+          "type": "object",
+          "required": ["note", "source"],
+          "additionalProperties": false,
+          "properties": {
+            "note": { "type": "string", "minLength": 20 },
+            "source": { "type": "string", "minLength": 8 }
+          }
+        }
+      }
+    },
+
+    "modifiers": {
+      "type": "object",
+      "required": ["declared_at", "names", "equivalences", "matched_by", "chosen_spelling", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "declared_at": { "$ref": "#/definitions/cite" },
+        "names": {
+          "type": "array",
+          "minItems": 14,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Z0-9]+$" },
+          "description": "Every spelling upstream accepts. Recorded whole so the generator can accept a person's spelling and normalise it, rather than refusing a valid one."
+        },
+        "equivalences": {
+          "type": "object",
+          "required": ["CTRL", "ALT", "SUPER"],
+          "additionalProperties": false,
+          "properties": {
+            "CTRL": { "const": "CONTROL" },
+            "ALT": { "const": "MOD1" },
+            "SUPER": { "const": "WIN, LOGO, MOD4, META" }
+          }
+        },
+        "matched_by": { "type": "string", "minLength": 40 },
+        "chosen_spelling": {
+          "type": "object",
+          "required": ["SUPER", "CTRL", "ALT", "SHIFT"],
+          "additionalProperties": false,
+          "properties": {
+            "SUPER": { "type": "string", "minLength": 20 },
+            "CTRL": { "type": "string", "minLength": 20 },
+            "ALT": { "type": "string", "minLength": 20 },
+            "SHIFT": { "type": "string", "minLength": 20 }
+          }
+        },
+        "note": { "type": "string", "minLength": 40 }
+      }
+    },
+
+    "bind": {
+      "type": "object",
+      "required": [
+        "registered_at", "implemented_at", "signature", "arguments", "options",
+        "exclusions", "special_keys", "submaps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registered_at": { "$ref": "#/definitions/cite" },
+        "implemented_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+        "signature": { "const": "hl.bind(keys, handler, options)" },
+        "arguments": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["position", "name", "type", "note"],
+            "additionalProperties": false,
+            "properties": {
+              "position": { "type": "integer", "minimum": 1, "maximum": 3 },
+              "name": { "enum": ["keys", "handler", "options"] },
+              "type": { "type": "string", "minLength": 5 },
+              "note": { "type": "string", "minLength": 20 }
+            }
+          }
+        },
+        "options": {
+          "type": "object",
+          "required": [
+            "repeating", "locked", "release", "non_consuming", "auto_consuming",
+            "transparent", "ignore_mods", "dont_inhibit", "long_press",
+            "submap_universal", "mouse", "click", "drag", "allow_input_capture",
+            "description", "device"
+          ],
+          "additionalProperties": false,
+          "description": "Every option hl.bind reads out of its third argument. additionalProperties false is what makes this the whole list: an option invented here would be an option the generator could emit and the compositor would ignore in silence.",
+          "patternProperties": {
+            "^(repeating|locked|release|non_consuming|auto_consuming|transparent|ignore_mods|dont_inhibit|long_press|submap_universal|mouse|click|drag|allow_input_capture)$": {
+              "type": "object",
+              "required": ["type", "flag", "source"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "const": "boolean" },
+                "flag": { "type": "string", "pattern": "^BIND_FLAG_[A-Z_]+$" },
+                "source": { "type": "string", "minLength": 8 },
+                "meaning": { "type": "string" },
+                "alias": { "type": "string" },
+                "alias_source": { "type": "string" },
+                "note": { "type": "string" },
+                "note_on_alias": { "type": "string" },
+                "default": { "type": "boolean" },
+                "incompatible_with": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "uniqueItems": true
+                }
+              }
+            },
+            "^description$": {
+              "type": "object",
+              "required": ["type", "source", "meaning", "alias", "alias_source", "note_on_alias"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "const": "string" },
+                "source": { "type": "string", "minLength": 8 },
+                "meaning": { "type": "string", "minLength": 20 },
+                "alias": { "const": "desc" },
+                "alias_source": { "type": "string", "minLength": 8 },
+                "note_on_alias": { "type": "string", "minLength": 20 }
+              }
+            },
+            "^device$": {
+              "type": "object",
+              "required": ["type", "source", "fields"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "const": "table" },
+                "source": { "type": "string", "minLength": 8 },
+                "fields": {
+                  "type": "object",
+                  "required": ["inclusive", "list"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "inclusive": {
+                      "type": "object",
+                      "required": ["type", "default", "note"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": { "const": "boolean" },
+                        "default": { "const": true },
+                        "note": { "type": "string", "minLength": 20 }
+                      }
+                    },
+                    "list": {
+                      "type": "object",
+                      "required": ["type", "note"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": { "const": "array of strings" },
+                        "note": { "type": "string", "minLength": 20 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "exclusions": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["refused", "message", "source"],
+            "additionalProperties": false,
+            "properties": {
+              "refused": { "type": "string", "minLength": 10 },
+              "message": { "type": "string", "pattern": "^hl\\.bind: " },
+              "source": { "$ref": "#/definitions/cite" }
+            }
+          },
+          "description": "The combinations upstream refuses with a config error. The generator checks these before it writes, because a bind the compositor rejects at parse time is a bind that silently does not exist."
+        },
+        "special_keys": {
+          "type": "object",
+          "required": ["catchall"],
+          "additionalProperties": false,
+          "properties": {
+            "catchall": {
+              "type": "object",
+              "required": ["allowed_in", "message", "source", "note"],
+              "additionalProperties": false,
+              "properties": {
+                "allowed_in": { "const": "a submap only" },
+                "message": { "const": "hl.bind: catchall keybinds are only allowed in submaps." },
+                "source": { "type": "string", "minLength": 8 },
+                "note": { "type": "string", "minLength": 20 }
+              }
+            }
+          }
+        },
+        "submaps": {
+          "type": "object",
+          "required": ["declared_with", "source", "switched_with", "used_by_this_project", "note"],
+          "additionalProperties": false,
+          "properties": {
+            "declared_with": { "type": "string", "minLength": 10 },
+            "source": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+            "switched_with": { "const": "hl.dsp.submap" },
+            "used_by_this_project": { "const": false },
+            "note": { "type": "string", "minLength": 40 }
+          }
+        }
+      }
+    },
+
+    "dispatchers": {
+      "type": "object",
+      "required": [
+        "registered_at", "namespace", "max_args_meaning", "groups", "toplevel",
+        "used_by_this_project", "not_used_and_why"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registered_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+        "namespace": { "const": "hl.dsp" },
+        "max_args_meaning": { "type": "string", "minLength": 40 },
+        "groups": {
+          "type": "object",
+          "required": ["cursor", "group", "window", "workspace"],
+          "additionalProperties": false,
+          "patternProperties": {
+            "^(cursor|group|window|workspace)$": {
+              "type": "object",
+              "required": ["source", "members"],
+              "additionalProperties": false,
+              "properties": {
+                "source": { "$ref": "#/definitions/cite" },
+                "members": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 2 },
+                  "description": "Dispatcher name to the most arguments it takes. Zero means it is called with no arguments, which is how the shipped config writes hl.dsp.window.close()."
+                }
+              }
+            }
+          }
+        },
+        "toplevel": {
+          "type": "object",
+          "required": ["source", "members"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "$ref": "#/definitions/cite" },
+            "members": {
+              "type": "object",
+              "minProperties": 17,
+              "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 2 }
+            }
+          }
+        },
+        "used_by_this_project": {
+          "type": "object",
+          "minProperties": 10,
+          "additionalProperties": { "type": "string", "minLength": 10 },
+          "description": "Dispatcher to the reason this session uses it. A dispatcher nobody wrote a reason for is a dispatcher nobody has thought about."
+        },
+        "not_used_and_why": {
+          "type": "object",
+          "minProperties": 5,
+          "additionalProperties": { "type": "string", "minLength": 20 },
+          "description": "The dispatchers that exist and are deliberately not used, with the reason. Recorded so that a later part does not reach for one and rediscover the objection."
+        }
+      }
+    },
+
+    "exec": {
+      "type": "object",
+      "required": [
+        "the_only_form", "spawned_at", "spawned_as", "source", "paths",
+        "consequence", "shell_action"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "the_only_form": { "const": "one string" },
+        "spawned_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+        "spawned_as": {
+          "const": "execl(\"/bin/sh\", \"/bin/sh\", \"-c\", args.c_str(), nullptr)",
+          "description": "Pinned verbatim because it is the single line that decides how every command in this file is stored. A generator that emitted an argv list would be emitting something this function cannot receive."
+        },
+        "source": { "$ref": "#/definitions/cite" },
+        "paths": {
+          "type": "object",
+          "required": ["hl.dsp.exec_cmd(string)", "hl.dsp.exec_cmd(string, rule)", "hl.dsp.exec_raw(string)"],
+          "additionalProperties": false,
+          "patternProperties": {
+            "^hl\\.dsp\\.exec_(cmd|raw)\\(string(, rule)?\\)$": {
+              "type": "string",
+              "minLength": 20
+            }
+          }
+        },
+        "consequence": {
+          "type": "object",
+          "required": ["statement", "what_this_project_does", "why_not_a_string_in_the_data", "and_why_no_shell_true_here"],
+          "additionalProperties": false,
+          "properties": {
+            "statement": { "type": "string", "minLength": 40 },
+            "what_this_project_does": { "type": "string", "minLength": 40 },
+            "why_not_a_string_in_the_data": { "type": "string", "minLength": 40 },
+            "and_why_no_shell_true_here": { "type": "string", "minLength": 40 }
+          }
+        },
+        "shell_action": {
+          "type": "object",
+          "required": ["what_it_is", "marked", "note"],
+          "additionalProperties": false,
+          "properties": {
+            "what_it_is": { "type": "string", "minLength": 20 },
+            "marked": { "const": "advanced" },
+            "note": { "type": "string", "minLength": 40 }
+          }
+        }
+      }
+    },
+
+    "toplevel": {
+      "type": "object",
+      "required": ["note", "registered_at", "members"],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "type": "string", "minLength": 40 },
+        "registered_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+        "members": {
+          "type": "object",
+          "required": [
+            "hl.on", "hl.bind", "hl.define_submap", "hl.timer", "hl.dispatch",
+            "hl.version", "hl.get_loaded_plugins", "hl.exec_cmd",
+            "hl.clear_crashed_lockscreen",
+            "hl.exec_scheduled_prop_refresh_immediately", "hl.unbind",
+            "hl.is_key_down"
+          ],
+          "additionalProperties": false,
+          "description": "Every function registered on hl itself. additionalProperties false is the point: this is the whole list, so a call the generator emits that is not here is a call the compositor does not have.",
+          "patternProperties": {
+            "^hl\\.[a-z_]+$": {
+              "type": "object",
+              "required": ["registered_with", "source", "used_by_this_project"],
+              "additionalProperties": false,
+              "properties": {
+                "registered_with": { "enum": ["setMgrFn", "setFn"] },
+                "source": { "$ref": "#/definitions/cite" },
+                "implemented_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+                "used_by_this_project": { "type": "boolean" },
+                "takes": { "type": "string", "minLength": 10 },
+                "why_that_matters": { "type": "string", "minLength": 40 },
+                "note": { "type": "string", "minLength": 20 }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "query": {
+      "type": "object",
+      "required": ["note", "registered_at", "members", "used_by_this_project", "window_fields", "not_used_and_why"],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "type": "string", "minLength": 60 },
+        "registered_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+        "members": {
+          "type": "array",
+          "minItems": 20,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^hl\\.get_[a-z_]+$" },
+          "description": "Every read function registered on hl. additionalProperties has no meaning in an array, so the count is the floor: a member dropped from this list would drop below it and fail."
+        },
+        "used_by_this_project": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "minLength": 20 }
+        },
+        "window_fields": {
+          "type": "object",
+          "required": ["source", "fields", "note"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "string", "pattern": "^src/.*\\.cpp$" },
+            "fields": {
+              "type": "array",
+              "minItems": 12,
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[a-z_]+$" }
+            },
+            "note": { "type": "string", "minLength": 60 }
+          }
+        },
+        "not_used_and_why": {
+          "type": "object",
+          "minProperties": 3,
+          "additionalProperties": { "type": "string", "minLength": 15 }
+        }
+      }
+    },
+
+    "recovery": {
+      "type": "object",
+      "required": ["note", "emergency_mode", "errors_are_shown", "safe_mode"],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "type": "string", "minLength": 40 },
+        "emergency_mode": {
+          "type": "object",
+          "required": [
+            "tripped_when", "source", "what_runs", "run_at", "defined_at",
+            "binds_it_registers", "window_rule_it_adds", "reported_as", "why_it_matters"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "tripped_when": { "type": "string", "minLength": 30 },
+            "source": { "$ref": "#/definitions/cite" },
+            "what_runs": { "type": "string", "minLength": 20 },
+            "run_at": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+            "defined_at": { "type": "string", "pattern": "^src/.*\\.hpp:\\d+-\\d+$" },
+            "binds_it_registers": {
+              "type": "array",
+              "minItems": 3,
+              "items": {
+                "type": "object",
+                "required": ["keys", "does", "source"],
+                "additionalProperties": false,
+                "properties": {
+                  "keys": { "type": "string", "pattern": "^SUPER \\+ [A-Z]$" },
+                  "does": { "type": "string", "minLength": 20 },
+                  "source": { "$ref": "#/definitions/cite" },
+                  "status": { "enum": ["TODO(verify)"] }
+                }
+              }
+            },
+            "window_rule_it_adds": { "type": "string", "minLength": 20 },
+            "reported_as": { "type": "string", "minLength": 20 },
+            "why_it_matters": {
+              "type": "array",
+              "minItems": 3,
+              "items": { "type": "string", "minLength": 40 },
+              "description": "The consequences of an upstream mechanism this project did not choose and cannot turn off. Required to be several because one sentence about emergency mode is a footnote and four is a design input."
+            }
+          }
+        },
+        "errors_are_shown": {
+          "type": "object",
+          "required": ["behaviour", "source", "over_hyprctl"],
+          "additionalProperties": false,
+          "properties": {
+            "behaviour": { "type": "string", "minLength": 30 },
+            "source": { "type": "string", "pattern": "^src/.*\\.cpp:\\d+-\\d+$" },
+            "over_hyprctl": { "type": "string", "minLength": 30 }
+          }
+        },
+        "safe_mode": {
+          "type": "object",
+          "required": ["flag", "source", "behaviour", "why_it_matters"],
+          "additionalProperties": false,
+          "properties": {
+            "flag": { "const": "--safe-mode" },
+            "source": { "type": "string", "minLength": 10 },
+            "behaviour": { "type": "string", "minLength": 30 },
+            "why_it_matters": { "type": "string", "minLength": 40 }
+          }
+        }
+      }
+    },
+
+    "validation": {
+      "type": "object",
+      "required": ["note", "levels", "the_order_they_run_in", "and_what_happens_on_failure"],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "type": "string", "minLength": 40 },
+        "levels": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["level", "checks", "tool", "answers", "limit"],
+            "additionalProperties": false,
+            "properties": {
+              "level": { "enum": ["the model", "the syntax", "the compositor"] },
+              "checks": { "type": "string", "minLength": 30 },
+              "tool": { "type": "string", "minLength": 5 },
+              "source": { "type": "string", "minLength": 10 },
+              "behaviour": { "type": "string", "minLength": 30 },
+              "answers": { "type": "string", "minLength": 15 },
+              "limit": { "type": "string", "minLength": 30 }
+            }
+          }
+        },
+        "the_order_they_run_in": { "type": "string", "minLength": 40 },
+        "and_what_happens_on_failure": { "type": "string", "minLength": 80 }
+      }
+    },
+
+    "keysyms": {
+      "type": "object",
+      "required": ["verified_against", "total_names_in_that_release", "declared_lines_in_that_release", "names_declared_more_than_once", "name_list", "on_the_duplicates", "resolution", "used_by_this_project", "mouse_buttons", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "verified_against": { "type": "string", "minLength": 20 },
+        "total_names_in_that_release": {
+          "const": 2577,
+          "description": "Distinct XKB_KEY_ names the header declares. Pinned as a constant so that a re-fetch against a different xkbcommon is a visible change to this record rather than a silent one: the keysym list beside it is generated from that release and would have to be regenerated with it."
+        },
+        "declared_lines_in_that_release": { "const": 2590 },
+        "names_declared_more_than_once": { "const": 11 },
+        "name_list": { "const": "data/reference/xkb-keysyms-1.7.0.txt" },
+        "on_the_duplicates": { "type": "string", "minLength": 80 },
+        "resolution": { "type": "string", "minLength": 20 },
+        "used_by_this_project": {
+          "type": "array",
+          "minItems": 60,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9_]+$" },
+          "description": "Every keysym name the defaults bind. A test checks each of these against the header, so a name that is not a keysym cannot reach a generated file."
+        },
+        "mouse_buttons": {
+          "type": "object",
+          "required": ["mouse:272", "mouse:273", "mouse_up", "mouse_down"],
+          "additionalProperties": false,
+          "properties": {
+            "mouse:272": { "type": "string", "minLength": 10 },
+            "mouse:273": { "type": "string", "minLength": 10 },
+            "mouse_up": { "type": "string", "minLength": 10 },
+            "mouse_down": { "type": "string", "minLength": 10 }
+          }
+        },
+        "note": { "type": "string", "minLength": 60 }
+      }
+    },
+
+    "reserved": {
+      "type": "object",
+      "required": ["note", "combinations"],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "type": "string", "minLength": 40 },
+        "combinations": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["keys", "policy", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "keys": { "type": "string", "pattern": "^[A-Z+ <>a-z]+$" },
+              "policy": { "enum": ["never bound", "refused unless a person explicitly overrides it", "bound, locked, and behind a confirmation"] },
+              "reason": { "type": "string", "minLength": 40 }
+            }
+          }
+        }
+      }
+    },
+
+    "alphabet": {
+      "type": "object",
+      "required": ["note", "settles", "statuses", "layers"],
+      "additionalProperties": false,
+      "description": "The A-Z allocation of the three letter layers, 78 cells, each one decided. Pinned as three layers in a fixed order with their modifiers as const, because which layers a letter may live in is a decision and not a description: Super+Alt cannot be spelled here at all, so the table cannot grow a fourth layer that the checker refuses. What the table is, what enforces it and what it does not constrain (an override file) is in its own note.",
+      "properties": {
+        "note": { "type": "string", "minLength": 200 },
+        "settles": { "type": "string", "minLength": 80 },
+        "statuses": {
+          "type": "object",
+          "required": ["bound", "declared", "reserved", "free"],
+          "additionalProperties": false,
+          "properties": {
+            "bound": { "type": "string", "minLength": 40 },
+            "declared": { "type": "string", "minLength": 40 },
+            "reserved": { "type": "string", "minLength": 40 },
+            "free": { "type": "string", "minLength": 40 }
+          }
+        },
+        "layers": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "additionalItems": false,
+          "items": [
+        {
+          "type": "object",
+          "required": ["mods", "name", "purpose", "free_reason", "cells"],
+          "additionalProperties": false,
+          "properties": {
+            "mods": { "const": ["SUPER"] },
+            "name": { "const": "primary" },
+            "purpose": { "type": "string", "minLength": 80 },
+            "free_reason": { "type": "string", "minLength": 40 },
+            "cells": {
+              "type": "array",
+              "minItems": 26,
+              "maxItems": 26,
+              "items": { "$ref": "#/definitions/alphabet_cell" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["mods", "name", "purpose", "free_reason", "cells"],
+          "additionalProperties": false,
+          "properties": {
+            "mods": { "const": ["SUPER", "SHIFT"] },
+            "name": { "const": "secondary" },
+            "purpose": { "type": "string", "minLength": 80 },
+            "free_reason": { "type": "string", "minLength": 40 },
+            "cells": {
+              "type": "array",
+              "minItems": 26,
+              "maxItems": 26,
+              "items": { "$ref": "#/definitions/alphabet_cell" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["mods", "name", "purpose", "free_reason", "cells"],
+          "additionalProperties": false,
+          "properties": {
+            "mods": { "const": ["SUPER", "CTRL"] },
+            "name": { "const": "tertiary" },
+            "purpose": { "type": "string", "minLength": 80 },
+            "free_reason": { "type": "string", "minLength": 40 },
+            "cells": {
+              "type": "array",
+              "minItems": 26,
+              "maxItems": 26,
+              "items": { "$ref": "#/definitions/alphabet_cell" }
+            }
+          }
+        }
+          ]
+        }
+      }
+    },
+
+    "rejected": {
+      "type": "array",
+      "minItems": 5,
+      "description": "A rejection that source later disproves is deleted rather than kept with a correction attached: this array is read as a list of spellings that do not work, and a row that does work is a false statement no matter what its status says. The wheel-axis row that used to be here moved to key_forms.forms as the 'special event name' form, and docs/UNVERIFIED.md records the closure of KB-04 with the citations.",
+      "items": {
+        "type": "object",
+        "required": ["spelling", "why_rejected"],
+        "additionalProperties": false,
+        "properties": {
+          "spelling": { "type": "string", "minLength": 10 },
+          "why_rejected": { "type": "string", "minLength": 40 },
+          "use_instead": { "type": "string", "minLength": 10 },
+          "status": { "enum": ["TODO(verify)"] },
+          "note": { "type": "string", "minLength": 20 },
+          "replacements": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "required": ["from", "to", "source", "note"],
+              "additionalProperties": false,
+              "properties": {
+                "from": { "type": "string", "minLength": 8 },
+                "to": { "type": "string", "minLength": 8 },
+                "source": { "type": "string", "pattern": "^src/" },
+                "note": { "type": "string", "minLength": 40 }
+              }
+            },
+            "description": "The verified replacement for a rejected spelling. Required to carry a source per entry: a replacement with no line behind it is a second invention, and the whole point of rejecting the first was to stop inventing."
+          },
+          "correspondence": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "type": "string", "pattern": "^options\\.[a-z_]+$" }
+          },
+          "correspondence_note": { "type": "string", "minLength": 40 },
+          "verified_against": { "type": "string", "minLength": 20 }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "cite": {
+      "type": "string",
+      "pattern": "^src/[^:]+:(\\d+)(-\\d+)?(, :\\d+(-\\d+)?)*$",
+      "description": "A file under src/ and the line or lines the claim was read from. The shape is enforced so a citation cannot be a filename alone: a claim with no line behind it cannot be checked, and checking is the whole point of the record."
+    },
+    "rule": {
+      "type": "object",
+      "required": ["rule", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": { "type": "string", "minLength": 15 },
+        "source": { "$ref": "#/definitions/cite" }
+      }
+    },
+
+    "alphabet_cell": {
+      "type": "object",
+      "required": ["key", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "pattern": "^[A-Z]$" },
+        "status": { "enum": ["bound", "declared", "reserved", "free"] },
+        "binding": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*\\.[a-z0-9-]+$",
+          "description": "The id of the binding in data/keybinds.default.json that owns this cell. The shape is the category.subject shape tools/migrate_keybinds_v2.py mints, so an id that could not have come out of the migration cannot be written into the table either."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 120,
+          "description": "Why nothing may bind here. The floor is high on purpose: a reservation is an argument with a mechanism, a verb or a command in it, and 'not yet' is not one."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "enum": ["bound", "declared"] } } },
+          "then": { "required": ["binding"] },
+          "else": { "not": { "required": ["binding"] } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "reserved" } } },
+          "then": { "required": ["reason"] },
+          "else": { "not": { "required": ["reason"] } }
+        }
+      ]
+    }
+  }
+}

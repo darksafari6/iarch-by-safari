@@ -12,6 +12,15 @@ DOC = ROOT / "docs" / "SHORTCUTS.md"
 DATA = ROOT / "data" / "keybinds.default.json"
 
 
+def key_string(binding):
+    """The combination the way the document prints it: modifiers then the key."""
+    return " + ".join(list(binding.get("mods") or []) + [binding["key"]])
+
+
+def is_bound(binding):
+    return bool(binding.get("enabled")) and binding["action"].get("type") != "none"
+
+
 class ShortcutsDoc(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -27,20 +36,21 @@ class ShortcutsDoc(unittest.TestCase):
         self.assertIn("GENERATED FILE - do not edit by hand", self.doc)
         self.assertIn("data/keybinds.default.json", self.doc)
 
-    def test_every_bound_shortcut_is_listed(self):
+    def test_every_declared_shortcut_is_listed(self):
+        """Bound and reserved alike: a key the record declares is a key the table shows."""
         listed = set(re.findall(r"^\| `([^`]+)` \|", self.doc, re.M))
         for binding in self.data["bindings"]:
-            with self.subTest(keys=binding["keys"]):
-                self.assertIn(binding["keys"], listed)
+            with self.subTest(keys=key_string(binding)):
+                self.assertIn(key_string(binding), listed)
         self.assertEqual(len(listed), len(self.data["bindings"]))
 
     def test_reserved_keys_are_marked_as_not_bound(self):
-        reserved = [b for b in self.data["bindings"] if b["status"] == "reserved"]
+        reserved = [b for b in self.data["bindings"] if not is_bound(b)]
         self.assertTrue(reserved, "expected the overlay keys to be reserved")
-        section = self.doc.split("## Planned", 1)[1]
         for binding in reserved:
-            with self.subTest(keys=binding["keys"]):
-                line = next(l for l in section.splitlines() if f"`{binding['keys']}`" in l)
+            with self.subTest(keys=key_string(binding)):
+                line = next(l for l in self.doc.splitlines()
+                            if f"`{key_string(binding)}`" in l)
                 self.assertIn("not bound yet", line)
 
     def test_categories_follow_the_session_configuration(self):
@@ -52,7 +62,10 @@ class ShortcutsDoc(unittest.TestCase):
         for category in expected:
             self.assertIn(category, headings)
         self.assertIn("Contents", headings)
-        self.assertIn("Changing a shortcut", headings)
+        # The "Changing a shortcut" section is rendered only while something is
+        # reserved, so its presence is asserted against the record and not assumed.
+        if any(not is_bound(b) for b in self.data["bindings"]):
+            self.assertIn("Changing a shortcut", headings)
 
     def test_relative_links_resolve(self):
         for target in re.findall(r"\]\(([^)#]+?)(?:#[^)]*)?\)", self.doc):

@@ -1,0 +1,228 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "_note": "A small fixed record the golden-file test renders. It is not shipped and not validated by CI's data step; it exists so that a change to the way iarch-keybinds renders Lua is caught by a diff against tests/fixtures/keybinds.golden.lua rather than silently reaching a generated session file. Every action type the renderer handles appears here once, plus a reserved entry that must render to nothing.",
+  "version": 2,
+  "bindings": [
+    {
+      "id": "app.terminal",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "Return",
+      "action": {
+        "type": "exec",
+        "command": [
+          "kitty"
+        ]
+      },
+      "description": "Terminal",
+      "category": "Apps",
+      "enabled": true,
+      "locked": true
+    },
+    {
+      "id": "app.browser",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "B",
+      "action": {
+        "type": "shell",
+        "script": "~/.config/hypr/Scripts/browser-launcher.sh",
+        "why_shell": "A tilde the shell expands."
+      },
+      "description": "Browser",
+      "category": "Apps",
+      "enabled": true,
+      "locked": false
+    },
+    {
+      "id": "app.notify",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "P",
+      "action": {
+        "type": "exec",
+        "command": [
+          "notify-send",
+          "a path with spaces",
+          "it's here"
+        ]
+      },
+      "description": "Quote \"this\" and a back\\slash",
+      "category": "Apps",
+      "enabled": true,
+      "locked": false
+    },
+    {
+      "id": "win.close",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "Q",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.close"
+      },
+      "description": "Close window",
+      "category": "Windows",
+      "enabled": true,
+      "locked": true
+    },
+    {
+      "id": "win.float",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "V",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.float",
+        "args_lua": "{ action = \"toggle\" }"
+      },
+      "description": "Float",
+      "category": "Windows",
+      "enabled": true,
+      "locked": false
+    },
+    {
+      "id": "win.resize",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "R",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.resize",
+        "args": {
+          "x": 30,
+          "y": 0,
+          "relative": true
+        }
+      },
+      "description": "Resize",
+      "category": "Windows",
+      "enabled": true,
+      "locked": false
+    },
+    {
+      "id": "win.swap",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "H",
+      "action": {
+        "type": "lua",
+        "lua": "function()\n    hl.dispatch(hl.dsp.window.swap({ direction = \"left\" }))\nend",
+        "why_lua": "Two dispatchers behind one query."
+      },
+      "description": "Swap left",
+      "category": "Windows",
+      "enabled": true,
+      "locked": false
+    },
+    {
+      "id": "ws.one",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "1",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "workspace": "1"
+      },
+      "description": "Workspace 1",
+      "category": "Workspaces",
+      "enabled": true,
+      "locked": false
+    },
+    {
+      "id": "ws.empty",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "E",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "workspace": "empty"
+      },
+      "description": "Empty workspace",
+      "category": "Workspaces",
+      "enabled": true,
+      "locked": false
+    },
+    {
+      "id": "media.mute",
+      "mods": [],
+      "key": "XF86AudioMute",
+      "action": {
+        "type": "noctalia",
+        "verb": "volume-mute"
+      },
+      "description": "Mute",
+      "category": "Media",
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true
+      }
+    },
+    {
+      "id": "sys.focus",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "Z",
+      "action": {
+        "type": "iarch",
+        "cli": "iarch-focus",
+        "args": [
+          "on"
+        ]
+      },
+      "description": "Focus mode",
+      "category": "System",
+      "enabled": true,
+      "locked": false
+    },
+    {
+      "id": "mouse.scroll",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "mouse_down",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.focus",
+        "workspace": "r+1"
+      },
+      "description": "Scroll next",
+      "category": "Mouse",
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "mouse": true
+      }
+    },
+    {
+      "id": "planned.overlay",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "H",
+      "action": {
+        "type": "none"
+      },
+      "description": "Reserved overlay",
+      "category": "Planned",
+      "enabled": false,
+      "locked": false,
+      "reserved": true
+    }
+  ]
+}

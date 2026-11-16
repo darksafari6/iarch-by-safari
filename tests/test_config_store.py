@@ -143,6 +143,53 @@ class ConfigStore(unittest.TestCase):
         self.assertEqual(real.read_text(), "x")
 
 
+class TheEnvironmentItIsGiven(unittest.TestCase):
+    """A function that accepts an environment must read the home from it.
+
+    ``config_dir`` and ``state_dir`` take an ``env`` mapping and then fell back to
+    ``Path.home()``, which reads the *real* ``HOME`` out of ``os.environ``. So a caller
+    that passed ``{"HOME": "/somewhere/else"}`` was silently ignored, and a command
+    told to work against another home read and wrote the developer's own
+    ``~/.config/iarch`` while reporting success. ``--config-home`` was half-honoured
+    because of it: the generated Lua went where it was told and the override did not.
+    """
+
+    def setUp(self):
+        import tempfile
+
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: __import__("shutil").rmtree(self.tmp, True))
+        self.home = self.tmp / "other-home"
+        self.home.mkdir()
+
+    def test_the_config_dir_follows_the_home_it_was_given(self):
+        found = configstore.config_dir({"HOME": str(self.home)})
+        self.assertEqual(self.home / ".config" / "iarch", found)
+
+    def test_the_state_dir_follows_the_home_it_was_given(self):
+        found = configstore.state_dir({"HOME": str(self.home)})
+        self.assertEqual(self.home / ".local" / "state" / "iarch", found)
+
+    def test_the_backups_follow_it_too(self):
+        self.assertEqual(self.home / ".local" / "state" / "iarch" / "backups",
+                         configstore.backup_dir({"HOME": str(self.home)}))
+
+    def test_an_explicit_config_dir_still_wins_over_the_home(self):
+        elsewhere = self.tmp / "explicit"
+        found = configstore.config_dir({"HOME": str(self.home),
+                                        "IARCH_CONFIG_DIR": str(elsewhere)})
+        self.assertEqual(elsewhere, found)
+
+    def test_no_environment_at_all_means_this_processs_own_home(self):
+        self.assertEqual(configstore.config_dir(), configstore.config_dir(os.environ))
+        self.assertEqual(configstore.home_dir(), Path.home())
+
+    def test_a_relative_override_is_still_refused(self):
+        with self.assertRaises(configstore.ConfigError):
+            configstore.config_dir({"HOME": str(self.home),
+                                    "IARCH_CONFIG_DIR": "relative/path"})
+
+
 class Renderers(unittest.TestCase):
     def test_header_detection(self):
         from iarch.lib import renderers

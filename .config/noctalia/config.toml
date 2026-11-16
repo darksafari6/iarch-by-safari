@@ -134,7 +134,7 @@ capsule_border_width = 1
 capsule_radius = 16.0
 start = ["launcher", "workspaces"]
 center = ["clock"]
-end = ["media", "tray", "network", "bluetooth", "volume", "brightness", "battery", "notifications", "control-center", "session"]
+end = ["media", "tray", "clipboard", "network", "bluetooth", "volume", "brightness", "battery", "privacy", "notifications", "control-center", "session"]
 
 # Dock geometry and magnification.
 [dock]

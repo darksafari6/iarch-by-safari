@@ -5,6 +5,393 @@ Notable changes to iArch by Safari, newest first. The format follows
 six-part plan in [`docs/ROADMAP.md`](docs/ROADMAP.md) rather than semantic
 versioning, because nothing here is a library anyone links against.
 
+## Unreleased — the A to Z shortcut table, and the layer debt it settled
+
+This is the first slice of Part 7 of the roadmap: the keyboard map laid out as a plan rather than
+grown one bind at a time. Before it, `data/keybinds.default.json` said what was bound and nothing
+said what was not — a letter with no bind was indistinguishable from a letter nobody had thought
+about — two bindings the v1 map had carried into the recovery layer were printed as debt on every
+`iarch-keybinds check` run, and the two modes this project builds were commands with no key at
+all, which is exactly what Part 3 left for this work.
+
+### Added
+
+- **The A to Z table** — `data/design/keybinds.json -> alphabet` allocates all 78 letter cells of
+  the three layers a letter may live in (`Super`, `Super+Shift`, `Super+Ctrl`), and
+  `tools/render_shortcuts.py` renders it as a grid at the end of `docs/SHORTCUTS.md`. A cell is
+  one of four things: a binding, a key the record has claimed and not bound, a refusal with the
+  mechanism behind it, or empty on purpose. Ten of them are refusals, and each names a verb, a
+  file or a command rather than a mood: brightness has no relative verb in noctalia v5.4.1,
+  `theme-mode-toggle` would set a value `render_noctalia.py` generates and the next `iarch-theme`
+  run would quietly revert, Do Not Disturb and caffeine belong to focus mode because it reads
+  both back before it changes them, mute belongs on the media row where the volume steps are,
+  `Super+R` is the compositor's own emergency launcher (`KB-05`), and `Super+Ctrl+R` would be a
+  second spelling of the recovery combo. The schema pins the three layers and their modifiers as
+  constants, so the table cannot grow a fourth layer that the checker refuses — `Super+Alt`
+  cannot be spelled in it at all.
+- **`tests/test_keybinds_alphabet.py`** — seventeen tests that hold the table and the map
+  together in both directions: a cell that says bound has to name a binding enabled at exactly
+  those keys, a cell left empty has to have nothing bound at it, every letter binding in the map
+  has to have a cell so a bind cannot land on a letter nobody allocated, every refusal has to
+  cite something this repository actually has, and the three keys `docs/ROADMAP.md` reserves are
+  read out of the roadmap rather than written down a second time here. The renderer refuses to
+  write a table that disagrees with the map, for the same reason from the other side.
+  `iarch-keybinds check` deliberately does not read the table: an override in
+  `~/.config/iarch/keybinds.json` may use any empty cell it likes, and a validator that policed
+  a person's own map would be policing the wrong file.
+- **`scripts/iarch-focus.sh` and `scripts/iarch-gamemode.sh`** — the two thin launchers that make
+  `iarch-focus` and `iarch-gamemode` real names, which `scripts/iarch-link-cli.sh` now links. A
+  bind that execs a name nothing installs is a key that does nothing, and it fails quietly: the
+  compositor spawns `/bin/sh -c` with one string, so the only report is a "command not found" in
+  a log nobody is reading. `tests/test_cli_launchers.py` gained the check that turns the
+  guarantee from one bind into all of them — every `iarch-*` command the map execs has to be a
+  name the linker puts on `PATH`.
+- **Three binds in the `Super+Ctrl` layer** — `Super+Ctrl+F` for focus mode, `Super+Ctrl+G` for
+  game mode and `Super+Ctrl+L` for night light through the shell's own `nightlight-toggle`. Each
+  carries an `unverified` note in the record and all three are `KB-06`: the launchers, the verbs
+  and the CLIs' own logic are exercised here, and no key has been pressed on a session, because
+  there is no compositor and no display where this was written.
+
+### Changed
+
+- **The `Super+Ctrl+Alt` layer debt is settled.** `move.next` and `move.previous` — moving the
+  focused window to the next and the previous workspace, carried into the recovery layer by the
+  v1 map — moved to `Super+Ctrl+N` and `Super+Ctrl+P`: the layer the checker itself offers when
+  it refuses a plain `Ctrl+letter`, and the layer that already owns workspace navigation on the
+  arrows. `iarch-keybinds check` reports nothing at all on the shipped map now, where it used to
+  print those two on every run; the rule that printed them stays, and its message says where they
+  went. Both rows carry a `relocated_from` field, new in `data/schemas/keybinds.schema.json`,
+  because the person whose hands still reach for the old combination is the one who needs it
+  written down — and an override that rebinds either row keeps working, since the id is the
+  identity and the keys are not.
+- **`docs/SHORTCUTS.md` has two sources and says so.** The banner names the A to Z allocation
+  beside the keybind record, `--check` compares the document against both, and the prose the
+  table renders keeps the record's ASCII dashes but reads as Markdown, because the document it
+  lands in is not the file it was written in.
+- **The documents that said the modes had no key now say what they have.** `README.md` said "no
+  key is bound to it" and `docs/ROADMAP.md` Part 3 said "no key binds either mode"; both were
+  true when they were written, and a true sentence left behind a change is a false one, so each
+  now names the key and the row in `docs/UNVERIFIED.md` that says it has not been observed.
+  `docs/CUSTOMIZING-SHORTCUTS.md` gained the table, the settled layer and the two keys that have
+  never been pressed.
+
+### Known gaps
+
+- **Nothing in the new layer has been watched on a session.** `KB-06` is the row, and it sits
+  inside `INS-07`: whether a session greetd started has `~/.local/bin` on its `PATH` at all is
+  the question every bind that names an `iarch-*` command depends on, and no installer has run
+  here. The game-mode key is the one to be careful with, because its action writes generated
+  files and asks for a reload — a reload that arrives mid-game is a stutter nobody asked for,
+  which is why the CLI carries `--no-reload` and why the row is not locked.
+- **The table allocates letters and nothing else.** Arrows, digits, function keys, media keys and
+  the mouse binds are governed by the layer rules in `iarch_keybinds.py` and by the reserved
+  combinations in the design record, but they have no grid, so a new bind on `Super+Ctrl+up` is
+  still a decision nobody has written down. The map binds no mute key and no brightness keys, and
+  both gaps are recorded in the table's refusals rather than filled with a guessed flag.
+
+## Unreleased — the installer wizard, the bar's widget vocabulary, and the desktop art
+
+This is the first slice of Part 6 of the roadmap: an installer that is safe to run twice and
+honest about what it changed. Before it, `install.sh` was one long sequence of `echo` and
+`pacman -S --noconfirm` calls — it reinstalled packages a machine already had, it put three
+package names that do not exist in Arch's repositories into the transaction whose failure
+aborts everything, and it never installed the icon themes, the wallpapers, the menu entry or
+the command wrappers the session's own configuration expects to find. It also shipped a bar
+whose widget list nobody had checked against the shell that draws it.
+
+### Added
+
+- **`lib/packages.sh`** — the package-state layer every transaction now goes through. It
+  refreshes the sync databases once per run, asks `pacman -Quq` which targets are actually out
+  of date, classifies each name as missing, outdated or current, prints the plan
+  (`core: 2 to install, 1 to update, 84 already current`) on stderr, and hands pacman and yay
+  `--needed` — pacman(8)'s own "do not reinstall the targets that are already up-to-date". A
+  machine that is already current opens no transaction at all. `tests/test_packages.sh` proves
+  the classification, the single `-Sy`, the `--needed` flag and the empty-transaction case
+  against a stubbed `pacman`, `yay` and `sudo`.
+- **The installer wizard** — 24 numbered steps, each printing `[ 7/24] Bluetooth` and then
+  `✓ done`, `– skipped: <reason>` or `✗ failed: <reason>`, a banner naming the step count and
+  the manifest path, notes indented under their step, and a summary
+  (`✓ 19 done   – 4 skipped   ✗ 1 failed`) that makes the script exit non-zero when anything
+  failed. `tests/test_installer_wizard.py` executes the extracted banner, step runners, reboot
+  prompt and main flow under a pty, asserts the step count and the flow agree, and refuses a
+  named package transaction that bypasses `lib/packages.sh`.
+- **Five installer steps that were missing**: *Icons and cursors* (Papirus, Yaru and Humanity
+  icon themes plus the Bibata cursor through `yay`, non-fatal, and skipping a cursor theme that
+  is already installed under either of its two names), *Session commands on PATH* (the five
+  `iarch-*` wrappers), *Session PATH* (`~/.config/environment.d/iarch-cli-path.conf`, because a
+  session a display manager starts reads no shell profile), *Menu entry* (the settings desktop
+  entry, the icon its `Icon=` key names, and `update-desktop-database` when the machine has it)
+  and *Wallpapers* (copies the committed art into the Pictures directory noctalia's picker
+  reads, skipping files that are already identical).
+- **`~/.local/state/iarch/install-manifest.txt`** — every path the installer creates outside
+  the repository, one per line, so a second run knows what it owns and a person can read what
+  an install did.
+- **`bar_widgets` in `data/design/noctalia.json`** — the 34 widget types noctalia v5.4.1's
+  `widget_factory.cpp` registers, read out of `kBuiltinWidgets`, plus six this project refuses
+  to ship with the reason beside each. `render_noctalia.py` now refuses to render a bar array
+  naming a widget the factory does not register — upstream logs `widget factory: unknown
+  widget` and draws nothing while the config still validates, which is a silent failure — or
+  one of the six refused names.
+- **Six 4K desktop wallpapers** in `assets/wallpapers/desktop/`, one per gradient style the
+  generator has, each rendered from a recorded seed by `gen_wallpapers.py --preset <id>` and
+  each darker than `MAX_MEAN_LUMINANCE = 0.14`, measured as the mean of the ITU-R 601-2 luma
+  channel. Dark is a measurement rather than an adjective because a bright desktop stops making
+  glass panels read as panels. No third-party artwork: the generator is the author of all six.
+
+### Changed
+
+- The shipped bar's `end` array gains `clipboard` and `privacy`. `clipboard` is a registered
+  panel with no keybind and no bar entry, so clipboard history could not be opened at all;
+  `privacy` is the session's only indicator that a microphone or camera is in use. `taskbar`
+  stays refused: `dock.show_running` already draws running windows.
+- `scripts/iarch-link-cli.sh` links five commands instead of two — `iarch-keybinds`,
+  `iarch-cheatsheet`, `iarch-settings`, `iarch-control-center` and `iarch-healthcheck` — which
+  was every name the session configuration called at that point. The shortcut section above
+  adds two more, because the keyboard map now execs them.
+- Papirus dark and light are `verified: true` in all six colour presets, with the registry
+  evidence in the entry's note, and `data/schemas/preset.schema.json` now says what `verified`
+  certifies: that `package_arch` was read out of Arch's own registry, and nothing about
+  `package_fedora`, which no environment here can check.
+- `THIRD_PARTY_NOTICES.md` and `data/licenses.json` carry real versions for
+  `papirus-icon-theme` (20260801-1, in `extra`) and `bibata-cursor` (2.0.7-1 in the AUR as
+  `bibata-cursor-theme-bin`, which both Provides and Conflicts `bibata-cursor-theme`).
+
+### Fixed
+
+- `papirus-folders` and `bibata-cursor-theme` were in the fatal core package list although
+  neither is in Arch's repositories — the package search JSON API returns no result for either
+  — so `install.sh` aborted at *Core packages* on any machine that had only the official
+  repositories, before it configured anything. Both moved to a step that warns instead (TP-20).
+- The icon and cursor themes the presets name were never installed by anything, so a fresh
+  install drew the cursor and icon theme the distribution happened to have.
+- **Every `install.sh:NNN` citation in the repository pointed at the wrong line** after the
+  restructure — in three design records (`greeter.json`, `startup.json`, `xdg-defaults.json`),
+  in `SECURITY.md`, in `docs/UNVERIFIED.md`, in two source docstrings, and in the header
+  `gen_startup_lua.py` renders into `.config/hypr/startup.lua`. `docs/FONTS.md` and `README.md`
+  also named `bibata-cursor-theme` as the package Arch installs, which it is not. Each was
+  re-pointed by reading the file rather than by adding an offset to the old number, because an
+  offset assumes nothing else moved — the assumption that caused the drift. A stale line number
+  does not read as a gap; it reads as a lie about code that is correct.
+- That class of drift is now checked rather than repaired: `tests/test_citations.py` scans every
+  citation of both installers in the repository, refuses one that points past the end of its
+  file, and for every citation in a design record or in `SECURITY.md` asserts the cited lines
+  still contain the token the citation is about. A new citation in a record arrives with an
+  expectation or the suite fails.
+
+### Known gaps
+
+- `--dry-run` still does not exist, `pacman -Syu --noconfirm` still upgrades the whole system
+  before the AUR builds, and the `pacman -Rns` removal path is unchanged (INS-01).
+- Nothing reads the install manifest yet (INS-08), and whether a greetd-started session
+  inherits the `environment.d` file that puts `~/.local/bin` on its `PATH` is unobserved
+  (INS-07) — which is what KB-01 and SET-10 still turn on.
+- No bar, wallpaper picker, icon theme or line of wizard output has been seen on a real
+  machine: no compositor, display, package manager or terminal emulator exists in the
+  environment these changes were made in (TP-19, WAL-03, INS-01).
+
+## Unreleased — the keyboard map, and the record that owns it
+
+This is Part 5 of the roadmap: shortcuts as data. Before it, the keyboard map
+lived in a hand-written `.config/hypr/keybind.lua` and every report about it —
+the documentation, the Settings page — was a second copy that could drift. The
+direction is now reversed: one record is the source, and the Lua the compositor
+reads, the documentation and the Settings page are all rendered from it.
+
+### Added
+
+- **`data/keybinds.default.json`, version 2** — 80 entries, 77 of them enabled,
+  each an `{id, mods, key, action, description, category, enabled, locked}` with
+  ids of the form `category.subject`. An override in
+  `~/.config/iarch/keybinds.json` carries only the fields it changes, keyed by
+  id, so a rebind does not have to restate an action. Validated against
+  `data/schemas/keybinds.schema.json`.
+- **`data/design/keybinds.json`** — the keyboard surface of the pinned
+  compositor, read out of Hyprland v0.57.2's own source rather than transcribed:
+  the `hl.bind` signature and its option names, the dispatcher tree with an
+  arity per leaf, the bind-option exclusions, and what the compositor does by
+  itself when a Lua config fails (`recovery.emergency_mode`).
+- **`data/design/noctalia-ipc.json`** — 41 verbs the shell answers on, each with
+  its argument shape and the upstream line it was read from, verified against
+  noctalia v5.4.1. Verbs this project deliberately does not send are recorded
+  with the reason, so "not used" is a decision on the record rather than an
+  omission.
+- **`data/reference/xkb-keysyms-1.7.0.txt`** — 2 577 keysym names from the
+  pinned xkbcommon. Every key a bind may name is checked against it, which is
+  how `BackSpace` (capital S) and `period` (not `.`) stop being runtime
+  surprises.
+- **`iarch/cli/iarch_keybinds.py`** — `generate`, `list`, `check`, `docs`,
+  `reset` and a top-level `--check` for CI. `check` is the gate the render runs
+  behind: it refuses a key that is not a keysym, a modifier the compositor does
+  not know, two binds on one combination, a dispatcher outside the verified
+  tree, a noctalia verb outside the record, an exec with no argv, a duplicate
+  id, and an override that tried to delete a locked binding.
+- **`tools/migrate_keybinds_v2.py`** and **`tools/render_shortcuts.py`** — the
+  one-off v1→v2 migration, and the renderer behind `docs/SHORTCUTS.md`.
+- **The Shortcuts page** (`iarch/settings-app/iarch_settings/pages/shortcuts.py`)
+  now reads the record, so it shows the map that ships rather than a copy of it.
+- **A golden fixture pair** (`tests/fixtures/keybinds.golden.{json,lua}`) pins
+  the exact Lua a fixed record must produce, so a change to how a command is
+  quoted or a description escaped is a diff a person accepts on purpose instead
+  of a silent edit to a file the session reads.
+
+- **The mutating subcommands** — `set`, `add`, `disable`, `enable`, `export` and
+  `import`, beside the `reset` the recovery combo already needed. Each is one
+  change with the same four steps in the same order: validate the map the change
+  would produce, confirm where it discards more than was named, back up both
+  files, then write both through a temporary file renamed into place — restoring
+  both if a write fails halfway, because "validate first" cannot cover a full
+  disk. The exit status is the contract: **0** done, **1** refused, cancelled or
+  failed to write, **2** bad input. A confirmation with no terminal to answer it
+  exits 2 rather than assuming yes, and a batch validates and lands as one change
+  so there is no half-disabled map. Input is canonicalised to the pinned spelling
+  rather than accepted as typed, so one key cannot end up written two ways.
+- **`iarch/cli/iarch_cheatsheet.py`** — the overlay behind `Super+H`, which the
+  record had bound to a command that did not exist. It merges the record with your
+  override through the same function that renders the compositor's Lua, so it
+  cannot show a map the session does not have; groups rows by the record's own
+  categories, with reserved and disabled keys held in their own group at the end
+  rather than dropped; filters on every term at once, where a single character has
+  to be a *key* rather than a letter inside a description, because `super t` has to
+  answer with one row and not most of the map; and paints from the shipped
+  `midnight-glass` preset, refusing a colour role the preset does not define rather
+  than inventing a hex value, so it is the same dark glass and the same neon blue as
+  the session it floats over. Fired from a bind it has no terminal, so it decides
+  where to draw and says why: the terminal it already has, else the first installed
+  of the six the compositor's own emergency mode probes for, in its order, else
+  `notify-send`, else stderr and a non-zero exit. In a terminal it waits — `q`
+  closes, anything else is read as a new filter and redrawn. `--json` gives the same
+  overlay as data. 48 tests cover the model, the grouping, the filter, the palette,
+  both renderings and every fallback branch, injected rather than hoped for.
+- **`scripts/iarch-keybinds.sh` and `scripts/iarch-link-cli.sh`** — the name the
+  recovery bind, the record and the documentation had all been using already. The
+  first is a thin launcher that execs the CLI so the exit status passes through
+  untouched; the second writes `~/.local/bin/iarch-keybinds` as a generated
+  wrapper that names its checkout absolutely. It is idempotent, refuses to touch
+  a file it did not write unless `--force` (and backs that file up when it does),
+  refuses to run as root, creates the directory, says when it is not on `PATH`,
+  and fails loudly with the command to re-run when the checkout is gone.
+  `tests/test_cli_launchers.py` runs both for real, then runs `iarch-keybinds
+  check` *by name* through the wrapper, and asserts that every name
+  `.config/hypr/keybind.lua` probes for with `command -v` is a name the linker
+  provides — so the bind and the linker cannot drift apart.
+
+### Changed
+
+- **The Lua is generated, not written.** `.config/hypr/generated/keybinds.lua`
+  holds 76 binds and opens with a do-not-edit header naming the command that
+  regenerates it. `.config/hypr/keybind.lua` no longer binds anything except the
+  recovery combo, and `.config/hypr/hyprland.lua` requires the generated file
+  *before* it.
+- **`tools/extract_keybinds.py` is gone.** It read the record out of the Lua,
+  which is the direction this part reverses; leaving it in place would leave two
+  tools claiming to be the source.
+- **Super+Shift+E opens the session menu** rather than ending the session.
+  `hl.dsp.exit` takes no arguments and runs the moment the key goes down, and
+  noctalia's `session logout` does the same, so neither goes on a key: the bind
+  is `panel-toggle session`, and `session` is a builtin panel id in noctalia
+  v5.4.1 (`src/launcher/panel_catalog.cpp`), which means the shell draws the
+  confirmation. `lock` and `suspend` stay bindable because both are undoable.
+- **The modifier layers are enforced, not documented and hoped for.** `Super` is
+  the primary layer, `Super+Shift` the secondary one, the `Ctrl+Alt` family is
+  recovery and system, and `Super+Alt` is kept empty on purpose so a later bind
+  has somewhere to go without taking a key from anything. A plain `Ctrl+letter`
+  is still refused — and its remedy no longer suggests `Ctrl+Alt`, which the
+  layer rule reserves, because a checker that recommends its own next refusal
+  sends people in a circle.
+- **Seven bindings are locked** by role: close window, lock, exit, open
+  terminal, open settings, cheat sheet, power menu. Locked is keyed by id, not
+  by key, so a later re-layout of the map cannot quietly drop one. A locked
+  binding can be rebound but not deleted, and an override that tries is refused.
+- **`Ctrl+Alt+BackSpace` is reserved and never bound.** It is the X11
+  kill-server combination; holding the key in the record disabled is what stops
+  a future edit taking it.
+- **The two mouse-wheel binds are verified, and were verified by being wrong.**
+  `Super+mouse_up` and `Super+mouse_down` were carried from the v1 map as an open
+  question because neither is a keysym nor a `mouse:N` code. Source settled it:
+  the compositor accepts them as *events* (`src/keybinds/Key.cpp:8-10`) and
+  dispatches a wheel delta under exactly that name
+  (`src/keybinds/Manager.cpp:312-335`), so they bind without ever reaching the
+  resolver. The rejection row in `data/design/keybinds.json` was deleted rather
+  than annotated and the mechanism recorded as a fifth key form; `check` reports
+  two warnings instead of four, and the two limits that came with the finding are
+  recorded as well — the names are compared exactly, and only a scroll wheel
+  produces them, so a touchpad scroll never fires these binds.
+- **`docs/UNVERIFIED.md` now carries a verification log for the keyboard map**,
+  listing every upstream file and line range the record cites, at which ref each
+  was read, and stating plainly that nothing in the pass was observed on a running
+  compositor — there is no Hyprland, no `hyprctl`, no display and no package tool
+  here. KB-04 is closed; KB-01, KB-02, KB-03 and KB-05 remain, because each needs
+  an observation rather than a reading, and TP-10 still owns the live half of all
+  of it.
+
+### Fixed
+
+- **A deployed session was missing a file it requires.**
+  `hypr/generated/keybinds.lua` was absent from both the path list in
+  `lib/stage-v5-config.sh` and `EXPECTED_PAYLOAD` in `tests/test_payload_map.py`
+  — two literal lists that agreed with each other while the installed session
+  failed to load a module `hyprland.lua` requires. Added to both, and the
+  payload test now derives one side from the load graph so the two cannot agree
+  in the same wrong way again.
+- **`user_override_path()` asked for `"keybinds.json"`** from a helper that
+  appends `.json`, so overrides were written to `keybinds.json.json` and never
+  read back. It now passes the bare stem.
+- **The conflict check compared key strings exactly**, so `validate()` reported a
+  clean map for `SUPER + t` beside `SUPER + T` — two handlers on one key, and
+  which runs depends on registration order. The compositor resolves key names with
+  `XKB_KEYSYM_CASE_INSENSITIVE` (`src/keybinds/Key.cpp:40`), a fact this
+  repository's own record already stated at `key_forms.forms[3]` and the checker
+  contradicted. Comparison is case-folded now, and the message says why a spelling
+  difference is not a second key. A dead `if key in seen: pass` sitting above it
+  went with the fix.
+- **`validate()` claimed a check it did not have.** Two docstrings said it refused
+  "a locked binding an override tried to delete"; no such branch existed. Locked
+  and disabled at once is an error now, added after confirming that no shipped
+  entry would newly fail it.
+- **Bad input was accepted in three places.** An id with no separator (`custom`,
+  where ids are `category.subject`); a keysym in a case the pinned list does not
+  contain (`Backspace`, which the compositor resolves but the documentation would
+  then show two ways); and a dispatcher leaf with nothing checking it against the
+  verified tree. Each is now refused or canonicalised, with the pinned spelling or
+  a near-miss suggestion in the message — and each refusal is drift-checked by
+  reintroducing the defect and proving a test notices.
+
+### Known gaps
+
+- **The recovery combo is bound, and what it calls now exists — but the bind has
+  not fired.** `Ctrl+Alt+R` is hand-written in `.config/hypr/keybind.lua`
+  deliberately, because a bind whose job is to repair a broken keyboard map
+  cannot live in the file that might be broken, and the compositor's safe-`require`
+  (`ConfigManager.cpp:522-527`, `:328-360`) catches a generated file that loads
+  and then errors, so the static one still registers. `scripts/iarch-link-cli.sh`
+  now puts `iarch-keybinds` on `PATH` and that is tested end to end, so the
+  remaining gap is installation rather than code: no installer has been run on a
+  machine, and a session started by a display manager does not read a shell
+  profile, so whether its `PATH` reaches `~/.local/bin` is unobserved. Until it
+  does the bind opens a terminal and says on stderr which command to run. The
+  record carries this as an `unverified` note rather than implying a working key,
+  and the installer task owns the session `PATH`.
+- **`UI-02`, narrowed: the overlay draws in a terminal, not in glass.**
+  `Super+H` now runs something real — see Added — but the layer-shell glass
+  surface with a search box you type into is still Part 7. The vendored overlay
+  plugin cannot be ported (v4 QML against noctalia v5.4.1, which needs
+  `plugin.toml` plus a `.luau` entry point), and the settings application cannot
+  host it either: a `PagePlan` row deliberately cannot carry behaviour, so a row
+  that filtered as you typed is not expressible in it. Nothing was observed on a
+  session, because there is no compositor here.
+- **Two bindings in the recovery layer are debt.** `Super+Ctrl+Alt+left` and
+  `+right` move a window across workspaces, which is not a system action; every
+  sensible destination key is already taken, so `check` reports them as warnings
+  on every run instead of an invisible exception, and they move with the next
+  laying-out of the default map.
+- **The Shortcuts page still will not edit the map.** The CLI can, and the page
+  reads the same record, but there is no recorder, no action picker and no switch,
+  so the collision check is not yet in front of the person making the change.
+- **No live reload-and-rollback against a running compositor.** The validation
+  before a write and the rollback after a failed one are real and tested; asking
+  a running compositor to accept a map, and undoing it if the session does not
+  survive, needs a compositor, and this machine does not have one.
 ## Unreleased — the settings application
 
 This is Part 4 of the roadmap: the glass settings window, the About page's

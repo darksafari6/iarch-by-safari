@@ -336,7 +336,10 @@ class Criterion4WhatASurfaceCannotDo(unittest.TestCase):
             "docs/WALLPAPERS.md": "not repository state",
             "docs/glass-experience.md": "a command in this repository rather than an installed binary",
             "SECURITY.md": "silent by construction",
-            "README.md": "no key is bound",
+            # The limit moved rather than went away: Part 3's honest sentence was that no
+            # key was bound to either mode, and the A to Z table bound both. What a reader
+            # would still get wrong is that a bound key is a watched one.
+            "README.md": "no key has been watched on a session",
             "iarch/cli/README.md": "unverified",
         }
         for relative, needle in sorted(claims.items()):
