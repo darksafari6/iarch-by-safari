@@ -740,7 +740,7 @@
     "not_changed": [
       "The greeter account name stays hardcoded as 'greeter' rather than resolved through the apply helper's --print-greeter-user. Upstream's own resolution falls back to the same name, the installers create the account when it is missing, and calling a root-owned helper to ask for a name during install is a larger change than the drift it would remove.",
       "No session is pinned with --session, so the greeter keeps its picker and remembers the last choice in sync.toml.",
-      "The display manager switch stays as it is: install.sh:1773-1777 disables sddm and enables greetd unconditionally. That is the riskiest operation in the installer and it belongs to the installer-safety work, not to this record."
+      "The display manager switch stays as it is: install.sh:1801-1807 disables sddm and enables greetd unconditionally. That is the riskiest operation in the installer and it belongs to the installer-safety work, not to this record."
     ]
   }
 }
