@@ -1,5 +1,54 @@
 # Changelog
 
+## Unreleased — six session theme packs, one saved choice and one renderer
+
+The six visual themes now have a typed pack contract and a single application
+path. The choice remains in the user's iArch config directory; the generators
+write the desktop files from that choice instead of storing the selected ID in
+generated output.
+
+### Added
+
+- **`data/themes/schema.json` and six packs** — `greenhouse`, `amber-bloom`,
+  `neon-rain`, `forest-night`, `violet-glass` and `crimson-silk`. Each pack
+  carries its Hyprland decoration and motion, Noctalia palette/layout hints,
+  GTK/Kvantum accent, Kitty ANSI colors, Starship palette, wallpaper/sound
+  asset paths and overview hints.
+- **`iarch-theme list|apply <id>|current`** — the existing CLI now routes the
+  six session-pack IDs through `data/themes/<id>.json`. The selected value is
+  `~/.config/iarch/theme.json`; `forest-night` is only the repository default
+  when that file does not exist.
+- **`tools/render_theme.py` and `iarch/cli/session_theme.py`** — atomic,
+  backup-aware projections for Hyprland, the active Noctalia palette/config,
+  Kitty, Starship, GTK accent blocks, Kvantum colors and the active-notification
+  symlink. The renderer preserves the shipped glass CSS and the rest of each
+  existing config.
+- **`docs/THEMES.md` and `tests/test_session_themes.py`** — schema, command,
+  generated-target and limitation documentation, plus pack/render contract tests.
+
+### Changed
+
+- Hyprland loads the selected generated theme after its existing glass fallback;
+  the former hardcoded decoration values were removed from
+  `.config/hypr/themes/theme.lua`.
+- Kitty includes `theme.conf` last, allowing the selected pack to override the
+  base terminal colors.
+- Game mode now re-renders the selected session pack after its active state
+  changes, so the mode's reduced-motion/blur overlay and the user's saved theme
+  can coexist. Focus-mode dim/DND state is retained across theme reloads.
+
+### Limitations
+
+- The pack paths for original wallpapers and OGG notification sounds are
+  defined, but those binary assets are not included in this change. The
+  renderer warns and does not pretend an absent asset was applied.
+- The overview style values are stored and validated, but the pinned shell and
+  compositor expose no verified bento/tiles/pills styling consumer. No
+  replacement overview or window manager was introduced.
+- No live Hyprland/Noctalia/Kitty session was available in the editing
+  environment; runtime reload behavior remains for machine verification.
+
+
 Notable changes to iArch by Safari, newest first. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the
 six-part plan in [`docs/ROADMAP.md`](docs/ROADMAP.md) rather than semantic
