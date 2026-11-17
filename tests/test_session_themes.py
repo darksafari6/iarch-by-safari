@@ -69,10 +69,11 @@ class ThemePacks(unittest.TestCase):
                 "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             }
             out, err = io.StringIO(), io.StringIO()
-            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-                code = session_theme.main([
-                    "apply", "forest-night", "--config-home", str(config_home), "--no-reload"
-                ])
+            with patch.dict(os.environ, env, clear=True):
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    code = session_theme.main([
+                        "apply", "forest-night", "--config-home", str(config_home), "--no-reload"
+                    ])
             self.assertEqual(0, code, err.getvalue())
             self.assertEqual({"id": "forest-night"},
                              json.loads((config_home / "iarch" / "theme.json").read_text()))
