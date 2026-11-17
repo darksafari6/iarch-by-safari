@@ -6,7 +6,7 @@ package.path = table.concat({
 }, ";")
 
 -- Clear cached modules so they re-execute on reload (ensures binds/rules re-register)
-for _, mod in ipairs({"monitors", "inputs", "generated.keybinds", "keybind", "windowrules", "animations", "generated.animations", "themes.theme", "generated.glass", "generated.theme"}) do
+for _, mod in ipairs({"monitors", "inputs", "generated.keybinds", "keybind", "windowrules", "animations", "generated.animations", "themes.theme", "generated.glass"}) do
     package.loaded[mod] = nil
 end
 
@@ -21,13 +21,17 @@ require("keybind")
 require("windowrules")
 require("animations")
 require("themes.theme")
--- The session theme pack is generated from ~/.config/iarch/theme.json and
--- intentionally loads after the repository-wide glass fallback.
-local theme_ok, theme_err = pcall(function()
-    require("generated.theme")
-end)
-if not theme_ok then
-    print("[iarch] generated/theme.lua is missing or broken; keeping the glass fallback: " .. tostring(theme_err))
+-- The session theme pack is generated from ~/.config/iarch/theme.json.
+-- It is a runtime file under the user's config tree, not a tracked Lua module.
+-- loadfile keeps it optional without adding a dangling require() to the load graph.
+local theme_chunk, theme_load_error = loadfile(config_dir .. "/generated/theme.lua")
+if theme_chunk then
+    local theme_ok, theme_err = pcall(theme_chunk)
+    if not theme_ok then
+        print("[iarch] generated theme failed; keeping the glass fallback: " .. tostring(theme_err))
+    end
+elseif theme_load_error then
+    print("[iarch] generated theme is not present; keeping the glass fallback")
 end
 
 hl.config({
