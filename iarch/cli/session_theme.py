@@ -361,7 +361,7 @@ def render_noctalia_config(existing: str, pack: Dict[str, Any],
         ("notification", "position", layout["notification_position"]),
         ("notification", "width", layout["notification_width"]),
         ("notification", "background_opacity", pack["noctalia"]["surface_alpha"]),
-        ("audio", "enable_notification_sounds", True),
+        ("audio", "enable_notification_sounds", (ROOT / sound["notify"]).is_file()),
         ("audio", "sound_volume", sound["volume"]),
         ("audio", "sound_theme", "iarch-session"),
     ]
