@@ -180,7 +180,7 @@ class ThemeRenderers(unittest.TestCase):
         self.assertIn('custom_palette = "iarch-active"', updated)
         self.assertIn('position = "top"', updated)
         self.assertIn('sidebar = "compact"', updated)
-        self.assertIn('enable_notification_sounds = true', updated)
+        self.assertIn('enable_notification_sounds = false', updated)
         self.assertIn('sound_volume = 0.32', updated)
         self.assertIn('sound_theme = "iarch-session"', updated)
         self.assertIn('background_opacity = 0.82', updated)
@@ -195,6 +195,18 @@ class ThemeRenderers(unittest.TestCase):
         config = (ROOT / ".config/noctalia/config.toml").read_text(encoding="utf-8")
         updated = session_theme.render_noctalia_config(config, violet)
         self.assertEqual(3, updated.count("background_opacity = 0.72"))
+
+    def test_noctalia_enables_custom_notification_audio_only_when_pack_asset_exists(self):
+        source = (ROOT / ".config/noctalia/config.toml").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_root = Path(tmp)
+            sound = theme_root / "assets/sounds/forest-night/notify.ogg"
+            sound.parent.mkdir(parents=True)
+            sound.write_bytes(b"test-ogg-placeholder")
+            with patch.object(session_theme, "ROOT", theme_root):
+                updated = session_theme.render_noctalia_config(source, self.pack)
+        self.assertIn('enable_notification_sounds = true', updated)
+        self.assertIn('sound_theme = "iarch-session"', updated)
 
     def test_kitty_and_starship_render_complete_palette(self):
         kitty = session_theme.render_kitty_theme(self.pack)
