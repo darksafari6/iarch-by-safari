@@ -74,6 +74,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from iarch.lib import configstore  # noqa: E402  (repo-root import by design)
+from iarch.cli import session_theme  # noqa: E402  (session pack renderer)
 from iarch.cli import (  # noqa: E402  (repo-root import by design)
     contrast_check,
     gen_animations_lua,
@@ -656,7 +657,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    args = build_parser().parse_args(argv)
+    values = list(sys.argv[1:] if argv is None else argv)
+    # The six closed session-pack ids take precedence over the older glass
+    # preset catalogue. The older subcommands remain available for the
+    # intensity/settings machinery that still imports cmd_apply directly.
+    if values and (
+        values[0] in ("list", "current")
+        or (values[0] == "apply" and len(values) > 1 and values[1] in session_theme.theme_ids())
+    ):
+        return session_theme.main(values)
+    args = build_parser().parse_args(values)
     env = os.environ
     try:
         return args.func(args, env)
