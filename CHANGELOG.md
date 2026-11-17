@@ -28,6 +28,7 @@ generated output.
 
 ### Changed
 
+- Noctalia custom palettes remain in the pinned shell's six-digit color format. Per-theme surface alpha is rendered through the shell's supported bar, dock and notification opacity settings (Violet Glass uses 0.72) rather than an unsupported alpha suffix in a palette color.
 - Hyprland loads the selected generated theme after its existing glass fallback;
   the former hardcoded decoration values were removed from
   `.config/hypr/themes/theme.lua`.
