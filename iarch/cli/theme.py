@@ -628,10 +628,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     default_home = str(Path.home() / ".config")
 
-    apply_p = sub.add_parser("apply", help="render and apply a preset across every surface")
+    sub.add_parser("list", help="list the six session theme packs")
+
+    apply_p = sub.add_parser(
+        "apply",
+        help="apply a six-theme session pack (legacy glass presets remain available)",
+    )
     apply_p.add_argument("preset", nargs="?",
-                         help=f"colour preset id (default: settings theme.colour_preset, "
-                              f"else {DEFAULT_PRESET})")
+                         help="session theme id (greenhouse, amber-bloom, neon-rain, "
+                              "forest-night, violet-glass, crimson-silk) or legacy glass preset id")
     apply_p.add_argument("--intensity",
                          help="crystal, frosted, soft or performance (default: settings "
                               "theme.intensity, else the preset's own default_intensity)")
@@ -648,7 +653,7 @@ def build_parser() -> argparse.ArgumentParser:
                               "reload nothing")
     apply_p.set_defaults(func=cmd_apply)
 
-    current_p = sub.add_parser("current", help="show the theme that apply would use")
+    current_p = sub.add_parser("current", help="show the selected session theme")
     current_p.add_argument("--config-home", default=default_home,
                            help=f"live config root (default {default_home})")
     current_p.set_defaults(func=cmd_current)
@@ -663,7 +668,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # intensity/settings machinery that still imports cmd_apply directly.
     if values and (
         (values[0] == "list" and len(values) == 1)
-        or (values[0] == "current" and len(values) == 1)
+        or values[0] == "current"
         or (values[0] == "apply" and len(values) > 1
             and values[1] in session_theme.theme_ids())
     ):
