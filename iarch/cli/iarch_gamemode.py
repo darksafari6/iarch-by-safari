@@ -351,6 +351,19 @@ def _reload_shell(report: Dict[str, Any], no_reload: bool) -> None:
     if reply.ok:
         report["ran"].append(printable)
         modes.say(f"  reload: ran `{printable}`")
+        if modes.is_active(os.environ, "focus"):
+            dnd_command = ("noctalia", "msg", "notification-dnd-set", "on")
+            dnd_reply = modes.run(dnd_command)
+            dnd_label = " ".join(dnd_command)
+            if dnd_reply is None:
+                report["skipped"].append(f"{dnd_label} (no Noctalia process on PATH)")
+                modes.warn("focus mode is recorded on, but Do Not Disturb could not be restored after the shell reload")
+            elif dnd_reply.ok:
+                report["ran"].append(dnd_label)
+                modes.say("  focus:       Do Not Disturb restored after shell reload")
+            else:
+                report["skipped"].append(f"{dnd_label} ({dnd_reply.text or f'exit {dnd_reply.returncode}'})")
+                modes.warn("focus mode is recorded on, but Noctalia refused to restore Do Not Disturb after the shell reload")
     else:
         report["skipped"].append(f"{printable} ({reply.text or f'exit {reply.returncode}'})")
         modes.warn(f"reload: `{printable}` did not answer ok: "
