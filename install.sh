@@ -1638,6 +1638,8 @@ render_session_theme() {
         ".config/hypr/generated/theme.lua" \
         ".config/noctalia/palettes/iarch-active.json" \
         ".config/kitty/theme.conf" \
+        ".config/iarch/sounds/active-notify.ogg" \
+        ".config/iarch/sounds/active-urgent.ogg" \
         ".local/share/sounds/iarch-session/index.theme" \
         ".local/share/sounds/iarch-session/stereo/message-new-instant.ogg"; do
         path="$ACTUAL_USER_HOME/$relative"
