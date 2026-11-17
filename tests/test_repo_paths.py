@@ -63,11 +63,20 @@ class InstallerPaths(unittest.TestCase):
             references = self.references(script)
             all_references |= references
             for token in sorted(references):
-                # A runtime destination the installer creates on the target
-                # machine is not a repository file; those are always absolute or
-                # variable-prefixed and the regex above already excluded them.
+                # These paths are created by tools/render_theme.py after the
+                # payload is staged; they are intentionally not committed as
+                # generated user config files or optional sound symlinks.
+                generated_theme_outputs = {
+                    ".config/hypr/generated/theme.lua",
+                    ".config/iarch/sounds/active-notify.ogg",
+                    ".config/iarch/sounds/active-urgent.ogg",
+                    ".config/kitty/theme.conf",
+                }
                 with self.subTest(script=name, path=token):
-                    if "*" in token:
+                    if token in generated_theme_outputs:
+                        self.assertTrue((ROOT / "tools" / "render_theme.py").is_file())
+                        self.assertIn("render_session_theme", script.read_text(encoding="utf-8"))
+                    elif "*" in token:
                         matches = list(ROOT.glob(token))
                         self.assertTrue(matches, f"{name} globs something absent: {token}")
                     else:
