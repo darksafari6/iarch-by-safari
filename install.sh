@@ -1617,6 +1617,23 @@ install_icon_themes() {
     fi
 }
 
+render_session_theme() {
+    local renderer="$REPO_DIR/tools/render_theme.py"
+    if [ ! -f "$renderer" ]; then
+        step_fail "tools/render_theme.py is missing from this checkout"
+        return 1
+    fi
+    if ! sudo -u "$ACTUAL_USER" env \
+            HOME="$ACTUAL_USER_HOME" \
+            XDG_CONFIG_HOME="$ACTUAL_USER_HOME/.config" \
+            IARCH_CONFIG_DIR="$ACTUAL_USER_HOME/.config/iarch" \
+            python3 "$renderer"; then
+        step_fail "the saved session theme could not be rendered"
+        return 1
+    fi
+    step_note "rendered the saved theme without changing ~/.config/iarch/theme.json"
+}
+
 install_repo_commands() {
     # The session's keybinds call iarch-keybinds and iarch-cheatsheet by bare
     # name, the menu entry below launches iarch-settings the same way, and none
@@ -1875,6 +1892,7 @@ run_step   "Display brightness"          setup_ddcutil
 run_step   "File manager"                configure_file_manager
 fatal_step "Configuration payload"       deploy_configs
 run_step   "Backup configuration"        copy_backup_configs
+run_step   "Saved session theme"          render_session_theme
 run_step   "Nvidia startup flags"        update_hypr_startup_config
 run_step   "File permissions"            set_permissions
 run_step   "Dolby PipeWire profile"      apply_dolby_pipewire_profile
