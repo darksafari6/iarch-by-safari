@@ -71,6 +71,7 @@ class InstallerPaths(unittest.TestCase):
                     ".config/iarch/sounds/active-notify.ogg",
                     ".config/iarch/sounds/active-urgent.ogg",
                     ".config/kitty/theme.conf",
+                    ".config/noctalia/palettes/iarch-active.json",
                 }
                 with self.subTest(script=name, path=token):
                     if token in generated_theme_outputs:
