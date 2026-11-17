@@ -24,6 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from iarch.lib import configstore, modes  # noqa: E402
+from iarch.cli import gen_animations_lua  # noqa: E402
 
 THEMES_DIR = ROOT / "data" / "themes"
 INDEX_PATH = THEMES_DIR / "ids.json"
@@ -139,50 +140,71 @@ def _n(value: Any) -> str:
     return str(round(float(value), 4))
 
 
-def _animation(leaf: str, enabled: bool, ms: int, curve: str, style: Optional[str] = None) -> str:
-    if not enabled or ms <= 0:
-        return f'hl.animation({{ leaf = "{leaf}", enabled = false }})'
-    fields = [f'leaf = "{leaf}"', "enabled = true", f"speed = {_n(ms / 100)}", f'bezier = "{curve}"']
-    if style:
-        fields.append(f'style = "{style}"')
-    return "hl.animation({ " + ", ".join(fields) + " })"
+def _theme_animation_preset(pack: Dict[str, Any], game_mode: bool) -> Dict[str, Any]:
+    """Translate the theme's motion section into the validated Hyprland event model."""
+    motion = pack["motion"]
+    curve = motion["bezier"]
+    local_curve_name = curve["name"]
+    controls = curve["controls"]
+    events: Dict[str, Dict[str, Any]] = {}
 
+    def add(leaf: str, enabled: bool, duration_ms: Optional[int] = None,
+            style: Optional[str] = None) -> None:
+        event: Dict[str, Any] = {"enabled": bool(enabled)}
+        if enabled:
+            event["curve"] = local_curve_name
+            event["duration_ms"] = int(duration_ms or 0)
+            if style is not None:
+                event["style"] = style
+        events[leaf] = event
 
-def _mode_active(env: Mapping[str, str], name: str) -> bool:
-    return bool(modes.mode_state(dict(env), name).get("active"))
+    windows = motion["windows"]
+    add("windows", True, windows["open_ms"], windows["style"])
+    add("windowsIn", True, windows["open_ms"], windows["style"])
+    add("windowsOut", True, windows["close_ms"], windows["style"])
+    add("windowsMove", True, windows["move_ms"], windows["style"])
 
+    workspace = motion["workspace"]
+    workspace_enabled = workspace["direction"] != "none"
+    workspace_style = {
+        "horizontal": "slide",
+        "vertical": "slidevert",
+        "none": "fade",
+    }[workspace["direction"]]
+    for leaf in ("workspaces", "workspacesIn", "workspacesOut",
+                 "specialWorkspace", "specialWorkspaceIn", "specialWorkspaceOut"):
+        add(leaf, workspace_enabled, workspace["duration_ms"], workspace_style)
 
-def _focus_values() -> Tuple[bool, float]:
-    tokens = _read_json(ROOT / "data" / "design" / "tokens.json")
-    focus = tokens.get("modes", {}).get("focus", {})
-    return bool(focus.get("dim_inactive", True)), float(focus.get("dim_strength", 0.5))
+    fade = motion["fade"]
+    for leaf in ("fade", "fadeIn", "fadeOut", "fadeSwitch", "fadeShadow",
+                 "fadeDim", "fadeLayers", "fadeLayersIn", "fadeLayersOut"):
+        add(leaf, fade["enabled"], fade["duration_ms"])
 
+    border = motion["border"]
+    add("border", border["enabled"], border["duration_ms"])
 
-def _sync_focus_restore_target(pack: Dict[str, Any], env: Mapping[str, str]) -> None:
-    """When a theme changes during focus mode, make focus-off restore this theme."""
-    settings = configstore.load("settings", ROOT, dict(env))
-    modes_block = settings.setdefault("modes", {})
-    focus = modes_block.get("focus")
-    if not isinstance(focus, dict) or not focus.get("active"):
-        return
-    previous = focus.get("previous")
-    if not isinstance(previous, dict):
-        previous = {}
-    leaves = previous.get("leaves")
-    if not isinstance(leaves, dict):
-        leaves = {}
-    leaves["decoration:dim_inactive"] = bool(pack["hypr"]["dim_strength"] > 0)
-    leaves["decoration:dim_strength"] = float(pack["hypr"]["dim_strength"])
-    previous["leaves"] = leaves
-    focus["previous"] = previous
-    modes_block["focus"] = focus
-    settings["modes"] = modes_block
-    configstore.save("settings", settings, dict(env))
+    layer = motion["layer"]
+    add("layers", True, layer["bar_ms"], layer["style"])
+    add("layersIn", True, layer["bar_ms"], layer["style"])
+    add("layersOut", True, layer["osd_ms"], layer["style"])
+
+    return {
+        "name": pack["meta"]["id"],
+        "label": pack["meta"]["name"],
+        "master": not game_mode,
+        "curves": {
+            local_curve_name: {
+                "type": "bezier",
+                "points": [[controls[0], controls[1]], [controls[2], controls[3]]],
+            }
+        },
+        "events": events,
+    }
 
 
 def render_hypr_theme(pack: Dict[str, Any], game_mode: bool = False,
                       focus_mode: bool = False) -> str:
-    meta, hypr, motion = pack["meta"], pack["hypr"], pack["motion"]
+    meta, hypr = pack["meta"], pack["hypr"]
     blur = hypr["blur"]
     focus_dim, focus_strength = _focus_values()
     dim_inactive = focus_dim if focus_mode else (hypr["dim_strength"] > 0 and not game_mode)
@@ -190,12 +212,8 @@ def render_hypr_theme(pack: Dict[str, Any], game_mode: bool = False,
     inactive_opacity = 1.0 if game_mode else hypr["inactive_opacity"]
     blur_enabled = bool(blur["enabled"]) and not game_mode
     shadow_enabled = hypr["shadow_range"] > 0 and not game_mode
-    curve = motion["bezier"]["name"]
-    controls = motion["bezier"]["controls"]
-    x1, y1, x2, y2 = controls
     lines = [
         "-- Active session theme pack; generated, never hand-edited.",
-        "-- Generated from data/themes/<id>.json. Do not edit this file.",
         "hl.config({",
         "    general = {",
         f"        gaps_in = {hypr['gaps_in']},",
@@ -237,32 +255,16 @@ def render_hypr_theme(pack: Dict[str, Any], game_mode: bool = False,
         "    },",
         "})",
         "",
-        f'hl.curve("{curve}", {{ type = "bezier", points = {{{{ {_n(x1)}, {_n(y1)} }}, {{ {_n(x2)}, {_n(y2)} }}}} }})',
     ]
-    windows = motion["windows"]
-    workspace = motion["workspace"]
-    fade = motion["fade"]
-    border = motion["border"]
-    layer = motion["layer"]
-    if game_mode:
-        lines.append("hl.config({ animations = { enabled = false } })")
-    lines.extend([
-        _animation("windows", not game_mode, max(windows["open_ms"], windows["close_ms"], windows["move_ms"]), curve, windows["style"]),
-        _animation("windowsIn", not game_mode, windows["open_ms"], curve, windows["style"]),
-        _animation("windowsOut", not game_mode, windows["close_ms"], curve, windows["style"]),
-        _animation("windowsMove", not game_mode, windows["move_ms"], curve, windows["style"]),
-    ])
-    workspace_style = {"horizontal": "slide", "vertical": "slidevert", "none": "fade"}[workspace["direction"]]
-    lines.append(_animation("workspaces", not game_mode and workspace["direction"] != "none", workspace["duration_ms"], curve, workspace_style))
-    lines.append(_animation("specialWorkspace", not game_mode and workspace["direction"] != "none", workspace["duration_ms"], curve, workspace_style))
-    for leaf in ("fade", "fadeIn", "fadeOut", "fadeSwitch", "fadeShadow", "fadeDim", "fadeLayers"):
-        lines.append(_animation(leaf, fade["enabled"] and not game_mode, fade["duration_ms"], curve))
-    lines.append(_animation("border", border["enabled"] and not game_mode, border["duration_ms"], curve))
-    lines.append(_animation("layers", not game_mode, layer["bar_ms"], curve, layer["style"]))
-    lines.append(_animation("layersIn", not game_mode, layer["bar_ms"], curve, layer["style"]))
-    lines.append(_animation("layersOut", not game_mode, layer["osd_ms"], curve, layer["style"]))
-    # The overview token is deliberately data-only until the shipped shell has
-    # a real overview styling API. It does not spawn a second window manager.
+    tokens = gen_animations_lua.load_tokens()
+    surface = gen_animations_lua.load_surface()
+    animation_preset = _theme_animation_preset(pack, game_mode)
+    animation_body, warnings = gen_animations_lua.render_preset(
+        tokens, surface, animation_preset, multiplier=1.0, reduce_motion=False
+    )
+    if warnings:
+        lines.extend(f"-- animation: {warning}" for warning in warnings)
+    lines.append(animation_body.rstrip())
     lines.extend([
         "",
         f"-- Overview token: {pack['overview']['style']}; rounding={pack['overview']['rounding']};",
