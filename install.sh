@@ -1631,6 +1631,20 @@ render_session_theme() {
         step_fail "the saved session theme could not be rendered"
         return 1
     fi
+    # The renderer may create these paths on the first install. Record only
+    # paths that now exist; record_installed_file de-duplicates the manifest.
+    local relative path
+    for relative in \
+        ".config/hypr/generated/theme.lua" \
+        ".config/noctalia/palettes/iarch-active.json" \
+        ".config/kitty/theme.conf" \
+        ".local/share/sounds/iarch-session/index.theme" \
+        ".local/share/sounds/iarch-session/stereo/message-new-instant.ogg"; do
+        path="$ACTUAL_USER_HOME/$relative"
+        if [ -e "$path" ] || [ -L "$path" ]; then
+            record_installed_file "$path" || return 1
+        fi
+    done
     step_note "rendered the saved theme without changing ~/.config/iarch/theme.json"
 }
 
