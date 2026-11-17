@@ -140,6 +140,36 @@ def _n(value: Any) -> str:
     return str(round(float(value), 4))
 
 
+def _mode_active(env: Mapping[str, str], name: str) -> bool:
+    """Read the existing game/focus mode record without creating state."""
+    return modes.is_active(dict(env), name)
+
+
+def _focus_values() -> Tuple[bool, float]:
+    """Use the focus values already defined by the repository design tokens."""
+    tokens = _read_json(ROOT / "data" / "design" / "tokens.json")
+    focus = tokens.get("modes", {}).get("focus", {})
+    return bool(focus.get("dim_inactive", True)), float(focus.get("dim_strength", 0.5))
+
+
+def _sync_focus_restore_target(pack: Dict[str, Any], env: Mapping[str, str]) -> None:
+    """Make focus-off restore the selected theme's dim values after a theme switch."""
+    settings = configstore.load("settings", ROOT, dict(env))
+    mode_records = dict(settings.get("modes") or {})
+    focus = mode_records.get("focus")
+    if not isinstance(focus, dict) or not focus.get("active"):
+        return
+    previous = dict(focus.get("previous") or {})
+    leaves = dict(previous.get("leaves") or {})
+    leaves["decoration:dim_inactive"] = bool(pack["hypr"]["dim_strength"] > 0)
+    leaves["decoration:dim_strength"] = float(pack["hypr"]["dim_strength"])
+    previous["leaves"] = leaves
+    focus["previous"] = previous
+    mode_records["focus"] = focus
+    settings["modes"] = mode_records
+    configstore.save("settings", settings, dict(env))
+
+
 def _theme_animation_preset(pack: Dict[str, Any], game_mode: bool) -> Dict[str, Any]:
     """Translate the theme's motion section into the validated Hyprland event model."""
     motion = pack["motion"]
