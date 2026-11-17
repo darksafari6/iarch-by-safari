@@ -675,35 +675,11 @@ def _run(command: Sequence[str], *, timeout: int = CONFIG_TIMEOUT) -> bool:
 
 
 def _reload_noctalia() -> bool:
-    if _run(("noctalia", "msg", "config-reload")):
-        return True
-    # Noctalia's own launcher is the process entry point recorded in startup.lua.
-    # Restart only that shell process; never restart Hyprland or the user session.
-    noctalia = shutil.which("noctalia")
-    pgrep = shutil.which("pgrep")
-    kill = shutil.which("kill")
-    if not noctalia or not pgrep:
-        _warn("Noctalia IPC is unavailable and a shell-only restart could not be resolved from PATH")
-        return False
-    try:
-        probe = subprocess.run([pgrep, "-x", "noctalia"], capture_output=True, text=True,
-                               timeout=3, check=False)
-        pids = [value for value in probe.stdout.split() if value.isdigit()]
-        if not pids:
-            _warn("No running noctalia process was found; not starting a second shell")
-            return False
-        for pid in pids:
-            subprocess.run([kill or "kill", "-TERM", pid], check=False, timeout=3,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        time.sleep(0.6)
-        subprocess.Popen([noctalia], stdin=subprocess.DEVNULL,
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         start_new_session=True)
-        print("restarted: Noctalia shell only")
-        return True
-    except (OSError, subprocess.SubprocessError) as exc:
-        _warn(f"Noctalia shell-only restart failed: {exc}")
-        return False
+    # This repository pins and documents Noctalia's config-reload IPC. Use that
+    # supported path directly; never guess at a Quickshell process name or
+    # restart the compositor/session as a fallback.
+    return _run(("noctalia", "msg", "config-reload"))
+
 
 
 def _apply_sound_link(pack: Dict[str, Any], env: Mapping[str, str]) -> List[Path]:
