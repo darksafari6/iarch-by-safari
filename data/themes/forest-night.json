@@ -27,7 +27,7 @@
   },
   "motion": {
     "bezier": {
-      "name": "iarch-forest-night",
+      "name": "forest-night",
       "controls": [
         0.4,
         0,
