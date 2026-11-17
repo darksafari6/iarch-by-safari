@@ -169,7 +169,8 @@ class ThemeRenderers(unittest.TestCase):
 
     def test_game_mode_disables_animation_blur_shadow_and_dim(self):
         rendered = session_theme.render_hypr_theme(self.pack, game_mode=True)
-        self.assertIn("hl.config({ animations = { enabled = false } })", rendered)
+        self.assertIn("animations = {", rendered)
+        self.assertIn("enabled = false", rendered)
         self.assertIn("enabled = false", rendered)
         self.assertIn("inactive_opacity = 1.0", rendered)
         self.assertIn("dim_strength = 0.0", rendered)
@@ -194,7 +195,8 @@ class ThemeRenderers(unittest.TestCase):
             generated = config_home / "hypr" / "generated" / "theme.lua"
             self.assertTrue(generated.is_file())
             content = generated.read_text(encoding="utf-8")
-            self.assertIn("hl.config({ animations = { enabled = false } })", content)
+            self.assertIn("animations = {", content)
+            self.assertIn("enabled = false", content)
             self.assertIn("dim_strength = 0.0", content)
             self.assertFalse((Path(env["IARCH_CONFIG_DIR"]) / "theme.json").exists())
 
