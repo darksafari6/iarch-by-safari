@@ -1,0 +1,148 @@
+{
+  "meta": {
+    "id": "neon-rain",
+    "name": "Neon Rain",
+    "blurb": "Violet and electric pink under a midnight sky, with a medium horizontal slide and a clean fade.",
+    "dark": true
+  },
+  "wallpaper": "assets/wallpapers/themes/neon-rain.webp",
+  "hypr": {
+    "active_border": "#C45CFF",
+    "inactive_border": "#A45AD6",
+    "rounding": 18,
+    "border_size": 2,
+    "gaps_in": 5,
+    "gaps_out": 10,
+    "shadow_range": 22,
+    "shadow_color": "#07040C",
+    "blur": {
+      "enabled": true,
+      "size": 10,
+      "passes": 3,
+      "noise": 0.035,
+      "contrast": 0.94
+    },
+    "inactive_opacity": 0.92,
+    "dim_strength": 0.1
+  },
+  "motion": {
+    "bezier": {
+      "name": "iarch-neon-rain",
+      "controls": [
+        0.16,
+        1,
+        0.3,
+        1
+      ]
+    },
+    "windows": {
+      "style": "slide",
+      "open_ms": 300,
+      "close_ms": 240,
+      "move_ms": 260
+    },
+    "workspace": {
+      "direction": "horizontal",
+      "duration_ms": 320
+    },
+    "fade": {
+      "enabled": true,
+      "duration_ms": 280
+    },
+    "border": {
+      "enabled": true,
+      "duration_ms": 300
+    },
+    "layer": {
+      "style": "fade",
+      "bar_ms": 260,
+      "osd_ms": 230
+    }
+  },
+  "noctalia": {
+    "palette": {
+      "background": "#120816",
+      "surface": "#1C1024",
+      "primary": "#C45CFF",
+      "on_primary": "#24083A",
+      "error": "#FF6B9A",
+      "outline": "#8551B5",
+      "bar": "#1C1024",
+      "dock": "#261432",
+      "notification": "#261432",
+      "text": "#F4E9FF",
+      "secondary": "#FF4FA3",
+      "on_secondary": "#24083A",
+      "on_error": "#24083A"
+    },
+    "layout": {
+      "bar_position": "top",
+      "module_order": {
+        "start": [
+          "launcher",
+          "workspaces"
+        ],
+        "center": [
+          "clock"
+        ],
+        "end": [
+          "media",
+          "tray",
+          "network",
+          "bluetooth",
+          "volume",
+          "notifications",
+          "control-center",
+          "session"
+        ]
+      },
+      "dock_visible": false,
+      "control_center_density": "compact",
+      "notification_position": "top_right",
+      "notification_width": 400,
+      "corner_radius": 18
+    }
+  },
+  "gtk": {
+    "accent": "#C45CFF",
+    "window_bg": "#120816",
+    "headerbar": "#1C1024",
+    "destructive": "#FF6B9A"
+  },
+  "terminal": {
+    "foreground": "#F4E9FF",
+    "background": "#120816",
+    "cursor": "#C45CFF",
+    "selection_foreground": "#F4E9FF",
+    "selection_background": "#261432",
+    "color0": "#241430",
+    "color1": "#FF6B9A",
+    "color2": "#7EE0B0",
+    "color3": "#FFD27A",
+    "color4": "#C45CFF",
+    "color5": "#FF4FA3",
+    "color6": "#80D0E8",
+    "color7": "#E0D0F0",
+    "color8": "#4A3060",
+    "color9": "#FF9AB8",
+    "color10": "#A8F0C8",
+    "color11": "#FFE0A0",
+    "color12": "#D0B8FF",
+    "color13": "#FFB0D8",
+    "color14": "#A8E4F4",
+    "color15": "#F8F0FF"
+  },
+  "starship": {
+    "palette": "neon-rain"
+  },
+  "sound": {
+    "notify": "assets/sounds/neon-rain/notify.ogg",
+    "volume": 0.4
+  },
+  "overview": {
+    "style": "pills",
+    "rounding": 22,
+    "gap": 8,
+    "dim_inactive": true
+  }
+}
