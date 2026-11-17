@@ -80,6 +80,8 @@ result and it was rolled back, 2 on a usage or data error.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import os
 import sys
@@ -374,17 +376,27 @@ def _reload_shell(report: Dict[str, Any], no_reload: bool) -> None:
 
 
 def _refresh_session_theme(config_home: Path, env: Dict[str, str],
-                           game_mode_override: bool) -> None:
+                           game_mode_override: bool,
+                           report: Dict[str, Any]) -> None:
     """Stage the selected pack with the requested game-mode overlay.
 
     This runs after the legacy intensity renderer but before iarch-anim performs
     the one compositor reload. It never changes theme.json or reloads the shell.
+    Optional pack assets/config consumers can be absent in test homes; preserve
+    their warnings as report notes rather than contaminating --json stderr.
     """
+    warnings = io.StringIO()
     try:
-        session_theme.render_active(config_home, env,
-                                    game_mode_override=game_mode_override)
+        with contextlib.redirect_stderr(warnings):
+            session_theme.render_active(config_home, env,
+                                        game_mode_override=game_mode_override)
     except (session_theme.SessionThemeError, configstore.ConfigError, OSError) as exc:
         raise GameModeError(f"could not render the selected session theme: {exc}") from exc
+    for line in warnings.getvalue().splitlines():
+        message = line.removeprefix("warning: ").strip()
+        if message:
+            report.setdefault("notes", []).append("session theme: " + message)
+            modes.say(f"  note:        session theme: {message}")
 
 
 def _apply_bundle(report: Dict[str, Any], tokens: Dict[str, Any], colour: str,
@@ -420,7 +432,7 @@ def _apply_bundle(report: Dict[str, Any], tokens: Dict[str, Any], colour: str,
         return code
 
     try:
-        _refresh_session_theme(config_home, env, game_mode_override)
+        _refresh_session_theme(config_home, env, game_mode_override, report)
     except GameModeError as exc:
         back = ["apply", rollback["colour"], "--intensity", rollback["intensity"],
                 "--config-home", str(config_home), "--no-reload"]
