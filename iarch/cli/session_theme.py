@@ -363,6 +363,7 @@ def render_noctalia_config(existing: str, pack: Dict[str, Any],
         ("notification", "background_opacity", pack["noctalia"]["surface_alpha"]),
         ("audio", "enable_notification_sounds", True),
         ("audio", "sound_volume", sound["volume"]),
+        ("audio", "sound_theme", "iarch-session"),
     ]
     result = re.sub(
         r"(?m)^# Source:.*$",
@@ -728,6 +729,57 @@ def _apply_sound_link(pack: Dict[str, Any], env: Mapping[str, str]) -> List[Path
     return linked
 
 
+def _apply_noctalia_sound_theme(env: Mapping[str, str]) -> Optional[Path]:
+    """Expose active-notify.ogg through Noctalia's freedesktop sound-theme lookup.
+
+    Noctalia loads installed sound themes from ~/.local/share/sounds/<theme>/stereo.
+    Keep the user-facing iArch symlink as the single selected sound source and
+    point the Noctalia event name at it; the shell itself owns playback.
+    """
+    active = configstore.config_dir(env) / "sounds" / "active-notify.ogg"
+    theme_root = configstore.home_dir(env) / ".local" / "share" / "sounds" / "iarch-session"
+    stereo = theme_root / "stereo"
+    index = theme_root / "index.theme"
+    event = stereo / "message-new-instant.ogg"
+    if not active.exists():
+        _warn(f"{_display(active)} is absent; Noctalia will inherit its freedesktop notification sound")
+        return None
+
+    theme_root.mkdir(parents=True, exist_ok=True)
+    stereo.mkdir(parents=True, exist_ok=True)
+    index_body = (
+        "# Managed by iArch. Do not edit.\n"
+        "[Sound Theme]\n"
+        "Name=iArch Session\n"
+        "Comment=The active iArch notification sound\n"
+        "Inherits=freedesktop\n"
+        "Directories=stereo\n\n"
+        "[stereo]\n"
+        "OutputProfile=stereo\n"
+    )
+    if index.is_file():
+        old = index.read_text(encoding="utf-8")
+        if old != index_body and not old.startswith("# Managed by iArch. Do not edit."):
+            _warn(f"{_display(index)} belongs to another sound theme; refusing to replace it")
+            return None
+        if old != index_body:
+            configstore.backup_of(index, env)
+            configstore.atomic_write(index, index_body, validate_json=False)
+    else:
+        configstore.atomic_write(index, index_body, validate_json=False)
+
+    if event.is_file() and not event.is_symlink():
+        _warn(f"{_display(event)} is a regular file; refusing to replace it with a symlink")
+        return None
+    if event.is_symlink() and event.resolve() == active.resolve():
+        return event
+    temporary = event.with_name(f".{event.name}.new-{os.getpid()}")
+    temporary.unlink(missing_ok=True)
+    temporary.symlink_to(active.resolve())
+    os.replace(temporary, event)
+    return event
+
+
 def _apply_wallpaper(pack: Dict[str, Any]) -> None:
     wallpaper = ROOT / pack["wallpaper"]
     if not wallpaper.is_file():
@@ -741,8 +793,13 @@ def render_active(config_home: Path, env: Mapping[str, str],
     theme_id, _saved = current_theme_id(env)
     pack = load_theme(theme_id)
     actions = _build_actions(pack, config_home, env, game_mode_override)
-    sound_paths = [configstore.config_dir(env) / "sounds" / name
-                   for name in ("active-notify.ogg", "active-urgent.ogg")]
+    sound_paths = [
+        configstore.config_dir(env) / "sounds" / name
+        for name in ("active-notify.ogg", "active-urgent.ogg")
+    ] + [
+        configstore.home_dir(env) / ".local/share/sounds/iarch-session/index.theme",
+        configstore.home_dir(env) / ".local/share/sounds/iarch-session/stereo/message-new-instant.ogg",
+    ]
     sound_snapshots = {path: _snapshot(path) for path in sound_paths}
     settings_path = configstore.user_path("settings", env)
     settings_snapshot = _snapshot(settings_path)
@@ -751,6 +808,7 @@ def render_active(config_home: Path, env: Mapping[str, str],
         changed, snapshots = _apply_actions(actions, env)
         _sync_focus_restore_target(pack, env)
         _apply_sound_link(pack, env)
+        _apply_noctalia_sound_theme(env)
     except BaseException:
         for path, snapshot in reversed(list(snapshots.items())):
             try:
@@ -800,8 +858,13 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
         return 0
 
     old_choice = _write_choice(state, theme_id, env)
-    sound_paths = [configstore.config_dir(env) / "sounds" / name
-                   for name in ("active-notify.ogg", "active-urgent.ogg")]
+    sound_paths = [
+        configstore.config_dir(env) / "sounds" / name
+        for name in ("active-notify.ogg", "active-urgent.ogg")
+    ] + [
+        configstore.home_dir(env) / ".local/share/sounds/iarch-session/index.theme",
+        configstore.home_dir(env) / ".local/share/sounds/iarch-session/stereo/message-new-instant.ogg",
+    ]
     old_sounds = {path: _snapshot(path) for path in sound_paths}
     settings_path = configstore.user_path("settings", env)
     old_settings = _snapshot(settings_path)
@@ -812,6 +875,9 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
         # Sound is optional until each original OGG asset is included. A missing
         # sound never invalidates or changes the user's saved visual theme.
         sound_links = _apply_sound_link(pack, env)
+        noctalia_sound = _apply_noctalia_sound_theme(env)
+        if noctalia_sound:
+            sound_links.append(noctalia_sound)
     except BaseException:
         for path, snapshot in reversed(list(snapshots.items())):
             try:
