@@ -104,6 +104,7 @@ class DataFiles(unittest.TestCase):
     def test_every_document_in_data_has_a_schema(self):
         documents = {p.relative_to(ROOT).as_posix() for p in (ROOT / "data").rglob("*.json")}
         schemas = {p.relative_to(ROOT).as_posix() for p in (ROOT / "data" / "schemas").glob("*.json")}
+        schemas.add("data/themes/schema.json")
         unmapped = documents - schemas - set(PAIRS)
         self.assertEqual(set(), unmapped, "data/ ships a JSON file nothing validates")
         for schema in schemas:
