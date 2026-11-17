@@ -61,6 +61,7 @@ COMMANDS=(
     "iarch-keybinds:scripts/iarch-keybinds.sh"
     "iarch-cheatsheet:scripts/iarch-cheatsheet.sh"
     "iarch-settings:scripts/iarch-settings.sh"
+    "iarch-theme:scripts/iarch-theme.sh"
     "iarch-control-center:scripts/iarch-control-center.sh"
     "iarch-healthcheck:scripts/iarch-healthcheck.sh"
     "iarch-focus:scripts/iarch-focus.sh"
