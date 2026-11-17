@@ -23,6 +23,7 @@ generated output.
   Kitty, Starship, GTK accent blocks, Kvantum colors and the active-notification
   symlink. The renderer preserves the shipped glass CSS and the rest of each
   existing config.
+- Removed the six duplicate partial design presets and their separate Noctalia palettes; the complete `data/themes/<id>.json` packs are now the only source for the six session themes.
 - **`docs/THEMES.md` and `tests/test_session_themes.py`** — schema, command,
   generated-target and limitation documentation, plus pack/render contract tests.
 
