@@ -5,6 +5,7 @@
   "description": "One complete session theme. Theme choices live in ~/.config/iarch/theme.json; every runtime artifact is rendered from exactly one pack.",
   "type": "object",
   "required": [
+    "_copyright",
     "meta",
     "wallpaper",
     "hypr",
@@ -655,6 +656,10 @@
           "type": "boolean"
         }
       }
+    },
+    "_copyright": {
+      "type": "string",
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
     }
   },
   "definitions": {
@@ -662,5 +667,6 @@
       "type": "string",
       "pattern": "^#[0-9A-Fa-f]{6}$"
     }
-  }
+  },
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
 }
