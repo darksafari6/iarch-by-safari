@@ -554,9 +554,11 @@ def _noctalia_config_path(config_home: Path) -> Path:
 
 
 def _build_actions(pack: Dict[str, Any], config_home: Path,
-                   env: Mapping[str, str]) -> List[Tuple[str, Path, str]]:
+                   env: Mapping[str, str],
+                   game_mode_override: Optional[bool] = None) -> List[Tuple[str, Path, str]]:
     actions: List[Tuple[str, Path, str]] = []
-    game_mode = _mode_active(env, "game")
+    game_mode = (_mode_active(env, "game") if game_mode_override is None
+                 else bool(game_mode_override))
     focus_mode = _mode_active(env, "focus")
     hypr = config_home / "hypr" / "generated" / "theme.lua"
     actions.append(("generated", hypr, render_hypr_theme(pack, game_mode, focus_mode)))
@@ -718,10 +720,11 @@ def _apply_wallpaper(pack: Dict[str, Any]) -> None:
     _run(("noctalia", "msg", "wallpaper-set", str(wallpaper.resolve())))
 
 
-def render_active(config_home: Path, env: Mapping[str, str]) -> List[Path]:
+def render_active(config_home: Path, env: Mapping[str, str],
+                  game_mode_override: Optional[bool] = None) -> List[Path]:
     theme_id, _saved = current_theme_id(env)
     pack = load_theme(theme_id)
-    actions = _build_actions(pack, config_home, env)
+    actions = _build_actions(pack, config_home, env, game_mode_override)
     sound_path = configstore.config_dir(env) / "sounds" / "active-notify.ogg"
     sound_snapshot = _snapshot(sound_path)
     settings_path = configstore.user_path("settings", env)
