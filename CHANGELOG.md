@@ -24,6 +24,7 @@ generated output.
   symlink. The renderer preserves the shipped glass CSS and the rest of each
   existing config.
 - Removed the six duplicate partial design presets and their separate Noctalia palettes; the complete `data/themes/<id>.json` packs are now the only source for the six session themes.
+- Both installers now render the existing saved theme after staging the config payload. Fedora also links the public `iarch-theme` launcher and adds the same user-session PATH file as Arch; the saved theme ID is read but never reset.
 - **`docs/THEMES.md` and `tests/test_session_themes.py`** — schema, command,
   generated-target and limitation documentation, plus pack/render contract tests.
 
