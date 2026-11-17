@@ -90,6 +90,8 @@ class ThemePacks(unittest.TestCase):
             self.assertIn("audio: no playback command was run", out.getvalue())
             self.assertNotIn("pw-play", out.getvalue())
             self.assertFalse((config_home / "iarch/sounds/active-notify.ogg").exists())
+            sound_index = home / ".local/share/sounds/iarch-session/index.theme"
+            self.assertIn("Inherits=freedesktop", sound_index.read_text(encoding="utf-8"))
 
 
     def test_public_launcher_reaches_the_session_theme_cli(self):
@@ -180,6 +182,7 @@ class ThemeRenderers(unittest.TestCase):
         self.assertIn('sidebar = "compact"', updated)
         self.assertIn('enable_notification_sounds = true', updated)
         self.assertIn('sound_volume = 0.32', updated)
+        self.assertIn('sound_theme = "iarch-session"', updated)
         self.assertIn('background_opacity = 0.82', updated)
         self.assertIn('[idle.behavior.lock]', updated)
 
