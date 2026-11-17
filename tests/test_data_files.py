@@ -56,6 +56,14 @@ PAIRS = {
     # icon name it is allowed to use, each read out of a pinned upstream ref.
     "data/design/adwaita.json": "data/schemas/adwaita.schema.json",
     "data/licenses.json": "data/schemas/licenses.schema.json",
+    # The session theme index and its six complete packs are governed by
+    # their own closed schema; none of these packs are legacy glass presets.
+    "data/themes/ids.json": "data/schemas/theme-ids.schema.json",
+    **{
+        f"data/themes/{path.name}": "data/themes/schema.json"
+        for path in sorted((ROOT / "data" / "themes").glob("*.json"))
+        if path.name not in {"ids.json", "schema.json"}
+    },
     # Colour presets are a family under one schema; expanding the directory keeps
     # a newly added preset mapped automatically, while a JSON file anywhere else
     # in data/ still has to be listed by hand above.
