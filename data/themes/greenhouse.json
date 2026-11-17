@@ -1,0 +1,150 @@
+{
+  "meta": {
+    "id": "greenhouse",
+    "name": "Greenhouse",
+    "blurb": "Warm copper over dark wood, with soft horizontal motion and a spacious bento overview.",
+    "dark": true
+  },
+  "wallpaper": "assets/wallpapers/themes/greenhouse.webp",
+  "hypr": {
+    "active_border": "#E7A15A",
+    "inactive_border": "#C4844A",
+    "rounding": 20,
+    "border_size": 2,
+    "gaps_in": 6,
+    "gaps_out": 12,
+    "shadow_range": 26,
+    "shadow_color": "#0A0705",
+    "blur": {
+      "enabled": true,
+      "size": 8,
+      "passes": 3,
+      "noise": 0.025,
+      "contrast": 0.92
+    },
+    "inactive_opacity": 0.91,
+    "dim_strength": 0.12
+  },
+  "motion": {
+    "bezier": {
+      "name": "iarch-greenhouse",
+      "controls": [
+        0.22,
+        1,
+        0.36,
+        1
+      ]
+    },
+    "windows": {
+      "style": "slide",
+      "open_ms": 520,
+      "close_ms": 420,
+      "move_ms": 460
+    },
+    "workspace": {
+      "direction": "horizontal",
+      "duration_ms": 520
+    },
+    "fade": {
+      "enabled": true,
+      "duration_ms": 360
+    },
+    "border": {
+      "enabled": true,
+      "duration_ms": 420
+    },
+    "layer": {
+      "style": "fade",
+      "bar_ms": 420,
+      "osd_ms": 320
+    }
+  },
+  "noctalia": {
+    "palette": {
+      "background": "#1A120C",
+      "surface": "#2A2118",
+      "primary": "#E7A15A",
+      "on_primary": "#2A1606",
+      "error": "#E07A6A",
+      "outline": "#C4844A",
+      "bar": "#2A2118",
+      "dock": "#34281C",
+      "notification": "#2A2118",
+      "text": "#F3E6D4",
+      "secondary": "#F0C27A",
+      "on_secondary": "#2A1606",
+      "on_error": "#2A1606"
+    },
+    "layout": {
+      "bar_position": "top",
+      "module_order": {
+        "start": [
+          "launcher",
+          "workspaces"
+        ],
+        "center": [
+          "clock"
+        ],
+        "end": [
+          "media",
+          "audio_visualizer",
+          "tray",
+          "network",
+          "volume",
+          "brightness",
+          "battery",
+          "notifications",
+          "control-center",
+          "session"
+        ]
+      },
+      "dock_visible": true,
+      "control_center_density": "full",
+      "notification_position": "top_right",
+      "notification_width": 380,
+      "corner_radius": 20
+    }
+  },
+  "gtk": {
+    "accent": "#E7A15A",
+    "window_bg": "#1A120C",
+    "headerbar": "#2A2118",
+    "destructive": "#E07A6A"
+  },
+  "terminal": {
+    "foreground": "#F3E6D4",
+    "background": "#1A120C",
+    "cursor": "#E7A15A",
+    "selection_foreground": "#F3E6D4",
+    "selection_background": "#34281C",
+    "color0": "#2C2218",
+    "color1": "#E07A6A",
+    "color2": "#8FD18A",
+    "color3": "#F0C27A",
+    "color4": "#E7A15A",
+    "color5": "#D69A78",
+    "color6": "#87B7A8",
+    "color7": "#E6D5C4",
+    "color8": "#5A4636",
+    "color9": "#F0A090",
+    "color10": "#B0E4AA",
+    "color11": "#F8D38A",
+    "color12": "#F0C090",
+    "color13": "#F0D0C4",
+    "color14": "#B6DED2",
+    "color15": "#F8F1E8"
+  },
+  "starship": {
+    "palette": "greenhouse"
+  },
+  "sound": {
+    "notify": "assets/sounds/greenhouse/notify.ogg",
+    "volume": 0.42
+  },
+  "overview": {
+    "style": "bento",
+    "rounding": 22,
+    "gap": 12,
+    "dim_inactive": true
+  }
+}
