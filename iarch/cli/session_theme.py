@@ -285,7 +285,7 @@ def _palette_mode(pack: Dict[str, Any], light: bool = False) -> Dict[str, Any]:
         "mError": p["error"], "mOnError": p["on_error"],
         "mSurface": surface, "mOnSurface": text,
         "mSurfaceVariant": surface_variant, "mOnSurfaceVariant": text,
-        "mOutline": p["outline"], "mShadow": background,
+        "mOutline": p["outline"], "mShadow": pack["hypr"]["shadow_color"],
         "mHover": p["notification"], "mOnHover": text,
         "terminal": {
             "background": t["background"] if not light else "#F7F4EF",
