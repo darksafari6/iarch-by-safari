@@ -94,6 +94,7 @@ from iarch.lib import configstore, modes  # noqa: E402  (repo-root import by des
 from iarch.cli import gen_animations_lua as anim  # noqa: E402
 from iarch.cli import iarch_anim as anim_cli  # noqa: E402
 from iarch.cli import theme as theme_cli  # noqa: E402
+from iarch.cli import session_theme  # noqa: E402
 
 MODE = "game"
 TOOL = "iarch-gamemode"
@@ -359,6 +360,26 @@ def _reload_shell(report: Dict[str, Any], no_reload: bool) -> None:
 # ---------------------------------------------------------------- the round trip
 
 
+def _refresh_session_theme(config_home: Path, env: Dict[str, str],
+                           no_reload: bool) -> None:
+    """Re-project the selected theme after a mode record changes.
+
+    The legacy intensity renderer still owns game mode's performance profile.
+    The session pack renderer then applies that profile as an overlay without
+    replacing the saved theme.json choice, so turning game mode off returns to
+    the latest selected theme rather than the colour preset saved before it.
+    """
+    try:
+        session_theme.render_active(config_home, env)
+        theme_id, _saved = session_theme.current_theme_id(env)
+        pack = session_theme.load_theme(theme_id)
+        if not no_reload:
+            session_theme.reload_active_surfaces(pack, config_home, env)
+    except (session_theme.SessionThemeError, configstore.ConfigError, OSError,
+            session_theme.subprocess.SubprocessError) as exc:
+        raise GameModeError(f"could not refresh the selected session theme after changing game mode: {exc}") from exc
+
+
 def _apply_bundle(report: Dict[str, Any], tokens: Dict[str, Any], colour: str,
                   intensity: str, preset_name: str, config_home: Path,
                   env: Dict[str, str], args: argparse.Namespace,
@@ -477,18 +498,18 @@ def cmd_on(args: argparse.Namespace, env: Dict[str, str], report: Dict[str, Any]
         return code
 
     report["applied"] = True
+    path, changed = modes.write_mode(env, MODE, {"active": True,
+                                                 "previous": report["previous"]})
+    report["settings"] = {"path": _display(path), "changed": changed}
+    modes.say(f"  settings: {'recorded' if changed else 'already recorded'} "
+              f"modes.game in {_display(path)}")
+    _refresh_session_theme(_config_home(args.config_home), env, bool(args.no_reload))
     if args.no_reload:
         report["notes"].append("no reload was requested, so the session was not asked "
                                "what it runs; the files on disk are the applied state")
         report["verdict"] = modes.UNVERIFIED
     else:
         check_session(tokens, target_intensity, rendered, report)
-
-    path, changed = modes.write_mode(env, MODE, {"active": True,
-                                                 "previous": report["previous"]})
-    report["settings"] = {"path": _display(path), "changed": changed}
-    modes.say(f"  settings: {'recorded' if changed else 'already recorded'} "
-              f"modes.game in {_display(path)}")
     modes.say(f"game mode is on: {target_intensity} intensity, {rendered!r} motion. "
               "`iarch-gamemode off` puts the previous state back.")
     return modes.exit_for_verdict(
@@ -572,6 +593,9 @@ def cmd_off(args: argparse.Namespace, env: Dict[str, str], report: Dict[str, Any
         return code
 
     report["applied"] = True
+    path, changed = modes.write_mode(env, MODE, {"active": False})
+    report["settings"] = {"path": _display(path), "changed": changed}
+    _refresh_session_theme(_config_home(args.config_home), env, bool(args.no_reload))
     if args.no_reload:
         report["verdict"] = modes.UNVERIFIED
         report["notes"].append("no reload was requested, so the session was not asked")
@@ -579,9 +603,6 @@ def cmd_off(args: argparse.Namespace, env: Dict[str, str], report: Dict[str, Any
         check_session(tokens, restore_intensity,
                       effective_preset(tokens, restore_preset,
                                        bool(previous.get("reduce_motion"))), report)
-
-    path, changed = modes.write_mode(env, MODE, {"active": False})
-    report["settings"] = {"path": _display(path), "changed": changed}
     modes.say(f"  settings: {'cleared' if changed else 'already cleared'} modes.game in "
               f"{_display(path)}")
     modes.say(f"game mode is off: {restore_colour!r} at {restore_intensity!r} with "
