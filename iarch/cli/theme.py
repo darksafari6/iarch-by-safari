@@ -668,7 +668,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # intensity/settings machinery that still imports cmd_apply directly.
     if values and (
         (values[0] == "list" and len(values) == 1)
-        or values[0] == "current"
+        or (values[0] == "current" and len(values) == 1)
         or (values[0] == "apply" and len(values) > 1
             and values[1] in session_theme.theme_ids())
     ):
