@@ -6,46 +6,28 @@
   "themes": [
     {
       "id": "greenhouse",
-      "name": "Greenhouse",
-      "dock": true,
-      "overview": "bento",
-      "motion": "slow-slide"
+      "name": "Greenhouse"
     },
     {
       "id": "amber-bloom",
-      "name": "Amber Bloom",
-      "dock": false,
-      "overview": "tiles",
-      "motion": "fast-linear"
+      "name": "Amber Bloom"
     },
     {
       "id": "neon-rain",
-      "name": "Neon Rain",
-      "dock": false,
-      "overview": "pills",
-      "motion": "slide-fade"
+      "name": "Neon Rain"
     },
     {
       "id": "forest-night",
-      "name": "Forest Night",
-      "dock": false,
-      "overview": "tiles",
-      "motion": "short-fade"
+      "name": "Forest Night"
     },
     {
       "id": "violet-glass",
-      "name": "Violet Glass",
-      "dock": false,
-      "overview": "pills",
-      "motion": "long-blur-fade"
+      "name": "Violet Glass"
     },
     {
       "id": "crimson-silk",
-      "name": "Crimson Silk",
-      "dock": true,
-      "overview": "bento",
-      "motion": "scale-fade"
+      "name": "Crimson Silk"
     }
   ],
-  "note": "Each data/themes/<id>.json pack is the source for its compositor, motion, Noctalia palette and layout, GTK/Kvantum accent, terminal palette, sound and overview settings. Generated runtime files are never edited by hand."
+  "note": "Closed ID catalogue and repository default only. All per-theme appearance, motion, layout, terminal and asset values live exclusively in data/themes/<id>.json."
 }
