@@ -721,6 +721,8 @@ def render_active(config_home: Path, env: Mapping[str, str]) -> List[Path]:
     actions = _build_actions(pack, config_home, env)
     sound_path = configstore.config_dir(env) / "sounds" / "active-notify.ogg"
     sound_snapshot = _snapshot(sound_path)
+    settings_path = configstore.user_path("settings", env)
+    settings_snapshot = _snapshot(settings_path)
     snapshots: Dict[Path, Tuple[str, Optional[bytes], Optional[str]]] = {}
     try:
         changed, snapshots = _apply_actions(actions, env)
@@ -732,7 +734,11 @@ def render_active(config_home: Path, env: Mapping[str, str]) -> List[Path]:
                 _restore(path, snapshot)
             except OSError:
                 pass
-        _restore(sound_path, sound_snapshot)
+        for path, snapshot in ((sound_path, sound_snapshot), (settings_path, settings_snapshot)):
+            try:
+                _restore(path, snapshot)
+            except OSError:
+                pass
         raise
     return changed
 
@@ -773,6 +779,8 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
     old_choice = _write_choice(state, theme_id, env)
     sound_path = configstore.config_dir(env) / "sounds" / "active-notify.ogg"
     old_sound = _snapshot(sound_path)
+    settings_path = configstore.user_path("settings", env)
+    old_settings = _snapshot(settings_path)
     snapshots: Dict[Path, Tuple[str, Optional[bytes], Optional[str]]] = {}
     try:
         changed, snapshots = _apply_actions(actions, env)
@@ -786,11 +794,12 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
                 _restore(path, snapshot)
             except OSError:
                 pass
-        try:
-            _restore(sound_path, old_sound)
-            _restore(state, old_choice)
-        except OSError:
-            pass
+        for path, snapshot in ((sound_path, old_sound), (settings_path, old_settings),
+                               (state, old_choice)):
+            try:
+                _restore(path, snapshot)
+            except OSError:
+                pass
         raise
 
     print(f"theme: applied {pack['meta']['name']} ({theme_id})")
