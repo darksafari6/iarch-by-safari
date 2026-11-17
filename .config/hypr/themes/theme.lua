@@ -24,5 +24,5 @@ local ok, err = pcall(function()
     require("generated.glass")
 end)
 if not ok then
-    print("[iarch] generated/glass.lua is missing or broken, keeping the static theme: " .. tostring(err))
+    print("[iarch] generated/glass.lua is missing or broken, keeping the glass fallback: " .. tostring(err))
 end
