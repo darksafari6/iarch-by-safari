@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from iarch.lib import configstore  # noqa: E402
+from iarch.lib import configstore, modes  # noqa: E402
 
 THEMES_DIR = ROOT / "data" / "themes"
 INDEX_PATH = THEMES_DIR / "ids.json"
@@ -148,9 +148,48 @@ def _animation(leaf: str, enabled: bool, ms: int, curve: str, style: Optional[st
     return "hl.animation({ " + ", ".join(fields) + " })"
 
 
-def render_hypr_theme(pack: Dict[str, Any]) -> str:
+def _mode_active(env: Mapping[str, str], name: str) -> bool:
+    return bool(modes.mode_state(dict(env), name).get("active"))
+
+
+def _focus_values() -> Tuple[bool, float]:
+    tokens = _read_json(ROOT / "data" / "design" / "tokens.json")
+    focus = tokens.get("modes", {}).get("focus", {})
+    return bool(focus.get("dim_inactive", True)), float(focus.get("dim_strength", 0.5))
+
+
+def _sync_focus_restore_target(pack: Dict[str, Any], env: Mapping[str, str]) -> None:
+    """When a theme changes during focus mode, make focus-off restore this theme."""
+    settings = configstore.load("settings", ROOT, dict(env))
+    modes_block = settings.setdefault("modes", {})
+    focus = modes_block.get("focus")
+    if not isinstance(focus, dict) or not focus.get("active"):
+        return
+    previous = focus.get("previous")
+    if not isinstance(previous, dict):
+        previous = {}
+    leaves = previous.get("leaves")
+    if not isinstance(leaves, dict):
+        leaves = {}
+    leaves["decoration:dim_inactive"] = bool(pack["hypr"]["dim_strength"] > 0)
+    leaves["decoration:dim_strength"] = float(pack["hypr"]["dim_strength"])
+    previous["leaves"] = leaves
+    focus["previous"] = previous
+    modes_block["focus"] = focus
+    settings["modes"] = modes_block
+    configstore.save("settings", settings, dict(env))
+
+
+def render_hypr_theme(pack: Dict[str, Any], game_mode: bool = False,
+                      focus_mode: bool = False) -> str:
     meta, hypr, motion = pack["meta"], pack["hypr"], pack["motion"]
     blur = hypr["blur"]
+    focus_dim, focus_strength = _focus_values()
+    dim_inactive = focus_dim if focus_mode else (hypr["dim_strength"] > 0 and not game_mode)
+    dim_strength = focus_strength if focus_mode else (0.0 if game_mode else hypr["dim_strength"])
+    inactive_opacity = 1.0 if game_mode else hypr["inactive_opacity"]
+    blur_enabled = bool(blur["enabled"]) and not game_mode
+    shadow_enabled = hypr["shadow_range"] > 0 and not game_mode
     curve = motion["bezier"]["name"]
     controls = motion["bezier"]["controls"]
     x1, y1, x2, y2 = controls
@@ -169,13 +208,13 @@ def render_hypr_theme(pack: Dict[str, Any]) -> str:
         "    },",
         "    decoration = {",
         f"        rounding = {hypr['rounding']},",
-        f"        inactive_opacity = {_n(hypr['inactive_opacity'])},",
+        f"        inactive_opacity = {_n(inactive_opacity)},",
         "        active_opacity = 1.0,",
         "        fullscreen_opacity = 1.0,",
-        f"        dim_inactive = {str(hypr['dim_strength'] > 0).lower()},",
-        f"        dim_strength = {_n(hypr['dim_strength'])},",
+        f"        dim_inactive = {str(dim_inactive).lower()},",
+        f"        dim_strength = {_n(dim_strength)},",
         "        blur = {",
-        f"            enabled = {str(bool(blur['enabled'])).lower()},",
+        f"            enabled = {str(blur_enabled).lower()},",
         f"            size = {blur['size']},",
         f"            passes = {blur['passes']},",
         f"            noise = {_n(blur['noise'])},",
@@ -187,8 +226,8 @@ def render_hypr_theme(pack: Dict[str, Any]) -> str:
         "            special = true,",
         "        },",
         "        shadow = {",
-        f"            enabled = {str(hypr['shadow_range'] > 0).lower()},",
-        f"            range = {hypr['shadow_range']},",
+        f"            enabled = {str(shadow_enabled).lower()},",
+        f"            range = {0 if game_mode else hypr['shadow_range']},",
         "            render_power = 2,",
         f'            color = "{_hex_rgba(hypr["shadow_color"], 0.42)}",',
         f'            color_inactive = "{_hex_rgba(hypr["shadow_color"], 0.24)}",',
@@ -205,21 +244,23 @@ def render_hypr_theme(pack: Dict[str, Any]) -> str:
     fade = motion["fade"]
     border = motion["border"]
     layer = motion["layer"]
+    if game_mode:
+        lines.append("hl.config({ animations = { enabled = false } })")
     lines.extend([
-        _animation("windows", True, max(windows["open_ms"], windows["close_ms"], windows["move_ms"]), curve, windows["style"]),
-        _animation("windowsIn", True, windows["open_ms"], curve, windows["style"]),
-        _animation("windowsOut", True, windows["close_ms"], curve, windows["style"]),
-        _animation("windowsMove", True, windows["move_ms"], curve, windows["style"]),
+        _animation("windows", not game_mode, max(windows["open_ms"], windows["close_ms"], windows["move_ms"]), curve, windows["style"]),
+        _animation("windowsIn", not game_mode, windows["open_ms"], curve, windows["style"]),
+        _animation("windowsOut", not game_mode, windows["close_ms"], curve, windows["style"]),
+        _animation("windowsMove", not game_mode, windows["move_ms"], curve, windows["style"]),
     ])
     workspace_style = {"horizontal": "slide", "vertical": "slidevert", "none": "fade"}[workspace["direction"]]
-    lines.append(_animation("workspaces", workspace["direction"] != "none", workspace["duration_ms"], curve, workspace_style))
-    lines.append(_animation("specialWorkspace", workspace["direction"] != "none", workspace["duration_ms"], curve, workspace_style))
+    lines.append(_animation("workspaces", not game_mode and workspace["direction"] != "none", workspace["duration_ms"], curve, workspace_style))
+    lines.append(_animation("specialWorkspace", not game_mode and workspace["direction"] != "none", workspace["duration_ms"], curve, workspace_style))
     for leaf in ("fade", "fadeIn", "fadeOut", "fadeSwitch", "fadeShadow", "fadeDim", "fadeLayers"):
-        lines.append(_animation(leaf, fade["enabled"], fade["duration_ms"], curve))
-    lines.append(_animation("border", border["enabled"], border["duration_ms"], curve))
-    lines.append(_animation("layers", True, layer["bar_ms"], curve, layer["style"]))
-    lines.append(_animation("layersIn", True, layer["bar_ms"], curve, layer["style"]))
-    lines.append(_animation("layersOut", True, layer["osd_ms"], curve, layer["style"]))
+        lines.append(_animation(leaf, fade["enabled"] and not game_mode, fade["duration_ms"], curve))
+    lines.append(_animation("border", border["enabled"] and not game_mode, border["duration_ms"], curve))
+    lines.append(_animation("layers", not game_mode, layer["bar_ms"], curve, layer["style"]))
+    lines.append(_animation("layersIn", not game_mode, layer["bar_ms"], curve, layer["style"]))
+    lines.append(_animation("layersOut", not game_mode, layer["osd_ms"], curve, layer["style"]))
     # The overview token is deliberately data-only until the shipped shell has
     # a real overview styling API. It does not spawn a second window manager.
     lines.extend([
@@ -296,7 +337,8 @@ def _set_toml(text: str, section: str, key: str, value: Any) -> str:
     raise SessionThemeError(f"Noctalia config is missing [{section}] section")
 
 
-def render_noctalia_config(existing: str, pack: Dict[str, Any]) -> str:
+def render_noctalia_config(existing: str, pack: Dict[str, Any],
+                            game_mode: bool = False) -> str:
     layout = pack["noctalia"]["layout"]
     sound = pack["sound"]
     radius_scale = round(layout["corner_radius"] / 16, 2)
@@ -306,6 +348,7 @@ def render_noctalia_config(existing: str, pack: Dict[str, Any]) -> str:
         ("theme", "shell_mode", "dark" if pack["meta"]["dark"] else "light"),
         ("theme", "custom_palette", "iarch-active"),
         ("shell", "corner_radius_scale", radius_scale),
+        ("shell.animation", "enabled", not game_mode),
         ("shell.animation", "speed", motion_speed),
         ("bar.default", "position", layout["bar_position"]),
         ("bar.default", "start", layout["module_order"]["start"]),
@@ -510,8 +553,10 @@ def _noctalia_config_path(config_home: Path) -> Path:
 def _build_actions(pack: Dict[str, Any], config_home: Path,
                    env: Mapping[str, str]) -> List[Tuple[str, Path, str]]:
     actions: List[Tuple[str, Path, str]] = []
+    game_mode = _mode_active(env, "game")
+    focus_mode = _mode_active(env, "focus")
     hypr = config_home / "hypr" / "generated" / "theme.lua"
-    actions.append(("generated", hypr, render_hypr_theme(pack)))
+    actions.append(("generated", hypr, render_hypr_theme(pack, game_mode, focus_mode)))
 
     palette = config_home / "noctalia" / "palettes" / "iarch-active.json"
     actions.append(("generated", palette, render_noctalia_palette(pack)))
@@ -519,7 +564,7 @@ def _build_actions(pack: Dict[str, Any], config_home: Path,
     noctalia_config = _noctalia_config_path(config_home)
     if noctalia_config.is_file():
         existing = noctalia_config.read_text(encoding="utf-8")
-        updated = render_noctalia_config(existing, pack)
+        updated = render_noctalia_config(existing, pack, game_mode)
         actions.append(("generated-existing", noctalia_config, _strip_generated_header(updated)))
     else:
         _warn(f"{_display(noctalia_config)} is absent; palette will be generated but Noctalia selection/layout cannot be changed")
@@ -675,7 +720,29 @@ def render_active(config_home: Path, env: Mapping[str, str]) -> List[Path]:
     pack = load_theme(theme_id)
     actions = _build_actions(pack, config_home, env)
     changed, _snapshots = _apply_actions(actions, env)
+    _sync_focus_restore_target(pack, env)
+    _apply_sound_link(pack, env)
     return changed
+
+
+def reload_active_surfaces(pack: Dict[str, Any], config_home: Path,
+                            env: Mapping[str, str]) -> None:
+    _run(("hyprctl", "reload"))
+    _reload_noctalia()
+    if _mode_active(env, "focus"):
+        # A shell-only fallback restart does not preserve runtime DND, so restore
+        # the recorded focus mode explicitly after the shell has reloaded.
+        _run(("noctalia", "msg", "notification-dnd-set", "on"))
+    _apply_wallpaper(pack)
+    socket = os.environ.get("KITTY_LISTEN_ON")
+    kitty = shutil.which("kitty")
+    theme_conf = config_home / "kitty" / "theme.conf"
+    if socket and kitty and theme_conf.is_file():
+        _run((kitty, "@", "--to", socket, "set-colors", "--all", str(theme_conf)))
+    elif socket:
+        _warn("KITTY_LISTEN_ON is set but kitty or the generated theme.conf is unavailable")
+    else:
+        print("kitty: no KITTY_LISTEN_ON socket; existing windows were not changed")
 
 
 def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
@@ -694,6 +761,7 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
     old_choice = _write_choice(state, theme_id, env)
     try:
         changed, snapshots = _apply_actions(actions, env)
+        _sync_focus_restore_target(pack, env)
         # Sound is optional until each original OGG asset is included. A missing
         # sound never invalidates or changes the user's saved visual theme.
         sound_link = _apply_sound_link(pack, env)
@@ -708,18 +776,7 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
     if sound_link:
         print(f"  sound: {_display(sound_link)}")
     if not no_reload:
-        _run(("hyprctl", "reload"))
-        _reload_noctalia()
-        _apply_wallpaper(pack)
-        socket = os.environ.get("KITTY_LISTEN_ON")
-        kitty = shutil.which("kitty")
-        theme_conf = config_home / "kitty" / "theme.conf"
-        if socket and kitty and theme_conf.is_file():
-            _run((kitty, "@", "--to", socket, "set-colors", "--all", str(theme_conf)))
-        elif socket:
-            _warn("KITTY_LISTEN_ON is set but kitty or the generated theme.conf is unavailable")
-        else:
-            print("kitty: no KITTY_LISTEN_ON socket; existing windows were not changed")
+        reload_active_surfaces(pack, config_home, env)
     else:
         print("reload: skipped (--no-reload)")
     print("audio: no playback command was run")
