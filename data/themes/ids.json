@@ -29,5 +29,6 @@
       "name": "Crimson Silk"
     }
   ],
-  "note": "Closed ID catalogue and repository default only. All per-theme appearance, motion, layout, terminal and asset values live exclusively in data/themes/<id>.json."
+  "note": "Closed ID catalogue and repository default only. All per-theme appearance, motion, layout, terminal and asset values live exclusively in data/themes/<id>.json.",
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
 }
