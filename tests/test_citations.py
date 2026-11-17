@@ -8,7 +8,7 @@ is that every restructure moves the target and the citation quietly starts
 pointing at something else -- not at nothing, which a reader would notice, but
 at whatever line now happens to be there.
 
-That is not a hypothetical. Restructuring `install.sh` into 24 numbered steps
+That is not a hypothetical. Restructuring `install.sh` into 25 numbered steps
 left twenty-one citations pointing at the wrong lines, and two of them were
 only caught because a test happened to assert the anchor text: the greeter
 record's function range and the startup record's `sed` anchor. The other
@@ -63,14 +63,14 @@ SCANNED_SUFFIXES = (".json", ".md", ".py", ".sh")
 #: the prose around it. The full citation beside it is checked instead.
 EXPECTATIONS: Dict[Tuple[str, str], str] = {
     # --- data/design/greeter.json: the login screen's installer half ---
-    ("install.sh", "1764"): "noctalia-greeter-git",
+    ("install.sh", "1797"): "noctalia-greeter-git",
     ("install.sh", "1481-1530"): "setup_noctalia_greeter() {",
     ("install.sh", "1513-1520"): "default_session",
     ("install.sh", "1488-1490"): "command -v",
     ("install.sh", "1492-1495"): "useradd",
     ("install.sh", "1498-1505"): "chmod 0750",
     ("install.sh", "1522-1529"): "setup_greetd_pam",
-    ("install.sh", "1773-1777"): "greetd",
+    ("install.sh", "1801-1807"): "greetd",
     ("fedora_install.sh", "558-607"): "setup_noctalia_greeter() {",
     ("fedora_install.sh", "590-597"): "default_session",
     ("fedora_install.sh", "576-582"): "chmod 0750",
@@ -85,8 +85,8 @@ EXPECTATIONS: Dict[Tuple[str, str], str] = {
     ("fedora_install.sh", "836-854"): "polkit",
     # --- data/design/xdg-defaults.json: the file-manager association ---
     ("install.sh", "1359"): "xdg-mime default thunar",
-    ("fedora_install.sh", "910"): "xdg-mime default thunar",
-    ("fedora_install.sh", "1115"): "inode/directory",
+    ("fedora_install.sh", "978"): "xdg-mime default thunar",
+    ("fedora_install.sh", "1189"): "inode/directory",
     # --- SECURITY.md: the operations it warns about, by line ---
     ("install.sh", "951"): "cups",
     ("install.sh", "967"): "bluetooth",
