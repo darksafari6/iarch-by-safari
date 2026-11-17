@@ -159,6 +159,15 @@ class ThemeRenderers(unittest.TestCase):
     def setUp(self):
         self.pack = session_theme.load_theme("forest-night")
 
+    def test_all_six_motion_packs_pass_the_pinned_hyprland_animation_validator(self):
+        for theme_id in IDS:
+            with self.subTest(theme=theme_id):
+                pack = session_theme.load_theme(theme_id)
+                output = session_theme.render_hypr_theme(pack)
+                self.assertIn(f'hl.curve("iarch-{theme_id}"', output)
+                self.assertIn('leaf = "windowsIn"', output)
+                self.assertIn('leaf = "layersOut"', output)
+
     def test_hyprland_output_contains_pack_geometry_blur_and_motion(self):
         rendered = session_theme.render_hypr_theme(self.pack)
         self.assertIn("gaps_in = 4", rendered)
