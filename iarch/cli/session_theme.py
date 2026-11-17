@@ -277,7 +277,7 @@ def _palette_mode(pack: Dict[str, Any], light: bool = False) -> Dict[str, Any]:
     if light:
         surface, surface_variant, text, background = "#F7F4EF", "#EEE7DF", "#211A18", "#F7F4EF"
     else:
-        surface, surface_variant, text, background = p["surface"], p["dock"], p["text"], p["background"]
+        surface, surface_variant, text, background = p["surface"], p["bar"], p["text"], p["background"]
     return {
         "mPrimary": p["primary"], "mOnPrimary": p["on_primary"],
         "mSecondary": p["secondary"], "mOnSecondary": p["on_secondary"],
