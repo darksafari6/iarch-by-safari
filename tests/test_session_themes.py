@@ -209,6 +209,7 @@ class ThemeRenderers(unittest.TestCase):
                 self.assertEqual(palette["bar"], mode["mSurfaceVariant"])
                 self.assertEqual(palette["dock"], mode["mTertiary"])
                 self.assertEqual(palette["notification"], mode["mHover"])
+                self.assertEqual(self.pack["hypr"]["shadow_color"], mode["mShadow"])
             self.assertEqual(8, len(mode["terminal"]["normal"]))
             self.assertEqual(8, len(mode["terminal"]["bright"]))
             self.assertRegex(mode["mSurface"], r"^#[0-9A-Fa-f]{6}$")
