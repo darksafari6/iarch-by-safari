@@ -27,7 +27,7 @@
   },
   "motion": {
     "bezier": {
-      "name": "iarch-violet-glass",
+      "name": "violet-glass",
       "controls": [
         0.3,
         0,
