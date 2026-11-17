@@ -62,7 +62,7 @@
   "noctalia": {
     "palette": {
       "background": "#140818",
-      "surface": "#24102EB8",
+      "surface": "#24102E",
       "primary": "#B388FF",
       "on_primary": "#1C0830",
       "error": "#FF8AB0",
@@ -101,7 +101,8 @@
       "notification_position": "bottom_right",
       "notification_width": 420,
       "corner_radius": 24
-    }
+    },
+    "surface_alpha": 0.72
   },
   "gtk": {
     "accent": "#B388FF",
