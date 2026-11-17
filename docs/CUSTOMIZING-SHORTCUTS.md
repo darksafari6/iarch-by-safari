@@ -343,22 +343,32 @@ of them is stale.
 A modifier layer is a budget, so every letter of the three layers a letter may
 live in is allocated before anything is bound to it: 78 cells in
 `data/design/keybinds.json` under `alphabet`, rendered as a grid at the end of
-[SHORTCUTS.md](SHORTCUTS.md). A cell is one of four things — a binding, a key the
-record has claimed and not bound, a refusal with the mechanism that makes it a
-bad idea, or empty on purpose — and `tests/test_keybinds_alphabet.py` checks the
-table against the map in both directions, so a bind added to a letter nobody
-allocated fails there instead of quietly making the grid a story about the past.
+[SHORTCUTS.md](SHORTCUTS.md). A cell may be one of four things — a binding, a key
+the record has claimed and not bound, a refusal with the mechanism that makes it
+a bad idea, or empty on purpose — and after four passes over the table not one of
+the 78 is empty: twenty-six letters are bound on `Super`, twenty-five bound and
+one claimed on `Super+Shift`, eighteen bound and eight refused on `Super+Ctrl`.
+The fourth state stays in the schema because a layer with a letter nobody has
+thought about is more honest than one that pretends to be finished, and a cell
+that is empty is a cell a reader can ask about. `tests/test_keybinds_alphabet.py`
+checks the table against the map in both directions, so a bind added to a letter
+nobody allocated fails there instead of quietly making the grid a story about the
+past.
 
 The refusals are the cells worth reading, and each one names the verb, file or
-command behind it. There are seven of them left, all in the `Super+Ctrl` layer,
-and every one of them is a reason not to bind a key rather than a key nobody got
+command behind it. There are eight of them, all in the `Super+Ctrl` layer, and
+every one of them is a reason not to bind a key rather than a key nobody got
 round to: brightness and mute belong on the media row, where the XF86 keys this
 map now binds are; theme mode is written by a generator that a runtime toggle
 would disagree with, so the cycle goes through `iarch-cycle theme` instead; Do
 Not Disturb and caffeine belong to focus mode because it reads both back before
-it changes them; monitors off is a switch nobody has watched come back on input;
-screenshots are already three `hyprshot` binds on Print Screen; and
-`Super+Ctrl+R` would be a second spelling of the recovery combo.
+it changes them; the keyboard letter is the eighth and the newest, because the
+layout cycle already sits on `Super+K`, the backlight toggle on `Super+Shift+K`
+and two XF86 keys step the backlight, while the two verbs that would set a level
+outright take a value the record marks as required; monitors off is a switch
+nobody has watched come back on input; screenshots are already three `hyprshot`
+binds on Print Screen; and `Super+Ctrl+R` would be a second spelling of the
+recovery combo.
 
 Two refusals this list used to carry are gone, and the reason is worth keeping
 because it is how a refusal should end. `Super+R` was refused as the

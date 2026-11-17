@@ -58,6 +58,100 @@ Notable changes to iArch by Safari, newest first. The format follows
 six-part plan in [`docs/ROADMAP.md`](docs/ROADMAP.md) rather than semantic
 versioning, because nothing here is a library anyone links against.
 
+## Unreleased — every letter in all three layers, and the thirty-one binds that filled them
+
+The third slice of Part 7. The previous one filled the `Super` layer and left the other two with
+letters empty on purpose; this one closes the table, and the way it closed is the reason it is a
+slice of its own rather than a footnote. Filling a cell needs a mechanism, and thirty-one of the
+mechanisms this pass reached for were already sitting in source nobody had counted: fifteen verbs in
+the shell's own command table, seven dispatchers in the compositor's, five control-centre contexts
+behind a script that already existed, and two cycles in a launcher whose header said out loud that
+neither of them was bound. What the pass added is one script, and what it corrected is a record that
+had been describing an absence as a fact.
+
+### Added
+
+- **Thirty-one bindings, and no letter cell in any layer is empty.** `data/keybinds.default.json`
+  went from 98 rows to 129, `.config/hypr/generated/keybinds.lua` from 95 binds to 126, and
+  `docs/SHORTCUTS.md` from 96 rows to 127. Five open a control-centre tab through
+  `scripts/iarch-control-center.sh` (`Super+Shift+C`, `M`, `O`, `S` and `Super+Ctrl+H`), six toggle
+  something the shell already owns — the dock, the bar's reserved strip, the desktop widgets and
+  their edit mode, the lock screen widgets' edit mode and the shell's templates — seven dispatch a
+  compositor action read out of `LuaBindingsDispatchers.cpp` (fullscreen state, kill, cycle next,
+  bring to top, the special workspace, release input capture, force a renderer reload), two report a
+  level without changing it, two step a keyboard backlight, and the rest are the clipboard, the
+  notification invoke, the panel close, a suspend that locks first and a re-render.
+- **Two XF86 keys that nothing had ever bound.** `XF86KbdBrightnessUp` and `XF86KbdBrightnessDown`
+  send `keyboard-backlight-up` and `keyboard-backlight-down`, with `repeating` so a held key walks
+  the shell's level list and `locked` so it works on the lock screen. Both keysyms are among the 2577
+  `data/reference/xkb-keysyms-1.7.0.txt` pins, at `:1352` and `:1353`.
+- **Fifteen verbs in `data/design/noctalia-ipc.json`**, which went from 51 to 66 of the 119 the
+  header declares at v5.4.1: `templates-apply`, `notification-invoke-latest`, `notification-show`,
+  `panel-close`, `bar-reserve-toggle`, `dock-toggle`, the two desktop-widget toggles and the
+  lockscreen-widget one, the three keyboard-backlight verbs, `mic-volume-osd`, and the two clipboard
+  verbs. Each carries the line it was read off and what this project sends it for, and
+  `iarch-keybinds check` validates every noctalia action against the file — so an invented verb is
+  refused at the gate rather than at the key.
+- **One launcher: `scripts/iarch-clipboard.sh`**, the sixteenth name `scripts/iarch-link-cli.sh`
+  puts on `PATH`. `show` reads the last clipboard entry with `clipboard-text` and reports it as a
+  card through `notification-show`, because a key press has no stdout; `clear` puts the shell's own
+  picker in front of `clipboard-clear` and sends the verb only on an answer the picker returned,
+  because erasing the history `Super+Y` opens is the one thing a key press in this map can lose and
+  the checker's confirmation rule is about a session ending, not a history.
+- **Five rows in `docs/UNVERIFIED.md`** — `KB-11` for the seventeen binds that send a shell verb,
+  `KB-12` for the seven that dispatch a compositor action, `KB-13` for the clipboard script, `KB-14`
+  for the two backlight keys and `KB-15` for the three that re-step or re-render a surface. The
+  register is at 92 rows. Every one of the thirty-one bindings carries an `unverified` note pointing
+  at the row that explains it, so the record says what was read and what was never run.
+
+### Changed
+
+- **The A to Z table is finished rather than allocated.** `data/design/keybinds.json -> alphabet`
+  still has 78 cells and still allows a cell to be empty on purpose, but none is: twenty-six letters
+  bound on `Super`, twenty-five bound and one claimed on `Super+Shift`, eighteen bound and eight
+  refused on `Super+Ctrl`. The eighth refusal is `Super+Ctrl+K`, and it is a refusal about required
+  arguments rather than about taste — the layout cycle is on `Super+K`, the backlight toggle on
+  `Super+Shift+K` and two XF86 keys step it, while `keyboard-backlight-set` and
+  `keyboard-backlight-osd` each take a value the record marks as required, so neither can hang off a
+  bare letter.
+- **Four dispatchers the design record listed as used are now listed as not used, with a reason
+  each.** `hl.dsp.layout` is tiling and takes an argument, so it was never the keyboard layout the
+  cell needed; `hl.dsp.window.pseudo`, `.pin` and `.center` have no caller anywhere in this
+  repository — `windowrules.lua` sets `pin = true` as a rule, which is not a dispatch. A record that
+  claims a mechanism is used and cannot point at the line that uses it is the same defect as a
+  reserved cell that claims a verb does not exist, and this pass had already found three of those.
+- **The two volume popups carry upstream's `locked` flag.** `volume-osd` and `mic-volume-osd` are
+  Media rows, and the rule this map is held against is that a Media row without `flags.locked` stops
+  answering on the lock screen. The flag is `BIND_FLAG_LOCKED`, recorded in the design record from
+  `LuaBindingsToplevel.cpp:131` and `:143`, and it is not this project's `locked` field, which means
+  something else entirely.
+- **Four headers and comments that said a thing was unbound now say what binds it.**
+  `scripts/iarch-cycle.sh` said both of its other cycles were candidates for a cell "if one ever
+  frees up"; `scripts/iarch-reload.sh` said its `config` half had no key; and a comment in
+  `iarch/cli/render_noctalia.py` still called the clipboard panel a builtin id with no bind, which
+  stopped being true a slice ago and is now three keys untrue. `docs/CUSTOMIZING-SHORTCUTS.md` and
+  `docs/ROADMAP.md` Part 7 said the same thing at document length, including a count of seven
+  refusals where there are eight.
+- **Four tests pinned the old map and were updated rather than weakened.** The count in
+  `tests/test_settings_ipc.py` is 66 and its name says so; `tests/test_iarch_cheatsheet.py`'s
+  single-character rule now expects three rows for `super t`, because `Super+Ctrl+T` is one of them;
+  and two fixtures in `tests/test_iarch_keybinds.py` moved to `Super+Shift+Ctrl`, the one layer the
+  table does not allocate, which is where that file's own header already said a fixture whose key
+  reaches validation has to land.
+
+### Known gaps
+
+- **None of the thirty-one has been pressed.** There is no compositor, no shell, no display, no
+  clipboard and no keyboard backlight where this was written. Every verb, dispatcher and flag is a
+  reading of source at a pinned ref, and `KB-11` to `KB-15` are the five rows that say so.
+- **The record is still a curated subset.** 66 of the shell's 119 commands are in
+  `data/design/noctalia-ipc.json`; the other 53 are absent because nothing here sends them, not
+  because they were checked and rejected. This pass is the third that found a cell reserved on the
+  strength of that absence, so the count is a number in a test rather than `len(VERBS)`.
+- **`Super+Ctrl+Y` can only report one line.** The IPC is line-capped and the card it draws carries
+  the first line, so a clipboard entry longer than that loses the rest by design — the script says
+  so on stderr, and nobody has watched it happen.
+
 ## Unreleased — every Super+letter cell, and the eight scripts that filled them
 
 The second slice of Part 7, and it exists because the first one left a sentence behind that

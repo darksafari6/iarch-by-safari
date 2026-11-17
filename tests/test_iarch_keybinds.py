@@ -958,13 +958,13 @@ class Mutating(IsolatedHome):
 
     def test_set_changes_one_field_and_keeps_the_rest_from_the_default(self):
         self.assertEqual(0, self.run_cli("set", "applications.terminal",
-                                         "--mods", "SUPER,SHIFT", "--key", "T"))
+                                         "--mods", FREE_MODS, "--key", "T"))
         entry = json.loads(self.override.read_text(encoding="utf-8"))["bindings"][0]
-        self.assertEqual({"id": "applications.terminal", "mods": ["SUPER", "SHIFT"],
+        self.assertEqual({"id": "applications.terminal", "mods": FREE_MODS_LIST,
                           "key": "T"}, entry,
                          "a difference that restates the action stops a later update "
                          "to that action from ever reaching this machine")
-        self.assertIn('hl.bind("SUPER + SHIFT + T"', self.session_binds())
+        self.assertIn('hl.bind("SUPER + SHIFT + CTRL + T"', self.session_binds())
         self.assertNotIn('hl.bind("SUPER + RETURN"', self.session_binds())
 
     def test_the_modifiers_are_canonicalised_into_the_order_the_record_uses(self):
@@ -1072,14 +1072,14 @@ class Mutating(IsolatedHome):
 
     def test_add_creates_a_binding_of_your_own(self):
         self.assertEqual(0, self.run_cli(
-            "add", "custom.scratchpad", "--mods", "SUPER,SHIFT", "--key", "T",
+            "add", "custom.scratchpad", "--mods", FREE_MODS, "--key", "T",
             "--description", "Dropdown terminal", "--category", "Custom",
             "--exec", "kitty --class scratch"))
         entry = json.loads(self.override.read_text(encoding="utf-8"))["bindings"][0]
         self.assertEqual("custom.scratchpad", entry["id"])
         self.assertEqual({"type": "exec", "command": ["kitty", "--class", "scratch"]},
                          entry["action"])
-        self.assertIn('hl.bind("SUPER + SHIFT + T"', self.session_binds())
+        self.assertIn('hl.bind("SUPER + SHIFT + CTRL + T"', self.session_binds())
 
     def test_add_accepts_a_dispatch_and_a_noctalia_verb(self):
         self.assertEqual(0, self.run_cli(

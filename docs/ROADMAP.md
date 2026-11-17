@@ -315,12 +315,22 @@ so there was nothing for the placeholder to become. SUPER + K is now the keyboar
 (`noctalia msg keyboard-layout-cycle`), and a cell that names a surface which does not exist is worse
 than one that names a verb which does. All 78 letter cells of the three layers a letter may live in are
 allocated in `data/design/keybinds.json -> alphabet` and rendered as a grid at the end of
-`docs/SHORTCUTS.md`, where a cell is a binding, a claimed-but-unbound key, a refusal that names the verb
-or file or command behind it, or empty on purpose; `tests/test_keybinds_alphabet.py` checks the grid
+`docs/SHORTCUTS.md`, where a cell is a binding, a claimed-but-unbound key, or a refusal that names the
+verb, file or command behind it — the fourth state the schema still allows, a cell left empty on
+purpose, has no occupant left after four passes; `tests/test_keybinds_alphabet.py` checks the grid
 against the map in both directions. The Super layer is bound across — all twenty-six of its letters —
 which the third pass of that table did by giving each empty cell a mechanism rather than a placeholder:
 eight launchers under `scripts/`, ten verbs read back out of the shell's command table, and one
-compositor configuration call whose leaves `data/design/tokens.json` already records. The two workspace moves the v1 map carried into `Super+Ctrl+Alt`
+compositor configuration call whose leaves `data/design/tokens.json` already records. The fourth pass
+finished the other two layers and the map with them: `Super+Shift` is twenty-five bound and one
+claimed, `Super+Ctrl` eighteen bound and eight refused, and the record went from 98 bindings to 129,
+from 51 verbs to 66 of the shell's 119, and from fifteen linked launcher names to sixteen with
+`scripts/iarch-clipboard.sh`. Four dispatchers moved out of the design record's used list into
+`not_used` with a reason each, because `hl.dsp.layout` is tiling rather than keyboard layout and
+`hl.dsp.window.pseudo`, `.pin` and `.center` have no caller here; the five rows that pass added to
+`docs/UNVERIFIED.md` are `KB-11` to `KB-15`, and every one of the thirty-one bindings carries an
+`unverified` note pointing at the row that explains it. The two workspace moves the v1 map carried into `Super+Ctrl+Alt`
 moved to `Super+Ctrl+N` and `Super+Ctrl+P`, so the shipped map reports no warning at all. Still open:
 the glass overlay surface with a box you type into (`UI-02`), a Shortcuts page that edits the map rather
-than reading it, and every claim that needs a session (`KB-01`, `KB-03`, `KB-06`).
+than reading it, and every claim that needs a session — `KB-01`, `KB-03` and `KB-06`, and the five the
+fourth pass added, `KB-11` to `KB-15`.

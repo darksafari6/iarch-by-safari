@@ -98,6 +98,16 @@
       "not_used_note": "Recorded and deliberately not sent: the Appearance page offers dark, light and auto as three choices and sends theme-mode-set with the one that was chosen. A toggle cannot say which mode it landed on, and it would drop auto, which is the mode most people on this shell actually run."
     },
     {
+      "verb": "templates-apply",
+      "description": "Apply configured theme templates for the current palette",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:801-803",
+      "used_by": [
+        "data/keybinds.default.json: appearance.templates on SUPER + SHIFT + T"
+      ],
+      "note": "The half of a palette change that does not need this repository: the shell re-runs its own templates over the palette it already has. iarch/cli/theme.py renders every surface this project owns and then sends config-reload, so the two are not the same action -- this one asks the shell to re-apply what the shell itself generates, which a render from here cannot do. Takes no argument, so a key can send it without knowing which templates are configured."
+    },
+    {
       "verb": "color-scheme-get",
       "description": "Print the colour scheme the shell resolved",
       "arguments": [],
@@ -164,6 +174,37 @@
         "data/keybinds.default.json: notifications.clear on SUPER + N"
       ],
       "note": "Dismisses what is on screen and leaves the history alone; notification-clear-history is the other half and is deliberately not bound, because a key that erases the record of what interrupted you is a key that loses information on a mis-press. Distinct from notification-dnd-set, which stops notifications arriving rather than clearing the ones that did."
+    },
+    {
+      "verb": "notification-invoke-latest",
+      "description": "Invoke the default action of the most recent active notification",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:643-652",
+      "used_by": [
+        "data/keybinds.default.json: notifications.invoke-latest on SUPER + CTRL + I"
+      ],
+      "note": "The action behind a notification rather than the notification itself: what clicking the card would do. It is the reason a card can be acted on from the keyboard without opening the control centre's notifications tab, and it takes no argument, so which notification is 'the most recent active' one is the shell's answer and not this project's."
+    },
+    {
+      "verb": "notification-show",
+      "description": "Show an internal Noctalia notification",
+      "arguments": [
+        {
+          "name": "summary",
+          "required": true,
+          "note": "The card's title. Required, which is why nothing binds this verb to a key on its own: a key would have to carry a title that never changes."
+        },
+        {
+          "name": "body",
+          "required": false,
+          "note": "The card's text. Optional and the last positional, so it may be omitted or given as a second word."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:653-660 (Command) and :172-174 (positionals)",
+      "used_by": [
+        "scripts/iarch-clipboard.sh: `show` reads the last clipboard entry with clipboard-text and reports it as a card, because a key press has nowhere else to put text"
+      ],
+      "note": "An internal card, which the description is explicit about: it is the shell drawing its own notification rather than a client going through the notification daemon. That is why scripts/iarch-clipboard.sh uses it instead of notify-send -- one mechanism for cards a key asks for, and it works when no daemon is claiming the bus."
     },
     {
       "verb": "osd-toggle",
@@ -252,6 +293,36 @@
       "note": "Takes no argument at all, so a key can cycle without knowing how many layouts are configured or which one is next -- the shell owns the order. The compositor's own hl.dsp.layout is a different thing (a tiling layout, one argument) and is recorded as unused in data/design/keybinds.json."
     },
     {
+      "verb": "keyboard-backlight-toggle",
+      "description": "Toggle all keyboard backlights on/off",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:555-557",
+      "used_by": [
+        "data/keybinds.default.json: brightness.keyboard-backlight on SUPER + SHIFT + K"
+      ],
+      "note": "All of them, which the description states and which matters on a machine with more than one backlight device: the shell owns the enumeration, so this project does not have to guess a sysfs path the way scripts/iarch-brightness.sh has to for the display. The steps beside it -- keyboard-backlight-up and keyboard-backlight-down -- are what the two XF86KbdBrightness keys are for, and the toggle is what neither of them can do."
+    },
+    {
+      "verb": "keyboard-backlight-up",
+      "description": "Increase all keyboard backlights by one level",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:558-560",
+      "used_by": [
+        "data/keybinds.default.json: brightness.keyboard-up on XF86KbdBrightnessUp"
+      ],
+      "note": "One level, which is the shell's step and not a percentage this project chose. Bound to the key a keyboard already sends, with the `repeating` flag the display-brightness rows carry, so holding it walks the levels; unlike scripts/iarch-brightness.sh there is no floor to enforce here, because the level list is the shell's and its bottom is off."
+    },
+    {
+      "verb": "keyboard-backlight-down",
+      "description": "Decrease all keyboard backlights by one level",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:532-534",
+      "used_by": [
+        "data/keybinds.default.json: brightness.keyboard-down on XF86KbdBrightnessDown"
+      ],
+      "note": "The mirror of keyboard-backlight-up, on the key a keyboard already sends."
+    },
+    {
       "verb": "power-set",
       "description": "Set the UPower power profile (e.g. performance, balanced, power-saver)",
       "arguments": [
@@ -301,12 +372,13 @@
             "reboot-uefi",
             "shutdown"
           ],
-          "note": "This project sends 'lock' and 'suspend' only. A settings panel that can log out, reboot or shut down the machine is one mis-click away from losing somebody's unsaved work, and the session menu the shell already draws is the right place for those; see not_used below."
+          "note": "This project sends 'lock', 'suspend' and 'lock-and-suspend' only. A settings panel that can log out, reboot or shut down the machine is one mis-click away from losing somebody's unsaved work, and the session menu the shell already draws is the right place for those; see not_used below. Suspend is the exception iarch/cli/iarch_keybinds.py's confirmation rule makes explicitly -- it names lock and suspend as the two a person can undo by logging back in or waking the machine -- and the key sends lock-and-suspend rather than suspend, because a combination pressed without looking should not leave a machine asleep and unlocked. iarch/cli/render_noctalia.py sets lock_before_suspend for the idle path; this is the explicit one."
         }
       ],
       "evidence": "src/cli/schema_msg.h:747 and :79-80 (choices)",
       "used_by": [
-        "iarch/settings-app: the Power & Idle page's Lock now row"
+        "iarch/settings-app: the Power & Idle page's Lock now row, and its Suspend now row, which services/noctalia.py:suspend_now() sends as 'suspend'",
+        "data/keybinds.default.json: applications.lock-screen on SUPER + L sends 'lock', and session.suspend on SUPER + CTRL + Z sends 'lock-and-suspend'"
       ]
     },
     {
@@ -383,7 +455,8 @@
       ],
       "evidence": "src/cli/schema_msg.h:823",
       "used_by": [
-        "iarch/settings-app: the Sound page's open-the-mixer quick action, which shows the shell's own volume surface instead of drawing a second one"
+        "iarch/settings-app: the Sound page's open-the-mixer quick action, which shows the shell's own volume surface instead of drawing a second one",
+        "data/keybinds.default.json: media.volume-osd on SUPER + SHIFT + V, which is the same answer from a key: the level, without the step the XF86 volume keys take"
       ]
     },
     {
@@ -393,6 +466,22 @@
       "evidence": "src/cli/schema_msg.h:821",
       "used_by": [],
       "not_used_note": "Recorded and deliberately not sent, for the same reason as volume-set: mute is a state of the compositor's mixer, and this project changes that state through hyprctl so the switch and the level cannot drift apart."
+    },
+    {
+      "verb": "mic-volume-osd",
+      "description": "Show the microphone volume OSD without changing volume (defaults to the current volume)",
+      "arguments": [
+        {
+          "name": "value",
+          "required": false,
+          "note": "What the popup should say; omitted means the current level, which is the only answer a key can want. Required on brightness-osd and keyboard-backlight-osd, which is why neither of those is bound to a letter: a key would have to carry a number, and a number it carried would be a lie about the level."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:585-594 (Command) and :160-162 (positionals)",
+      "used_by": [
+        "data/keybinds.default.json: media.mic-volume-osd on SUPER + CTRL + V"
+      ],
+      "note": "The capture half of volume-osd, and the reason SUPER + CTRL + V is bound while SUPER + CTRL + M stays reserved: XF86AudioMicMute already mutes the microphone, so a letter that muted it would be a second spelling, while nothing else in this map answers 'how loud is my microphone right now'. It changes nothing, which the description is explicit about."
     },
     {
       "verb": "wifi-status",
@@ -479,6 +568,22 @@
       "note": "Sent by the session's own keybinds and not by the settings application: a panel that could open the launcher would be a second mechanism for a decision the keybind file already owns, and the Shortcuts page shows those bindings rather than pressing them."
     },
     {
+      "verb": "panel-close",
+      "description": "Close the active panel, or close the named panel if it is active",
+      "arguments": [
+        {
+          "name": "id",
+          "required": false,
+          "note": "Which panel; omitted means whichever one is active, which is what a key press should ask for, since the person pressing it is looking at the panel they want gone."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:666-675 (Command) and :180-182 (positionals)",
+      "used_by": [
+        "data/keybinds.default.json: system.panel-close on SUPER + CTRL + Q"
+      ],
+      "note": "The close half panel-toggle implies, on its own. Every open in this map is a toggle, so a person who opened the wrong panel closes it with the same key; what a toggle cannot do is close whichever panel happens to be up without knowing which one that is, and that is the whole of this verb. It closes only a panel that is active, so sending it with nothing open is a no-op rather than an error."
+    },
+    {
       "verb": "bar-hide",
       "description": "Hide one or all bars and release their layout gaps",
       "arguments": [
@@ -520,6 +625,27 @@
       ]
     },
     {
+      "verb": "bar-reserve-toggle",
+      "description": "Temporarily toggle reserve space for one or all bars",
+      "arguments": [
+        {
+          "name": "bar-name",
+          "required": false,
+          "note": "Which bar; omitted means every bar."
+        },
+        {
+          "name": "monitor-selector",
+          "required": false,
+          "note": "A positional and not a flag, which is the trap the header of this file names: it reads like a word from a choice list and there is no choice list attached to it."
+        }
+      ],
+      "evidence": "src/cli/schema_msg.h:365-374 (Command) and :103-106 (positionals)",
+      "used_by": [
+        "data/keybinds.default.json: appearance.bar-reserve on SUPER + SHIFT + R"
+      ],
+      "note": "Not a visibility switch and not the same thing as bar-hide: the bar stays drawn and stops reserving its strip, so a window can use the full height of the output. bar-hide releases the layout gaps too, which is why scripts/iarch-zen.sh sends that one; this is the smaller change, for a session that wants its bar and its pixels. 'Temporarily' is upstream's own word and what ends it was not observed -- docs/UNVERIFIED.md KB-11 carries that."
+    },
+    {
       "verb": "dock-hide",
       "description": "Hide the dock (persists override)",
       "arguments": [],
@@ -539,6 +665,16 @@
       ]
     },
     {
+      "verb": "dock-toggle",
+      "description": "Toggle dock visibility (persists override)",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:515-516",
+      "used_by": [
+        "data/keybinds.default.json: appearance.dock on SUPER + SHIFT + D"
+      ],
+      "note": "The both-ways form of dock-hide and dock-show, and the one a key wants: a toggle cannot be sent as one of three and still leave a script knowing which way it went, which is why scripts/iarch-zen.sh sends the two explicit halves, but a single key has no state to keep and cannot strand the dock hidden. That stranding is documented on dock-hide itself -- the override persists, so a shell restart leaves the dock gone -- and this verb is the way back from it without a terminal."
+    },
+    {
       "verb": "desktop-widgets-hide",
       "description": "Hide desktop widgets now (runtime only; does not change the saved setting)",
       "arguments": [],
@@ -546,7 +682,7 @@
       "used_by": [
         "scripts/iarch-zen.sh: the zen switch sends the three hide verbs together and the three show verbs together, because one bind carries one action and a zen mode that hid the bar but left the dock and the desktop widgets is not zen"
       ],
-      "note": "Runtime only, and the description says so: the saved setting is left alone, which is exactly what a temporary zen mode needs. desktop-widgets-toggle is the one-key form and is not bound, for the reason the zen switch gives -- a toggle cannot be sent as one of three and still leave the script knowing which way it went."
+      "note": "Runtime only, and the description says so: the saved setting is left alone, which is exactly what a temporary zen mode needs. desktop-widgets-toggle is the one-key form, and it is bound where a single key wants it -- SUPER + SHIFT + Z -- rather than sent from this script, for the reason the zen switch gives: a toggle cannot be sent as one of three and still leave the script knowing which way it went."
     },
     {
       "verb": "desktop-widgets-show",
@@ -556,6 +692,36 @@
       "used_by": [
         "scripts/iarch-zen.sh: the zen switch sends the three hide verbs together and the three show verbs together, because one bind carries one action and a zen mode that hid the bar but left the dock and the desktop widgets is not zen"
       ]
+    },
+    {
+      "verb": "desktop-widgets-toggle",
+      "description": "Toggle desktop widgets visibility (runtime only; does not change the saved setting)",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:499-508",
+      "used_by": [
+        "data/keybinds.default.json: appearance.desktop-widgets on SUPER + SHIFT + Z"
+      ],
+      "note": "The one-key form of the hide and show pair above, bound on its own at SUPER + SHIFT + Z where a single key wants exactly the both-ways behaviour scripts/iarch-zen.sh cannot use. Runtime only, as the description says, so the saved setting survives the key press and the widgets come back at the next shell start -- the difference from dock-toggle, whose override persists."
+    },
+    {
+      "verb": "desktop-widgets-toggle-edit",
+      "description": "Toggle desktop widgets edit mode",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:509-511",
+      "used_by": [
+        "data/keybinds.default.json: appearance.desktop-widgets-edit on SUPER + CTRL + E"
+      ],
+      "note": "Edit mode is a different thing from visibility: the widgets stay on the desktop and become movable, which is the state desktop-widgets-edit enters and desktop-widgets-exit leaves. The toggle is what a key sends, so one combination both enters and leaves and neither half can be stranded."
+    },
+    {
+      "verb": "lockscreen-widgets-toggle-edit",
+      "description": "Toggle lockscreen widgets edit mode",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:570-572",
+      "used_by": [
+        "data/keybinds.default.json: appearance.lockscreen-widgets-edit on SUPER + SHIFT + L"
+      ],
+      "note": "The lock screen's copy of the same idea, and the reason SUPER + SHIFT + L is the cell that got it: SUPER + L locks the session, so the letter already belongs to the lock screen and this is the one change a person makes to it. Editing it while the session is unlocked is the only way to see the result, which is what makes a toggle the right form rather than an enter and an exit."
     },
     {
       "verb": "settings-open",
@@ -679,6 +845,27 @@
       "evidence": "src/cli/schema_msg.h:435 and kMsgClipboardCopyPositionals",
       "used_by": [],
       "not_used_note": "Recorded and deliberately not used by the Contact page's copy button: that copy happens inside this application through the widget's own Gdk clipboard (GNOME/gtk@4.10.0:gdk/gdkclipboard.h gdk_clipboard_set_text), so it works when the shell is not running and does not put a link on an IPC socket."
+    },
+    {
+      "verb": "clipboard-clear",
+      "description": "Clear clipboard history",
+      "arguments": [],
+      "evidence": "src/cli/schema_msg.h:433",
+      "used_by": [
+        "scripts/iarch-clipboard.sh: `clear`, which asks first and sends this only on an answer the shell's own picker returned"
+      ],
+      "note": "History, not the selection: what the panel behind SUPER + Y keeps. It is the one verb in this record that a key press can lose something with, so nothing sends it directly -- scripts/iarch-clipboard.sh puts the shell's own picker in front of it the way the session panel is put in front of `session logout`, because iarch/cli/iarch_keybinds.py's confirmation rule is about a session ending and a clipboard nobody can get back is the same shape of mistake on a smaller scale."
+    },
+    {
+      "verb": "clipboard-text",
+      "description": "Print the most recent clipboard text",
+      "arguments": [],
+      "prints": "the most recent entry, on stdout",
+      "evidence": "src/cli/schema_msg.h:437",
+      "used_by": [
+        "scripts/iarch-clipboard.sh: `show`, which hands what it prints to notification-show"
+      ],
+      "note": "Prints, which is why no key sends it on its own: a key press has no stdout to print to, and a bind that ran it would look like a key that does nothing. Read by a script that has somewhere to put the answer, it is the cheapest way to see the last thing copied without opening the panel and hunting in it."
     }
   ],
   "not_commands": [

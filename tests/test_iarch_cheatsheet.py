@@ -196,11 +196,12 @@ class Filtering(unittest.TestCase):
         rows answer, not the order the categories happen to render in.
         """
         rows = self.shown("super t")
-        self.assertEqual({"applications.settings", "appearance.theme-mode"},
+        self.assertEqual({"applications.settings", "appearance.theme-mode",
+                          "appearance.templates"},
                          {r["id"] for r in rows},
-                         "Super+T and Super+Ctrl+T are the two combinations that are both "
-                         "`super` and `t`; a row whose description merely contains the "
-                         "letter is not one of them")
+                         "Super+T, Super+Shift+T and Super+Ctrl+T are the three "
+                         "combinations that are both `super` and `t`; a row whose "
+                         "description merely contains the letter is not one of them")
         for row in rows:
             self.assertIn("t", sheet.key_tokens(row["keys"]))
 
