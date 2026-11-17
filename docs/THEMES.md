@@ -79,17 +79,26 @@ the saved choice.
 | --- | --- |
 | `hypr/generated/theme.lua` | Border colors/size, rounding, gaps, shadow, blur, inactive opacity and dim; named bezier curve and window/workspace/fade/border/layer animation leaves |
 | `noctalia/palettes/iarch-active.json` | A custom palette in the same dark/light and terminal shape as the shipped `iarch-*.json` palettes |
-| `noctalia/config.toml` | Selects `iarch-active`; updates only existing theme, bar, dock, Control Center, notification, shell-animation and audio keys, including supported bar/dock/toast opacity |
+| `noctalia/config.toml` | Selects `iarch-active`; updates only existing theme, bar, dock, Control Center, notification, shell-animation and audio keys, including supported surface opacity and the `iarch-session` sound theme |
 | `kitty/theme.conf` | Foreground, background, cursor, selection and all sixteen ANSI colors |
 | `starship.toml` | Selects the named palette and replaces only the marked iArch palette block |
 | `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css` | Replaces only the marked iArch accent block; the existing generated glass sheets stay intact |
 | `Kvantum/iarch/iarch.kvconfig` | Updates supported `[GeneralColors]` color values in the existing theme |
-| `iarch/sounds/active-notify.ogg`, `active-urgent.ogg` | Symlinks to the selected notification sound and optional urgent sound, when the assets exist |
+| `iarch/sounds/active-notify.ogg`, `active-urgent.ogg` | User-visible symlinks to the selected notification sound and optional urgent sound, when assets exist |
+| `~/.local/share/sounds/iarch-session/stereo/message-new-instant.ogg` | Noctalia's native notification-event symlink to `active-notify.ogg`; the installed theme inherits the freedesktop theme for missing events |
 
 Hyprland loads the user-generated `hypr/generated/theme.lua` with `loadfile`
 after the existing glass fallback; it is optional until a theme is first applied.
 The Kitty include is last in `kitty.conf`, so the active theme colors win over
 the base terminal include.
+
+Noctalia v5.4.1 loads installed sound themes from
+`~/.local/share/sounds/<theme-name>/stereo` and resolves notifications through
+the `message-new-instant` event. The renderer selects the generated
+`iarch-session` theme and links that event to the user-facing
+`~/.config/iarch/sounds/active-notify.ogg`; Noctalia handles playback through
+its own audio service, not the theme apply command. The theme inherits the
+freedesktop sound theme when the custom event asset is not yet available.
 
 Reload order is compositor (`hyprctl reload`), Noctalia (`noctalia msg
 config-reload`), wallpaper (`noctalia msg wallpaper-set` when the selected file
