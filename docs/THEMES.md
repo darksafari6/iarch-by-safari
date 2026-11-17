@@ -84,9 +84,10 @@ the saved choice.
 | `starship.toml` | Selects the named palette and replaces only the marked iArch palette block |
 | `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css` | Replaces only the marked iArch accent block; the existing generated glass sheets stay intact |
 | `Kvantum/iarch/iarch.kvconfig` | Updates supported `[GeneralColors]` color values in the existing theme |
-| `iarch/sounds/active-notify.ogg` | A symlink to the selected pack's notification sound, when that asset exists |
+| `iarch/sounds/active-notify.ogg`, `active-urgent.ogg` | Symlinks to the selected notification sound and optional urgent sound, when the assets exist |
 
-The Hyprland loader requires `generated.theme` after the existing glass fallback.
+Hyprland loads the user-generated `hypr/generated/theme.lua` with `loadfile`
+after the existing glass fallback; it is optional until a theme is first applied.
 The Kitty include is last in `kitty.conf`, so the active theme colors win over
 the base terminal include.
 
