@@ -159,9 +159,14 @@ class ThemeRenderers(unittest.TestCase):
     def test_noctalia_palette_matches_existing_custom_palette_shape(self):
         payload = json.loads(session_theme.render_noctalia_palette(self.pack))
         self.assertEqual({"dark", "light"}, set(payload))
-        for mode in payload.values():
+        for mode_name, mode in payload.items():
             for key in ("mPrimary", "mOnPrimary", "mSurface", "mOnSurface", "mOutline", "terminal"):
                 self.assertIn(key, mode)
+            if mode_name == "dark":
+                palette = self.pack["noctalia"]["palette"]
+                self.assertEqual(palette["bar"], mode["mSurfaceVariant"])
+                self.assertEqual(palette["dock"], mode["mTertiary"])
+                self.assertEqual(palette["notification"], mode["mHover"])
             self.assertEqual(8, len(mode["terminal"]["normal"]))
             self.assertEqual(8, len(mode["terminal"]["bright"]))
             self.assertRegex(mode["mSurface"], r"^#[0-9A-Fa-f]{6}$")
