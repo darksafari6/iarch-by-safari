@@ -50,7 +50,6 @@ ALLOWLIST: Dict[str, str] = {
     "lib/managed-files.sh": FROZEN + " (the '# Managed by minimaLinux session installer' marker)",
     "tools/diagnose.py": FROZEN + " (~/.config/minimalinux of the legacy session)",
     "tools/glass_preset.py": FROZEN + " (~/.config/minimalinux of the legacy session)",
-    "tools/preflight.py": FROZEN + " (~/.config/minimalinux of the legacy session)",
     "tools/recover_session.py": FROZEN + " (~/.config/minimalinux of the legacy session)",
     "data/design/greeter.json": FROZEN + " (records that the login screen can select the legacy "
                                 "session by its desktop entry name, and cites the file by path)",

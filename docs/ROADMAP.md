@@ -277,15 +277,38 @@ evidence or still listed.
 decides what every package step installs: one `-Sy` per run, each target classified from the local
 database, the plan printed before anything is fetched, `--needed` on every named transaction, and no
 transaction at all on a machine that is already current, which is the reviewed half of `INS-01`.
-`install.sh` runs 24 numbered steps that each print a verdict, ends with a summary that fails the run
+`install.sh` runs 25 numbered steps that each print a verdict, ends with a summary that fails the run
 when a step failed, and records every path it creates outside the repository in
 `~/.local/state/iarch/install-manifest.txt`. The icon and cursor themes the presets name are installed
 at last, in a step that warns rather than aborting, and three package names that are not in Arch's
-repositories came out of the transaction whose failure stops everything (`TP-20`). Still open:
-`--noconfirm` on `pacman -Syu` and on the removal path (`INS-01`), narrow ownership changes
-(`INS-02`), a reversible and logged display-manager switch (`INS-03`), `tools/preflight.py`, a
-manifest-driven `uninstall.sh` (`INS-08`), whether a greetd-started session inherits the `PATH` the
-installer writes (`INS-07`), and a runtime mechanism for the icon theme (`TP-19`).
+repositories came out of the transaction whose failure stops everything (`TP-20`).
+
+**The installer-safety slice.** `tools/preflight.py` runs before any privileged step, which is the
+acceptance criterion that stayed open while the tool itself already existed and was tested: the
+installer never called it. It is step one and it is fatal, because on a machine that is not vanilla
+Arch, or one whose package database a transaction still holds, every step after it fails and a summary
+listing twenty-four failures hides the one cause; `--preflight-only` runs the same report with no root
+and no changes, so "would this even run here" is a question that can be asked before the privilege is.
+Every prompt goes through one helper that takes the default its own text advertises when there is
+nothing left to read, so an end of input ends a prompt instead of looping on "please answer" forever,
+and `--yes` means *take those defaults* rather than *answer yes* — which is the whole difference at the
+prompt that removes packages. A run whose stdin is not a terminal is refused before anything privileged
+happens, and an argument nobody defined is a refusal rather than a question. The `INS-` rows moved with
+it: `INS-01`'s upgrade half is announced — the count and the first twenty names — before
+`pacman -Syu --noconfirm`; `INS-02` is closed in code, both recursive `chown` calls now following the
+paths the step wrote, with a test that fails if the unrestricted form comes back; `INS-03` is recorded
+before the switch and printed by `uninstall.sh` after it; `INS-06` writes `[brightness] enable_ddcutil`
+into the `config.toml` the payload actually deploys, through `tools/toml_set_flag.py`, instead of a v4
+key into a v4 file that is never there; and `INS-08` is closed, because `uninstall.sh` reads the
+manifest and removes exactly the files it names. Three of the `INS-` rows turned out to be wrong
+about the code they described, and `docs/UNVERIFIED.md` now says so where each one stood.
+
+Still open: adopting `lib/iarch-common.sh` across `install.sh` and `fedora_install.sh`, which this slice
+did not do, `install.sh` keeping its own helpers; the nine prompts in `fedora_install.sh`, which have
+none of the behaviour above (`INS-09`); whether a greetd-started session inherits the `PATH` the
+installer writes (`INS-07`); a runtime mechanism for the icon theme (`TP-19`); and the acceptance
+criterion nobody can meet from a sandbox with no package manager, no display and no root — that a
+second run changes nothing on a real machine.
 
 ## Part 7 — Shortcut system
 

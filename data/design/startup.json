@@ -109,7 +109,7 @@
     {
       "name": "QT_QPA_PLATFORMTHEME",
       "value": "qt6ct",
-      "why": "Qt 6 reads its platform theme from here, and qt6ct is what points it at the Kvantum theme this repository renders (.config/Kvantum/). Installed by install.sh:505."
+      "why": "Qt 6 reads its platform theme from here, and qt6ct is what points it at the Kvantum theme this repository renders (.config/Kvantum/). Installed by install.sh:729."
     },
     {
       "name": "QT_AUTO_SCREEN_SCALE_FACTOR",
@@ -136,7 +136,7 @@
     {
       "command": "gnome-keyring-daemon --start --components=secrets",
       "why": "The Secret Service provider browsers and password managers ask for. Only the secrets component: the ssh and pkcs11 components are not used by this session, and starting them would hold an agent nobody asked for.",
-      "installer": "install.sh:435"
+      "installer": "install.sh:659"
     },
     {
       "command": "systemctl --user start --ignore-dependencies xdg-desktop-portal-hyprland.service xdg-desktop-portal.service",
@@ -155,7 +155,7 @@
     {
       "command": "sleep 3 && easyeffects --gapplication-service",
       "why": "EasyEffects as a background service, so the audio pipeline it owns survives its window being closed. The delay is upstream's own recommendation for a service that has to appear on the session bus after the shell has taken its name; the wrapper the v4 file used (`sh -c '…'`) is gone because the executor already runs /bin/sh -c.",
-      "installer": "install.sh:555-557 (only when the audio mode is easyeffects)"
+      "installer": "install.sh:779-781 (only when the audio mode is easyeffects)"
     },
     {
       "command": "systemctl --user import-environment WAYLAND_DISPLAY && hash dbus-update-activation-environment 2>/dev/null && dbus-update-activation-environment --systemd WAYLAND_DISPLAY",
@@ -169,7 +169,7 @@
       "flag": "enable_nvidia_optional",
       "enabled_by_default": false,
       "why": "NVIDIA needs these four vendor variables to get hardware cursors and VA-API decoding right, and they are wrong on every other GPU: WLR_NO_HARDWARE_CURSORS in particular costs a software cursor path. So they stay behind a flag rather than in the environment of every install.",
-      "installer_flips_the_flag": ["install.sh:1197-1199", "fedora_install.sh:858-860"],
+      "installer_flips_the_flag": ["install.sh:1406-1408", "fedora_install.sh:858-860"],
       "env": [
         {
           "name": "WLR_NO_HARDWARE_CURSORS",
@@ -202,7 +202,7 @@
   "installer_anchors": [
     {
       "file": "install.sh",
-      "lines": "1197-1199",
+      "lines": "1406-1408",
       "anchor": "local enable_nvidia_optional = false",
       "replacement": "local enable_nvidia_optional = true",
       "match": "a whole line, anchored with ^ and $ in the sed expression",

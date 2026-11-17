@@ -27,7 +27,7 @@ adds on top of that record is refusal:
   silently win and the record would no longer say which one did;
 * the two lines both installers rewrite with ``sed`` are checked *after* the
   render, in the rendered text: ``local enable_nvidia_optional = false`` has to be
-  a whole line on its own (``install.sh:1197-1199``,
+  a whole line on its own (``install.sh:1406-1408``,
   ``fedora_install.sh:858-860``), and the polkit agent command has to appear on
   exactly one line, because Fedora's rewrite replaces every line containing it
   with a quoted table entry (``fedora_install.sh:847``). A comment naming the

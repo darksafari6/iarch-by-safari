@@ -58,6 +58,198 @@ Notable changes to iArch by Safari, newest first. The format follows
 six-part plan in [`docs/ROADMAP.md`](docs/ROADMAP.md) rather than semantic
 versioning, because nothing here is a library anyone links against.
 
+## Unreleased — the installer's first step, its fourteen prompts, and a manifest something reads
+
+The second slice of Part 6, and the first one that changes what running `install.sh` feels like. The
+part's own acceptance criterion had been open for a whole pass with the tool it names already
+written, tested and sitting in `tools/`: `preflight.py` ran before any privileged step in every plan
+and in no version of the installer. What follows is that gap closing, and the four things reading
+the script turned up on the way — a step that reported a switch it never made, a prompt that could
+not be answered with an end of input, an ownership change that claimed a whole config tree, and a
+manifest nothing consumed.
+
+### Added
+
+- **A report as step one, and it is fatal.** `preflight_report` writes the read-only hardware and
+  environment report to `~/.local/state/iarch/preflight.json`, records it in the install manifest,
+  prints one line per finding, and fails the run on a blocker: not vanilla Arch, a package database
+  a transaction still holds, or no pacman at all. Everything else — a probe that could not reach
+  GitHub, an NVIDIA controller with no module loaded, no sudo, no Hyprland on `PATH` yet — is a
+  warning that gets printed and walked past, because a judgement this script has no evidence for is
+  not a reason to stop somebody's install. Fatal from the other end: on a machine that cannot run
+  the steps, twenty-four failures in the summary hide the one cause.
+- **`--preflight-only`, which needs neither root nor a terminal.** The report runs before the root
+  check and before the first prompt, so "would this even run here" can be asked before asking for
+  privilege. It reads `$SCRIPT_DIR` rather than `$REPO_DIR`, because `REPO_DIR` is not assigned
+  until after the check it now precedes. `--yes` and `--help` are the other two switches, `usage`
+  names all three, and an argument nobody defined exits 2 with that text instead of being answered
+  with a question.
+- **The report is a tool with a contract of its own, and fourteen more tests for it.**
+  `tools/preflight.py` grew `--blockers`, which answers the one question that stops an install and
+  exits 1 on a blocker and 0 on a warning, and `--from-report PATH`, which reads a saved report back
+  instead of probing the machine again, so a verdict can be tested without a machine.
+  `FIRST_STEP_NEEDS` names the two hosts the first privileged step really fetches from —
+  `keyserver.ubuntu.com` for the Chaotic key, `cdn-mirror.chaotic.cx` for its two packages — in the
+  file that reports on them rather than in the installer's prose, and a failed probe says which of
+  the two it could not reach. `tests/test_preflight.py` went from three tests to seventeen: a
+  derivative distribution is a blocker and not a warning, a held database lock names the lock file,
+  a probe that never ran says so rather than staying quiet, and a machine with nothing to report
+  says *that* rather than nothing at all.
+- **`tools/toml_set_flag.py`, and the twenty-three tests that pin it.** One boolean in one top-level
+  table, nothing else touched: comments and sibling indentation survive byte for byte, a subtable
+  that shares a prefix (`[brightness.monitor.dell]`) is not the table, and it refuses rather than
+  guesses — a table or key that appears twice, or an existing value that is not a boolean, is
+  somebody else's decision. `--check` never writes. It is a tool because `tomllib` reads TOML and
+  cannot write it, so the obvious library is half the job, and because `sed` cannot tell which table
+  a key is in: `[brightness] minimum_brightness` and a `[lockscreen] minimum_brightness` are
+  different keys to a person and the same string to a pattern.
+- **The second half of `uninstall.sh`.** It reads `~/.local/state/iarch/install-manifest.txt` and
+  removes exactly the paths the installer recorded, after asking, with three refusals built in
+  rather than left to judgement: a path that is not absolute is not guessed at, a directory is
+  reported instead of deleted because a tree is a claim about files the script never enumerated, and
+  a path that is already gone is a detail so a second run stays boring. The manifest itself is kept
+  in both cases — it is the record of what an install did, and removing it would leave a second run
+  with nothing to read. `tests/test_uninstall.sh` grew twenty-six checks, from twenty-four to fifty,
+  executing the real script against a manufactured home and manifest, including the two that matter
+  most: a file the manifest does not name survives, and a dry run changes nothing at all.
+- **The display manager is written down before it is switched.** `record_display_manager_state` asks
+  `systemctl is-enabled` about six units and writes the answer to
+  `~/.local/state/iarch/display-manager-before.txt` — or the word `none`, because an empty file
+  cannot be told from a file nobody wrote — once per machine, so a second run does not overwrite the
+  answer with `greetd`. `uninstall.sh` reads it and prints the `systemctl` commands that put the
+  machine back with the unit names filled in. It does not run them: re-enabling a unit needs root,
+  and a script that asked for it in the same breath as "restore my configuration" would be asking
+  for more than the person agreed to.
+- **A stopped run says what it left behind.** The manifest path is printed at the end of the main
+  flow, and a `fatal_step` never reaches the end, so the branch of `wizard_summary` that lists the
+  failed steps prints the paperwork as well: the manifest this run was writing to, the
+  `~/.config/<name>.bak.<timestamp>` convention the restore step uses, and the
+  `/etc/pacman.conf.bak.<epoch seconds>` copy the repository step makes before it edits that file.
+  Part 6's own acceptance criterion asks that a failed run report what it touched and where the
+  backups are; this is that sentence, printed by the thing that failed. A run that finished does not
+  repeat it, because the same paths are already above it on the page.
+- **Twenty tests in `tests/test_installer_wizard.py` for all of it**, which is the only way any of
+  it can be checked from here. The prompt helper is executed with an answer, with no answer and
+  under `--yes`; the report step is executed against three reports this test writes — blocked,
+  warned and clean — so the real `tools/preflight.py` reads them and the real `run_step` prints the
+  verdict; the record is executed against a stubbed `systemctl`; the DDC step is executed against a
+  copy of the shipped `.config/noctalia/config.toml` which is then parsed with `tomllib`, because a
+  step that says it set a flag should be checked by reading the file and not by trusting the
+  message; and a run that fails on purpose is executed far enough to print its paperwork, because a
+  summary that only appears when something went wrong is the one nobody tests.
+
+### Changed
+
+- **Every prompt in `install.sh` goes through `read_answer`, all fourteen of them.** A bare `read -r
+  -p` fails at end of input and leaves its variable empty, and an empty answer is not one of the
+  branches a `(y/n)` question offers, so each of those prompts used to print "Please answer 'y' or
+  'n'." and ask again forever with nothing to read. The helper prints the answer instead of
+  assigning it by name, so each call site still shows which variable it sets and a linter does not
+  have to guess.
+- **`--yes` takes the default each prompt advertises, and says which one it took.** Not "answer yes
+  to everything": the prompt that removes packages advertises no, and under `--yes` it stays no.
+  Without the flag a run whose stdin is not a terminal exits 2 before the banner, rather than
+  reading its answers out of a pipe — `curl ... | bash` feeds the rest of the script to the first
+  prompt.
+- **The whole-system upgrade announces itself first.** `upgrade_system` refreshes the databases,
+  asks `lib/packages.sh` what is out of date, and prints the count and the first twenty names before
+  `pacman -Syu --noconfirm`. The flag stays, because pacman would otherwise ask a second time in the
+  middle of a step that has just said what it is doing; the announcement is the answer to the
+  question the flag skips, and a person who cannot see that a step will replace four hundred
+  packages has not consented to it.
+- **Ownership follows the paths the step wrote.** `copy_backup_configs` now chowns each directory it
+  restored, one `chown -R` per path, instead of all of `~/.config` — a claim about every file in it,
+  including the ones this installer has never heard of. `tests/test_installer_wizard.py` fails if
+  the unrestricted form comes back.
+- **`STEP_TOTAL` is 25, and the test that checks the banner now reads the literal** instead of
+  pinning `[ 1/24]` in a second place. The count is still asserted three ways — the literal, the
+  number of step calls in the main flow, and the fatal list, which gained the report as its first
+  member.
+- **Every citation into `install.sh` was remapped by diffing the two revisions, twice**, not by
+  adding an offset to the old number: `.shellcheckrc`, `SECURITY.md`, three design records,
+  `docs/UNVERIFIED.md`, two docstrings, the generated `startup.lua` header and the expectation table
+  in `tests/test_citations.py`. Twenty-nine moved when the argument parser, the prompt helper and
+  the report step went in near the top of the file, and fifty-one more when the failure summary grew
+  seven lines below them; each pass reconstructed the revision the citations were written against,
+  asked `difflib` for the opcodes, and asserted the diff was the single insertion it was supposed to
+  be before trusting the map. An offset assumes nothing else moved, which is the mistake that
+  produced the drift that file exists to catch. Reading the diff afterwards caught three numbers
+  that were never `install.sh` citations at all — `legacy-install.sh:444` and
+  `session-install.sh:71` and `:73` — which a hyphen in a filename had made look like one.
+- **`docs/ROADMAP.md`'s Part 6 section now separates what landed from what did not.** The
+  provisional scope stays as it was written; under it, the slice this entry describes, and then what
+  is still open — `lib/iarch-common.sh` unadopted, the nine prompts in `fedora_install.sh`,
+  `INS-07`, `TP-19`, and the acceptance criterion no sandbox can meet. A roadmap that only lists
+  intentions is a document about the future, and this part now has a past.
+- **`tools/toml_set_flag.py --check` runs in CI**, and the status is compared rather than negated:
+  the shipped profile must *not* carry the per-machine DDC switch, so exit 1 is the pass, and exit 2
+  means a file the tool could not read, which is a failure.
+
+### Fixed
+
+- **The DDC step set a key that does not exist, in a file that is never deployed.** Both
+  `deploy_configs` and `copy_backup_configs` looked for `~/.config/noctalia/settings.json` and set
+  `brightness.enableDdcSupport`, which is the v4 spelling; at v5.4.1 the section is registered as
+  `brightness` (`src/config/schema/config_sections.cpp:61`), the key is `enable_ddcutil`
+  (`src/config/schema/config_schema.cpp:488`) and its type is `bool enableDdcutil = false`
+  (`src/config/config_types.h:1594`). There is no `enableDdcSupport` anywhere in the schema, and the
+  v5 payload ships `config.toml` with no `settings.json` at all — `deploy_configs` replaces the
+  whole noctalia directory with a staged tree — so the branch never found a file to edit while the
+  step went on reporting that DDC support was on. It now runs `tools/toml_set_flag.py` over the
+  deployed `config.toml`, warns and fails when there is no file to edit, and says which key to set
+  by hand when there is no `python3` (`INS-06`).
+- **Ctrl-D hung the installer, and so did a closed stdin.** See the prompt change above; the reboot
+  prompt already had the fix and the other fourteen did not, which is the shape of a defect that
+  gets fixed where somebody noticed it.
+- **Three rows in `docs/UNVERIFIED.md` were wrong about the code they described.** `INS-05` said the
+  convolver's HRIR path was not one the installer deploys; `apply_dolby_pipewire_profile` copies the
+  whole `pipewire/` tree with `cp -rf`, so `hrir/atmos.wav` — 14 channels, 48000 Hz, read out of its
+  own `fmt ` chunk — lands exactly where the conf names it, and the row now carries the real open
+  question instead: `hrir/44/` holds the same impulse responses at 44100 Hz and the conf declares no
+  graph rate. `INS-06` said both installers wrote the v4 key; `fedora_install.sh` has no DDC branch
+  at all. `INS-02` described a restriction one of the two recursive `chown` calls did not have, and
+  `SECURITY.md` repeated it as a promise.
+- **`SECURITY.md` cited the wrong row and the wrong file.** The AUR greeter transaction was
+  attributed to `INS-02`, whose subject is ownership, and to `install.sh`, which contains no named
+  `yay -S`: it lives in `lib/packages.sh:231` and is called from the greeter and icon-theme steps.
+  The row now names the four transactions `install.sh` really runs, by line.
+- **A shorthand citation in the greeter record named the wrong line in the wrong file.** The record
+  cites `fedora_install.sh:558-607` for that script's copy of `setup_noctalia_greeter` and then
+  says, in shorthand, that it is called at `:1037` — which is the line that reports a failed
+  core-package transaction. The call is at `:1050`. A bare `:NNNN` is the one citation form
+  `tests/test_citations.py` cannot attribute to a file, so both shorthands in that record, this one
+  and the Arch one that had been stale since the step restructure, had to be read against the
+  scripts by hand.
+- **`.shellcheckrc` carried two wrong line numbers, and nothing was in a position to notice.** The
+  file indexes every finding this repository silences by the line the silence is on, and both of its
+  installer numbers were already stale before this pass: the `SC2034` entry named a comment about
+  the cursor-theme package in `install.sh` and a closing brace in `fedora_install.sh`, where the two
+  silences really sit at `install.sh:832` and `fedora_install.sh:471`. The reason nothing caught it
+  is the part worth keeping: the file has no suffix in `SCANNED_SUFFIXES` and sits in no directory
+  in `SCANNED_ROOTS`, so `tests/test_citations.py` never read it, and a faithful remap then carried
+  a wrong number to a new wrong line. It is scanned now, both numbers have an expectation, and
+  putting either back fails the suite.
+- **`INS-08` is closed, and its row is deleted** the way `KB-04` was: the manifest has a consumer,
+  and the consumer is proved by executing it rather than by reading it.
+
+### Known gaps
+
+- **`fedora_install.sh` has none of this.** Nine bare `read -r -p` prompts, no argument parsing, no
+  terminal check, no report step, and it does not source `lib/packages.sh`, so its package steps are
+  its own. `INS-09` is the row. Porting the Arch behaviour moves every `fedora_install.sh:NNN`
+  citation in the design records and `SECURITY.md` at once, and that remap is a pass of its own
+  rather than a footnote to this one.
+- **`lib/iarch-common.sh` is still not adopted across the installers**, which is the first item in
+  Part 6's own scope. `install.sh` keeps its own helpers; this slice added to them rather than
+  replacing them. Adopting the library means replacing the step scaffolding itself, which is a pass
+  of its own and not a footnote to this one.
+- **Nothing here ran on a machine.** There is no pacman, yay, sudo, systemctl, root or display in
+  the sandbox, so the installer was checked with `bash -n`, shellcheck at `--severity=warning` over
+  every tracked shell file, and by executing extracted functions in a harness with stubbed commands.
+  The acceptance criterion "a second run changes nothing" is still a reading of the code.
+- **`INS-07` and `TP-19` are unchanged**: whether a greetd-started session inherits the `PATH` the
+  installer writes, and a runtime mechanism for the icon theme the presets name.
+
 ## Unreleased — every letter in all three layers, and the thirty-one binds that filled them
 
 The third slice of Part 7. The previous one filled the `Super` layer and left the other two with
