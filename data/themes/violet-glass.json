@@ -67,9 +67,9 @@
       "on_primary": "#1C0830",
       "error": "#FF8AB0",
       "outline": "#7C629A",
-      "bar": "#24102EB8",
+      "bar": "#24102E",
       "dock": "#30143C",
-      "notification": "#24102EB8",
+      "notification": "#24102E",
       "text": "#F6EEFF",
       "secondary": "#E0B0FF",
       "on_secondary": "#1C0830",
@@ -145,5 +145,6 @@
     "rounding": 24,
     "gap": 12,
     "dim_inactive": true
-  }
+  },
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
 }
