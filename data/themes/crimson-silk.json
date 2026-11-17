@@ -27,7 +27,7 @@
   },
   "motion": {
     "bezier": {
-      "name": "iarch-crimson-silk",
+      "name": "crimson-silk",
       "controls": [
         0.2,
         0.9,
