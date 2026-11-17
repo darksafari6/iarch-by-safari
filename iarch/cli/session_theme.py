@@ -712,9 +712,7 @@ def _apply_sound_link(pack: Dict[str, Any], env: Mapping[str, str]) -> List[Path
             continue
         target = ROOT / relative
         if not target.is_file():
-            if link.is_symlink():
-                link.unlink()
-            _warn(f"{relative} is not in the repository; {_display(link)} was not linked")
+            _warn(f"{relative} is not in the repository; leaving {_display(link)} unchanged")
             continue
         if link.exists() and not link.is_symlink():
             _warn(f"{_display(link)} is a regular file; refusing to replace it with a symlink")
