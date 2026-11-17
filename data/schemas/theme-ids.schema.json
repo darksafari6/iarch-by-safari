@@ -40,10 +40,7 @@
         "type": "object",
         "required": [
           "id",
-          "name",
-          "dock",
-          "overview",
-          "motion"
+          "name"
         ],
         "additionalProperties": false,
         "properties": {
@@ -58,20 +55,6 @@
             ]
           },
           "name": {
-            "type": "string",
-            "minLength": 2
-          },
-          "dock": {
-            "type": "boolean"
-          },
-          "overview": {
-            "enum": [
-              "bento",
-              "tiles",
-              "pills"
-            ]
-          },
-          "motion": {
             "type": "string",
             "minLength": 2
           }
