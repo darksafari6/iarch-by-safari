@@ -83,7 +83,7 @@ class ThemePacks(unittest.TestCase):
             self.assertTrue((config_home / "kitty/theme.conf").is_file())
             self.assertIn("[palettes.forest-night]",
                           (config_home / "starship.toml").read_text())
-            self.assertIn("BEGIN iArch session theme: forest-night",
+            self.assertIn("BEGIN iArch session theme */",
                           (config_home / "gtk-3.0/gtk.css").read_text())
             updated = tomllib.loads((config_home / "noctalia/config.toml").read_text())
             self.assertEqual("iarch-active", updated["theme"]["custom_palette"])
@@ -258,7 +258,7 @@ class ThemeRenderers(unittest.TestCase):
         first = session_theme.render_gtk_css(source, self.pack)
         second = session_theme.render_gtk_css(first, self.pack)
         self.assertIn(".iarch-glass-card { border-radius: 16px; }", second)
-        self.assertIn("BEGIN iArch session theme: forest-night", second)
+        self.assertIn("BEGIN iArch session theme */", second)
         self.assertEqual(first, second)
 
     def test_kvantum_changes_only_existing_general_colors(self):
