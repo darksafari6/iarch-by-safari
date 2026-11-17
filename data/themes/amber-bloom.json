@@ -27,7 +27,7 @@
   },
   "motion": {
     "bezier": {
-      "name": "iarch-amber-bloom",
+      "name": "amber-bloom",
       "controls": [
         0.18,
         1.18,
