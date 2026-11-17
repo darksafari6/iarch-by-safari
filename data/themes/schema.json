@@ -417,22 +417,67 @@
                 "start": {
                   "type": "array",
                   "items": {
-                    "type": "string",
-                    "minLength": 1
+                    "enum": [
+                      "launcher",
+                      "workspaces",
+                      "clock",
+                      "media",
+                      "tray",
+                      "clipboard",
+                      "network",
+                      "bluetooth",
+                      "volume",
+                      "brightness",
+                      "battery",
+                      "privacy",
+                      "notifications",
+                      "control-center",
+                      "session"
+                    ]
                   }
                 },
                 "center": {
                   "type": "array",
                   "items": {
-                    "type": "string",
-                    "minLength": 1
+                    "enum": [
+                      "launcher",
+                      "workspaces",
+                      "clock",
+                      "media",
+                      "tray",
+                      "clipboard",
+                      "network",
+                      "bluetooth",
+                      "volume",
+                      "brightness",
+                      "battery",
+                      "privacy",
+                      "notifications",
+                      "control-center",
+                      "session"
+                    ]
                   }
                 },
                 "end": {
                   "type": "array",
                   "items": {
-                    "type": "string",
-                    "minLength": 1
+                    "enum": [
+                      "launcher",
+                      "workspaces",
+                      "clock",
+                      "media",
+                      "tray",
+                      "clipboard",
+                      "network",
+                      "bluetooth",
+                      "volume",
+                      "brightness",
+                      "battery",
+                      "privacy",
+                      "notifications",
+                      "control-center",
+                      "session"
+                    ]
                   }
                 }
               }
