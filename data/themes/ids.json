@@ -1,0 +1,50 @@
+{
+  "default": "forest-night",
+  "choice_file": "~/.config/iarch/theme.json",
+  "apply_command": "iarch-theme apply",
+  "status": "contract-only",
+  "themes": [
+    {
+      "id": "greenhouse",
+      "name": "Greenhouse",
+      "dock": true,
+      "overview": "bento",
+      "motion": "slow-slide"
+    },
+    {
+      "id": "amber-bloom",
+      "name": "Amber Bloom",
+      "dock": false,
+      "overview": "tiles",
+      "motion": "fast-linear"
+    },
+    {
+      "id": "neon-rain",
+      "name": "Neon Rain",
+      "dock": false,
+      "overview": "pills",
+      "motion": "slide-fade"
+    },
+    {
+      "id": "forest-night",
+      "name": "Forest Night",
+      "dock": false,
+      "overview": "tiles",
+      "motion": "short-fade"
+    },
+    {
+      "id": "violet-glass",
+      "name": "Violet Glass",
+      "dock": false,
+      "overview": "pills",
+      "motion": "long-blur-fade"
+    },
+    {
+      "id": "crimson-silk",
+      "name": "Crimson Silk",
+      "dock": true,
+      "overview": "bento",
+      "motion": "scale-fade"
+    }
+  ]
+}
