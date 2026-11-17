@@ -318,6 +318,7 @@
       "type": "object",
       "required": [
         "palette",
+        "surface_alpha",
         "layout"
       ],
       "additionalProperties": false,
@@ -463,6 +464,11 @@
               "maximum": 64
             }
           }
+        },
+        "surface_alpha": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
         }
       }
     },
@@ -654,7 +660,7 @@
   "definitions": {
     "color": {
       "type": "string",
-      "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+      "pattern": "^#[0-9A-Fa-f]{6}$"
     }
   }
 }
