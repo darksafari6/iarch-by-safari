@@ -912,16 +912,21 @@ def cmd_list(_args: argparse.Namespace, _env: Mapping[str, str]) -> int:
     return 0
 
 
-def cmd_current(_args: argparse.Namespace, env: Mapping[str, str]) -> int:
-    theme_id, saved = current_theme_id(env)
+def cmd_current(args: argparse.Namespace, env: Mapping[str, str]) -> int:
+    selected_env = dict(env)
+    config_home = Path(args.config_home).expanduser()
+    if not config_home.is_absolute():
+        raise SessionThemeError("--config-home must be an absolute path")
+    selected_env["IARCH_CONFIG_DIR"] = str(config_home / "iarch")
+    theme_id, saved = current_theme_id(selected_env)
     pack = load_theme(theme_id)
     status = "saved choice" if saved else "repository default"
     print(f"iArch by Safari — current theme: {pack['meta']['name']} ({theme_id}) [{status}]")
-    print(f"choice file: {_display(choice_path(env))}")
+    print(f"choice file: {_display(choice_path(selected_env))}")
     # Preserve useful read-only context for people who still use the older
     # intensity/motion settings controls. It is informational, never a source of
     # truth for the session theme pack.
-    legacy = configstore.user_path("settings", env)
+    legacy = configstore.user_path("settings", selected_env)
     legacy_choice = None
     if legacy.is_file():
         try:
@@ -942,6 +947,11 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("list", help="list the six session theme packs").set_defaults(func=cmd_list)
     current = sub.add_parser("current", help="show the active session theme")
+    current.add_argument(
+        "--config-home",
+        default=os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
+        help="configuration root containing iarch/theme.json",
+    )
     current.set_defaults(func=cmd_current)
     apply = sub.add_parser("apply", help="save a theme choice, render and reload the session")
     apply.add_argument("theme_id", choices=theme_ids())
