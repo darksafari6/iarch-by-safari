@@ -741,10 +741,6 @@ def _apply_noctalia_sound_theme(env: Mapping[str, str]) -> Optional[Path]:
     stereo = theme_root / "stereo"
     index = theme_root / "index.theme"
     event = stereo / "message-new-instant.ogg"
-    if not active.exists():
-        _warn(f"{_display(active)} is absent; Noctalia will inherit its freedesktop notification sound")
-        return None
-
     theme_root.mkdir(parents=True, exist_ok=True)
     stereo.mkdir(parents=True, exist_ok=True)
     index_body = (
@@ -768,6 +764,9 @@ def _apply_noctalia_sound_theme(env: Mapping[str, str]) -> Optional[Path]:
     else:
         configstore.atomic_write(index, index_body, validate_json=False)
 
+    if not active.exists():
+        _warn(f"{_display(active)} is absent; Noctalia will inherit its freedesktop notification sound")
+        return None
     if event.is_file() and not event.is_symlink():
         _warn(f"{_display(event)} is a regular file; refusing to replace it with a symlink")
         return None
