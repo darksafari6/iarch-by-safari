@@ -262,8 +262,6 @@ jobs:
           expected = {
               "midnight-glass", "frosted-light", "aurora",
               "crimson-plasma", "tokyo-night-glass", "mono-ice",
-              "greenhouse", "amber-bloom", "neon-rain", "forest-night",
-              "violet-glass", "crimson-silk",
           }
           assert set(presets) == expected, f"presets changed: {sorted(set(presets) ^ expected)}"
           for name, entry in sorted(presets.items()):
