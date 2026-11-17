@@ -83,6 +83,25 @@ class InstallerPaths(unittest.TestCase):
                 self.assertTrue((ROOT / required).exists())
         self.assertGreater(checked, 12, "the reference extraction found almost nothing")
 
+    def test_both_installers_render_the_saved_theme_after_config_deployment(self):
+        arch = (ROOT / "install.sh").read_text(encoding="utf-8")
+        fedora = (ROOT / "fedora_install.sh").read_text(encoding="utf-8")
+        for name, text in (("Arch", arch), ("Fedora", fedora)):
+            with self.subTest(installer=name):
+                self.assertIn("tools/render_theme.py", text)
+                self.assertIn("render_session_theme", text)
+                self.assertIn('IARCH_CONFIG_DIR="$ACTUAL_USER_HOME/.config/iarch"', text)
+        self.assertIn('"Saved session theme"', arch)
+        self.assertIn("render_session_theme ||", fedora)
+
+    def test_fedora_installs_the_public_theme_cli_and_session_path(self):
+        text = (ROOT / "fedora_install.sh").read_text(encoding="utf-8")
+        self.assertIn('scripts/iarch-link-cli.sh', text)
+        self.assertIn('"iarch-theme:scripts/iarch-theme.sh"', 
+                      (ROOT / "scripts" / "iarch-link-cli.sh").read_text(encoding="utf-8"))
+        self.assertIn("iarch-cli-path.conf", text)
+        self.assertIn("install_session_cli_tools ||", text)
+
     def test_the_v5_payload_the_installers_deploy_is_complete(self):
         for name in ("install.sh", "fedora_install.sh"):
             text = (ROOT / name).read_text(encoding="utf-8")
