@@ -115,9 +115,10 @@ freedesktop notification sound.
 Reload order is compositor (`hyprctl reload`), Noctalia (`noctalia msg
 config-reload`), wallpaper (`noctalia msg wallpaper-set` when the selected file
 exists), and Kitty remote `set-colors` only when `KITTY_LISTEN_ON` identifies
-a socket. When the Noctalia config-reload IPC cannot be reached, the renderer
-may restart the Noctalia shell process only; it never restarts Hyprland or the
-desktop session. It does not run `pw-play`.
+a socket. The pinned Noctalia release has a verified
+`noctalia msg config-reload` IPC; the renderer uses that command directly and
+does not guess a shell process name or restart the session. It does not run
+`pw-play`.
 
 ## Modes and unsupported surfaces
 
