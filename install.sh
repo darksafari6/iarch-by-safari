@@ -655,7 +655,7 @@ error() {
 #
 # STEP_TOTAL is a literal, and tests/test_installer_wizard.py counts the
 # step_begin calls in this file and refuses to let the two disagree.
-STEP_TOTAL=24
+STEP_TOTAL=25
 STEP_NUMBER=0
 STEP_TITLE=''
 STEP_VERDICT='ok'
