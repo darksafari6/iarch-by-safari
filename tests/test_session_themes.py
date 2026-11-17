@@ -99,6 +99,8 @@ class ThemePacks(unittest.TestCase):
             home = Path(tmp)
             fake_repo = home / "repo"
             shutil.copytree(ROOT / "data" / "themes", fake_repo / "data" / "themes")
+            shutil.copy2(ROOT / "data" / "settings.default.json",
+                         fake_repo / "data" / "settings.default.json")
             (fake_repo / "data" / "design").mkdir(parents=True)
             shutil.copy2(ROOT / "data" / "design" / "tokens.json",
                          fake_repo / "data" / "design" / "tokens.json")
