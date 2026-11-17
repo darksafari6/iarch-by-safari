@@ -176,6 +176,12 @@ jobs:
 
           PAIRS = {
               "data/settings.default.json": "data/schemas/settings.schema.json",
+              "data/themes/ids.json": "data/schemas/theme-ids.schema.json",
+              **{
+                  p.as_posix(): "data/themes/schema.json"
+                  for p in sorted(Path("data/themes").glob("*.json"))
+                  if p.name not in {"ids.json", "schema.json"}
+              },
               "data/contacts.default.json": "data/schemas/contacts.schema.json",
               "data/keybinds.default.json": "data/schemas/keybinds.schema.json",
               "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",
@@ -212,6 +218,7 @@ jobs:
 
           documents = {p.as_posix() for p in Path("data").rglob("*.json")}
           schemas = {p.as_posix() for p in Path("data/schemas").glob("*.json")}
+          schemas.add("data/themes/schema.json")
 
           # 1. every schema is itself a valid draft-07 schema
           for schema_path in sorted(schemas):
@@ -255,6 +262,8 @@ jobs:
           expected = {
               "midnight-glass", "frosted-light", "aurora",
               "crimson-plasma", "tokyo-night-glass", "mono-ice",
+              "greenhouse", "amber-bloom", "neon-rain", "forest-night",
+              "violet-glass", "crimson-silk",
           }
           assert set(presets) == expected, f"presets changed: {sorted(set(presets) ^ expected)}"
           for name, entry in sorted(presets.items()):
