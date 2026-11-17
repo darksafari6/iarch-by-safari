@@ -17,7 +17,7 @@ Two defects this file exists to keep fixed:
   no terminal is not asked at all.
 * ``STEP_TOTAL`` is a literal in one part of a file whose steps are calls in
   another part of the same file. Nothing but a test stops them drifting apart,
-  and a banner that promises 20 steps and then prints ``[23/20]`` is worse than
+  and a banner that promises 25 steps and then prints ``[23/20]`` is worse than
   no number at all.
 """
 
@@ -238,11 +238,11 @@ step_begin "Skipped step"; step_skip "nothing selected"; finish_step
 step_begin "Broken step"; step_fail "the repository is missing"; finish_step
 wizard_summary
 """)
-        self.assertIn("[ 1/24] Done step", out)
+        self.assertIn("[ 1/25] Done step", out)
         self.assertIn("\u2713 done", out)
-        self.assertIn("[ 2/24] Skipped step", out)
+        self.assertIn("[ 2/25] Skipped step", out)
         self.assertIn("skipped: nothing selected", out)
-        self.assertIn("[ 3/24] Broken step", out)
+        self.assertIn("[ 3/25] Broken step", out)
         self.assertIn("failed: the repository is missing", out)
         self.assertIn("\u2713 1 done   \u2013 1 skipped   \u2717 1 failed", out)
         self.assertIn("Broken step", out.split("These steps did not finish:")[1])
