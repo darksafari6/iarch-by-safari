@@ -117,9 +117,7 @@ class EveryPresetPasses(unittest.TestCase):
         ids = {read_json(p)["id"] for p in self.paths}
         self.assertEqual(
             {"midnight-glass", "frosted-light", "aurora", "crimson-plasma",
-             "tokyo-night-glass", "mono-ice",
-             "greenhouse", "amber-bloom", "neon-rain", "forest-night",
-             "violet-glass", "crimson-silk"},
+             "tokyo-night-glass", "mono-ice"},
             ids,
         )
 
