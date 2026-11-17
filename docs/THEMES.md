@@ -38,7 +38,7 @@ Validate a pack after editing it:
 ```bash
 python3 -m json.tool data/themes/greenhouse.json >/dev/null
 python3 -m json.tool data/themes/schema.json >/dev/null
-python3 -m unittest tests.test_session_themes
+python3 -m unittest discover -s tests -p 'test_session_themes.py'
 ```
 
 When `jsonschema` is installed, the renderer validates the pack against
