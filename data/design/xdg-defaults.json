@@ -105,7 +105,7 @@
       "read": "xdg-mime query default inode/directory",
       "mimetypes": ["inode/directory", "application/x-gnome-saved-search"],
       "why": "inode/directory is the association a file manager is reached through. The second mimetype is there because this repository's own installers already set both for Thunar in one command (install.sh:1359, fedora_install.sh:978): writing only the first would leave saved searches pointing at whatever the install chose, so the page and the installer would disagree about the same role.",
-      "evidence": "install.sh:1359 and fedora_install.sh:910 (both `xdg-mime default thunar.desktop inode/directory application/x-gnome-saved-search`); fedora_install.sh:1189 sets inode/directory alone"
+      "evidence": "install.sh:1359 and fedora_install.sh:978 (both `xdg-mime default thunar.desktop inode/directory application/x-gnome-saved-search`); fedora_install.sh:1189 sets inode/directory alone"
     },
     {
       "role": "editor",
