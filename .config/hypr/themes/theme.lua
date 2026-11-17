@@ -14,40 +14,10 @@ for _, item in ipairs(env) do
     end
 end
 
--- The values below are the fallback: they hold when no design system has been
--- applied yet. generated/glass.lua, required at the end of this file, sets the
--- same leaves from data/design/tokens.json, and because Hyprland applies window
--- and config values in registration order, whatever is required last wins.
--- It is wrapped in pcall so a session with no generated file still starts.
-hl.config({
-    general = {
-        gaps_in = 2,
-        gaps_out = 4,
-        border_size = 2,
-        resize_on_border = true,
-        allow_tearing = false,
-        layout = "dwindle",
-    },
-
-    decoration = {
-        rounding = 8,
-        shadow = {
-            enabled = true,
-        },
-        active_opacity = 1.0,
-        inactive_opacity = 0.90,
-        fullscreen_opacity = 1.0,
-        blur = {
-            enabled = true,
-            size = 1,
-            passes = 3,
-            new_optimizations = true,
-            ignore_opacity = true,
-            xray = false,
-            special = true,
-        },
-    },
-})
+-- This file exports cursor settings only. Session appearance is loaded from
+-- generated/glass.lua as a compatibility fallback, then generated/theme.lua
+-- (the selected data/themes/<id>.json pack) by hyprland.lua. Keep values out
+-- of this source file so there is only one per-theme definition.
 
 -- Design system: rendered by iarch/cli/gen_glass_lua.py, never edited by hand.
 local ok, err = pcall(function()
