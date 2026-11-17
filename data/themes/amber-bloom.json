@@ -100,7 +100,8 @@
       "notification_position": "top_right",
       "notification_width": 340,
       "corner_radius": 12
-    }
+    },
+    "surface_alpha": 0.88
   },
   "gtk": {
     "accent": "#F0A020",
