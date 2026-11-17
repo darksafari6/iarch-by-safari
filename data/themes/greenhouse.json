@@ -87,7 +87,6 @@
         ],
         "end": [
           "media",
-          "audio_visualizer",
           "tray",
           "network",
           "volume",
