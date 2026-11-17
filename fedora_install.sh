@@ -889,6 +889,68 @@ update_hypr_keybind_config() {
 
 
 
+# Render the theme choice after the v5 payload and optional backup restore.
+# render_theme.py reads theme.json if present and otherwise uses the repo default;
+# it never changes the saved choice, so repeated installs preserve user selection.
+render_session_theme() {
+    local renderer="$REPO_DIR/tools/render_theme.py"
+    if [ ! -f "$renderer" ]; then
+        echo "ERROR: Theme renderer is missing: $renderer" >&2
+        return 1
+    fi
+    if ! sudo -u "$ACTUAL_USER" env \
+            HOME="$ACTUAL_USER_HOME" \
+            XDG_CONFIG_HOME="$ACTUAL_USER_HOME/.config" \
+            IARCH_CONFIG_DIR="$ACTUAL_USER_HOME/.config/iarch" \
+            python3 "$renderer"; then
+        echo "ERROR: Could not render the saved iArch theme." >&2
+        return 1
+    fi
+    echo "Saved iArch session theme rendered without changing theme.json."
+}
+
+# The Fedora flow uses its own post-install commands rather than the Arch
+# installer's numbered-step helper. Keep the public CLI link and session PATH
+# idempotent, and back up an existing PATH file before replacing its contents.
+install_session_cli_tools() {
+    local linker="$REPO_DIR/scripts/iarch-link-cli.sh"
+    local env_dir="$ACTUAL_USER_HOME/.config/environment.d"
+    local env_file="$env_dir/iarch-cli-path.conf"
+    local expected='# Managed by iArch install.sh
+PATH=$HOME/.local/bin:$PATH'
+
+    if [ ! -f "$linker" ]; then
+        echo "ERROR: CLI linker is missing: $linker" >&2
+        return 1
+    fi
+    if ! sudo -u "$ACTUAL_USER" env HOME="$ACTUAL_USER_HOME" bash "$linker" --force; then
+        echo "ERROR: Could not link the iArch CLI tools." >&2
+        return 1
+    fi
+    if ! sudo -u "$ACTUAL_USER" mkdir -p "$env_dir"; then
+        echo "ERROR: Could not create $env_dir." >&2
+        return 1
+    fi
+    if [ -f "$env_file" ] && [ "$(cat "$env_file")" = "$expected" ]; then
+        echo "iArch session PATH is already configured."
+        return 0
+    fi
+    if [ -e "$env_file" ] || [ -L "$env_file" ]; then
+        local backup="$env_file.bak.$(date +%Y%m%d-%H%M%S).$RANDOM"
+        if ! cp -p -- "$env_file" "$backup"; then
+            echo "ERROR: Could not back up $env_file; refusing to replace it." >&2
+            return 1
+        fi
+        echo "Backed up existing session PATH file to $backup"
+    fi
+    if ! printf '%s\\n' "$expected" | sudo -u "$ACTUAL_USER" tee -- "$env_file" >/dev/null; then
+        echo "ERROR: Could not write $env_file." >&2
+        return 1
+    fi
+    chown "$ACTUAL_USER:$ACTUAL_USER" "$env_file" || return 1
+    echo "Linked iArch CLI tools and added ~/.local/bin to the session PATH."
+}
+
 # Set executable permissions for scripts
 set_permissions() {
     SCRIPTS_PATH="$ACTUAL_USER_HOME/.config/hypr/Scripts"
@@ -1081,6 +1143,9 @@ deploy_configs || { echo "Configuration deployment failed; stopping." >&2; exit 
 # Copy backup config files if available
 copy_backup_configs
 
+# Apply the saved/default theme after all payload overlays are in place.
+render_session_theme || { echo "Theme generation failed; stopping." >&2; exit 1; }
+
 # Update Hyprland startup command for Fedora
 update_hypr_startup_config
 
@@ -1092,6 +1157,9 @@ create_thunar_bookmarks
 
 # Set Script Permissions
 set_permissions
+
+# Link iarch-theme and the other public commands for the target session user.
+install_session_cli_tools || { echo "Session CLI setup failed; stopping." >&2; exit 1; }
 
 # Apply optional Dolby PipeWire profile
 apply_dolby_pipewire_profile
