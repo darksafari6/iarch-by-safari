@@ -27,7 +27,7 @@
   },
   "motion": {
     "bezier": {
-      "name": "iarch-greenhouse",
+      "name": "greenhouse",
       "controls": [
         0.22,
         1,
