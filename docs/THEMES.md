@@ -25,9 +25,9 @@ exists.
   keys, out-of-range values, malformed colors and paths that do not match the
   theme ID.
 - `data/themes/<id>.json` owns the theme's metadata, wallpaper and notification
-  sound paths, Hyprland decoration, motion, Noctalia palette and layout hints,
-  GTK and Kvantum accent, Kitty palette, Starship palette name and overview
-  style/geometry hints.
+  sound paths, Hyprland decoration, motion, Noctalia palette and layout hints (including
+  supported per-surface opacity), GTK and Kvantum accent, Kitty palette,
+  Starship palette name and overview style/geometry hints.
 - `~/.config/iarch/theme.json` is the user's selection and has exactly this
   shape: `{"id":"<id>"}`. It is not copied into generated files as a default.
 - `tools/render_theme.py` renders the saved selection. It does not change the
@@ -44,6 +44,13 @@ python3 -m unittest discover -s tests -p 'test_session_themes.py'
 When `jsonschema` is installed, the renderer validates the pack against
 `data/themes/schema.json` before it writes anything. Its structural and path
 checks still run without that optional Python package.
+
+The Noctalia palette uses its existing six-digit `#RRGGBB` color format. Opacity
+is a separate pack value (`noctalia.surface_alpha`) applied only through existing
+Noctalia `bar.default.background_opacity`, `dock.background_opacity`, and
+`notification.background_opacity` settings. For example, Violet Glass stores
+`surface = "#24102E"` and `surface_alpha = 0.72`; it does not put an alpha suffix
+in a palette color that the pinned shell cannot parse.
 
 ## Commands
 
@@ -72,7 +79,7 @@ the saved choice.
 | --- | --- |
 | `hypr/generated/theme.lua` | Border colors/size, rounding, gaps, shadow, blur, inactive opacity and dim; named bezier curve and window/workspace/fade/border/layer animation leaves |
 | `noctalia/palettes/iarch-active.json` | A custom palette in the same dark/light and terminal shape as the shipped `iarch-*.json` palettes |
-| `noctalia/config.toml` | Selects `iarch-active`; updates only existing theme, bar, dock, Control Center, notification, shell-animation and audio keys |
+| `noctalia/config.toml` | Selects `iarch-active`; updates only existing theme, bar, dock, Control Center, notification, shell-animation and audio keys, including supported bar/dock/toast opacity |
 | `kitty/theme.conf` | Foreground, background, cursor, selection and all sixteen ANSI colors |
 | `starship.toml` | Selects the named palette and replaces only the marked iArch palette block |
 | `gtk-3.0/gtk.css`, `gtk-4.0/gtk.css` | Replaces only the marked iArch accent block; the existing generated glass sheets stay intact |
