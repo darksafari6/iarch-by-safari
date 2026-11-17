@@ -110,6 +110,7 @@ class ThemeRenderers(unittest.TestCase):
                 self.assertIn(key, mode)
             self.assertEqual(8, len(mode["terminal"]["normal"]))
             self.assertEqual(8, len(mode["terminal"]["bright"]))
+            self.assertRegex(mode["mSurface"], r"^#[0-9A-Fa-f]{6}$")
 
     def test_noctalia_config_updates_only_supported_existing_keys(self):
         source = (ROOT / ".config/noctalia/config.toml").read_text(encoding="utf-8")
@@ -119,7 +120,18 @@ class ThemeRenderers(unittest.TestCase):
         self.assertIn('sidebar = "compact"', updated)
         self.assertIn('enable_notification_sounds = true', updated)
         self.assertIn('sound_volume = 0.32', updated)
+        self.assertIn('background_opacity = 0.82', updated)
         self.assertIn('[idle.behavior.lock]', updated)
+
+    def test_violet_glass_surface_alpha_uses_shell_opacity_not_palette_alpha_hex(self):
+        violet = session_theme.load_theme("violet-glass")
+        self.assertEqual("#24102E", violet["noctalia"]["palette"]["surface"])
+        self.assertEqual(0.72, violet["noctalia"]["surface_alpha"])
+        palette = json.loads(session_theme.render_noctalia_palette(violet))
+        self.assertEqual("#24102E", palette["dark"]["mSurface"])
+        config = (ROOT / ".config/noctalia/config.toml").read_text(encoding="utf-8")
+        updated = session_theme.render_noctalia_config(config, violet)
+        self.assertEqual(3, updated.count("background_opacity = 0.72"))
 
     def test_kitty_and_starship_render_complete_palette(self):
         kitty = session_theme.render_kitty_theme(self.pack)
