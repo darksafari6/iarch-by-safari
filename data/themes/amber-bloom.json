@@ -1,0 +1,147 @@
+{
+  "meta": {
+    "id": "amber-bloom",
+    "name": "Amber Bloom",
+    "blurb": "Gold on near-black, crisp edges, near-linear speed and a quick pop with a small bounce.",
+    "dark": true
+  },
+  "wallpaper": "assets/wallpapers/themes/amber-bloom.webp",
+  "hypr": {
+    "active_border": "#F0A020",
+    "inactive_border": "#A77B32",
+    "rounding": 10,
+    "border_size": 2,
+    "gaps_in": 4,
+    "gaps_out": 8,
+    "shadow_range": 16,
+    "shadow_color": "#080502",
+    "blur": {
+      "enabled": true,
+      "size": 5,
+      "passes": 2,
+      "noise": 0.015,
+      "contrast": 1
+    },
+    "inactive_opacity": 0.96,
+    "dim_strength": 0.04
+  },
+  "motion": {
+    "bezier": {
+      "name": "iarch-amber-bloom",
+      "controls": [
+        0.18,
+        1.18,
+        0.28,
+        1
+      ]
+    },
+    "windows": {
+      "style": "popin",
+      "open_ms": 150,
+      "close_ms": 105,
+      "move_ms": 90
+    },
+    "workspace": {
+      "direction": "horizontal",
+      "duration_ms": 140
+    },
+    "fade": {
+      "enabled": true,
+      "duration_ms": 90
+    },
+    "border": {
+      "enabled": true,
+      "duration_ms": 110
+    },
+    "layer": {
+      "style": "fade",
+      "bar_ms": 110,
+      "osd_ms": 95
+    }
+  },
+  "noctalia": {
+    "palette": {
+      "background": "#120C06",
+      "surface": "#24180C",
+      "primary": "#F0A020",
+      "on_primary": "#2B1600",
+      "error": "#FF7A5C",
+      "outline": "#8C682C",
+      "bar": "#24180C",
+      "dock": "#2E2010",
+      "notification": "#2E2010",
+      "text": "#FFE7B0",
+      "secondary": "#FFD27A",
+      "on_secondary": "#2B1600",
+      "on_error": "#2B1600"
+    },
+    "layout": {
+      "bar_position": "top",
+      "module_order": {
+        "start": [
+          "launcher",
+          "workspaces"
+        ],
+        "center": [
+          "clock"
+        ],
+        "end": [
+          "tray",
+          "network",
+          "volume",
+          "battery",
+          "control-center",
+          "notifications",
+          "session"
+        ]
+      },
+      "dock_visible": false,
+      "control_center_density": "compact",
+      "notification_position": "top_right",
+      "notification_width": 340,
+      "corner_radius": 12
+    }
+  },
+  "gtk": {
+    "accent": "#F0A020",
+    "window_bg": "#120C06",
+    "headerbar": "#24180C",
+    "destructive": "#FF7A5C"
+  },
+  "terminal": {
+    "foreground": "#FFE7B0",
+    "background": "#120C06",
+    "cursor": "#F0A020",
+    "selection_foreground": "#FFE7B0",
+    "selection_background": "#2E2010",
+    "color0": "#2A1C0C",
+    "color1": "#FF7A5C",
+    "color2": "#B6E07A",
+    "color3": "#F0A020",
+    "color4": "#E0B060",
+    "color5": "#F0C090",
+    "color6": "#D0B070",
+    "color7": "#EAD8B0",
+    "color8": "#5A4020",
+    "color9": "#FFB090",
+    "color10": "#D0F0A0",
+    "color11": "#FFD27A",
+    "color12": "#F0D090",
+    "color13": "#F8D8B8",
+    "color14": "#E8D0A0",
+    "color15": "#FFF6E0"
+  },
+  "starship": {
+    "palette": "amber-bloom"
+  },
+  "sound": {
+    "notify": "assets/sounds/amber-bloom/notify.ogg",
+    "volume": 0.38
+  },
+  "overview": {
+    "style": "tiles",
+    "rounding": 10,
+    "gap": 6,
+    "dim_inactive": false
+  }
+}
