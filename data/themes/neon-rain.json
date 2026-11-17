@@ -27,7 +27,7 @@
   },
   "motion": {
     "bezier": {
-      "name": "iarch-neon-rain",
+      "name": "neon-rain",
       "controls": [
         0.16,
         1,
