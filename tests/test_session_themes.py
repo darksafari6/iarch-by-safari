@@ -5,7 +5,9 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import stat
+import tomllib
 import subprocess
 import tempfile
 import unittest
@@ -54,6 +56,39 @@ class ThemePacks(unittest.TestCase):
                 self.assertEqual(0, session_theme.main(["current"]))
             self.assertIn("forest-night", current.getvalue())
             self.assertFalse((Path(tmp) / "theme.json").exists())
+
+    def test_apply_writes_the_saved_choice_and_all_local_projections_without_audio(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            config_home = home / ".config"
+            shutil.copytree(ROOT / ".config", config_home)
+            env = {
+                "HOME": tmp,
+                "IARCH_CONFIG_DIR": str(config_home / "iarch"),
+                "IARCH_STATE_DIR": str(home / ".local" / "state" / "iarch"),
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            }
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = session_theme.main([
+                    "apply", "forest-night", "--config-home", str(config_home), "--no-reload"
+                ])
+            self.assertEqual(0, code, err.getvalue())
+            self.assertEqual({"id": "forest-night"},
+                             json.loads((config_home / "iarch" / "theme.json").read_text()))
+            self.assertTrue((config_home / "hypr/generated/theme.lua").is_file())
+            self.assertTrue((config_home / "noctalia/palettes/iarch-active.json").is_file())
+            self.assertTrue((config_home / "kitty/theme.conf").is_file())
+            self.assertIn("[palettes.forest-night]",
+                          (config_home / "starship.toml").read_text())
+            self.assertIn("BEGIN iArch session theme: forest-night",
+                          (config_home / "gtk-3.0/gtk.css").read_text())
+            updated = tomllib.loads((config_home / "noctalia/config.toml").read_text())
+            self.assertEqual("iarch-active", updated["theme"]["custom_palette"])
+            self.assertIn("audio: no playback command was run", out.getvalue())
+            self.assertNotIn("pw-play", out.getvalue())
+            self.assertFalse((config_home / "iarch/sounds/active-notify.ogg").exists())
+
 
     def test_public_launcher_reaches_the_session_theme_cli(self):
         launcher = ROOT / "scripts" / "iarch-theme.sh"
