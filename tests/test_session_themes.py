@@ -169,9 +169,7 @@ class ThemeRenderers(unittest.TestCase):
 
     def test_game_mode_disables_animation_blur_shadow_and_dim(self):
         rendered = session_theme.render_hypr_theme(self.pack, game_mode=True)
-        self.assertIn("animations = {", rendered)
-        self.assertIn("enabled = false", rendered)
-        self.assertIn("enabled = false", rendered)
+        self.assertIn("animations = {\n        enabled = false,", rendered)
         self.assertIn("inactive_opacity = 1.0", rendered)
         self.assertIn("dim_strength = 0.0", rendered)
         self.assertIn("range = 0", rendered)
