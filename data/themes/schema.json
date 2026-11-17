@@ -455,7 +455,7 @@
             "notification_width": {
               "type": "integer",
               "minimum": 240,
-              "maximum": 800
+              "maximum": 500
             },
             "corner_radius": {
               "type": "integer",
