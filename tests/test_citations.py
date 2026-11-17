@@ -64,6 +64,7 @@ SCANNED_SUFFIXES = (".json", ".md", ".py", ".sh")
 EXPECTATIONS: Dict[Tuple[str, str], str] = {
     # --- data/design/greeter.json: the login screen's installer half ---
     ("install.sh", "1797"): "noctalia-greeter-git",
+    ("install.sh", "1807-1808"): "systemctl enable greetd",
     ("install.sh", "1481-1530"): "setup_noctalia_greeter() {",
     ("install.sh", "1513-1520"): "default_session",
     ("install.sh", "1488-1490"): "command -v",
