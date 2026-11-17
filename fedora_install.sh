@@ -936,7 +936,8 @@ PATH=$HOME/.local/bin:$PATH'
         return 0
     fi
     if [ -e "$env_file" ] || [ -L "$env_file" ]; then
-        local backup="$env_file.bak.$(date +%Y%m%d-%H%M%S).$RANDOM"
+        local backup
+        backup="$env_file.bak.$(date +%Y%m%d-%H%M%S).$RANDOM"
         if [ -L "$env_file" ]; then
             if ! mv -- "$env_file" "$backup"; then
                 echo "ERROR: Could not move the existing session PATH symlink; refusing to replace it." >&2
