@@ -73,6 +73,12 @@ then asks the running components to reload. The saved ID is not written back
 to repository defaults and a later installer render reads, rather than resets,
 the saved choice.
 
+Both `install.sh` and `fedora_install.sh` run
+`python3 tools/render_theme.py` after the configuration payload is in place.
+That renderer reads the saved `theme.json` and never creates or changes it.
+The Fedora installer also links the same public `iarch-theme` launcher and
+adds `~/.local/bin` to the existing user-session `environment.d` path.
+
 ## Generated targets
 
 | Target | What the renderer writes |
