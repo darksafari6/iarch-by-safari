@@ -94,6 +94,37 @@ class ThemePacks(unittest.TestCase):
             self.assertIn("Inherits=freedesktop", sound_index.read_text(encoding="utf-8"))
 
 
+    def test_apply_links_a_pack_sound_into_noctalias_native_event(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            fake_repo = home / "repo"
+            shutil.copytree(ROOT / "data" / "themes", fake_repo / "data" / "themes")
+            (fake_repo / "data" / "design").mkdir(parents=True)
+            shutil.copy2(ROOT / "data" / "design" / "tokens.json",
+                         fake_repo / "data" / "design" / "tokens.json")
+            sound = fake_repo / "assets" / "sounds" / "forest-night" / "notify.ogg"
+            sound.parent.mkdir(parents=True)
+            sound.write_bytes(b"synthetic test fixture; not a shipped audio asset")
+            config_home = home / ".config"
+            shutil.copytree(ROOT / ".config", config_home)
+            env = {
+                "HOME": tmp,
+                "IARCH_CONFIG_DIR": str(config_home / "iarch"),
+                "IARCH_STATE_DIR": str(home / ".local" / "state" / "iarch"),
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            }
+            with patch.object(session_theme, "ROOT", fake_repo), patch.dict(os.environ, env, clear=True):
+                code = session_theme.main([
+                    "apply", "forest-night", "--config-home", str(config_home), "--no-reload"
+                ])
+            self.assertEqual(0, code)
+            active = config_home / "iarch/sounds/active-notify.ogg"
+            event = home / ".local/share/sounds/iarch-session/stereo/message-new-instant.ogg"
+            self.assertTrue(active.is_symlink())
+            self.assertTrue(event.is_symlink())
+            self.assertEqual(sound.resolve(), active.resolve())
+            self.assertEqual(sound.resolve(), event.resolve())
+
     def test_public_launcher_reaches_the_session_theme_cli(self):
         launcher = ROOT / "scripts" / "iarch-theme.sh"
         self.assertTrue(launcher.is_file())
@@ -114,6 +145,12 @@ class ThemePacks(unittest.TestCase):
             self.assertEqual(0, current.returncode, current.stdout + current.stderr)
             self.assertIn("forest-night", current.stdout)
             self.assertFalse((Path(env["IARCH_CONFIG_DIR"]) / "theme.json").exists())
+            help_result = subprocess.run([str(launcher), "--help"], cwd=str(ROOT),
+                                          env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(0, help_result.returncode, help_result.stdout + help_result.stderr)
+            self.assertIn("list", help_result.stdout)
+            self.assertIn("apply", help_result.stdout)
+            self.assertIn("current", help_result.stdout)
 
 
 class ThemeRenderers(unittest.TestCase):
