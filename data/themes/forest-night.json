@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "id": "forest-night",
+    "name": "Forest Night",
+    "blurb": "Quiet greens on deep charcoal, with a minimal fade and no workspace slide.",
+    "dark": true
+  },
+  "wallpaper": "assets/wallpapers/themes/forest-night.webp",
+  "hypr": {
+    "active_border": "#8FCB6A",
+    "inactive_border": "#5C7456",
+    "rounding": 12,
+    "border_size": 2,
+    "gaps_in": 4,
+    "gaps_out": 8,
+    "shadow_range": 14,
+    "shadow_color": "#060806",
+    "blur": {
+      "enabled": true,
+      "size": 4,
+      "passes": 2,
+      "noise": 0.01,
+      "contrast": 0.92
+    },
+    "inactive_opacity": 0.97,
+    "dim_strength": 0.03
+  },
+  "motion": {
+    "bezier": {
+      "name": "iarch-forest-night",
+      "controls": [
+        0.4,
+        0,
+        0.6,
+        1
+      ]
+    },
+    "windows": {
+      "style": "popin",
+      "open_ms": 48,
+      "close_ms": 40,
+      "move_ms": 32
+    },
+    "workspace": {
+      "direction": "none",
+      "duration_ms": 36
+    },
+    "fade": {
+      "enabled": true,
+      "duration_ms": 44
+    },
+    "border": {
+      "enabled": true,
+      "duration_ms": 48
+    },
+    "layer": {
+      "style": "fade",
+      "bar_ms": 42,
+      "osd_ms": 40
+    }
+  },
+  "noctalia": {
+    "palette": {
+      "background": "#0C0E0C",
+      "surface": "#161916",
+      "primary": "#8FCB6A",
+      "on_primary": "#10200C",
+      "error": "#E08A7A",
+      "outline": "#5C7456",
+      "bar": "#243024",
+      "dock": "#1C221C",
+      "notification": "#161916",
+      "text": "#E7F0E4",
+      "secondary": "#C6E6A0",
+      "on_secondary": "#10200C",
+      "on_error": "#10200C"
+    },
+    "layout": {
+      "bar_position": "top",
+      "module_order": {
+        "start": [
+          "launcher",
+          "workspaces"
+        ],
+        "center": [
+          "clock"
+        ],
+        "end": [
+          "tray",
+          "network",
+          "volume",
+          "battery",
+          "notifications",
+          "control-center"
+        ]
+      },
+      "dock_visible": false,
+      "control_center_density": "compact",
+      "notification_position": "top_left",
+      "notification_width": 320,
+      "corner_radius": 12
+    }
+  },
+  "gtk": {
+    "accent": "#8FCB6A",
+    "window_bg": "#0C0E0C",
+    "headerbar": "#161916",
+    "destructive": "#E08A7A"
+  },
+  "terminal": {
+    "foreground": "#E7F0E4",
+    "background": "#0C0E0C",
+    "cursor": "#8FCB6A",
+    "selection_foreground": "#E7F0E4",
+    "selection_background": "#1C221C",
+    "color0": "#1A201A",
+    "color1": "#E08A7A",
+    "color2": "#8FCB6A",
+    "color3": "#E6D48A",
+    "color4": "#8FB88A",
+    "color5": "#C0D0A8",
+    "color6": "#88C0B0",
+    "color7": "#D0DCC8",
+    "color8": "#3A4838",
+    "color9": "#F0B0A4",
+    "color10": "#B0E89A",
+    "color11": "#F0E4A8",
+    "color12": "#B0D8AA",
+    "color13": "#D8E8C0",
+    "color14": "#B0DCD0",
+    "color15": "#F4FAF2"
+  },
+  "starship": {
+    "palette": "forest-night"
+  },
+  "sound": {
+    "notify": "assets/sounds/forest-night/notify.ogg",
+    "volume": 0.32
+  },
+  "overview": {
+    "style": "tiles",
+    "rounding": 12,
+    "gap": 6,
+    "dim_inactive": false
+  }
+}
