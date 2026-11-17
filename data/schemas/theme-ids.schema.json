@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/theme-ids.schema.json",
+  "title": "iArch session theme ID index",
+  "type": "object",
+  "required": [
+    "default",
+    "choice_file",
+    "apply_command",
+    "status",
+    "themes",
+    "note"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "default": {
+      "enum": [
+        "greenhouse",
+        "amber-bloom",
+        "neon-rain",
+        "forest-night",
+        "violet-glass",
+        "crimson-silk"
+      ]
+    },
+    "choice_file": {
+      "const": "~/.config/iarch/theme.json"
+    },
+    "apply_command": {
+      "const": "iarch-theme apply"
+    },
+    "status": {
+      "const": "theme-packs"
+    },
+    "themes": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "dock",
+          "overview",
+          "motion"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "enum": [
+              "greenhouse",
+              "amber-bloom",
+              "neon-rain",
+              "forest-night",
+              "violet-glass",
+              "crimson-silk"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2
+          },
+          "dock": {
+            "type": "boolean"
+          },
+          "overview": {
+            "enum": [
+              "bento",
+              "tiles",
+              "pills"
+            ]
+          },
+          "motion": {
+            "type": "string",
+            "minLength": 2
+          }
+        }
+      }
+    },
+    "note": {
+      "type": "string",
+      "minLength": 10
+    }
+  }
+}
