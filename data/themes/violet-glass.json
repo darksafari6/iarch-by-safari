@@ -1,0 +1,148 @@
+{
+  "meta": {
+    "id": "violet-glass",
+    "name": "Violet Glass",
+    "blurb": "Deep violet glass with a translucent 72% shell surface and a long, softened blur fade.",
+    "dark": true
+  },
+  "wallpaper": "assets/wallpapers/themes/violet-glass.webp",
+  "hypr": {
+    "active_border": "#B388FF",
+    "inactive_border": "#9778C6",
+    "rounding": 24,
+    "border_size": 2,
+    "gaps_in": 7,
+    "gaps_out": 14,
+    "shadow_range": 32,
+    "shadow_color": "#08040E",
+    "blur": {
+      "enabled": true,
+      "size": 16,
+      "passes": 4,
+      "noise": 0.045,
+      "contrast": 0.88
+    },
+    "inactive_opacity": 0.9,
+    "dim_strength": 0.14
+  },
+  "motion": {
+    "bezier": {
+      "name": "iarch-violet-glass",
+      "controls": [
+        0.3,
+        0,
+        0.1,
+        1
+      ]
+    },
+    "windows": {
+      "style": "gnomed",
+      "open_ms": 660,
+      "close_ms": 560,
+      "move_ms": 580
+    },
+    "workspace": {
+      "direction": "none",
+      "duration_ms": 600
+    },
+    "fade": {
+      "enabled": true,
+      "duration_ms": 640
+    },
+    "border": {
+      "enabled": true,
+      "duration_ms": 620
+    },
+    "layer": {
+      "style": "fade",
+      "bar_ms": 640,
+      "osd_ms": 600
+    }
+  },
+  "noctalia": {
+    "palette": {
+      "background": "#140818",
+      "surface": "#24102EB8",
+      "primary": "#B388FF",
+      "on_primary": "#1C0830",
+      "error": "#FF8AB0",
+      "outline": "#7C629A",
+      "bar": "#24102EB8",
+      "dock": "#30143C",
+      "notification": "#24102EB8",
+      "text": "#F6EEFF",
+      "secondary": "#E0B0FF",
+      "on_secondary": "#1C0830",
+      "on_error": "#1C0830"
+    },
+    "layout": {
+      "bar_position": "top",
+      "module_order": {
+        "start": [
+          "launcher",
+          "workspaces"
+        ],
+        "center": [
+          "clock"
+        ],
+        "end": [
+          "media",
+          "audio_visualizer",
+          "tray",
+          "network",
+          "volume",
+          "notifications",
+          "control-center",
+          "session"
+        ]
+      },
+      "dock_visible": false,
+      "control_center_density": "full",
+      "notification_position": "bottom_right",
+      "notification_width": 420,
+      "corner_radius": 24
+    }
+  },
+  "gtk": {
+    "accent": "#B388FF",
+    "window_bg": "#140818",
+    "headerbar": "#24102E",
+    "destructive": "#FF8AB0"
+  },
+  "terminal": {
+    "foreground": "#F6EEFF",
+    "background": "#140818",
+    "cursor": "#B388FF",
+    "selection_foreground": "#F6EEFF",
+    "selection_background": "#30143C",
+    "color0": "#281430",
+    "color1": "#FF8AB0",
+    "color2": "#8EE0B8",
+    "color3": "#F0D48A",
+    "color4": "#B388FF",
+    "color5": "#E0B0FF",
+    "color6": "#A0D0F0",
+    "color7": "#E4D8F4",
+    "color8": "#503868",
+    "color9": "#FFB0C8",
+    "color10": "#B4F0D0",
+    "color11": "#F8E4B0",
+    "color12": "#DCC4FF",
+    "color13": "#F0D0FF",
+    "color14": "#C0E4F8",
+    "color15": "#FAF6FF"
+  },
+  "starship": {
+    "palette": "violet-glass"
+  },
+  "sound": {
+    "notify": "assets/sounds/violet-glass/notify.ogg",
+    "volume": 0.36
+  },
+  "overview": {
+    "style": "pills",
+    "rounding": 24,
+    "gap": 12,
+    "dim_inactive": true
+  }
+}
