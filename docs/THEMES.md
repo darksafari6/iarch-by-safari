@@ -100,6 +100,12 @@ the `message-new-instant` event. The renderer selects the generated
 its own audio service, not the theme apply command. The theme inherits the
 freedesktop sound theme when the custom event asset is not yet available.
 
+Notification sounds remain disabled while the selected pack's OGG file is
+absent. Once `assets/sounds/<id>/notify.ogg` is installed, the renderer enables
+Noctalia's notification audio and points the native event at that asset. This
+prevents an incomplete pack from unexpectedly playing the desktop's generic
+freedesktop notification sound.
+
 Reload order is compositor (`hyprctl reload`), Noctalia (`noctalia msg
 config-reload`), wallpaper (`noctalia msg wallpaper-set` when the selected file
 exists), and Kitty remote `set-colors` only when `KITTY_LISTEN_ON` identifies
