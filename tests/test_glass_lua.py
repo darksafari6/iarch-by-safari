@@ -895,14 +895,13 @@ class TheShippedFileMatchesItsSource(unittest.TestCase):
         self.assertEqual(before, SHIPPED.read_bytes())
 
     def test_the_static_theme_falls_back_when_the_generated_file_is_absent(self):
-        # theme.lua must require the generated file through pcall, so a session
-        # with no design system applied still starts.
+        # theme.lua must require the compatibility glass renderer through pcall;
+        # the selected session theme is separately loaded from a runtime file.
         text = THEME.read_text(encoding='utf-8')
         self.assertIn('pcall(function()', text)
         self.assertIn('require("generated.glass")', text)
-        self.assertLess(text.index('hl.config({'), text.index('require("generated.glass")'),
-                        'the generated file must be required after the static '
-                        'values, because the last rule registered wins')
+        self.assertNotIn('hl.config({', text,
+                         'theme.lua must not own a second set of static appearance values')
 
 
 class TheCliBehaves(unittest.TestCase):
