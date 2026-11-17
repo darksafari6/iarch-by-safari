@@ -1,0 +1,660 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/themes/schema.json",
+  "title": "iArch session theme pack",
+  "description": "One complete session theme. Theme choices live in ~/.config/iarch/theme.json; every runtime artifact is rendered from exactly one pack.",
+  "type": "object",
+  "required": [
+    "meta",
+    "wallpaper",
+    "hypr",
+    "motion",
+    "noctalia",
+    "gtk",
+    "terminal",
+    "starship",
+    "sound",
+    "overview"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "blurb",
+        "dark"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "greenhouse",
+            "amber-bloom",
+            "neon-rain",
+            "forest-night",
+            "violet-glass",
+            "crimson-silk"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2
+        },
+        "blurb": {
+          "type": "string",
+          "minLength": 10
+        },
+        "dark": {
+          "type": "boolean"
+        }
+      }
+    },
+    "wallpaper": {
+      "type": "string",
+      "pattern": "^assets/wallpapers/themes/(greenhouse|amber-bloom|neon-rain|forest-night|violet-glass|crimson-silk)\\.webp$"
+    },
+    "hypr": {
+      "type": "object",
+      "required": [
+        "active_border",
+        "inactive_border",
+        "rounding",
+        "border_size",
+        "gaps_in",
+        "gaps_out",
+        "shadow_range",
+        "shadow_color",
+        "blur",
+        "inactive_opacity",
+        "dim_strength"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "active_border": {
+          "$ref": "#/definitions/color"
+        },
+        "inactive_border": {
+          "$ref": "#/definitions/color"
+        },
+        "rounding": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "border_size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "gaps_in": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "gaps_out": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "shadow_range": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 128
+        },
+        "shadow_color": {
+          "$ref": "#/definitions/color"
+        },
+        "blur": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "size",
+            "passes",
+            "noise",
+            "contrast"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 64
+            },
+            "passes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            "noise": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "contrast": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2
+            }
+          }
+        },
+        "inactive_opacity": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1
+        },
+        "dim_strength": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "motion": {
+      "type": "object",
+      "required": [
+        "bezier",
+        "windows",
+        "workspace",
+        "fade",
+        "border",
+        "layer"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bezier": {
+          "type": "object",
+          "required": [
+            "name",
+            "controls"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{1,40}$"
+            },
+            "controls": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "type": "number",
+                "minimum": -1,
+                "maximum": 2
+              }
+            }
+          }
+        },
+        "windows": {
+          "type": "object",
+          "required": [
+            "style",
+            "open_ms",
+            "close_ms",
+            "move_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "style": {
+              "enum": [
+                "slide",
+                "popin",
+                "gnome",
+                "gnomed"
+              ]
+            },
+            "open_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "close_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "move_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            }
+          }
+        },
+        "workspace": {
+          "type": "object",
+          "required": [
+            "direction",
+            "duration_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "direction": {
+              "enum": [
+                "horizontal",
+                "vertical",
+                "none"
+              ]
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            }
+          }
+        },
+        "fade": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "duration_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            }
+          }
+        },
+        "border": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "duration_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            }
+          }
+        },
+        "layer": {
+          "type": "object",
+          "required": [
+            "style",
+            "bar_ms",
+            "osd_ms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "style": {
+              "enum": [
+                "fade",
+                "slide",
+                "popin"
+              ]
+            },
+            "bar_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "osd_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            }
+          }
+        }
+      }
+    },
+    "noctalia": {
+      "type": "object",
+      "required": [
+        "palette",
+        "layout"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "palette": {
+          "type": "object",
+          "required": [
+            "background",
+            "surface",
+            "primary",
+            "on_primary",
+            "error",
+            "outline",
+            "bar",
+            "dock",
+            "notification",
+            "text",
+            "secondary",
+            "on_secondary",
+            "on_error"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "background": {
+              "$ref": "#/definitions/color"
+            },
+            "surface": {
+              "$ref": "#/definitions/color"
+            },
+            "primary": {
+              "$ref": "#/definitions/color"
+            },
+            "on_primary": {
+              "$ref": "#/definitions/color"
+            },
+            "error": {
+              "$ref": "#/definitions/color"
+            },
+            "outline": {
+              "$ref": "#/definitions/color"
+            },
+            "bar": {
+              "$ref": "#/definitions/color"
+            },
+            "dock": {
+              "$ref": "#/definitions/color"
+            },
+            "notification": {
+              "$ref": "#/definitions/color"
+            },
+            "text": {
+              "$ref": "#/definitions/color"
+            },
+            "secondary": {
+              "$ref": "#/definitions/color"
+            },
+            "on_secondary": {
+              "$ref": "#/definitions/color"
+            },
+            "on_error": {
+              "$ref": "#/definitions/color"
+            }
+          }
+        },
+        "layout": {
+          "type": "object",
+          "required": [
+            "bar_position",
+            "module_order",
+            "dock_visible",
+            "control_center_density",
+            "notification_position",
+            "notification_width",
+            "corner_radius"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bar_position": {
+              "enum": [
+                "top",
+                "bottom",
+                "left",
+                "right"
+              ]
+            },
+            "module_order": {
+              "type": "object",
+              "required": [
+                "start",
+                "center",
+                "end"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "start": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "center": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "end": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "dock_visible": {
+              "type": "boolean"
+            },
+            "control_center_density": {
+              "enum": [
+                "compact",
+                "full"
+              ]
+            },
+            "notification_position": {
+              "enum": [
+                "top_left",
+                "top_right",
+                "bottom_left",
+                "bottom_right"
+              ]
+            },
+            "notification_width": {
+              "type": "integer",
+              "minimum": 240,
+              "maximum": 800
+            },
+            "corner_radius": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 64
+            }
+          }
+        }
+      }
+    },
+    "gtk": {
+      "type": "object",
+      "required": [
+        "accent",
+        "window_bg",
+        "headerbar",
+        "destructive"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "accent": {
+          "$ref": "#/definitions/color"
+        },
+        "window_bg": {
+          "$ref": "#/definitions/color"
+        },
+        "headerbar": {
+          "$ref": "#/definitions/color"
+        },
+        "destructive": {
+          "$ref": "#/definitions/color"
+        }
+      }
+    },
+    "terminal": {
+      "type": "object",
+      "required": [
+        "foreground",
+        "background",
+        "cursor",
+        "selection_foreground",
+        "selection_background",
+        "color0",
+        "color1",
+        "color2",
+        "color3",
+        "color4",
+        "color5",
+        "color6",
+        "color7",
+        "color8",
+        "color9",
+        "color10",
+        "color11",
+        "color12",
+        "color13",
+        "color14",
+        "color15"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "foreground": {
+          "$ref": "#/definitions/color"
+        },
+        "background": {
+          "$ref": "#/definitions/color"
+        },
+        "cursor": {
+          "$ref": "#/definitions/color"
+        },
+        "selection_foreground": {
+          "$ref": "#/definitions/color"
+        },
+        "selection_background": {
+          "$ref": "#/definitions/color"
+        },
+        "color0": {
+          "$ref": "#/definitions/color"
+        },
+        "color1": {
+          "$ref": "#/definitions/color"
+        },
+        "color2": {
+          "$ref": "#/definitions/color"
+        },
+        "color3": {
+          "$ref": "#/definitions/color"
+        },
+        "color4": {
+          "$ref": "#/definitions/color"
+        },
+        "color5": {
+          "$ref": "#/definitions/color"
+        },
+        "color6": {
+          "$ref": "#/definitions/color"
+        },
+        "color7": {
+          "$ref": "#/definitions/color"
+        },
+        "color8": {
+          "$ref": "#/definitions/color"
+        },
+        "color9": {
+          "$ref": "#/definitions/color"
+        },
+        "color10": {
+          "$ref": "#/definitions/color"
+        },
+        "color11": {
+          "$ref": "#/definitions/color"
+        },
+        "color12": {
+          "$ref": "#/definitions/color"
+        },
+        "color13": {
+          "$ref": "#/definitions/color"
+        },
+        "color14": {
+          "$ref": "#/definitions/color"
+        },
+        "color15": {
+          "$ref": "#/definitions/color"
+        }
+      }
+    },
+    "starship": {
+      "type": "object",
+      "required": [
+        "palette"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "palette": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,30}$"
+        }
+      }
+    },
+    "sound": {
+      "type": "object",
+      "required": [
+        "notify",
+        "volume"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "notify": {
+          "type": "string",
+          "pattern": "^assets/sounds/(greenhouse|amber-bloom|neon-rain|forest-night|violet-glass|crimson-silk)/notify\\.ogg$"
+        },
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "urgent": {
+          "type": "string",
+          "pattern": "^assets/sounds/(greenhouse|amber-bloom|neon-rain|forest-night|violet-glass|crimson-silk)/urgent\\.ogg$"
+        }
+      }
+    },
+    "overview": {
+      "type": "object",
+      "required": [
+        "style",
+        "rounding",
+        "gap",
+        "dim_inactive"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "style": {
+          "enum": [
+            "bento",
+            "tiles",
+            "pills"
+          ]
+        },
+        "rounding": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "gap": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "dim_inactive": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+    }
+  }
+}
