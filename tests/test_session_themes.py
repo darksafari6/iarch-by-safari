@@ -4,6 +4,9 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
+import stat
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -51,6 +54,27 @@ class ThemePacks(unittest.TestCase):
                 self.assertEqual(0, session_theme.main(["current"]))
             self.assertIn("forest-night", current.getvalue())
             self.assertFalse((Path(tmp) / "theme.json").exists())
+
+    def test_public_launcher_reaches_the_session_theme_cli(self):
+        launcher = ROOT / "scripts" / "iarch-theme.sh"
+        self.assertTrue(launcher.is_file())
+        self.assertTrue(launcher.stat().st_mode & stat.S_IXUSR)
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {
+                "HOME": tmp,
+                "IARCH_CONFIG_DIR": str(Path(tmp) / ".config" / "iarch"),
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            }
+            listed = subprocess.run([str(launcher), "list"], cwd=str(ROOT),
+                                    env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(0, listed.returncode, listed.stdout + listed.stderr)
+            for theme_id in IDS:
+                self.assertIn(theme_id, listed.stdout)
+            current = subprocess.run([str(launcher), "current"], cwd=str(ROOT),
+                                     env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(0, current.returncode, current.stdout + current.stderr)
+            self.assertIn("forest-night", current.stdout)
+            self.assertFalse((Path(env["IARCH_CONFIG_DIR"]) / "theme.json").exists())
 
 
 class ThemeRenderers(unittest.TestCase):
