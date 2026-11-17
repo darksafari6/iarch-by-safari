@@ -102,6 +102,24 @@ class ThemeRenderers(unittest.TestCase):
         self.assertIn("dim_inactive = true", rendered)
         self.assertIn("dim_strength = 0.5", rendered)
 
+    def test_render_active_can_stage_game_override_before_the_mode_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_home = root / "config"
+            env = {
+                "HOME": tmp,
+                "IARCH_CONFIG_DIR": str(root / "iarch"),
+                "IARCH_STATE_DIR": str(root / "state"),
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            }
+            session_theme.render_active(config_home, env, game_mode_override=True)
+            generated = config_home / "hypr" / "generated" / "theme.lua"
+            self.assertTrue(generated.is_file())
+            content = generated.read_text(encoding="utf-8")
+            self.assertIn("hl.config({ animations = { enabled = false } })", content)
+            self.assertIn("dim_strength = 0.0", content)
+            self.assertFalse((Path(env["IARCH_CONFIG_DIR"]) / "theme.json").exists())
+
     def test_noctalia_palette_matches_existing_custom_palette_shape(self):
         payload = json.loads(session_theme.render_noctalia_palette(self.pack))
         self.assertEqual({"dark", "light"}, set(payload))
