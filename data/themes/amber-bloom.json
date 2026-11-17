@@ -144,5 +144,6 @@
     "rounding": 10,
     "gap": 6,
     "dim_inactive": false
-  }
+  },
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
 }
