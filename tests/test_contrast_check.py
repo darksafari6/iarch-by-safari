@@ -117,7 +117,9 @@ class EveryPresetPasses(unittest.TestCase):
         ids = {read_json(p)["id"] for p in self.paths}
         self.assertEqual(
             {"midnight-glass", "frosted-light", "aurora", "crimson-plasma",
-             "tokyo-night-glass", "mono-ice"},
+             "tokyo-night-glass", "mono-ice",
+             "greenhouse", "amber-bloom", "neon-rain", "forest-night",
+             "violet-glass", "crimson-silk"},
             ids,
         )
 
@@ -282,14 +284,14 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(0, code)
         payload = json.loads(out)
         self.assertTrue(payload["ok"])
-        self.assertEqual(6, len(payload["presets"]))
+        self.assertEqual(12, len(payload["presets"]))
         for entry in payload["presets"].values():
             self.assertEqual(0, len(entry["failures"]))
             self.assertGreater(entry["gated"], 0)
             self.assertGreater(entry["lowest_gated"], 3.0)
 
     def test_discover_finds_all_presets_and_filters_by_id(self):
-        self.assertEqual(6, len(cc.discover(PRESET_DIR)))
+        self.assertEqual(12, len(cc.discover(PRESET_DIR)))
         self.assertEqual(1, len(cc.discover(PRESET_DIR, "mono-ice")))
         self.assertEqual(1, len(cc.discover(PRESET_DIR, "mono-ice.json")))
         with self.assertRaises(cc.ContrastError):

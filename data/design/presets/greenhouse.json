@@ -1,0 +1,127 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari \u2014 GPL-3.0-or-later",
+  "version": 1,
+  "id": "greenhouse",
+  "name": "Greenhouse",
+  "mode": "dark",
+  "description": "Warm copper on a wood-dark base. Borders, bar, notifications and the terminal share one accent. Motion stays on the frosted intensity.",
+  "default_intensity": "frosted",
+  "palette": {
+    "background": "#1a120c",
+    "surface": "#2a2118",
+    "surface_variant": "#34281c",
+    "on_background": "#f6ecdf",
+    "on_surface": "#f6ecdf",
+    "on_surface_variant": "#d7c4ae",
+    "outline": "#907052",
+    "outline_variant": "#4a3828",
+    "shadow": "#0c0806",
+    "text_disabled": "#b59a82",
+    "accent": {
+      "primary": "#e7a15a",
+      "secondary": "#f0c27a",
+      "success": "#8fd18a",
+      "warning": "#f0c27a",
+      "danger": "#e07a6a"
+    },
+    "on_accent": {
+      "primary": "#2a1606",
+      "secondary": "#2b1c00",
+      "success": "#04231a",
+      "warning": "#2b1c00",
+      "danger": "#2b0710"
+    }
+  },
+  "terminal": {
+    "colors": {
+      "background": "#1a120c",
+      "foreground": "#f6ecdf",
+      "cursor": "#e7a15a",
+      "cursor_text": "#2a1606",
+      "selection_background": "#4a3424",
+      "selection_foreground": "#f8f1e8",
+      "url_color": "#f0c27a",
+      "color0": "#2c2218",
+      "color1": "#e07a6a",
+      "color2": "#8fd18a",
+      "color3": "#e7a15a",
+      "color4": "#d7a06a",
+      "color5": "#e0b0a0",
+      "color6": "#c4a574",
+      "color7": "#e6d5c4",
+      "color8": "#5a4636",
+      "color9": "#f0a090",
+      "color10": "#b0e4aa",
+      "color11": "#f0c27a",
+      "color12": "#f0c090",
+      "color13": "#f0d0c4",
+      "color14": "#e0c898",
+      "color15": "#f8f1e8"
+    },
+    "background_opacity_from_tokens": true,
+    "padding_px": 14,
+    "tab_bar_style": "powerline",
+    "tab_bar_separator": "  \u2502  "
+  },
+  "gtk": {
+    "accent": "#e7a15a",
+    "theme_dark": "adw-gtk3-dark",
+    "theme_light": "adw-gtk3",
+    "sidebar_alpha_delta": 0.06
+  },
+  "cursor": {
+    "theme": "Bibata-Modern-Classic",
+    "size": 24
+  },
+  "icons": {
+    "theme": "Papirus-Dark",
+    "available": [
+      {
+        "id": "papirus-dark",
+        "name": "Papirus (dark)",
+        "theme": "Papirus-Dark",
+        "license": "GPL-3.0",
+        "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
+        "package_arch": "papirus-icon-theme",
+        "package_fedora": "papirus-icon-theme",
+        "verified": true,
+        "note": "Arch's extra repository carries papirus-icon-theme: version 20260801-1, GPL-3.0, read from the package search JSON API on 2026-11-09. The 'Icons and cursors' step of install.sh fetches it with yay, so a mirror that lacks it costs an icon theme rather than the whole install. The Fedora package name is still unverified (docs/UNVERIFIED.md TP-13)."
+      },
+      {
+        "id": "papirus-light",
+        "name": "Papirus (light)",
+        "theme": "Papirus-Light",
+        "license": "GPL-3.0",
+        "upstream": "https://github.com/PapirusDevelopmentTeam/papirus-icon-theme",
+        "package_arch": "papirus-icon-theme",
+        "package_fedora": "papirus-icon-theme",
+        "verified": true,
+        "note": "The same Arch package provides Papirus-Light, verified the same way on 2026-11-09. The Fedora package name is still unverified (TP-13)."
+      },
+      {
+        "id": "yaru",
+        "name": "Yaru",
+        "theme": "Yaru",
+        "license": "GPL-3.0 and CC-BY-SA-4.0 icons",
+        "upstream": "https://github.com/ubuntu/yaru",
+        "package_arch": "yaru-icon-theme",
+        "package_fedora": "yaru-icon-theme",
+        "verified": false,
+        "note": "Fetched by the 'Icons and cursors' step of install.sh, which warns rather than stopping the install: neither the Arch nor the Fedora name is verified from this environment (TP-13). Licence split between the code and the artwork, see THIRD_PARTY_NOTICES.md."
+      }
+    ]
+  },
+  "wallpaper": {
+    "kind": "bundled",
+    "path": "assets/wallpapers/desktop/ember-radial.webp",
+    "credit": "Reuses a wallpaper this repository already generated. No third-party artwork."
+  },
+  "noctalia": {
+    "counterpart": {
+      "preset": "frosted-light",
+      "mode": "light"
+    },
+    "palette_id": "iarch-greenhouse",
+    "palette_name": "iArch Greenhouse"
+  }
+}

@@ -2,7 +2,7 @@
   "default": "forest-night",
   "choice_file": "~/.config/iarch/theme.json",
   "apply_command": "iarch-theme apply",
-  "status": "contract-only",
+  "status": "presets-shipped",
   "themes": [
     {
       "id": "greenhouse",
@@ -46,5 +46,6 @@
       "overview": "bento",
       "motion": "scale-fade"
     }
-  ]
+  ],
+  "note": "Colour, kitty, GTK, Kvantum, Noctalia palette and wallpaper path. Fish, sounds, fonts and layout are still global tokens."
 }
