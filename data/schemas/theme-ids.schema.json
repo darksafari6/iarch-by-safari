@@ -4,6 +4,7 @@
   "title": "iArch session theme ID index",
   "type": "object",
   "required": [
+    "_copyright",
     "default",
     "choice_file",
     "apply_command",
@@ -64,6 +65,11 @@
     "note": {
       "type": "string",
       "minLength": 10
+    },
+    "_copyright": {
+      "type": "string",
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
     }
-  }
+  },
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
 }
