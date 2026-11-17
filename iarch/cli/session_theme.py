@@ -698,18 +698,36 @@ def _reload_noctalia() -> bool:
         return False
 
 
-def _apply_sound_link(pack: Dict[str, Any], env: Mapping[str, str]) -> Optional[Path]:
-    target = ROOT / pack["sound"]["notify"]
-    link = configstore.config_dir(env) / "sounds" / "active-notify.ogg"
-    if not target.is_file():
-        _warn(f"{pack['sound']['notify']} is not in the repository; notification symlink was not changed")
-        return None
-    link.parent.mkdir(parents=True, exist_ok=True)
-    temporary = link.with_name(f".{link.name}.new-{os.getpid()}")
-    temporary.unlink(missing_ok=True)
-    temporary.symlink_to(target.resolve())
-    os.replace(temporary, link)
-    return link
+def _apply_sound_link(pack: Dict[str, Any], env: Mapping[str, str]) -> List[Path]:
+    sound_root = configstore.config_dir(env) / "sounds"
+    sound_root.mkdir(parents=True, exist_ok=True)
+    linked: List[Path] = []
+    for field, filename in (("notify", "active-notify.ogg"),
+                            ("urgent", "active-urgent.ogg")):
+        relative = pack["sound"].get(field)
+        link = sound_root / filename
+        if not relative:
+            if link.is_symlink():
+                link.unlink()
+            continue
+        target = ROOT / relative
+        if not target.is_file():
+            if link.is_symlink():
+                link.unlink()
+            _warn(f"{relative} is not in the repository; {_display(link)} was not linked")
+            continue
+        if link.exists() and not link.is_symlink():
+            _warn(f"{_display(link)} is a regular file; refusing to replace it with a symlink")
+            continue
+        if link.is_symlink() and link.resolve() == target.resolve():
+            linked.append(link)
+            continue
+        temporary = link.with_name(f".{link.name}.new-{os.getpid()}")
+        temporary.unlink(missing_ok=True)
+        temporary.symlink_to(target.resolve())
+        os.replace(temporary, link)
+        linked.append(link)
+    return linked
 
 
 def _apply_wallpaper(pack: Dict[str, Any]) -> None:
@@ -725,8 +743,9 @@ def render_active(config_home: Path, env: Mapping[str, str],
     theme_id, _saved = current_theme_id(env)
     pack = load_theme(theme_id)
     actions = _build_actions(pack, config_home, env, game_mode_override)
-    sound_path = configstore.config_dir(env) / "sounds" / "active-notify.ogg"
-    sound_snapshot = _snapshot(sound_path)
+    sound_paths = [configstore.config_dir(env) / "sounds" / name
+                   for name in ("active-notify.ogg", "active-urgent.ogg")]
+    sound_snapshots = {path: _snapshot(path) for path in sound_paths}
     settings_path = configstore.user_path("settings", env)
     settings_snapshot = _snapshot(settings_path)
     snapshots: Dict[Path, Tuple[str, Optional[bytes], Optional[str]]] = {}
@@ -740,7 +759,7 @@ def render_active(config_home: Path, env: Mapping[str, str],
                 _restore(path, snapshot)
             except OSError:
                 pass
-        for path, snapshot in ((sound_path, sound_snapshot), (settings_path, settings_snapshot)):
+        for path, snapshot in [*sound_snapshots.items(), (settings_path, settings_snapshot)]:
             try:
                 _restore(path, snapshot)
             except OSError:
@@ -783,8 +802,9 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
         return 0
 
     old_choice = _write_choice(state, theme_id, env)
-    sound_path = configstore.config_dir(env) / "sounds" / "active-notify.ogg"
-    old_sound = _snapshot(sound_path)
+    sound_paths = [configstore.config_dir(env) / "sounds" / name
+                   for name in ("active-notify.ogg", "active-urgent.ogg")]
+    old_sounds = {path: _snapshot(path) for path in sound_paths}
     settings_path = configstore.user_path("settings", env)
     old_settings = _snapshot(settings_path)
     snapshots: Dict[Path, Tuple[str, Optional[bytes], Optional[str]]] = {}
@@ -793,15 +813,15 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
         _sync_focus_restore_target(pack, env)
         # Sound is optional until each original OGG asset is included. A missing
         # sound never invalidates or changes the user's saved visual theme.
-        sound_link = _apply_sound_link(pack, env)
+        sound_links = _apply_sound_link(pack, env)
     except BaseException:
         for path, snapshot in reversed(list(snapshots.items())):
             try:
                 _restore(path, snapshot)
             except OSError:
                 pass
-        for path, snapshot in ((sound_path, old_sound), (settings_path, old_settings),
-                               (state, old_choice)):
+        for path, snapshot in [*old_sounds.items(), (settings_path, old_settings),
+                               (state, old_choice)]:
             try:
                 _restore(path, snapshot)
             except OSError:
@@ -812,7 +832,7 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
     print(f"choice: {_display(state)}")
     for path in changed:
         print(f"  wrote: {_display(path)}")
-    if sound_link:
+    for sound_link in sound_links:
         print(f"  sound: {_display(sound_link)}")
     if not no_reload:
         reload_active_surfaces(pack, config_home, env)
