@@ -30,6 +30,7 @@ generated output.
 ### Changed
 
 - Noctalia custom palettes remain in the pinned shell's six-digit color format. Per-theme surface alpha is rendered through the shell's supported bar, dock and notification opacity settings (Violet Glass uses 0.72) rather than an unsupported alpha suffix in a palette color.
+- Noctalia notification audio now uses the native `iarch-session` freedesktop sound theme and its `message-new-instant` event, linked to `~/.config/iarch/sounds/active-notify.ogg`; notifications remain muted until the selected OGG asset exists.
 - Hyprland loads the selected generated theme after its existing glass fallback;
   the former hardcoded decoration values were removed from
   `.config/hypr/themes/theme.lua`.
