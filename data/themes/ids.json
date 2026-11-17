@@ -2,7 +2,7 @@
   "default": "forest-night",
   "choice_file": "~/.config/iarch/theme.json",
   "apply_command": "iarch-theme apply",
-  "status": "presets-shipped",
+  "status": "theme-packs",
   "themes": [
     {
       "id": "greenhouse",
@@ -47,5 +47,5 @@
       "motion": "scale-fade"
     }
   ],
-  "note": "Colour, kitty, GTK, Kvantum, Noctalia palette and wallpaper path. Fish, sounds, fonts and layout are still global tokens."
+  "note": "Each data/themes/<id>.json pack is the source for its compositor, motion, Noctalia palette and layout, GTK/Kvantum accent, terminal palette, sound and overview settings. Generated runtime files are never edited by hand."
 }
