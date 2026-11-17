@@ -937,13 +937,18 @@ PATH=$HOME/.local/bin:$PATH'
     fi
     if [ -e "$env_file" ] || [ -L "$env_file" ]; then
         local backup="$env_file.bak.$(date +%Y%m%d-%H%M%S).$RANDOM"
-        if ! cp -p -- "$env_file" "$backup"; then
+        if [ -L "$env_file" ]; then
+            if ! mv -- "$env_file" "$backup"; then
+                echo "ERROR: Could not move the existing session PATH symlink; refusing to replace it." >&2
+                return 1
+            fi
+        elif ! cp -p -- "$env_file" "$backup"; then
             echo "ERROR: Could not back up $env_file; refusing to replace it." >&2
             return 1
         fi
         echo "Backed up existing session PATH file to $backup"
     fi
-    if ! printf '%s\\n' "$expected" | sudo -u "$ACTUAL_USER" tee -- "$env_file" >/dev/null; then
+    if ! printf '%s\n' "$expected" | sudo -u "$ACTUAL_USER" tee -- "$env_file" >/dev/null; then
         echo "ERROR: Could not write $env_file." >&2
         return 1
     fi
