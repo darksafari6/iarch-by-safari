@@ -464,7 +464,8 @@ class TheShellGate(IsolatedRun):
         tracked = subprocess.run(["git", "ls-files", "scripts/"], capture_output=True,
                                  text=True, cwd=str(ROOT), timeout=60)
         listed = set(tracked.stdout.split())
-        for relative in ("scripts/iarch-keybinds.sh", "scripts/iarch-link-cli.sh"):
+        for relative in ("scripts/iarch-keybinds.sh", "scripts/iarch-link-cli.sh",
+                         "scripts/iarch-theme.sh"):
             with self.subTest(script=relative):
                 self.assertIn(relative, listed,
                               "an untracked launcher is not shellchecked, not bash -n'd, "
