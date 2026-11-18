@@ -1,0 +1,212 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/theme-pack-apps.schema.json",
+  "title": "Dynamic theme pack apps",
+  "description": "Closed version 1 apps document. Cross-file references and filesystem safety are checked by theme_pack_validate.",
+  "type": "object",
+  "required": [
+    "_copyright",
+    "schema_version",
+    "id",
+    "gtk",
+    "qt",
+    "kitty",
+    "fish",
+    "starship",
+    "cursor",
+    "icons",
+    "fonts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "gtk": {
+      "type": "object",
+      "required": [
+        "theme",
+        "accent"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "theme": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "accent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        }
+      }
+    },
+    "qt": {
+      "type": "object",
+      "required": [
+        "theme"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "theme": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
+    "kitty": {
+      "type": "object",
+      "required": [
+        "foreground",
+        "background",
+        "cursor",
+        "font"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "foreground": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "background": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "font": {
+          "enum": [
+            "ui",
+            "display",
+            "mono"
+          ]
+        }
+      }
+    },
+    "fish": {
+      "type": "object",
+      "required": [
+        "command",
+        "error"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "error": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        }
+      }
+    },
+    "starship": {
+      "type": "object",
+      "required": [
+        "accent"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "accent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        }
+      }
+    },
+    "cursor": {
+      "type": "object",
+      "required": [
+        "theme",
+        "size"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "theme": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "size": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        }
+      }
+    },
+    "icons": {
+      "type": "object",
+      "required": [
+        "theme"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "theme": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "required": [
+        "ui",
+        "display",
+        "mono"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ui": {
+          "enum": [
+            "ui",
+            "display",
+            "mono"
+          ]
+        },
+        "display": {
+          "enum": [
+            "ui",
+            "display",
+            "mono"
+          ]
+        },
+        "mono": {
+          "enum": [
+            "ui",
+            "display",
+            "mono"
+          ]
+        }
+      }
+    }
+  }
+}

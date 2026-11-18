@@ -357,3 +357,5 @@ moved to `Super+Ctrl+N` and `Super+Ctrl+P`, so the shipped map reports no warnin
 the glass overlay surface with a box you type into (`UI-02`), a Shortcuts page that edits the map rather
 than reading it, and every claim that needs a session — `KB-01`, `KB-03` and `KB-06`, and the five the
 fourth pass added, `KB-11` to `KB-15`.
+
+Dynamic theme milestone gates are tracked in [THEMES-MILESTONES.md](THEMES-MILESTONES.md); asset policy is in [THEMES-ASSETS.md](THEMES-ASSETS.md).

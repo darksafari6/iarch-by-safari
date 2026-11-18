@@ -1,5 +1,9 @@
 # Session themes
 
+These six packs are the **Classic** engine's themes. The second engine, and the pack
+format the dynamic themes are written in, are documented in
+[THEMES-ARCHITECTURE.md](THEMES-ARCHITECTURE.md); nothing below changes for it.
+
 iArch's six session themes are complete data packs. The data pack is the only
 place a per-theme value is defined; the files under `~/.config` are projections
 written by the theme renderer.
@@ -156,3 +160,20 @@ notification audio is played by `iarch-theme apply`.
 4. Re-render with `python3 tools/render_theme.py` after changing the currently
    selected pack. Apply a different pack with `iarch-theme apply <id>`.
 5. Do not change `theme.json` during a renderer-only operation.
+
+For asset licensing and production rules see [THEMES-ASSETS.md](THEMES-ASSETS.md);
+for milestone gates see [THEMES-MILESTONES.md](THEMES-MILESTONES.md).
+
+Dynamic directories use the versioned pack schemas; `iarch-theme list --json`
+reports Classic and Dynamic groups. `validate`, `import`, `export`, and `preview`
+operate on packs, while `apply` snapshots its output, asks the shell and
+compositor to reload, and rolls back if either refuses. `rollback` restores the
+last successful dynamic apply. The reference pack is a format example, never an
+applicable theme. The runtime IPC contract and live compositor integration are
+unverified until M1; the shell skeleton cannot acknowledge an apply today.
+The settings and cursor projections do not guarantee a live refresh in already
+running applications, and wallpaper recipe rendering and sound generation are
+scheduled for later milestones.
+
+Dynamic pack validation requires Python `jsonschema`; previews require Pillow.
+The installer does not yet provision these dependencies.

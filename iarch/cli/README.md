@@ -16,6 +16,14 @@ a preset, renders a configuration file, and can verify what it previously wrote:
 | `python3 iarch/cli/render_kvantum.py` | `~/.config/Kvantum/kvantum.kvconfig` and `~/.config/Kvantum/iarch/iarch.kvconfig` | that the committed theme matches a fresh render of the tokens |
 | `python3 iarch/cli/gen_fontconfig.py` | `~/.config/fontconfig/fonts.conf` | that the committed file matches a fresh render of the tokens |
 | `python3 iarch/cli/theme.py apply [PRESET]` | all of the above at once, under the live `~/.config`, from one preset and intensity | the contrast gate before it writes, then skips any file whose rendered bytes already match |
+| `python3 iarch/cli/theme.py list --json` | nothing — it reports | Classic and Dynamic catalogue groups |
+| `python3 iarch/cli/theme.py validate PATH` | nothing — it reports | validates a dynamic pack directory |
+| `python3 iarch/cli/theme.py apply ID [--no-transition]` | generated session files | dynamic apply requires an acknowledging shell and verified compositor |
+| `python3 iarch/cli/theme.py rollback` | last dynamic apply snapshot | verifies reload and restores the current state on failure |
+| `python3 iarch/cli/theme.py preview ID` | an illustrative cached PNG | validates the dynamic pack first |
+| `python3 iarch/cli/theme.py export ID FILE` | a bounded pack archive | validates before exporting |
+| `python3 iarch/cli/theme.py import FILE [--force]` | a user pack directory | rejects unsafe archive members before extraction |
+| `python3 iarch/cli/theme_pack_validate.py DIRECTORY` | nothing — it reports | pack schemas, cross-file references and filesystem safety |
 | `python3 iarch/cli/theme.py current` | nothing — it reports | which preset and intensity an `apply` would use, and where it would write |
 | `python3 iarch/cli/iarch_anim.py list` | nothing — it reports | the five motion presets, how many events each animates, and which one is active |
 | `python3 iarch/cli/iarch_anim.py set PRESET` | `~/.config/hypr/generated/animations.lua` | the render against the animation surface, then `luac -p`, then the compositor's own `configerrors` after a reload — and rolls the file back if that reports anything new |
@@ -23,6 +31,10 @@ a preset, renders a configuration file, and can verify what it previously wrote:
 | `python3 iarch/cli/iarch_anim.py toggle EVENT` | the same file | that the event is one the active preset declares |
 | `python3 iarch/cli/iarch_anim.py reduce-motion on\|off` | the same file | that reduce-motion renders the forced preset with every duration under the cap |
 | `python3 iarch/cli/iarch_anim.py current [--live]` | nothing — it reports | the recorded state, the resolved per-event plan, whether the file matches it, and with `--live` what the compositor says it is animating with |
+| `python3 iarch/cli/iarch_shell_switch.py status` | nothing — it reports | which of the two shell engines is running, which one the record selects, and which process owns the notification server |
+| `python3 iarch/cli/iarch_shell_switch.py to ENGINE` | `~/.config/iarch/shell-engine.json` and the snapshot in `~/.local/state/iarch/shell-switch.json` | that the target's binary and entry point exist before anything is stopped, then that the engine it started is up inside ten seconds — and rolls the session back if it is not |
+| `python3 iarch/cli/iarch_shell_switch.py rollback` | the same two records | that the snapshotted engine came back up, and stops the other one |
+| `python3 iarch/cli/iarch_doctor.py shell` | nothing — it reports | that exactly one engine is running and that the notification server belongs to it |
 | `python3 iarch/cli/iarch_doctor.py notify-test` | nothing — it asks | that the shell answers IPC, that Do Not Disturb is off, that no other daemon holds the bus, and that low, normal and critical toasts are acknowledged |
 | `python3 iarch/cli/iarch_doctor.py dnd on\|off\|toggle\|status` | nothing — it asks | that the shell took the change, by reading the state back |
 | `python3 iarch/cli/iarch_gamemode.py on\|off\|toggle` | nothing of its own — it runs `theme.py apply` and `iarch_anim.py set` | that the four leaves the applied state decides are the four the compositor says it runs |

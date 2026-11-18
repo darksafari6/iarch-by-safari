@@ -1,0 +1,78 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/design-themes.schema.json",
+  "title": "design-themes",
+  "type": "object",
+  "required": [
+    "_copyright",
+    "verified_against",
+    "source",
+    "themes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
+    },
+    "verified_against": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "themes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "group",
+          "engine",
+          "status",
+          "source_screenshot"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "group": {
+            "enum": [
+              "classic",
+              "dynamic"
+            ]
+          },
+          "engine": {
+            "enum": [
+              "classic",
+              "ishell"
+            ]
+          },
+          "status": {
+            "enum": [
+              "shipped",
+              "planned",
+              "reference"
+            ]
+          },
+          "source_screenshot": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "minItems": 1
+    }
+  }
+}

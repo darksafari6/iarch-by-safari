@@ -676,14 +676,23 @@ def _apply_actions(actions: Sequence[Tuple[str, Path, str]], env: Mapping[str, s
 
 def _write_choice(path: Path, theme_id: str, env: Mapping[str, str]) -> Tuple[str, Optional[bytes], Optional[str]]:
     old = _snapshot(path)
+    previous = {}
     if old[0] == "file":
         try:
-            if json.loads((old[1] or b"{}").decode("utf-8")).get("id") == theme_id:
-                return old
-        except (UnicodeDecodeError, json.JSONDecodeError, AttributeError):
-            pass
+            previous = json.loads((old[1] or b"{}").decode("utf-8"))
+            if not isinstance(previous, dict):
+                previous = {}
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            previous = {}
+    overrides = previous.get("overrides", {})
+    if not isinstance(overrides, dict):
+        overrides = {}
+    choice = {"schema_version": 1, "id": theme_id, "engine": "classic", "overrides": overrides}
+    if previous == choice:
+        return old
+    if old[0] == "file":
         configstore.backup_of(path, env)
-    configstore.atomic_write(path, json.dumps({"id": theme_id}, indent=2) + "\n")
+    configstore.atomic_write(path, json.dumps(choice, indent=2) + "\n")
     return old
 
 

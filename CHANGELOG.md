@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0 — dynamic theme foundations
+
+- Added a two-engine catalogue, one-shell doctor and rollback-capable shell
+  switch; Classic remains the default until the live QA gate.
+- Added versioned dynamic pack schemas, a reference pack, safe archive handling,
+  a status catalogue, pack commands, user override records and generated
+  illustrative previews.
+- Added a transactional dynamic apply path with compositor and shell checks,
+  restoration on failure, and an explicit rollback command. Live integration
+  and the shell IPC acknowledgement remain unverified until the M1 runtime.
+- Added the shell skeleton and the themes architecture, asset policy and
+  milestone documentation. The six Dynamic themes remain planned, not shipped.
+
 ## Unreleased — six session theme packs, one saved choice and one renderer
 
 The six visual themes now have a typed pack contract and a single application

@@ -1,0 +1,115 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/theme-pack-sounds.schema.json",
+  "title": "Dynamic theme pack sounds",
+  "description": "Closed version 1 sounds document. Cross-file references and filesystem safety are checked by theme_pack_validate.",
+  "type": "object",
+  "required": [
+    "_copyright",
+    "schema_version",
+    "id",
+    "events"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "events": {
+      "type": "object",
+      "required": [
+        "notification",
+        "volume",
+        "switch"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "notification": {
+          "type": "object",
+          "required": [
+            "file",
+            "volume",
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^sounds/[a-zA-Z0-9._/-]+\\.(ogg|wav)$"
+            },
+            "volume": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "volume": {
+          "type": "object",
+          "required": [
+            "file",
+            "volume",
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^sounds/[a-zA-Z0-9._/-]+\\.(ogg|wav)$"
+            },
+            "volume": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "switch": {
+          "type": "object",
+          "required": [
+            "file",
+            "volume",
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^sounds/[a-zA-Z0-9._/-]+\\.(ogg|wav)$"
+            },
+            "volume": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  }
+}

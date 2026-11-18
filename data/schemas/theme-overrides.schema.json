@@ -1,0 +1,64 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/theme-overrides.schema.json",
+  "title": "theme-overrides",
+  "type": "object",
+  "required": [
+    "_copyright",
+    "schema_version",
+    "accent",
+    "wallpaper",
+    "sounds_enabled",
+    "volume",
+    "variants"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "accent": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "wallpaper": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4096
+    },
+    "sounds_enabled": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "volume": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "variants": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+      }
+    }
+  }
+}

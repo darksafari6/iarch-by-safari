@@ -1,0 +1,12 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "schema_version": 1,
+  "id": "dynamic-reference",
+  "kind": "gradient",
+  "seed": 1,
+  "colors": [
+    "background",
+    "accent"
+  ],
+  "size": "large"
+}

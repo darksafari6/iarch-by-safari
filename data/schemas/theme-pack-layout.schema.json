@@ -1,0 +1,352 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/theme-pack-layout.schema.json",
+  "title": "Dynamic theme pack layout",
+  "description": "Closed version 1 layout document. Cross-file references and filesystem safety are checked by theme_pack_validate.",
+  "type": "object",
+  "required": [
+    "_copyright",
+    "schema_version",
+    "id",
+    "sizes",
+    "surfaces"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "sizes": {
+      "type": "object",
+      "required": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "small": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 512
+        },
+        "medium": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 512
+        },
+        "large": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 512
+        }
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "required": [
+        "bar",
+        "overview",
+        "sidebar-right",
+        "sidebar-left",
+        "dock",
+        "osk"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bar": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "variant",
+            "position",
+            "size",
+            "order"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "variant": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "position": {
+              "enum": [
+                "top",
+                "bottom",
+                "left",
+                "right",
+                "center"
+              ]
+            },
+            "size": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "overview": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "variant",
+            "position",
+            "size",
+            "order"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "variant": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "position": {
+              "enum": [
+                "top",
+                "bottom",
+                "left",
+                "right",
+                "center"
+              ]
+            },
+            "size": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "sidebar-right": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "variant",
+            "position",
+            "size",
+            "order"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "variant": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "position": {
+              "enum": [
+                "top",
+                "bottom",
+                "left",
+                "right",
+                "center"
+              ]
+            },
+            "size": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "sidebar-left": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "variant",
+            "position",
+            "size",
+            "order"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "variant": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "position": {
+              "enum": [
+                "top",
+                "bottom",
+                "left",
+                "right",
+                "center"
+              ]
+            },
+            "size": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "dock": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "variant",
+            "position",
+            "size",
+            "order"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "variant": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "position": {
+              "enum": [
+                "top",
+                "bottom",
+                "left",
+                "right",
+                "center"
+              ]
+            },
+            "size": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "osk": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "variant",
+            "position",
+            "size",
+            "order"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "variant": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "position": {
+              "enum": [
+                "top",
+                "bottom",
+                "left",
+                "right",
+                "center"
+              ]
+            },
+            "size": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    }
+  }
+}
