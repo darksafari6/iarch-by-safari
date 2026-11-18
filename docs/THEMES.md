@@ -160,3 +160,6 @@ notification audio is played by `iarch-theme apply`.
 4. Re-render with `python3 tools/render_theme.py` after changing the currently
    selected pack. Apply a different pack with `iarch-theme apply <id>`.
 5. Do not change `theme.json` during a renderer-only operation.
+
+For asset licensing and production rules see [THEMES-ASSETS.md](THEMES-ASSETS.md);
+for milestone gates see [THEMES-MILESTONES.md](THEMES-MILESTONES.md).
