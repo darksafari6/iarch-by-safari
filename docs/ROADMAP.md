@@ -277,7 +277,7 @@ evidence or still listed.
 decides what every package step installs: one `-Sy` per run, each target classified from the local
 database, the plan printed before anything is fetched, `--needed` on every named transaction, and no
 transaction at all on a machine that is already current, which is the reviewed half of `INS-01`.
-`install.sh` runs 25 numbered steps that each print a verdict, ends with a summary that fails the run
+`install.sh` runs 26 numbered steps that each print a verdict, ends with a summary that fails the run
 when a step failed, and records every path it creates outside the repository in
 `~/.local/state/iarch/install-manifest.txt`. The icon and cursor themes the presets name are installed
 at last, in a step that warns rather than aborting, and three package names that are not in Arch's
@@ -287,7 +287,7 @@ repositories came out of the transaction whose failure stops everything (`TP-20`
 acceptance criterion that stayed open while the tool itself already existed and was tested: the
 installer never called it. It is step one and it is fatal, because on a machine that is not vanilla
 Arch, or one whose package database a transaction still holds, every step after it fails and a summary
-listing twenty-four failures hides the one cause; `--preflight-only` runs the same report with no root
+listing every later failure hides the one cause; `--preflight-only` runs the same report with no root
 and no changes, so "would this even run here" is a question that can be asked before the privilege is.
 Every prompt goes through one helper that takes the default its own text advertises when there is
 nothing left to read, so an end of input ends a prompt instead of looping on "please answer" forever,

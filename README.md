@@ -104,7 +104,7 @@ not a question, and a run whose stdin is not a terminal exits 2 unless `--yes` w
 Both scripts are interactive: they ask about a default install, NVIDIA,
 printer support, gaming packages, which packages to remove, browser, audio
 stack and whether to reboot. A prompt out of input takes the default it
-advertises and says so. `install.sh` then runs 25 numbered steps — the read-
+advertises and says so. `install.sh` then runs 26 numbered steps — the read-
 only report first, then repositories, packages, the configuration payload,
 the themes, the session commands on `PATH`, the wallpapers and the login
 manager — and each one prints `✓ done`, `– skipped: <reason>` or `✗ failed:

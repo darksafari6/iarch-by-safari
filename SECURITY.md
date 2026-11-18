@@ -28,19 +28,19 @@ system state.
 `install.sh` runs one step before any of it: `tools/preflight.py` collects a
 read-only report — OS identity, architecture, memory and free space, graphics and
 NVIDIA state, display session, pacman and its lock, sudo, and one outbound probe —
-and the step fails the run on a blocker rather than letting twenty-four later steps
-each fail for the same cause. `./install.sh --preflight-only` runs that report and
+and the step fails the run on a blocker rather than letting every later step
+fail for the same cause. `./install.sh --preflight-only` runs that report and
 nothing else, without root, so "would this even run here" can be asked before
 deciding to ask for privilege. As of this revision the privileged operations are:
 
 | Operation | Where | Why it matters |
 | :--- | :--- | :--- |
 | `pacman -Syu --noconfirm` for the whole-system upgrade, `pacman -Rns --noconfirm` for the removal path, `pacman -U --noconfirm` for the two Chaotic packages | `install.sh:1841`, `install.sh:1127`, `install.sh:1044` and `install.sh:1049`; every transaction that names a target goes through `lib/packages.sh:182` instead | Installs and upgrades without a per-package prompt. The upgrade announces how many packages it will change and names the first twenty before it starts, and the removal names its candidates and advertises keeping them as the default, so both `--noconfirm` calls follow a review rather than replacing one (`INS-01`) |
-| `yay -S --noconfirm --needed` for the AUR greeter and icon-theme packages | `lib/packages.sh:231`, called from `install.sh:2063-2085` | Builds third-party code from the AUR without review, on a fatal step: no greeter means no login manager (`INS-03`) |
+| `yay -S --noconfirm --needed` for the AUR greeter and icon-theme packages | `lib/packages.sh:231`, called from `install.sh:2096-2118` | Builds third-party code from the AUR without review, on a fatal step: no greeter means no login manager (`INS-03`) |
 | Edits `/etc/pacman.conf`: uncomments `[multilib]`, appends and reorders `[chaotic-aur]` | `install.sh`, `ensure_multilib_repo_enabled` and `reorder_pacman_conf` | Backs the file up to `/etc/pacman.conf.bak.<epoch>` first |
 | `pacman-key --recv-key 3056513887B78AEB` from `keyserver.ubuntu.com`, then `pacman -U --noconfirm` of `chaotic-keyring` and `chaotic-mirrorlist` from `cdn-mirror.chaotic.cx` | `install.sh`, `install_chaotic_aur` | Trusts a third-party packager and fetches packages over the network (`TP-05`) |
 | `dnf -y copr enable` for three COPRs | `fedora_install.sh:92-104` | Adds third-party build repositories system-wide |
-| `sudo systemctl disable sddm` then `sudo systemctl enable greetd` | `install.sh:2080` and `install.sh:2081-2084`, after `install.sh:2035-2061` | Replaces the display manager; this is the change most likely to leave a machine unbootable into a graphical session. The switch is unconditional, but it is now written down first: every unit that was enabled is recorded in `~/.local/state/iarch/display-manager-before.txt`, which `uninstall.sh` reads to print the commands that put the machine back (`INS-03`) |
+| `sudo systemctl disable sddm` then `sudo systemctl enable greetd` | `install.sh:2113` and `install.sh:2114-2117`, after `install.sh:2068-2094` | Replaces the display manager; this is the change most likely to leave a machine unbootable into a graphical session. The switch is unconditional, but it is now written down first: every unit that was enabled is recorded in `~/.local/state/iarch/display-manager-before.txt`, which `uninstall.sh` reads to print the commands that put the machine back (`INS-03`) |
 | `systemctl enable --now cups`, `systemctl enable bluetooth`, `accounts-daemon` | `install.sh:1182`, `install.sh:1198`, `fedora_install.sh:523-542` | Changes which services start at boot |
 | `chown -R` on `/var/lib/noctalia-greeter` | `fedora_install.sh:582`, `install.sh:1707` | Ownership change, scoped to one directory the installer created |
 | `rm -rf` on the staging directory it created | both installers | Scoped to a temporary directory the script owns |

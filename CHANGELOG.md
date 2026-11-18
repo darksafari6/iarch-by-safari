@@ -77,7 +77,7 @@ manifest nothing consumed.
   GitHub, an NVIDIA controller with no module loaded, no sudo, no Hyprland on `PATH` yet — is a
   warning that gets printed and walked past, because a judgement this script has no evidence for is
   not a reason to stop somebody's install. Fatal from the other end: on a machine that cannot run
-  the steps, twenty-four failures in the summary hide the one cause.
+  the steps, a summary listing every later failure hides the one cause.
 - **`--preflight-only`, which needs neither root nor a terminal.** The report runs before the root
   check and before the first prompt, so "would this even run here" can be asked before asking for
   privilege. It reads `$SCRIPT_DIR` rather than `$REPO_DIR`, because `REPO_DIR` is not assigned
@@ -161,21 +161,25 @@ manifest nothing consumed.
   restored, one `chown -R` per path, instead of all of `~/.config` — a claim about every file in it,
   including the ones this installer has never heard of. `tests/test_installer_wizard.py` fails if
   the unrestricted form comes back.
-- **`STEP_TOTAL` is 25, and the test that checks the banner now reads the literal** instead of
-  pinning `[ 1/24]` in a second place. The count is still asserted three ways — the literal, the
-  number of step calls in the main flow, and the fatal list, which gained the report as its first
-  member.
-- **Every citation into `install.sh` was remapped by diffing the two revisions, twice**, not by
+- **`STEP_TOTAL` is 26, and the test that checks the banner now reads the literal** instead of
+  pinning `[ 1/24]` in a second place. This slice added one step and `main` added another — the
+  saved session theme — while both were in flight, which is the arithmetic a hard-coded banner count
+  gets wrong. The count is still asserted three ways: the literal, the number of step calls in the
+  main flow, and the fatal list, which gained the report as its first member.
+- **Every citation into the two installers was remapped by diffing revisions, three times**, not by
   adding an offset to the old number: `.shellcheckrc`, `SECURITY.md`, three design records,
   `docs/UNVERIFIED.md`, two docstrings, the generated `startup.lua` header and the expectation table
   in `tests/test_citations.py`. Twenty-nine moved when the argument parser, the prompt helper and
-  the report step went in near the top of the file, and fifty-one more when the failure summary grew
-  seven lines below them; each pass reconstructed the revision the citations were written against,
-  asked `difflib` for the opcodes, and asserted the diff was the single insertion it was supposed to
-  be before trusting the map. An offset assumes nothing else moved, which is the mistake that
-  produced the drift that file exists to catch. Reading the diff afterwards caught three numbers
-  that were never `install.sh` citations at all — `legacy-install.sh:444` and
-  `session-install.sh:71` and `:73` — which a hyphen in a filename had made look like one.
+  the report step went in near the top of `install.sh`, fifty-one more when the failure summary grew
+  seven lines below them, and thirteen more — eight expectation keys with them — when this branch
+  was rebased onto the saved-theme work that landed on `main` in the meantime, which put a function
+  and a step into the same file and sixty-eight lines into `fedora_install.sh`. Each pass
+  reconstructed the revision the citations were written against, asked `difflib` for the opcodes,
+  and asserted the diff was the edit it was supposed to be before trusting the map. An offset
+  assumes nothing else moved, which is the mistake that produced the drift that file exists to
+  catch. Reading the diff afterwards caught three numbers that were never `install.sh` citations at
+  all — `legacy-install.sh:444` and `session-install.sh:71` and `:73` — which a hyphen in a filename
+  had made look like one.
 - **`docs/ROADMAP.md`'s Part 6 section now separates what landed from what did not.** The
   provisional scope stays as it was written; under it, the slice this entry describes, and then what
   is still open — `lib/iarch-common.sh` unadopted, the nine prompts in `fedora_install.sh`,

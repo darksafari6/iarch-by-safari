@@ -17,8 +17,8 @@ Two defects this file exists to keep fixed:
   no terminal is not asked at all.
 * ``STEP_TOTAL`` is a literal in one part of a file whose steps are calls in
   another part of the same file. Nothing but a test stops them drifting apart,
-  and a banner that promises 25 steps and then prints ``[23/20]`` is worse than
-  no number at all.
+  and a banner that promises one count and then prints another is worse than no
+  number at all, which is why the test below reads the literal out of the file.
 """
 
 from __future__ import annotations
@@ -213,7 +213,7 @@ class TheStepList(unittest.TestCase):
                          "fatal from the other end, because on a machine that is not "
                          "Arch, or one whose package database a running transaction "
                          "holds, every step after it fails -- and a summary listing "
-                         "twenty-four failures hides the one cause")
+                         "every one of those failures hides the single cause")
 
 
 class ThePackageTransactions(unittest.TestCase):
@@ -536,8 +536,8 @@ class TheQuestionsAndTheReport(unittest.TestCase):
                          "a privileged step runs before the report, so the machine's "
                          "answer about itself comes after something was already changed")
         self.assertEqual("fatal_step", calls[0].group("kind"),
-                         "the report is advisory, which means the twenty-four failures "
-                         "that follow it on a machine that cannot run them are the summary")
+                         "the report is advisory, which means the wall of failures "
+                         "that follows it on a machine that cannot run them is the summary")
         self.assertLess(MAIN_FLOW.index('fatal_step "Preflight"'),
                         MAIN_FLOW.index('fatal_step "Chaotic-AUR repository"'),
                         "the first privileged step fetches a signing key before the "

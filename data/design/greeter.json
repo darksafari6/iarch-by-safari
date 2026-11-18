@@ -6,7 +6,7 @@
   "shell_verified_against": "Noctalia v5.4.1, fetched 2026-11-09",
   "source": "noctalia-dev/noctalia-greeter at v1.7.0: src/greeter/greeter_config_store.h, src/greeter/greeter_config_io.cpp, src/greeter/greeter_preferences.h, src/greeter/greeter_preferences.cpp, src/greeter/appearance_sync.h, src/greeter/appearance_sync.cpp, src/greeter/appearance_config.cpp, src/greeter/session_config.cpp, src/compositor/noctalia_compositor.c, src/compositor/system_keyboard_config.c, src/config/config_types.h, src/render/animation/animation.h, src/main.cpp, examples/greeter.toml, docs/user/configuration.md, docs/user/sync.md, docs/user/input.md, data/org.noctalia.greeter.apply-appearance.policy.in, scripts/greetd_setup_lib.sh, scripts/setup_greetd_pam.sh. noctalia-dev/noctalia at v5.4.1: src/shell/greeter/greeter_appearance_sync.cpp, src/shell/greeter/greeter_appearance_sync.h, src/config/schema/config_schema.cpp, src/config/config_types.h, src/cli/schema_msg.h, src/ui/palette.h, docs/user/theming/palette.mdx.",
   "_note": "The login screen, recorded so that nothing has to be guessed about it. This project generates no file from this record: the greeter's declarative config is a root-owned system file that wins over Sync key by key, and Sync is the only supported way appearance reaches the login screen. What this record is for is the opposite of a generator — it is the evidence for the three keys this project deliberately does not emit (not_shipped), the palette contract that makes Sync work at all (palette_contract), and the four places where the greeter's own documentation disagrees with its code (doc_disagreements). Every default, enumeration and range below was read out of the v1.7.0 source, not out of the manual, because the manual is wrong in four places.",
-  "release_note": "install.sh:2070 installs the AUR package noctalia-greeter-git, which builds the main branch rather than a tag. At the fetch date main's meson.build still says version 1.7.0, so this record and the package an installer gets describe the same release, but that is a fact about today and not a guarantee. main carries two keys v1.7.0 does not; they are listed under main_only_keys and no test depends on either.",
+  "release_note": "install.sh:2103 installs the AUR package noctalia-greeter-git, which builds the main branch rather than a tag. At the fetch date main's meson.build still says version 1.7.0, so this record and the package an installer gets describe the same release, but that is a fact about today and not a guarantee. main carries two keys v1.7.0 does not; they are listed under main_only_keys and no test depends on either.",
   "main_only_keys": {
     "note": "Present in examples/greeter.toml and docs/user/configuration.md at main on 2026-11-09, absent from the same two files at v1.7.0, and absent from the v1.7.0 parser's isKnownClockKey (src/greeter/greeter_config_io.cpp:93-95), which would warn 'unrecognized key clock.time_font_size (ignored)' if it saw one.",
     "keys": {
@@ -715,8 +715,8 @@
   "installer": {
     "note": "What this repository's installers do to the login screen, recorded next to what upstream's own helper does, because the two were written independently and one line had drifted.",
     "functions": {
-      "install.sh": "install.sh:1683-1732, called at :2074 after the AUR package is installed at :2070",
-      "fedora_install.sh": "fedora_install.sh:558-607, a byte-identical copy of the Arch one, called at :1050"
+      "install.sh": "install.sh:1683-1732, called at :2107 after the AUR package is installed at :2103",
+      "fedora_install.sh": "fedora_install.sh:558-607, a byte-identical copy of the Arch one, called at :1118"
     },
     "steps": [
       "resolve the session wrapper with command -v, falling back to /usr/bin/noctalia-greeter-session",
@@ -740,7 +740,7 @@
     "not_changed": [
       "The greeter account name stays hardcoded as 'greeter' rather than resolved through the apply helper's --print-greeter-user. Upstream's own resolution falls back to the same name, the installers create the account when it is missing, and calling a root-owned helper to ask for a name during install is a larger change than the drift it would remove.",
       "No session is pinned with --session, so the greeter keeps its picker and remembers the last choice in sync.toml.",
-      "The display manager switch stays unconditional: install.sh:2080-2084 disables sddm and enables greetd whether or not sddm was what this machine booted. What changed is that the switch is now written down first — install.sh:2035-2061 records every display manager unit that was enabled into ~/.local/state/iarch/display-manager-before.txt before install_greeter reaches :2071, so uninstall.sh can print the commands that put the machine back. The riskiest operation in the installer is still the riskiest operation in the installer; it is no longer unrecoverable (INS-03)."
+      "The display manager switch stays unconditional: install.sh:2113-2117 disables sddm and enables greetd whether or not sddm was what this machine booted. What changed is that the switch is now written down first — install.sh:2068-2094 records every display manager unit that was enabled into ~/.local/state/iarch/display-manager-before.txt before install_greeter reaches :2071, so uninstall.sh can print the commands that put the machine back. The riskiest operation in the installer is still the riskiest operation in the installer; it is no longer unrecoverable (INS-03)."
     ]
   }
 }
