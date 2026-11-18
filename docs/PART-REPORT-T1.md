@@ -37,7 +37,7 @@ skeleton only; asset and milestone policies are in `docs/THEMES-ASSETS.md` and
 
 ## Verification and limits
 
-The Python suite passed 2,320 tests (five skipped). Shell syntax and shellcheck
+The Python suite passed 2,321 tests (five skipped). Shell syntax and shellcheck
 gates, six shell test suites, generated-output checks, naming and branding
 audits and the schema workflow step also passed offline. The schema workflow
 validated 49 documents against 35 schemas. Transaction success and failure, archive safety, status drift,
@@ -46,7 +46,8 @@ Quickshell session was available, so actual compositor parsing, shell IPC
 argument and acknowledgement behavior, notification ownership, sound playback,
 and live cursor/icon refresh remain **UNTESTED-LIVE**; see ENG-01 through ENG-06
 in `docs/UNVERIFIED.md`. The runtime in this part cannot acknowledge an apply;
-when it cannot be verified, apply fails closed and restores files.
+when it cannot be verified, apply fails closed and restores files. The switch
+refuses the marked skeleton before stopping a working shell.
 
 Wallpaper recipes are validated but not rendered here. The generated preview is a
 palette illustration, not screenshot parity. No actual theme sounds are bundled.

@@ -178,6 +178,12 @@ def _preflight(record: engines.Engine, env: Optional[Mapping[str, str]]) -> Opti
     if entry is not None and not Path(entry).is_file():
         return (f"its entry point {entry} does not exist, so the engine has nothing to load "
                 "(the installer puts it there)")
+    if entry is not None:
+        try:
+            if 'IARCH_SHELL_SKELETON_NOT_READY' in Path(entry).read_text(encoding='utf-8'):
+                return 'the installed dynamic shell is only a skeleton and is not ready to run'
+        except (OSError, UnicodeError):
+            return f'cannot read shell entry point {entry}'
     return None
 
 

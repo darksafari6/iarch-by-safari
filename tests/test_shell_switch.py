@@ -23,6 +23,15 @@ class ASwitchThatWorks(unittest.TestCase):
         return shell_switch.switch(target, env, run=fake.run, spawn=fake.spawn,
                                    clock=fake.clock, sleep=fake.sleep, **kwargs)
 
+    def test_skeleton_is_refused_before_stopping_classic(self):
+        with session_fake.environment() as env, \
+                session_fake.session(running={"noctalia": [123]}) as fake:
+            session_fake.install_shell(env, body='// IARCH_SHELL_SKELETON_NOT_READY\n')
+            with self.assertRaises(shell_switch.RefusedError):
+                self.switch(env, fake)
+            self.assertEqual([123], fake.pids('noctalia'))
+            self.assertFalse(fake.spawned)
+
     def test_it_stops_the_old_engine_before_it_starts_the_new_one(self):
         with session_fake.environment() as env, \
                 session_fake.session(running={"noctalia": [111]}) as fake:
