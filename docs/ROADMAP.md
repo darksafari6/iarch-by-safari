@@ -277,15 +277,38 @@ evidence or still listed.
 decides what every package step installs: one `-Sy` per run, each target classified from the local
 database, the plan printed before anything is fetched, `--needed` on every named transaction, and no
 transaction at all on a machine that is already current, which is the reviewed half of `INS-01`.
-`install.sh` runs 24 numbered steps that each print a verdict, ends with a summary that fails the run
+`install.sh` runs 26 numbered steps that each print a verdict, ends with a summary that fails the run
 when a step failed, and records every path it creates outside the repository in
 `~/.local/state/iarch/install-manifest.txt`. The icon and cursor themes the presets name are installed
 at last, in a step that warns rather than aborting, and three package names that are not in Arch's
-repositories came out of the transaction whose failure stops everything (`TP-20`). Still open:
-`--noconfirm` on `pacman -Syu` and on the removal path (`INS-01`), narrow ownership changes
-(`INS-02`), a reversible and logged display-manager switch (`INS-03`), `tools/preflight.py`, a
-manifest-driven `uninstall.sh` (`INS-08`), whether a greetd-started session inherits the `PATH` the
-installer writes (`INS-07`), and a runtime mechanism for the icon theme (`TP-19`).
+repositories came out of the transaction whose failure stops everything (`TP-20`).
+
+**The installer-safety slice.** `tools/preflight.py` runs before any privileged step, which is the
+acceptance criterion that stayed open while the tool itself already existed and was tested: the
+installer never called it. It is step one and it is fatal, because on a machine that is not vanilla
+Arch, or one whose package database a transaction still holds, every step after it fails and a summary
+listing every later failure hides the one cause; `--preflight-only` runs the same report with no root
+and no changes, so "would this even run here" is a question that can be asked before the privilege is.
+Every prompt goes through one helper that takes the default its own text advertises when there is
+nothing left to read, so an end of input ends a prompt instead of looping on "please answer" forever,
+and `--yes` means *take those defaults* rather than *answer yes* — which is the whole difference at the
+prompt that removes packages. A run whose stdin is not a terminal is refused before anything privileged
+happens, and an argument nobody defined is a refusal rather than a question. The `INS-` rows moved with
+it: `INS-01`'s upgrade half is announced — the count and the first twenty names — before
+`pacman -Syu --noconfirm`; `INS-02` is closed in code, both recursive `chown` calls now following the
+paths the step wrote, with a test that fails if the unrestricted form comes back; `INS-03` is recorded
+before the switch and printed by `uninstall.sh` after it; `INS-06` writes `[brightness] enable_ddcutil`
+into the `config.toml` the payload actually deploys, through `tools/toml_set_flag.py`, instead of a v4
+key into a v4 file that is never there; and `INS-08` is closed, because `uninstall.sh` reads the
+manifest and removes exactly the files it names. Three of the `INS-` rows turned out to be wrong
+about the code they described, and `docs/UNVERIFIED.md` now says so where each one stood.
+
+Still open: adopting `lib/iarch-common.sh` across `install.sh` and `fedora_install.sh`, which this slice
+did not do, `install.sh` keeping its own helpers; the nine prompts in `fedora_install.sh`, which have
+none of the behaviour above (`INS-09`); whether a greetd-started session inherits the `PATH` the
+installer writes (`INS-07`); a runtime mechanism for the icon theme (`TP-19`); and the acceptance
+criterion nobody can meet from a sandbox with no package manager, no display and no root — that a
+second run changes nothing on a real machine.
 
 ## Part 7 — Shortcut system
 
@@ -315,12 +338,22 @@ so there was nothing for the placeholder to become. SUPER + K is now the keyboar
 (`noctalia msg keyboard-layout-cycle`), and a cell that names a surface which does not exist is worse
 than one that names a verb which does. All 78 letter cells of the three layers a letter may live in are
 allocated in `data/design/keybinds.json -> alphabet` and rendered as a grid at the end of
-`docs/SHORTCUTS.md`, where a cell is a binding, a claimed-but-unbound key, a refusal that names the verb
-or file or command behind it, or empty on purpose; `tests/test_keybinds_alphabet.py` checks the grid
+`docs/SHORTCUTS.md`, where a cell is a binding, a claimed-but-unbound key, or a refusal that names the
+verb, file or command behind it — the fourth state the schema still allows, a cell left empty on
+purpose, has no occupant left after four passes; `tests/test_keybinds_alphabet.py` checks the grid
 against the map in both directions. The Super layer is bound across — all twenty-six of its letters —
 which the third pass of that table did by giving each empty cell a mechanism rather than a placeholder:
 eight launchers under `scripts/`, ten verbs read back out of the shell's command table, and one
-compositor configuration call whose leaves `data/design/tokens.json` already records. The two workspace moves the v1 map carried into `Super+Ctrl+Alt`
+compositor configuration call whose leaves `data/design/tokens.json` already records. The fourth pass
+finished the other two layers and the map with them: `Super+Shift` is twenty-five bound and one
+claimed, `Super+Ctrl` eighteen bound and eight refused, and the record went from 98 bindings to 129,
+from 51 verbs to 66 of the shell's 119, and from fifteen linked launcher names to sixteen with
+`scripts/iarch-clipboard.sh`. Four dispatchers moved out of the design record's used list into
+`not_used` with a reason each, because `hl.dsp.layout` is tiling rather than keyboard layout and
+`hl.dsp.window.pseudo`, `.pin` and `.center` have no caller here; the five rows that pass added to
+`docs/UNVERIFIED.md` are `KB-11` to `KB-15`, and every one of the thirty-one bindings carries an
+`unverified` note pointing at the row that explains it. The two workspace moves the v1 map carried into `Super+Ctrl+Alt`
 moved to `Super+Ctrl+N` and `Super+Ctrl+P`, so the shipped map reports no warning at all. Still open:
 the glass overlay surface with a box you type into (`UI-02`), a Shortcuts page that edits the map rather
-than reading it, and every claim that needs a session (`KB-01`, `KB-03`, `KB-06`).
+than reading it, and every claim that needs a session — `KB-01`, `KB-03` and `KB-06`, and the five the
+fourth pass added, `KB-11` to `KB-15`.

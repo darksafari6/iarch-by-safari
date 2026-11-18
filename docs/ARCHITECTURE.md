@@ -110,6 +110,8 @@ the map. Read it before changing anything.
 │   ├── render_shortcuts.py   Renders docs/SHORTCUTS.md out of the keybind record and the A to Z table.
 │   ├── profile_preset.py     Applies or reverts an effect preset, backup first.
 │   ├── preflight.py          Read-only host checks before an install.
+│   ├── toml_set_flag.py      Sets one boolean in one TOML table, comments intact.
+│   ├── render_theme.py       Renders the saved session theme pack; install.sh calls it.
 │   ├── diagnose.py           Read-only session diagnostics (legacy v4 session).
 │   ├── recover_session.py    Lists and restores session backups (legacy v4 session).
 │   ├── glass_preset.py       Experimental glass preset for the legacy v4 session.
@@ -133,9 +135,11 @@ the map. Read it before changing anything.
 ├── CHANGELOG.md              What changed, newest first.
 ├── SECURITY.md               How to report a problem, given privileged installers.
 │
-├── install.sh                Arch installer: system-wide, root, 24 numbered steps.
+├── install.sh                Arch installer: system-wide, root, 26 numbered steps, the first
+│                             of them the read-only report from tools/preflight.py.
 ├── fedora_install.sh         Fedora installer: system-wide, root, fresh install.
-├── uninstall.sh              Restores timestamped backups; never deletes an active config.
+├── uninstall.sh              Restores timestamped backups and removes the files the install
+│                             manifest records; never deletes an active config.
 │
 └── legacy/                   The frozen v4 payload and its two deprecated scripts.
     ├── install-v4-session.sh Deprecate-on-sight installer for the isolated legacy session.

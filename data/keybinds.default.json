@@ -392,6 +392,146 @@
       "unverified": "`clipboard` is one of the nine builtin panel ids at noctalia v5.4.1 (src/launcher/panel_catalog.cpp:25-35), and the shell keeps a history behind it: clipboard-text prints the most recent entry and clipboard-clear erases the history (src/cli/schema_msg.h:433-446). No shell and no display exist here, so the panel has never been opened and whether it draws the history or only the last entry is unobserved. TODO(verify) KB-09."
     },
     {
+      "id": "applications.calendar-controls",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "C",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-control-center",
+          "calendar"
+        ]
+      },
+      "description": "Open the calendar panel",
+      "category": "Applications",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-control-center.sh sends `panel-toggle control-center calendar`, and `calendar` is one of the twelve tabs the shell's control centre declares at v5.4.1 (src/shell/control_center/control_center_panel.h:133-145) -- the list docs/ROADMAP.md Part 7 quotes, and the same shape as the five contexts this layer already binds. The verb and its optional context positional are recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:683-690. No shell and no display exist here, so the tab has never been drawn and what it draws on a machine with no calendar account configured is unobserved. TODO(verify) KB-11."
+    },
+    {
+      "id": "applications.media-controls",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "M",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-control-center",
+          "media"
+        ]
+      },
+      "description": "Open the media panel",
+      "category": "Applications",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-control-center.sh sends `panel-toggle control-center media`, and `media` is one of the twelve tabs the shell's control centre declares at v5.4.1 (src/shell/control_center/control_center_panel.h:133-145) -- the list docs/ROADMAP.md Part 7 quotes, and the same shape as the five contexts this layer already binds. The verb and its optional context positional are recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:683-690. No shell and no display exist here, so the tab has never been drawn and what it draws when nothing is playing is unobserved. TODO(verify) KB-11."
+    },
+    {
+      "id": "applications.monitor-controls",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "O",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-control-center",
+          "monitor"
+        ]
+      },
+      "description": "Open the monitor panel",
+      "category": "Applications",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-control-center.sh sends `panel-toggle control-center monitor`, and `monitor` is one of the twelve tabs the shell's control centre declares at v5.4.1 (src/shell/control_center/control_center_panel.h:133-145) -- the list docs/ROADMAP.md Part 7 quotes, and the same shape as the five contexts this layer already binds. The verb and its optional context positional are recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:683-690. No shell and no display exist here, so the tab has never been drawn and what it offers on a single-output machine is unobserved. TODO(verify) KB-11."
+    },
+    {
+      "id": "applications.screen-time",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "S",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-control-center",
+          "screen-time"
+        ]
+      },
+      "description": "Open the screen time panel",
+      "category": "Applications",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-control-center.sh sends `panel-toggle control-center screen-time`, and `screen-time` is one of the twelve tabs the shell's control centre declares at v5.4.1 (src/shell/control_center/control_center_panel.h:133-145) -- the list docs/ROADMAP.md Part 7 quotes, and the same shape as the five contexts this layer already binds. The verb and its optional context positional are recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:683-690. No shell and no display exist here, so the tab has never been drawn and whether it has any history to report on a session it has just been installed on is unobserved. TODO(verify) KB-11."
+    },
+    {
+      "id": "applications.clipboard-clear",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "Y",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-clipboard",
+          "clear"
+        ]
+      },
+      "description": "Clear the clipboard history (asks first)",
+      "category": "Applications",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-clipboard.sh puts the shell's own picker in front of `clipboard-clear` (src/cli/schema_msg.h:433) and sends the verb only on an answer the picker returned, because erasing the history SUPER + Y opens is the one thing a key press in this map can lose. iarch/cli/iarch_keybinds.py's confirmation rule does not reach it -- `destructive_reason` is about a session or a machine ending -- so the confirmation is in the script rather than in the checker. The picker is `noctalia dmenu`, whose contract and socket scripts/iarch-run.sh already cites (src/launcher/dmenu_cli.h, src/launcher/dmenu_socket_path.cpp:8-19). No shell, no picker and no display exist here, so nothing was ever offered and nothing was ever cleared. TODO(verify) KB-13."
+    },
+    {
+      "id": "applications.home-controls",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "H",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-control-center",
+          "home"
+        ]
+      },
+      "description": "Open the control centre's home tab",
+      "category": "Applications",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-control-center.sh sends `panel-toggle control-center home`, and `home` is one of the twelve tabs the shell's control centre declares at v5.4.1 (src/shell/control_center/control_center_panel.h:133-145) -- the list docs/ROADMAP.md Part 7 quotes, and the same shape as the five contexts this layer already binds. The verb and its optional context positional are recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:683-690. No shell and no display exist here, so the tab has never been drawn and which of the shell's own summaries that tab draws is unobserved. TODO(verify) KB-11."
+    },
+    {
+      "id": "applications.clipboard-show",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "Y",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-clipboard",
+          "show"
+        ]
+      },
+      "description": "Show the last clipboard entry",
+      "category": "Applications",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-clipboard.sh reads `clipboard-text` (src/cli/schema_msg.h:437) and hands the first line to `notification-show` (:653-660), because a key press has no stdout and a card the shell draws is the only place this repository can put an answer the shell printed. The IPC is line-capped, so the first line is all a card can carry and the script says on stderr when it dropped the rest. Nothing has been read or drawn here: no shell, no display. TODO(verify) KB-13."
+    },
+    {
       "id": "window.close",
       "mods": [
         "SUPER"
@@ -436,6 +576,57 @@
       "category": "Window Management",
       "enabled": true,
       "locked": false
+    },
+    {
+      "id": "window.fullscreen-state",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "F",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.fullscreen_state"
+      },
+      "description": "Fullscreen, keeping the bar",
+      "category": "Window Management",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`hl.dsp.window.fullscreen_state` is a leaf of the verified dispatcher tree (src/config/lua/bindings/LuaBindingsDispatchers.cpp:1339-1361) recorded with a maximum of one argument, so calling it with none is the form the shipped config already uses for hl.dsp.window.close. data/design/keybinds.json records what the state means -- fullscreen while keeping the bar, which is the state the shell draws around -- and that is the counterpart of SUPER + F rather than a second spelling of it. No compositor exists here, so no window ever changed state and which kind of fullscreen a window was already in when the key went down was not observed. TODO(verify) KB-12."
+    },
+    {
+      "id": "window.kill",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "Q",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.kill"
+      },
+      "description": "Force close the focused window",
+      "category": "Window Management",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`hl.dsp.window.kill` is in the verified tree (LuaBindingsDispatchers.cpp:1339-1361) and data/design/keybinds.json records it as the force close a force-quit picker needs; this is the key that needs it, beside the close request SUPER + Q sends. A window that does not answer close is the case a second spelling exists for, so this is the other half of window.close and not a duplicate of it. No compositor exists here, so nothing was ever killed and whether a client that ignores the close request answers this one was not observed. TODO(verify) KB-12."
+    },
+    {
+      "id": "window.bring-to-top",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "U",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.bring_to_top"
+      },
+      "description": "Raise the focused window",
+      "category": "Window Management",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`hl.dsp.window.bring_to_top` is recorded with a maximum of zero arguments (LuaBindingsDispatchers.cpp:1339-1361), which data/design/keybinds.json says means it is called with no arguments at all -- the same form as the shipped hl.dsp.window.close(). It raises the focused window in the stacking order, and it is the one stacking action in the tree that needs neither an argument nor a window address, which is why the cell got it rather than window.alter_zorder, whose single argument this repository has no verified word for. No compositor exists here, so no window was ever raised. TODO(verify) KB-12."
     },
     {
       "id": "window.next-monitor",
@@ -744,6 +935,23 @@
       "category": "Window Navigation & Layout",
       "enabled": true,
       "locked": false
+    },
+    {
+      "id": "window.cycle-next",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "J",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.window.cycle_next"
+      },
+      "description": "Cycle focus to the next window",
+      "category": "Window Navigation & Layout",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`hl.dsp.window.cycle_next` is in the verified tree (LuaBindingsDispatchers.cpp:1339-1361) with a maximum of one argument, called here with none. It is the compositor's own cycle and deliberately not a second spelling of SUPER + J, which sends the shell's `window-switcher` overlay: one draws a list a person picks from and the other moves focus without drawing anything, which is the difference between choosing and stepping. No compositor and no shell exist here, so focus never moved and the order the compositor cycles in was not observed. TODO(verify) KB-12."
     },
     {
       "id": "screenshots.screenshot",
@@ -1191,6 +1399,23 @@
       "locked": false
     },
     {
+      "id": "workspace.special",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "J",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.workspace.toggle_special"
+      },
+      "description": "Open or close the special workspace",
+      "category": "Workspace Navigation",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`hl.dsp.workspace.toggle_special` is a leaf of the verified tree (LuaBindingsDispatchers.cpp:1363-1369) with a maximum of one argument -- the name of a special workspace -- and is called here with none, so the compositor's own default name decides. Nothing in this repository configures a special workspace, which is the honest reason the argument is omitted rather than a choice about which one to open. No compositor exists here, so the workspace was never opened or closed. TODO(verify) KB-12."
+    },
+    {
       "id": "move.next",
       "mods": [
         "SUPER",
@@ -1370,6 +1595,148 @@
       "enabled": true,
       "locked": false,
       "unverified": "wallpaper-next is recorded in data/design/noctalia-ipc.json from src/cli/schema_msg.h:842-849 with an optional connector, so sending it bare means every output, which is what a key press should do. The shell owns the order and the place it got to, and that is why this project cycles with a verb instead of listing assets/wallpapers itself and inventing both. No shell and no display exist here, so no wallpaper has changed. TODO(verify) KB-09."
+    },
+    {
+      "id": "appearance.dock",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "D",
+      "action": {
+        "type": "noctalia",
+        "verb": "dock-toggle"
+      },
+      "description": "Hide or show the dock",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`dock-toggle` persists its override, which is upstream's own note on the hide and show halves beside it (src/cli/schema_msg.h:512-516) and the reason this cell exists: scripts/iarch-zen.sh hides the dock as one of three and a shell restart leaves it hidden, so the both-ways form is the way back without a terminal. No shell and no display exist here, and no dock was ever hidden or shown. TODO(verify) KB-11."
+    },
+    {
+      "id": "appearance.lockscreen-widgets-edit",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "L",
+      "action": {
+        "type": "noctalia",
+        "verb": "lockscreen-widgets-toggle-edit"
+      },
+      "description": "Edit the lock screen's widgets",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`lockscreen-widgets-toggle-edit` takes no argument (src/cli/schema_msg.h:570-572) and is the toggle rather than the enter and exit halves beside it, so one combination both opens the editor and leaves it and neither state can be stranded. SUPER + L locks the session, which is why the letter got the lock screen's other half: the widgets can only be edited while the session is unlocked and the result can only be seen by locking. No shell, no lock screen and no display exist here. TODO(verify) KB-11."
+    },
+    {
+      "id": "appearance.bar-reserve",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "R",
+      "action": {
+        "type": "noctalia",
+        "verb": "bar-reserve-toggle"
+      },
+      "description": "Give the bar's strip back to the screen",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`bar-reserve-toggle` takes two optional positionals (src/cli/schema_msg.h:365-374 and :103-106), so sending it bare means every bar on every output, which is what a key press should ask for. It is not a visibility switch: the bar stays drawn and stops reserving its strip. Upstream's own word for the change is 'temporarily', and what ends it was not observed -- a shell restart is a guess this row refuses to make. No shell and no display exist here. TODO(verify) KB-11."
+    },
+    {
+      "id": "appearance.templates",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "T",
+      "action": {
+        "type": "noctalia",
+        "verb": "templates-apply"
+      },
+      "description": "Re-apply the theme templates",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`templates-apply` takes no argument (src/cli/schema_msg.h:801-803), so a key can send it without knowing which templates are configured. It is the shell re-applying its own templates over the palette it already has, which is not what `iarch-theme apply` does: that renders the surfaces this repository owns and then sends config-reload. Nothing here has watched a template re-apply, because there is no shell. TODO(verify) KB-11."
+    },
+    {
+      "id": "appearance.desktop-widgets",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "Z",
+      "action": {
+        "type": "noctalia",
+        "verb": "desktop-widgets-toggle"
+      },
+      "description": "Hide or show the desktop widgets",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`desktop-widgets-toggle` is runtime only and its description says so (src/cli/schema_msg.h:499-508), so the saved setting survives the key press and the widgets come back at the next shell start -- the difference from dock-toggle, whose override persists. scripts/iarch-zen.sh sends the hide and show halves rather than this one, because a toggle cannot be sent as one of three and still leave the script knowing which way it went; a single key has no state to keep. No shell and no display exist here. TODO(verify) KB-11."
+    },
+    {
+      "id": "appearance.desktop-widgets-edit",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "E",
+      "action": {
+        "type": "noctalia",
+        "verb": "desktop-widgets-toggle-edit"
+      },
+      "description": "Edit the desktop widgets",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`desktop-widgets-toggle-edit` puts the widgets that are already on the desktop into edit mode (src/cli/schema_msg.h:509-511), which is a different change from the visibility toggle at SUPER + SHIFT + Z: these stay drawn and become movable. It takes no argument, so nothing about which widgets are configured has to be known at bind time. No shell and no display exist here. TODO(verify) KB-11."
+    },
+    {
+      "id": "appearance.glass",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "G",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-cycle",
+          "blur"
+        ]
+      },
+      "description": "Cycle the glass intensity",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-cycle.sh steps the glass intensity through the four data/design/tokens.json records (crystal, frosted, soft, performance) and hands the one it landed on to `iarch-theme apply --intensity`, which renders every surface and asks for one reload. The script's own header names this cycle as a candidate for a cell and this is the cell it got; the header is also honest about the cost, because an intensity carries rounding, shadow, opacity and the dim values with it and there is no blur-only leaf to step instead. The CLI is exercised here against a temporary HOME; the rendered session is not, because there is no compositor and no display. TODO(verify) KB-15."
+    },
+    {
+      "id": "appearance.animation",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "A",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-cycle",
+          "animation"
+        ]
+      },
+      "description": "Cycle the animation preset",
+      "category": "Appearance",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-cycle.sh asks `iarch-anim list --json` for the presets in their own order and for the one that is active, steps to the next name and wraps, then hands that name to `iarch-anim set` -- so a preset added to data/design/animations/ is in the cycle the moment it exists and no list is kept in the script. The header names both cycles as candidates for a cell; this is the second of the two. The CLI is exercised here; the animations a compositor would run are not, because there is no compositor. TODO(verify) KB-15."
     },
     {
       "id": "mouse.scroll-next",
@@ -1594,6 +1961,46 @@
       "unverified": "scripts/iarch-audio.sh runs `wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle`, which is the form wpctl's own manual gives as its example (wpctl(1), SET-MUTE), and passes the exit status through rather than flattening it: 2 is 'could not connect to PipeWire' and 3 a command-specific error such as an object that was not found, and a caller that cannot tell those apart cannot say anything useful. No PipeWire session and no wpctl exist here, so nothing has been muted. The row carries no `repeating` flag on purpose: a toggle the compositor fires again while the key is held flips back and forth and ends wherever the release happened to land. TODO(verify) KB-07. The capture side is @DEFAULT_AUDIO_SOURCE@, which wpctl(1) lists under SPECIAL IDENTIFIERS as the current default capture device."
     },
     {
+      "id": "media.volume-osd",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "V",
+      "action": {
+        "type": "noctalia",
+        "verb": "volume-osd"
+      },
+      "description": "Show the volume without changing it",
+      "category": "Media",
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true
+      },
+      "unverified": "`volume-osd` takes an optional value that defaults to the current one (src/cli/schema_msg.h:823-829 and :238), so a key sends it bare and the popup reports the level the session is already at. The settings application's Sound page sends the same verb for its open-the-mixer action, and this is the same answer from a key: the level, without the step the two XF86 volume keys take through scripts/iarch-audio.sh. No shell and no display exist here, so no OSD was ever drawn. The row carries `flags.locked`, upstream's BIND_FLAG_LOCKED (data/design/keybinds.json bind.options.locked, read at src/config/lua/bindings/LuaBindingsToplevel.cpp:131 and :143), so the popup is still reachable while the lock screen inhibits input -- which is what the test this map is held against requires of every Media row, and what the seven XF86 keys here already do. No compositor runs in this sandbox, so the flag's effect is asserted from that recorded meaning rather than watched happen. TODO(verify) KB-11."
+    },
+    {
+      "id": "media.mic-volume-osd",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "V",
+      "action": {
+        "type": "noctalia",
+        "verb": "mic-volume-osd"
+      },
+      "description": "Show the microphone level",
+      "category": "Media",
+      "enabled": true,
+      "locked": false,
+      "flags": {
+        "locked": true
+      },
+      "unverified": "`mic-volume-osd` is the capture half (src/cli/schema_msg.h:585-594 and :160-162), the same optional value defaulting to the current level. It is bound while SUPER + CTRL + M stays reserved: XF86AudioMicMute already mutes the microphone through scripts/iarch-audio.sh, so a letter that muted it would be a second spelling, while nothing else in this map answers how loud the microphone is right now. No shell, no PipeWire session and no display exist here. The row carries `flags.locked`, upstream's BIND_FLAG_LOCKED (data/design/keybinds.json bind.options.locked, read at src/config/lua/bindings/LuaBindingsToplevel.cpp:131 and :143), so the popup is still reachable while the lock screen inhibits input -- which is what the test this map is held against requires of every Media row, and what the seven XF86 keys here already do. No compositor runs in this sandbox, so the flag's effect is asserted from that recorded meaning rather than watched happen. TODO(verify) KB-11."
+    },
+    {
       "id": "brightness.up",
       "mods": [],
       "key": "XF86MonBrightnessUp",
@@ -1634,6 +2041,59 @@
         "repeating": true
       },
       "unverified": "The mirror of brightness.up and the same script, with the suffix form `5%-` rather than the prefix form `+5%`: brightnessctl's parse_value accepts the sign on either side, but a leading `-` would be read by getopt as an option. The --min-value=1 floor is what stops a held key reaching a black screen, and calc_value forces the delta to -1 when a non-zero percentage request would round to zero (brightnessctl.c:397-398), so the step can never be a silent no-op on a backlight whose maximum is small. No machine here has a backlight, so no level has changed. TODO(verify) KB-07."
+    },
+    {
+      "id": "brightness.keyboard-backlight",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "K",
+      "action": {
+        "type": "noctalia",
+        "verb": "keyboard-backlight-toggle"
+      },
+      "description": "Turn the keyboard backlight on or off",
+      "category": "Brightness",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`keyboard-backlight-toggle` takes no argument and reaches all of the machine's keyboard backlights, which is the shell's own enumeration (src/cli/schema_msg.h:555-557) rather than a sysfs path this project guessed -- the difference from scripts/iarch-brightness.sh, which has to name a display device. The two steps beside it are on the two XF86 keys a keyboard already sends, so the letter carries the one action those keys cannot. No shell, no display and no backlit keyboard exist here. TODO(verify) KB-11."
+    },
+    {
+      "id": "brightness.keyboard-up",
+      "mods": [],
+      "key": "XF86KbdBrightnessUp",
+      "action": {
+        "type": "noctalia",
+        "verb": "keyboard-backlight-up"
+      },
+      "description": "Keyboard backlight up",
+      "category": "Brightness",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`keyboard-backlight-up` steps one level and the level list is the shell's (src/cli/schema_msg.h:558-560), so there is no floor for this repository to enforce the way scripts/iarch-brightness.sh enforces one for the display with --min-value=1: the bottom of a level list is off. The keysym is one of the 2577 data/reference/xkb-keysyms-1.7.0.txt pins, at :1352, and nothing bound it before this row. `repeating` is what makes holding the key walk the levels and `locked` what makes it work on the lock screen, both matching the two display-brightness rows beside it. No machine here has a keyboard backlight, so no level changed and whether a keyboard with none answers the verb at all was not observed. TODO(verify) KB-14.",
+      "flags": {
+        "locked": true,
+        "repeating": true
+      }
+    },
+    {
+      "id": "brightness.keyboard-down",
+      "mods": [],
+      "key": "XF86KbdBrightnessDown",
+      "action": {
+        "type": "noctalia",
+        "verb": "keyboard-backlight-down"
+      },
+      "description": "Keyboard backlight down",
+      "category": "Brightness",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`keyboard-backlight-down` steps one level and the level list is the shell's (src/cli/schema_msg.h:532-534), so there is no floor for this repository to enforce the way scripts/iarch-brightness.sh enforces one for the display with --min-value=1: the bottom of a level list is off. The keysym is one of the 2577 data/reference/xkb-keysyms-1.7.0.txt pins, at :1353, and nothing bound it before this row. `repeating` is what makes holding the key walk the levels and `locked` what makes it work on the lock screen, both matching the two display-brightness rows beside it. No machine here has a keyboard backlight, so no level changed and whether a keyboard with none answers the verb at all was not observed. TODO(verify) KB-14.",
+      "flags": {
+        "locked": true,
+        "repeating": true
+      }
     },
     {
       "id": "overlay.cheatsheet",
@@ -1762,6 +2222,114 @@
       "locked": false,
       "static": true,
       "unverified": "The bind is written and registered, and scripts/iarch-link-cli.sh now puts the name it calls on PATH (~/.local/bin/iarch-keybinds, a generated wrapper that execs scripts/iarch-keybinds.sh in the checkout). What has not happened is the bind firing: no installer has been run on a machine, no session PATH has been checked, and no compositor exists here, so whether a deployed session resolves iarch-keybinds is unobserved. Until it does the bind opens a terminal and says why on stderr, naming the command to run, instead of failing silently. TODO(verify) KB-01, KB-02."
+    },
+    {
+      "id": "session.rerender",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "U",
+      "action": {
+        "type": "exec",
+        "command": [
+          "iarch-reload",
+          "config"
+        ]
+      },
+      "description": "Re-render every surface, then reload",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "unverified": "scripts/iarch-reload.sh's `config` half, which its own header says has no key: it re-renders every surface this repository generates from ~/.config/iarch/settings.json -- the glass, the animations, the GTK sheets and the keybinds' own generated file -- and then asks for the two reloads the `session` half asks for. That is `iarch-theme apply` with no preset, so the colour preset and the intensity the settings already name are kept. SUPER + U is the half that only re-reads; this is the half that re-writes first. The CLIs are exercised here against a temporary HOME; no session was ever re-rendered. TODO(verify) KB-15."
+    },
+    {
+      "id": "system.release-input-capture",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "X",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.release_input_capture"
+      },
+      "description": "Release a stuck input capture",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`hl.dsp.release_input_capture` is a top-level member of the verified dispatcher tree recorded with a maximum of zero arguments (src/config/lua/bindings/LuaBindingsDispatchers.cpp:1371-1387), so it is called with none. It is the escape hatch for a session whose input a client captured and did not give back, which is a failure no other key in this map answers and the reason the row is in the System category rather than beside the window actions. No compositor exists here, so no capture was ever released and whether a session with nothing captured answers it as a no-op was not observed. TODO(verify) KB-12."
+    },
+    {
+      "id": "notifications.invoke-latest",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "I",
+      "action": {
+        "type": "noctalia",
+        "verb": "notification-invoke-latest"
+      },
+      "description": "Act on the newest notification",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`notification-invoke-latest` takes no argument (src/cli/schema_msg.h:643-652), so which notification is the most recent active one is the shell's answer and not a guess this bind has to make. It runs the action behind the card rather than dismissing it, which is what SUPER + N does, and is what clicking the card would do. No shell and no display exist here, so no card was ever acted on and what a card with no default action answers was not observed. TODO(verify) KB-11."
+    },
+    {
+      "id": "system.panel-close",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "Q",
+      "action": {
+        "type": "noctalia",
+        "verb": "panel-close"
+      },
+      "description": "Close the open panel",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`panel-close` takes an optional id and closes the active panel when it gets none (src/cli/schema_msg.h:666-675 and :180-182). Every open in this map is a toggle, so the one thing a toggle cannot do is close whichever panel happens to be up without knowing which one that is; that is the whole of this row, and why the cell is a close rather than another open. No shell and no display exist here, so no panel was ever closed and whether sending it with nothing open is a silent no-op was not observed. TODO(verify) KB-11."
+    },
+    {
+      "id": "system.renderer-reload",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "X",
+      "action": {
+        "type": "dispatch",
+        "dispatcher": "hl.dsp.force_renderer_reload"
+      },
+      "description": "Reload the renderer",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`hl.dsp.force_renderer_reload` is a top-level member of the verified tree recorded with a maximum of zero arguments (LuaBindingsDispatchers.cpp:1371-1387). It is the recovery half for a session that is drawing wrong rather than one that is not drawing at all, which is a different failure from the one CTRL + ALT + R answers: that one re-applies the default map when a generated file will not load, this one asks the compositor to rebuild what it is already drawing. No compositor exists here, so no renderer was ever reloaded and what a session looks like while it happens was not observed. TODO(verify) KB-12."
+    },
+    {
+      "id": "session.suspend",
+      "mods": [
+        "SUPER",
+        "CTRL"
+      ],
+      "key": "Z",
+      "action": {
+        "type": "noctalia",
+        "verb": "session",
+        "args": [
+          "lock-and-suspend"
+        ]
+      },
+      "description": "Lock and suspend",
+      "category": "System",
+      "enabled": true,
+      "locked": false,
+      "unverified": "`session lock-and-suspend` is one of the seven choices that verb declares (src/cli/schema_msg.h:747 and :79-80) and one of the three this project sends; data/design/noctalia-ipc.json records why a key sends this one rather than the plain `suspend` the settings application's Suspend now row sends. A combination pressed without looking should not leave a machine asleep and unlocked, and iarch/cli/render_noctalia.py sets lock_before_suspend for the idle path rather than for an explicit request. iarch/cli/iarch_keybinds.py's confirmation rule names lock and suspend as the two actions a person can undo by logging back in or waking the machine, which is why this one is on a key while logout, reboot and shutdown stay behind the session panel at SUPER + SHIFT + E. Nothing was ever suspended here. TODO(verify) KB-11."
     },
     {
       "id": "planned.refresh-overlay",

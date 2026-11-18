@@ -184,11 +184,16 @@ PROFILE: Dict[str, Any] = OrderedDict(
         # (:431-432), so the bar draws one widget fewer, the config still validates,
         # and nothing on screen says a name was misspelled.
         #
-        # The two additions are the panels nothing else could reach. `clipboard` is a
-        # builtin panel id with no bind in data/keybinds.default.json and no bar entry,
-        # so clipboard history existed in the shell and had no way to be opened.
-        # `privacy` shows which clients are holding the microphone or the camera, which
-        # is the only indicator of that anywhere in the session. Grouping is the reason
+        # The two additions are the panels nothing else could reach when the layout was
+        # decided. `clipboard` had no bind in data/keybinds.default.json and no bar entry,
+        # so clipboard history existed in the shell and had no way to be opened; the map has
+        # since given it three keys -- SUPER + Y opens the panel, SUPER + SHIFT + Y clears
+        # the history behind a question and SUPER + CTRL + Y reports the last entry as a
+        # card -- and the widget stays, because a bar widget is a thing you can see and
+        # click and a keybind is a thing you have to already know. `privacy` shows which
+        # clients are holding the microphone or the camera, which is the only indicator of
+        # that anywhere in the session, and it is still the one of the two with no key:
+        # tests/test_noctalia.py asserts both halves rather than assuming them. Grouping is the reason
         # for the order: utilities, then status, then alerts, then the session.
         start=["launcher", "workspaces"],
         center=["clock"],

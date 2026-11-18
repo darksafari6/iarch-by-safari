@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Safari — GPL-3.0-or-later
 """Tests for the shell's IPC: what may be sent, and what a machine without it must say.
 
-``data/design/noctalia-ipc.json`` records 51 verbs read out of one header in the shell's
+``data/design/noctalia-ipc.json`` records 66 verbs read out of one header in the shell's
 own tree, and every one of them is accounted for in one of three ways: sent, by something
 named in ``used_by``; recorded and refused, with a ``not_used_note`` or a note on the
 argument that explains what this project does instead; or listed in ``not_used``. A verb in
@@ -22,7 +22,13 @@ Re-reading the command table found it at :842 with an optional connector, beside
 ``wallpaper-previous`` and ``wallpaper-random``, and the cell is bound. Ten verbs came into
 the record in that pass -- the wallpaper cycle, the keyboard layout, the notification and
 OSD switches, the power cycle, and the six bar, dock and widget verbs
-``scripts/iarch-zen.sh`` sends as two sets of three.
+``scripts/iarch-zen.sh`` sends as two sets of three. It has happened a third time: the
+fifteen verbs the fourth pass of the A to Z table needed -- ``templates-apply``,
+``notification-invoke-latest``, ``notification-show``, ``panel-close``,
+``bar-reserve-toggle``, ``dock-toggle``, the two desktop-widget toggles and the
+lockscreen-widget one, the three keyboard-backlight verbs, ``mic-volume-osd``, and the two
+clipboard verbs -- were all sitting in the same header at :344 to :899, unrecorded, and
+four of them had been written up as reasons a cell could not be filled.
 
 The distinction that the tests keep pulling on is between **not answering** and
 **answering no**. On this machine the shell binary is absent, so every read comes back
@@ -84,9 +90,9 @@ def outcome(verdict: str, *, stdout: str = "", reason: str = "",
 class TestEveryVerbIsAccountedFor(unittest.TestCase):
     """Sent, refused with a reason, or listed -- the fourth state is a gap nobody sees."""
 
-    def test_the_record_carries_fifty_one_verbs_and_the_module_sees_the_same_fifty_one(self):
-        self.assertEqual(51, len(VERBS))
-        self.assertEqual(51, len(noctalia.verb_names()))
+    def test_the_record_carries_sixty_six_verbs_and_the_module_sees_the_same_sixty_six(self):
+        self.assertEqual(66, len(VERBS))
+        self.assertEqual(66, len(noctalia.verb_names()))
         self.assertEqual(sorted(VERB_NAMES), sorted(noctalia.verb_names()),
                          "the module's verb list and the record's are two copies of one "
                          "decision, and they have drifted")

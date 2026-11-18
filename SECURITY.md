@@ -23,18 +23,26 @@ claim nobody has proven yet.
 
 `install.sh` and `fedora_install.sh` are meant to be run with `sudo` on a fresh
 machine you are prepared to reinstall. They are not sandboxed and they change
-system state. As of this revision the privileged operations are:
+system state.
+
+`install.sh` runs one step before any of it: `tools/preflight.py` collects a
+read-only report — OS identity, architecture, memory and free space, graphics and
+NVIDIA state, display session, pacman and its lock, sudo, and one outbound probe —
+and the step fails the run on a blocker rather than letting every later step
+fail for the same cause. `./install.sh --preflight-only` runs that report and
+nothing else, without root, so "would this even run here" can be asked before
+deciding to ask for privilege. As of this revision the privileged operations are:
 
 | Operation | Where | Why it matters |
 | :--- | :--- | :--- |
-| `pacman -S --noconfirm`, `pacman -Syu --noconfirm` | `install.sh` | Installs and upgrades without a per-package prompt (`INS-01`) |
-| `yay -S --noconfirm` for the AUR greeter package | `install.sh` | Builds third-party code from the AUR without review (`INS-02`) |
+| `pacman -Syu --noconfirm` for the whole-system upgrade, `pacman -Rns --noconfirm` for the removal path, `pacman -U --noconfirm` for the two Chaotic packages | `install.sh:1841`, `install.sh:1127`, `install.sh:1044` and `install.sh:1049`; every transaction that names a target goes through `lib/packages.sh:182` instead | Installs and upgrades without a per-package prompt. The upgrade announces how many packages it will change and names the first twenty before it starts, and the removal names its candidates and advertises keeping them as the default, so both `--noconfirm` calls follow a review rather than replacing one (`INS-01`) |
+| `yay -S --noconfirm --needed` for the AUR greeter and icon-theme packages | `lib/packages.sh:231`, called from `install.sh:2096-2118` | Builds third-party code from the AUR without review, on a fatal step: no greeter means no login manager (`INS-03`) |
 | Edits `/etc/pacman.conf`: uncomments `[multilib]`, appends and reorders `[chaotic-aur]` | `install.sh`, `ensure_multilib_repo_enabled` and `reorder_pacman_conf` | Backs the file up to `/etc/pacman.conf.bak.<epoch>` first |
 | `pacman-key --recv-key 3056513887B78AEB` from `keyserver.ubuntu.com`, then `pacman -U --noconfirm` of `chaotic-keyring` and `chaotic-mirrorlist` from `cdn-mirror.chaotic.cx` | `install.sh`, `install_chaotic_aur` | Trusts a third-party packager and fetches packages over the network (`TP-05`) |
 | `dnf -y copr enable` for three COPRs | `fedora_install.sh:92-104` | Adds third-party build repositories system-wide |
-| `sudo systemctl disable sddm` then `sudo systemctl enable greetd` | `install.sh:1807-1808` | Replaces the display manager; this is the change most likely to leave a machine unbootable into a graphical session (`INS-03`) |
-| `systemctl enable --now cups`, `systemctl enable bluetooth`, `accounts-daemon` | `install.sh:951`, `install.sh:967`, `fedora_install.sh:523-542` | Changes which services start at boot |
-| `chown -R` on `/var/lib/noctalia-greeter` | `fedora_install.sh:582`, `install.sh:1505` | Ownership change, scoped to one directory the installer created |
+| `sudo systemctl disable sddm` then `sudo systemctl enable greetd` | `install.sh:2113` and `install.sh:2114-2117`, after `install.sh:2068-2094` | Replaces the display manager; this is the change most likely to leave a machine unbootable into a graphical session. The switch is unconditional, but it is now written down first: every unit that was enabled is recorded in `~/.local/state/iarch/display-manager-before.txt`, which `uninstall.sh` reads to print the commands that put the machine back (`INS-03`) |
+| `systemctl enable --now cups`, `systemctl enable bluetooth`, `accounts-daemon` | `install.sh:1182`, `install.sh:1198`, `fedora_install.sh:523-542` | Changes which services start at boot |
+| `chown -R` on `/var/lib/noctalia-greeter` | `fedora_install.sh:582`, `install.sh:1707` | Ownership change, scoped to one directory the installer created |
 | `rm -rf` on the staging directory it created | both installers | Scoped to a temporary directory the script owns |
 | Offers `ttf-ms-fonts` and other AUR packages whose redistribution terms were not verified | `install.sh` printer-support step | See `TP-12` in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
 
@@ -49,7 +57,19 @@ installer hardening pass — not accepted behaviour.
   explicit answer; additions are recorded by `lib/package-audit.sh` so a later
   run can tell you what it added.
 - **No blanket `chown -R` of a config tree.** Ownership changes are limited to
-  paths the installer created.
+  paths the installer created — the six deployed paths, and, on the restore path,
+  one recursive `chown` per directory that step actually restored. `INS-02` is the
+  row that kept that promise honest: the restore path used to chown all of
+  `~/.config`, and `tests/test_installer_wizard.py` now fails if the unrestricted
+  form comes back.
+- **No answers read out of a pipe.** Without `--yes`, `install.sh` refuses to start
+  when stdin is not a terminal, because a piped run would read its answers out of
+  whatever was on stdin — `curl ... | bash` feeds the rest of the script to the
+  first prompt. Every prompt goes through one helper that takes the default the
+  prompt's own text advertises when there is nothing left to read and says so in
+  the log, so an end of input ends a prompt instead of looping on "Please answer"
+  forever. `--yes` means *take those defaults*, not *answer yes*: the prompt that
+  removes packages advertises no, and `--yes` keeps them.
 - **Backups before overwriting.** `lib/iarch-common.sh` writes a timestamped
   `.bak.<timestamp>` copy and `uninstall.sh` restores from those; generated files
   additionally keep the last five generations under
@@ -200,8 +220,14 @@ writes a file that is not generated.
 
 1. Do not run the installer again.
 2. `bash scripts/iarch-healthcheck.sh` reports what it can see without changing anything.
-3. `./uninstall.sh` restores the timestamped backups it finds and tells you which
-   files it restored and which it left alone.
+3. `./uninstall.sh` restores the timestamped backups it finds and tells you which files
+   it restored and which it left alone. It then asks a second time and removes what the
+   installer recorded in `~/.local/state/iarch/install-manifest.txt` — the report it
+   wrote, the `environment.d` drop-in, the wallpapers, desktop entries and icons it
+   copied, its own state files — and prints the `systemctl` commands that put the
+   display manager back the way this machine had it. It prints those rather than running
+   them: re-enabling a unit needs root, and "restore my configuration" is not the same
+   agreement.
 4. System-level changes the uninstaller does not touch — enabled services, added
    repositories, installed packages — are listed in the installer output and in
    [`InstallNotes.md`](InstallNotes.md). Reverting those is manual, by design:

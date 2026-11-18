@@ -33,19 +33,22 @@
 # "something was asked and said no", 127 says "nothing was there to ask". A machine with
 # one half installed is a 1, and the warning names the half that was skipped.
 #
-# `config` has no key and it is not a reload at all in the compositor's sense: it
-# re-renders every surface this repository generates from ~/.config/iarch/settings.json --
-# the glass, the animations, the GTK sheets, the keybinds' own generated file through
-# iarch-keybinds -- and then asks for the reloads above. That is `iarch-theme apply` with
-# no preset, which keeps the colour preset and the intensity the settings already name. It
-# is the second half of this script rather than a cell in the table because iArch's
-# configuration is not a file the compositor reads: it is the input to the generators, so
-# "reload my configuration" means "run them again", and SUPER + U already means the other
-# thing. A terminal is where this one belongs, beside `iarch-theme apply` itself.
+# `config` is not a reload at all in the compositor's sense: it re-renders every surface
+# this repository generates from ~/.config/iarch/settings.json -- the glass, the animations,
+# the GTK sheets, the keybinds' own generated file through iarch-keybinds -- and then asks
+# for the reloads above. That is `iarch-theme apply` with no preset, which keeps the colour
+# preset and the intensity the settings already name. It is bound as session.rerender on
+# SUPER + SHIFT + U, the cell beside SUPER + U, and the two are the two halves of this
+# script: one asks the compositor and the shell to re-read what the generators last wrote,
+# the other runs the generators again first. That is why iArch's configuration is not a file
+# the compositor reads -- it is the input to the generators, so "reload my configuration"
+# means "run them again" -- and a terminal is still where both halves belong on a session
+# with no keys at all, beside `iarch-theme apply` itself.
 #
 # What has not happened: neither reload has been watched. There is no compositor and no
 # shell here, so both halves are commands this repository already calls elsewhere and the
-# behaviour is unobserved. docs/UNVERIFIED.md carries that as KB-08.
+# behaviour is unobserved. docs/UNVERIFIED.md carries the session half as KB-08 and the
+# re-render half, with the two cycles scripts/iarch-cycle.sh drives, as KB-15.
 set -euo pipefail
 
 here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

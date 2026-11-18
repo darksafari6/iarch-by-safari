@@ -15,6 +15,76 @@ fi
 IARCH_PRODUCT_NAME=${IARCH_PRODUCT_NAME:-iArch by Safari}
 IARCH_PRODUCT_TAGLINE=${IARCH_PRODUCT_TAGLINE:-Glass Hyprland desktop session for Arch Linux and Fedora}
 
+# --- Arguments ---
+#
+# Three switches, because an installer with a flag for every step is a second
+# installer nobody tests. --yes takes the default every prompt advertises -- it
+# does not answer "yes" to everything, and the difference matters at the prompt
+# that removes packages, whose advertised default is no. --preflight-only prints
+# the read-only report and stops, which needs no root and changes nothing, so
+# "would this even run here" is a question a person can ask before deciding.
+# An argument this script does not know is a refusal: a typo answered with a
+# question is a typo answered at the worst possible moment.
+ASSUME_YES=0
+PREFLIGHT_ONLY=0
+
+usage() {
+    cat <<USAGE
+Usage: sudo ./install.sh [--yes] [--preflight-only] [--help]
+
+  --yes             Take the default each prompt advertises and ask nothing.
+                    Prompts whose default is "no" still mean no: this is not
+                    "answer yes to everything".
+  --preflight-only  Print the read-only hardware and environment report from
+                    tools/preflight.py and exit. Needs no root, changes nothing.
+  --help            This text.
+
+Without --yes the installer needs a terminal to ask its questions on, and
+refuses to start without one rather than reading answers from a pipe.
+USAGE
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --yes|-y)
+            ASSUME_YES=1
+            shift
+            ;;
+        --preflight-only)
+            PREFLIGHT_ONLY=1
+            shift
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "ERROR: unknown argument '$1'." >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+done
+
+# The report is the one thing this script can do before it asks for anything:
+# it needs no root, changes nothing, and answers "would this even run here". So
+# it runs here, before the root check and before the first prompt -- a question
+# about whether an install would work is not a question that should need the
+# privilege the install is asking for. $REPO_DIR is not assigned yet at this
+# point, which is why this reads $SCRIPT_DIR.
+if [ "$PREFLIGHT_ONLY" -eq 1 ]; then
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "ERROR: python3 is not installed and the report needs it." >&2
+        exit 127
+    fi
+    if [ ! -f "$SCRIPT_DIR/tools/preflight.py" ]; then
+        echo "ERROR: tools/preflight.py is missing; this checkout is incomplete." >&2
+        exit 2
+    fi
+    python3 "$SCRIPT_DIR/tools/preflight.py"
+    exit $?
+fi
+
 print_product_banner() {
     echo ""
     echo "  ${IARCH_PRODUCT_NAME}"
@@ -34,6 +104,45 @@ append_unique_package() {
     done
 
     package_list+=("$package")
+}
+
+# read_answer PROMPT DEFAULT prints the line a person typed, or DEFAULT when
+# there is nothing left to read; every prompt here assigns it with
+# `VAR=$(read_answer ...)`. It exists because `read` fails at end of input and
+# leaves the variable empty, and an empty answer is not one of the branches a
+# `(y/n)` question offers: every prompt in this script used to print "Please
+# answer 'y' or 'n'." and ask again, forever, with nothing to read. Ctrl-D at
+# any prompt hung the installer, and a run with stdin closed spun before it
+# reached a single package step. DEFAULT is the answer the prompt's own text
+# advertises -- the N of a `(y/N)` question, the empty line a list prompt already
+# treats as "none" -- so taking it changes nothing about what a person who
+# presses Enter gets.
+#
+# The answer is printed rather than assigned by name so that each of the
+# fourteen call sites still shows which variable it sets: an assignment hidden
+# inside a helper is invisible at the place that asks the question, and to
+# anything that reads the script without running it.
+#
+# --yes is honoured here rather than at fourteen call sites, so that one flag
+# means the same thing everywhere: every prompt takes the default it advertises
+# and the run says which one it took.
+read_answer() {
+    local prompt=$1 default=$2 line
+    if [ "${ASSUME_YES-0}" -eq 1 ]; then
+        printf '%s' "$prompt" >&2
+        printf '%s (--yes)\n' "$default" >&2
+        printf '%s\n' "$default"
+        return 0
+    fi
+    printf '%s' "$prompt" >&2
+    if read -r line; then
+        printf '%s\n' "$line"
+        return 0
+    fi
+    printf '\n' >&2
+    printf 'No answer to read; taking the advertised default (%s).\n' "$default" >&2
+    printf '%s\n' "$default"
+    return 0
 }
 
 # Ensure running as root before collecting interactive input.
@@ -82,6 +191,108 @@ fi
 # shellcheck source=lib/packages.sh
 . "$REPO_DIR/lib/packages.sh"
 
+#: Where the read-only report goes. It is written once per run, it is the same
+#: file the first step's decision comes from, and it is recorded in the install
+#: manifest, so "what did this machine look like before the installer touched it"
+#: has an answer after the run and not only during it.
+preflight_report_path() {
+    printf '%s\n' "$ACTUAL_USER_HOME/.local/state/iarch/preflight.json"
+}
+
+PREFLIGHT_JSON=''
+
+# preflight_collect writes the report if this run has not written it yet and
+# prints its path. It is read-only by construction: tools/preflight.py reads
+# /proc, /sys, four reporting commands and nothing else, which is what makes it
+# safe to run before the first privileged step -- and what lets it run before the
+# prompts, where --yes needs its answer about an NVIDIA controller.
+preflight_collect() {
+    local tool="$REPO_DIR/tools/preflight.py" path dir
+    if [ -n "$PREFLIGHT_JSON" ]; then
+        printf '%s\n' "$PREFLIGHT_JSON"
+        return 0
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        return 127
+    fi
+    if [ ! -f "$tool" ]; then
+        return 2
+    fi
+    path="$(preflight_report_path)"
+    dir="$(dirname -- "$path")"
+    if command -v sudo >/dev/null 2>&1; then
+        sudo -u "$ACTUAL_USER" mkdir -p -- "$dir" 2>/dev/null || mkdir -p -- "$dir"
+    else
+        mkdir -p -- "$dir"
+    fi
+    if ! python3 "$tool" --json > "$path" 2>/dev/null; then
+        return 1
+    fi
+    chown "$ACTUAL_USER:$ACTUAL_USER" -- "$path" 2>/dev/null || true
+    PREFLIGHT_JSON="$path"
+    printf '%s\n' "$path"
+}
+
+# preflight_field NAME prints one field of the report, lower-cased so a JSON
+# boolean reads as the y/n answer a prompt wants. Empty, and a failure, when
+# there is no report to read: a missing python3 must not become a claim about
+# the machine.
+preflight_field() {
+    local path
+    path="$(preflight_collect)" || return 1
+    python3 - "$path" "$1" <<'PY' 2>/dev/null
+import json, sys
+value = json.load(open(sys.argv[1], encoding="utf-8")).get(sys.argv[2], "")
+print(str(value).lower() if isinstance(value, bool) else value)
+PY
+}
+
+# Turn the shell's DDC/CI switch on in a configuration file this installer
+# deployed. One key in one table and nothing else touched, which is what
+# tools/toml_set_flag.py guarantees: it refuses a file it does not understand
+# rather than rewriting it, and the file it edits is one a person may have
+# changed since it was deployed.
+#
+# The key is the shell's own at v5.4.1 -- the table is registered as "brightness"
+# (src/config/schema/config_sections.cpp:61), the key as "enable_ddcutil"
+# (src/config/schema/config_schema.cpp:488) and its type as `bool enableDdcutil =
+# false` (src/config/config_types.h:1594). What this used to write was
+# brightness.enableDdcSupport in noctalia/settings.json, which is the v4 file the
+# v5 payload does not deploy at all: deploy_configs backs the whole noctalia
+# directory up and replaces it with a staged tree that carries config.toml only,
+# so the branch never found a file to edit and the step still reported that DDC
+# support was on. INS-06.
+enable_noctalia_ddc() {
+    local target=$1
+    if [ ! -f "$target" ]; then
+        echo "Warning: $target is not there, so DDC support was not enabled." >&2
+        return 1
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "Warning: python3 is not installed, so DDC support was not enabled." >&2
+        echo "         Set [brightness] enable_ddcutil = true in $target by hand." >&2
+        return 1
+    fi
+    if python3 "$REPO_DIR/tools/toml_set_flag.py" "$target" brightness enable_ddcutil; then
+        chown "$ACTUAL_USER:$ACTUAL_USER" -- "$target" 2>/dev/null || true
+        return 0
+    fi
+    echo "Warning: DDC support could not be written into $target." >&2
+    return 1
+}
+
+# The Nvidia prompt is the one whose advertised default is a guess, and it is the
+# one question the report can answer: an NVIDIA controller is either on the PCI
+# bus or it is not. Under --yes the answer comes from there; interactively the
+# question is still asked, because a person may know something lspci does not.
+nvidia_default() {
+    if [ "${ASSUME_YES-0}" -eq 1 ] && [ "$(preflight_field nvidia)" = "true" ]; then
+        printf 'y\n'
+    else
+        printf 'n\n'
+    fi
+}
+
 # Validate repo directory
 if [ ! -d "$REPO_DIR/.config" ]; then
     echo "ERROR: Script must be run from the repository root directory."
@@ -94,10 +305,23 @@ if [ ! -d "$REPO_DIR/.config/hypr" ]; then
 fi
 
 # --- Pre-flight confirmation ---
+#
+# This script asks questions, so it needs something to ask them on. Without this
+# check a piped run reads its answers out of whatever is on stdin -- `curl ... |
+# bash` feeds the rest of the script to the first prompt -- and a run with stdin
+# closed reads nothing at all. Both are refused here, before anything privileged
+# happens, rather than discovered halfway through a package transaction.
+if [ ! -t 0 ] && [ "$ASSUME_YES" -ne 1 ]; then
+    echo "ERROR: this installer asks questions and stdin is not a terminal." >&2
+    echo "       Run it from a terminal, or pass --yes to take the default each" >&2
+    echo "       prompt advertises. The report needs neither: --preflight-only." >&2
+    exit 2
+fi
+
 print_product_banner
 echo "This script installs the ${IARCH_PRODUCT_NAME} dotfiles for Hyprland and enables the Chaotic AUR repository. Use only with a fresh install of Hyprland (vanilla Arch Linux). Use at your own risk."
 while true; do
-    read -r -p "Install ${IARCH_PRODUCT_NAME} now? (y/n): " proceed
+    proceed=$(read_answer "Install ${IARCH_PRODUCT_NAME} now? (y/n): " n)
     case "$proceed" in
         y|Y|yes|YES)
             echo "Great! Proceeding with the ${IARCH_PRODUCT_NAME} installation..."
@@ -116,7 +340,7 @@ done
 INSTALL_NVIDIA_OPTIONAL=0
 while true; do
     echo ""
-    read -r -p "Are you using an Nvidia GPU? (y/n): " nvidia_choice
+    nvidia_choice=$(read_answer "Are you using an Nvidia GPU? (y/n): " "$(nvidia_default)")
     case "$nvidia_choice" in
         y|Y|yes|YES)
             INSTALL_NVIDIA_OPTIONAL=1
@@ -137,7 +361,7 @@ done
 DEFAULT_INSTALL=0
 while true; do
     echo ""
-    read -r -p "Would you like to use the default installation options? (y/n): " default_install_choice
+    default_install_choice=$(read_answer "Would you like to use the default installation options? (y/n): " n)
     case "$default_install_choice" in
         y|Y|yes|YES)
             DEFAULT_INSTALL=1
@@ -161,7 +385,7 @@ if [ "$DEFAULT_INSTALL" -eq 1 ]; then
 else
 while true; do
     echo ""
-    read -r -p "Do you want printer support? (y/n): " printer_choice
+    printer_choice=$(read_answer "Do you want printer support? (y/n): " n)
     case "$printer_choice" in
         y|Y|yes|YES)
             INSTALL_PRINTER_SUPPORT=1
@@ -206,7 +430,7 @@ while true; do
     echo "  a. Install all gaming packages"
     echo "  0. Skip gaming package installation"
     echo ""
-    read -r -p "Enter your choices (comma or space separated, e.g., 1,2,5 or 1 2 5, or a for all): " gaming_choices
+    gaming_choices=$(read_answer "Enter your choices (comma or space separated, e.g., 1,2,5 or 1 2 5, or a for all): " "")
 
     if [ "$gaming_choices" = "0" ] || [ -z "$gaming_choices" ]; then
         echo "Skipping gaming package installation."
@@ -259,7 +483,7 @@ if [ "$DEFAULT_INSTALL" -eq 1 ]; then
 else
 while true; do
     echo ""
-    read -r -p "Do you want to install Bluetooth packages and enable the Bluetooth service? (y/n): " bluetooth_choice
+    bluetooth_choice=$(read_answer "Do you want to install Bluetooth packages and enable the Bluetooth service? (y/n): " n)
     case "$bluetooth_choice" in
         y|Y|yes|YES)
             INSTALL_BLUETOOTH_PACKAGES=1
@@ -289,7 +513,7 @@ while true; do
     echo "  0. Skip EasyEffects and Dolby setup"
     echo "  1. EasyEffects (default)"
     echo "  2. Dolby Atmos support"
-    read -r -p "Choose audio option (0-2): " audio_choice
+    audio_choice=$(read_answer "Choose audio option (0-2): " "")
     case "$audio_choice" in
         0)
             AUDIO_MODE="none"
@@ -333,7 +557,7 @@ while true; do
     echo "  a. Install all audio/video players"
     echo "  0. Skip audio/video player installation"
     echo ""
-    read -r -p "Enter your choices (comma or space separated, e.g., 1,2,5 or 1 2 5, or a for all): " av_choices
+    av_choices=$(read_answer "Enter your choices (comma or space separated, e.g., 1,2,5 or 1 2 5, or a for all): " "")
     
     if [ "$av_choices" = "0" ] || [ -z "$av_choices" ]; then
         echo "Skipping audio/video player installation."
@@ -372,7 +596,7 @@ while true; do
                 if [ "$pkg" = "vlc" ]; then
                     while true; do
                         echo ""
-                        read -r -p "Do you want to install vlc-plugins-all? If you choose no, you will need to install VLC plugins manually later. (y/n): " vlc_plugins_choice
+                        vlc_plugins_choice=$(read_answer "Do you want to install vlc-plugins-all? If you choose no, you will need to install VLC plugins manually later. (y/n): " n)
                         case "$vlc_plugins_choice" in
                             y|Y|yes|YES)
                                 INSTALL_VLC_PLUGINS_ALL=1
@@ -655,7 +879,7 @@ error() {
 #
 # STEP_TOTAL is a literal, and tests/test_installer_wizard.py counts the
 # step_begin calls in this file and refuses to let the two disagree.
-STEP_TOTAL=25
+STEP_TOTAL=26
 STEP_NUMBER=0
 STEP_TITLE=''
 STEP_VERDICT='ok'
@@ -737,6 +961,13 @@ wizard_summary() {
         done
         printf '\n  Configuration already deployed stays deployed. The steps\n' >&2
         printf '  listed above are the ones to re-run once the cause is fixed.\n' >&2
+        # A run that stopped is the run whose paperwork matters most, and this is
+        # the only place a stopped run can print it: the manifest path at the end
+        # of the main flow is never reached when a fatal step exits first.
+        printf '\n  What this run touched, and where what it replaced went:\n' >&2
+        printf '    files it created   %s\n' "$(install_manifest_path)" >&2
+        printf '    backups it made    %s/<name>.bak.<timestamp>\n' "$CONFIG_DIR" >&2
+        printf '    pacman.conf        /etc/pacman.conf.bak.<epoch seconds>\n' >&2
         return 1
     fi
     return 0
@@ -890,7 +1121,7 @@ remove_conflicting_packages() {
 
     echo "These packages may overlap with the selected defaults: ${candidates[*]}"
     echo "They will be preserved unless you explicitly approve removal."
-    read -r -p "Remove these packages and their unused dependencies? (y/N): " remove_choice
+    remove_choice=$(read_answer "Remove these packages and their unused dependencies? (y/N): " n)
     case "$remove_choice" in
         y|Y|yes|YES)
             if pacman -Rns --noconfirm -- "${candidates[@]}"; then
@@ -1019,7 +1250,7 @@ prompt_optional_packages() {
         echo "  a. Install all optional packages"
         echo ""
 
-        read -r -p "Enter your choices (comma or space separated, e.g., 1,2 or 1 2, or a for all): " optional_choices
+        optional_choices=$(read_answer "Enter your choices (comma or space separated, e.g., 1,2 or 1 2, or a for all): " "")
 
         if [ "$optional_choices" = "0" ] || [ -z "$optional_choices" ]; then
             echo "Skipping optional package installation."
@@ -1149,32 +1380,10 @@ deploy_configs() {
             chown -R "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR/$name" || return 1
         done
 
-        # If ddcutil was enabled, make sure Noctalia uses DDC monitor control.
-        if [ "$DDCUTIL_ENABLED" -eq 1 ] && [ -f "$CONFIG_DIR/noctalia/settings.json" ]; then
-            python3 - "$CONFIG_DIR/noctalia/settings.json" <<'PY'
-import json
-import sys
-
-path = sys.argv[1]
-with open(path, "r", encoding="utf-8") as f:
-    data = json.load(f)
-
-brightness = data.get("brightness")
-if not isinstance(brightness, dict):
-    brightness = {}
-    data["brightness"] = brightness
-
-brightness["enableDdcSupport"] = True
-
-with open(path, "w", encoding="utf-8") as f:
-    json.dump(data, f, indent=4)
-    f.write("\n")
-PY
-            if [ $? -eq 0 ]; then
-                chown "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR/noctalia/settings.json"
-                echo "Enabled Noctalia DDC support in settings.json."
-            else
-                echo "Warning: Could not update Noctalia DDC setting automatically."
+        # If ddcutil was enabled, make sure the shell uses DDC monitor control.
+        if [ "$DDCUTIL_ENABLED" -eq 1 ]; then
+            if enable_noctalia_ddc "$CONFIG_DIR/noctalia/config.toml"; then
+                echo "Enabled DDC support in noctalia/config.toml."
             fi
         fi
     else
@@ -1228,7 +1437,7 @@ prompt_browser_installation() {
     echo ""
     
     while true; do
-        read -r -p "Enter your choice (1-6): " browser_choice
+        browser_choice=$(read_answer "Enter your choice (1-6): " 6)
         case "$browser_choice" in
             1)
                 BROWSER_CHOICE=1
@@ -1293,7 +1502,7 @@ setup_ddcutil() {
         ddcutil_response="y"
         echo "Default selection: configuring ddcutil."
     else
-        read -r -p "Do you want to install and configure ddcutil? (y/N): " ddcutil_response
+        ddcutil_response=$(read_answer "Do you want to install and configure ddcutil? (y/N): " n)
     fi
     
     if [[ "$ddcutil_response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
@@ -1395,7 +1604,7 @@ copy_backup_configs() {
     fi
     
     echo "Found backup configs at: $config_source"
-    read -r -p "Do you want to restore config files from backup? (y/N): " backup_response
+    backup_response=$(read_answer "Do you want to restore config files from backup? (y/N): " n)
     
     if [[ "$backup_response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
         echo "Copying config files from backup to $CONFIG_DIR..."
@@ -1404,35 +1613,28 @@ copy_backup_configs() {
         if [ $? -eq 0 ]; then
             echo "Config files copied successfully!"
             
-            # Fix ownership since we're running as root
-            chown -R "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR"
+            # Ownership follows the paths this step copied, and nothing else. It
+            # used to be `chown -R "$CONFIG_DIR"`, which is a claim about every
+            # file in every configuration directory the user owns: the ones this
+            # installer has never heard of, the ones another program is writing
+            # right now, and anything a running session created between the copy
+            # and this line. The only paths this step can make a claim about are
+            # the ones it just wrote. INS-02.
+            local restored restored_name
+            for restored in "$config_source"/*; do
+                [ -e "$restored" ] || continue
+                restored_name=$(basename -- "$restored")
+                if [ -e "$CONFIG_DIR/$restored_name" ] || [ -L "$CONFIG_DIR/$restored_name" ]; then
+                    chown -R "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR/$restored_name" \
+                        || echo "Warning: could not set ownership of $CONFIG_DIR/$restored_name." >&2
+                fi
+            done
 
-            # Keep DDC support enabled if ddcutil setup was selected.
-            if [ "$DDCUTIL_ENABLED" -eq 1 ] && [ -f "$CONFIG_DIR/noctalia/settings.json" ]; then
-                python3 - "$CONFIG_DIR/noctalia/settings.json" <<'PY'
-import json
-import sys
-
-path = sys.argv[1]
-with open(path, "r", encoding="utf-8") as f:
-    data = json.load(f)
-
-brightness = data.get("brightness")
-if not isinstance(brightness, dict):
-    brightness = {}
-    data["brightness"] = brightness
-
-brightness["enableDdcSupport"] = True
-
-with open(path, "w", encoding="utf-8") as f:
-    json.dump(data, f, indent=4)
-    f.write("\n")
-PY
-                if [ $? -eq 0 ]; then
-                    chown "$ACTUAL_USER:$ACTUAL_USER" "$CONFIG_DIR/noctalia/settings.json"
-                    echo "Re-enabled Noctalia DDC support after backup restore."
-                else
-                    echo "Warning: Could not re-enable Noctalia DDC support after backup restore."
+            # Keep DDC support enabled if ddcutil setup was selected: a restored
+            # backup carries whatever the file said before this run reached it.
+            if [ "$DDCUTIL_ENABLED" -eq 1 ]; then
+                if enable_noctalia_ddc "$CONFIG_DIR/noctalia/config.toml"; then
+                    echo "Re-enabled DDC support in noctalia/config.toml after the restore."
                 fi
             fi
             
@@ -1558,6 +1760,49 @@ record_installed_file() {
     printf '%s\n' "$path" | sudo -u "$ACTUAL_USER" tee -a -- "$manifest" >/dev/null
 }
 
+#: Step one, and the only step that changes nothing on the machine it reports on.
+#: The report is written where a person can read it after the run, recorded in the
+#: manifest, and its blockers decide whether the run happens at all. A blocker is a
+#: fact that makes every later step certain to fail -- this is not vanilla Arch
+#: Linux, another transaction holds the pacman lock, or there is no pacman to plan
+#: against -- and everything else is a warning that gets printed and carried on
+#: past, because a judgement this script has no evidence for is not a reason to
+#: stop somebody's install. The outbound probe is a warning for exactly that
+#: reason: it reaches GitHub, while the next step fetches from
+#: keyserver.ubuntu.com and cdn-mirror.chaotic.cx, and a machine behind an
+#: allowlist can fail one and serve the other.
+preflight_report() {
+    local tool="$REPO_DIR/tools/preflight.py" path findings status line
+    if ! command -v python3 >/dev/null 2>&1; then
+        step_fail "python3 is not installed, and both the report and the DDC step need it"
+        return 1
+    fi
+    if [ ! -f "$tool" ]; then
+        step_fail "tools/preflight.py is missing; this checkout is incomplete"
+        return 1
+    fi
+    if ! path="$(preflight_collect)"; then
+        step_fail "the read-only report did not run"
+        return 1
+    fi
+    record_installed_file "$path" || true
+    step_note "the report is at $path"
+    findings="$(python3 "$tool" --blockers --from-report "$path")"
+    status=$?
+    while IFS= read -r line; do
+        case "$line" in
+            'BLOCKER: '*) step_note "$line" ;;
+            'WARN: '*)    step_note "warning: ${line#WARN: }" ;;
+            '')           ;;
+            *)            step_note "$line" ;;
+        esac
+    done <<< "$findings"
+    if [ "$status" -ne 0 ]; then
+        step_fail "this machine cannot run the steps that follow, and the lines above say why"
+        return 1
+    fi
+}
+
 install_core_packages() {
     # This step used to print a countdown and then hand pacman every name in
     # PACKAGES whether the machine had it or not. The plan the library prints is
@@ -1572,6 +1817,27 @@ install_core_packages() {
 upgrade_system() {
     # A partial upgrade is not a state this session can be tested in, and the
     # AUR builds later in the run compile against whatever is installed now.
+    #
+    # The upgrade is announced before it happens, which is the half of INS-01
+    # this step owns: the library already reads the local database, so the size
+    # of a whole-system transaction is knowable before it starts, and a person
+    # who cannot see that a step will replace four hundred packages has not
+    # consented to it. The --noconfirm stays, because pacman would otherwise ask
+    # a second time in the middle of a step that has just said what it is doing,
+    # and the review above is the answer to the question that flag skips.
+    local outdated count
+    packages_refresh_sync_db || true
+    outdated="$(packages_outdated_names)" || outdated=''
+    if [ -n "$outdated" ]; then
+        count=$(printf '%s\n' "$outdated" | grep -c . || true)
+        step_note "the system upgrade will change $count package(s)"
+        printf '%s\n' "$outdated" | head -20 | sed 's/^/     /' >&2
+        if [ "$count" -gt 20 ]; then
+            step_note "and $((count - 20)) more; pacman lists the rest itself"
+        fi
+    else
+        step_note "nothing in the local database is out of date, so the upgrade changes nothing"
+    fi
     if ! pacman -Syu --noconfirm; then
         step_fail "the system upgrade did not complete"
         return 1
@@ -1787,6 +2053,46 @@ deploy_wallpapers() {
     step_note "point Noctalia Settings at that folder, or pick from it directly"
 }
 
+#: Where the installer writes down which display manager was enabled before it
+#: switched this machine to greetd. A change to what boots the machine is the one
+#: change in this run a person may want undone without reinstalling what they had,
+#: and it is not recoverable from the configuration files: `systemctl disable`
+#: leaves no record of what it replaced. INS-03.
+display_manager_state_path() {
+    printf '%s\n' "$ACTUAL_USER_HOME/.local/state/iarch/display-manager-before.txt"
+}
+
+# Written once, before the first switch, so a second run does not overwrite the
+# answer with "greetd". A machine with no display manager enabled gets the word
+# `none`, because an empty file cannot be told from a file nobody wrote.
+record_display_manager_state() {
+    local state dir unit found=''
+    state="$(display_manager_state_path)"
+    if [ -f "$state" ]; then
+        step_note "the display manager this machine had is already recorded in $state"
+        return 0
+    fi
+    for unit in sddm gdm lightdm lxdm ly greetd; do
+        if systemctl is-enabled "$unit" >/dev/null 2>&1; then
+            found="$found$unit "
+        fi
+    done
+    dir="$(dirname -- "$state")"
+    if ! mkdir -p -- "$dir" 2>/dev/null; then
+        step_note "warning: could not create $dir, so the previous display manager is not recorded"
+        return 1
+    fi
+    if [ -n "$found" ]; then
+        printf '%s\n' $found > "$state"
+    else
+        printf 'none\n' > "$state"
+    fi
+    chown "$ACTUAL_USER:$ACTUAL_USER" -- "$state" 2>/dev/null || true
+    record_installed_file "$state" || true
+    step_note "before this step the machine booted: $(tr '\n' ' ' < "$state")"
+    return 0
+}
+
 install_greeter() {
     # The greeter is an AUR package, so it needs yay; a machine without yay has
     # no login manager and there is nothing to log into, which makes this fatal.
@@ -1802,6 +2108,7 @@ install_greeter() {
         step_fail "greetd could not be configured for the greeter"
         return 1
     fi
+    record_display_manager_state || true
     step_note "disabling sddm, enabling greetd"
     systemctl disable sddm >/dev/null 2>&1 || step_note "sddm was not enabled"
     if ! systemctl enable greetd; then
@@ -1826,7 +2133,11 @@ run_step() {
 # fatal_step is run_step for a step whose failure stops the install. Without the
 # repository, the core packages, the configuration payload or the login manager
 # there is no session to log into, and continuing would leave a half-installed
-# machine that is harder to diagnose than a stopped one.
+# machine that is harder to diagnose than a stopped one. The report that runs
+# before all of them is fatal for the same reason from the other end: on a
+# machine that is not Arch, or one whose package database is locked by a
+# transaction still running, every step after it fails and the summary lists
+# twenty-four failures instead of one cause.
 fatal_step() {
     local title=$1
     shift
@@ -1892,6 +2203,7 @@ else
     prompt_browser_installation
 fi
 
+fatal_step "Preflight"                   preflight_report
 fatal_step "Chaotic-AUR repository"      setup_chaotic_aur
 run_step   "Conflicting packages"        remove_conflicting_packages
 fatal_step "Core packages"               install_core_packages

@@ -97,6 +97,12 @@ def what_it_does(binding: Dict[str, Any]) -> str:
     return ""
 
 
+#: Counts this renderer spells out, because the document it writes is prose, and "8 of
+#: them" reads as a number pulled out of a variable rather than a sentence somebody meant.
+WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
+         8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
+
+
 def alphabet_section(data: Dict[str, Any], design: Dict[str, Any]) -> List[str]:
     """The 78 letter cells of the three layers, as a grid and as a list of refusals.
 
@@ -139,9 +145,11 @@ def alphabet_section(data: Dict[str, Any], design: Dict[str, Any]) -> List[str]:
         f"is written down in `{DESIGN.relative_to(ROOT)}` under `alphabet` and rendered "
         "here. `tests/test_keybinds_alphabet.py` proves the table and the map agree in "
         "both directions. It describes the shipped defaults only: your own "
-        "`~/.config/iarch/keybinds.json` may use any empty cell it likes, and "
-        "`iarch-keybinds check` does not consult this table, because a person's map is "
-        "theirs and a checker that policed it would be policing the wrong file."
+        "`~/.config/iarch/keybinds.json` may use any cell it likes, including one this "
+        "table refuses, because a refusal is a reason not to spend the shipped budget on a "
+        "bind and not a rule about yours -- and `iarch-keybinds check` does not consult "
+        "this table, because a person's map is theirs and a checker that policed it would "
+        "be policing the wrong file."
     )
     lines.append("")
     for layer in layers:
@@ -154,9 +162,11 @@ def alphabet_section(data: Dict[str, Any], design: Dict[str, Any]) -> List[str]:
     lines.append("| :--- |" + " :--- |" * len(layers))
 
     refusals: List[str] = []
+    refused_by_layer = [0] * len(layers)
+    empty_cells = 0
     for letter_index, letter in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
         row = [letter]
-        for layer in layers:
+        for layer_index, layer in enumerate(layers):
             cell = layer["cells"][letter_index]
             if cell["key"] != letter:
                 raise SystemExit(f"shortcuts: the alphabet table's {layer['name']} layer is "
@@ -185,22 +195,37 @@ def alphabet_section(data: Dict[str, Any], design: Dict[str, Any]) -> List[str]:
                 if status == "reserved":
                     row.append("*reserved*")
                     refusals.append(f"- **`{combo}`** — {prose(cell['reason'])}")
+                    refused_by_layer[layer_index] += 1
                 else:
                     row.append("—")
+                    empty_cells += 1
         lines.append("| " + " | ".join(row) + " |")
     lines.append("")
 
-    lines.append("### Why a cell is empty")
+    lines.append("### Why a cell is empty" if empty_cells
+                 else "### Why a cell is not bound")
     lines.append("")
-    lines.append(
-        "*reserved* is a refusal with a mechanism behind it, and an em dash is a cell "
-        "left empty on purpose. Every refusal is listed first, in letter order, then the "
-        "reason each layer leaves the rest of its letters alone."
-    )
+    if empty_cells:
+        lines.append(
+            "*reserved* is a refusal with a mechanism behind it, and an em dash is a cell "
+            "left empty on purpose. Every refusal is listed first, in letter order, then "
+            "the reason each layer leaves the rest of its letters alone."
+        )
+    else:
+        how_many = WORDS.get(len(refusals), str(len(refusals)))
+        lines.append(
+            f"*reserved* is a refusal with a mechanism behind it, and there are "
+            f"{how_many} of them. An em dash would be a cell left empty on purpose, which "
+            "is the fourth state the record allows and the one a reader can ask about — "
+            f"and after four passes over this table, not one of the {cells} cells is in "
+            "it. Every refusal is listed first, in letter order, then what each layer says "
+            "about the letters it does not refuse."
+        )
     lines.append("")
     lines.extend(refusals)
-    for layer in layers:
-        lines.append(f"- *Every other letter of `{' + '.join(layer['mods'])}`* — "
+    for layer_index, layer in enumerate(layers):
+        which = ("Every other letter" if refused_by_layer[layer_index] else "Every letter")
+        lines.append(f"- *{which} of `{' + '.join(layer['mods'])}`* — "
                      f"{prose(layer['free_reason'])}")
     lines.append("")
     return lines

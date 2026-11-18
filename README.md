@@ -87,22 +87,34 @@ repositories, services and the login manager.
 sudo pacman -S git                                  # Arch
 git clone https://github.com/darksafari6/iarch-by-safari.git
 cd iarch-by-safari
-sudo ./install.sh
+./install.sh --preflight-only                       # read-only: would this even run here?
+sudo ./install.sh                                   # the install itself, from a terminal
 ```
 
 On Fedora, the same three steps with `sudo dnf install git -y` and
 `sudo ./fedora_install.sh`.
 
-Both scripts are interactive: they ask about a default install, NVIDIA, printer
-support, gaming packages, which packages to remove, browser, audio stack and
-whether to reboot. `install.sh` then runs 24 numbered steps — repositories,
-packages, the configuration payload, icon and cursor themes, the session
-commands on `PATH`, the menu entry, the wallpapers and the login manager — and
-each one prints `✓ done`, `– skipped: <reason>` or `✗ failed: <reason>`, with a
-summary at the end. Every file it replaces is backed up first with a
-`.bak.<timestamp>` suffix, every file it creates outside the repository is
-recorded in `~/.local/state/iarch/install-manifest.txt`, and additions are
-recorded so nothing is removed silently later.
+`install.sh` takes three switches. `--preflight-only` prints the read-only report from
+`tools/preflight.py` and stops: no root, no changes, the same report the first step reads.
+`--yes` takes the default every prompt advertises and asks nothing — *not* "answer yes to
+everything", and the difference matters at the prompt that removes packages, whose advertised
+default is no. `--help` prints that text; an unknown argument is a refusal with exit status 2,
+not a question, and a run whose stdin is not a terminal exits 2 unless `--yes` was given.
+
+Both scripts are interactive: they ask about a default install, NVIDIA,
+printer support, gaming packages, which packages to remove, browser, audio
+stack and whether to reboot. A prompt out of input takes the default it
+advertises and says so. `install.sh` then runs 26 numbered steps — the read-
+only report first, then repositories, packages, the configuration payload,
+the themes, the session commands on `PATH`, the wallpapers and the login
+manager — and each one prints `✓ done`, `– skipped: <reason>` or `✗ failed:
+<reason>`, with a summary at the end. The report is the one step whose
+failure stops the run before anything changed: on a machine that is not
+Arch, or one whose package database a transaction holds, every later step
+fails. Its JSON goes to `~/.local/state/iarch/preflight.json`. Every file it
+replaces is backed up first with a `.bak.<timestamp>` suffix, and every file
+it creates outside the repository is recorded in
+`~/.local/state/iarch/install-manifest.txt`.
 
 **A run on a machine that is already up to date installs nothing.** Every
 package step goes through `lib/packages.sh`, which refreshes the sync databases
@@ -177,14 +189,22 @@ python3 tools/profile_preset.py revert --config ~/.config/noctalia/config.toml
 ./uninstall.sh
 ```
 
-It restores the timestamped backups it finds in `~/.config` and tells you which
-files it restored and which it deliberately left alone. Generated files also keep
-their last five versions under `~/.local/state/iarch/backups/`.
+Two halves, because they are two kinds of undo. The first restores the timestamped
+backups it finds in `~/.config` and tells you which files it restored and which it
+left alone. The second reads `~/.local/state/iarch/install-manifest.txt` and removes
+exactly the files the installer recorded, after asking: a directory is reported
+rather than deleted, a path that is not absolute is refused, and the manifest itself
+is kept. `IARCH_DRY_RUN=1` changes nothing; `IARCH_ASSUME_YES=1` skips both
+questions. Generated files also keep their last five versions under
+`~/.local/state/iarch/backups/`.
 
-What it does **not** do: remove packages, disable services it enabled, undo the
-repository changes in `/etc/pacman.conf` or the COPRs, or put your old display
-manager back. Those are listed in the installer output and in
-[`SECURITY.md`](SECURITY.md), and reverting them is manual by design.
+What it does **not** do: remove packages, disable services it enabled, or undo the
+repository changes in `/etc/pacman.conf` or the COPRs. It does not switch the display
+manager back either — re-enabling a unit needs root, which this script does not ask
+for — but it reads `~/.local/state/iarch/display-manager-before.txt`, written
+*before* the switch, and prints the `systemctl` commands that put the machine back
+with the unit names filled in. Running them is manual by design; see
+[`SECURITY.md`](SECURITY.md).
 
 ## Troubleshooting
 

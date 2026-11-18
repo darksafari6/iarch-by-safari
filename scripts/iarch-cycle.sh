@@ -2,15 +2,21 @@
 # Copyright (C) 2026 Safari — GPL-3.0-or-later
 # Three cycles: animation preset, blur strength, theme mode.
 #
-# Only the third has a key. `theme` is what data/keybinds.default.json binds as
-# appearance.theme-mode on SUPER + CTRL + T, the cell the A to Z table in
-# data/design/keybinds.json allocates to it. `animation` and `blur` are here because the
-# two CLIs they drive -- iarch-anim and iarch-theme -- each own a list of presets and
-# neither offers a "next" of its own, so a cycle is the thing that was missing, and a
-# launcher that only did the one cycle a key asks for would leave the other two reachable
-# only by typing a preset name. Both are candidates for a cell if one ever frees up, and
-# neither is bound today: the table's tertiary layer has twelve letters empty on purpose
-# and a second key for one action is a second place to keep in sync.
+# All three have a key. `theme` is what data/keybinds.default.json binds as
+# appearance.theme-mode on SUPER + CTRL + T, `blur` as appearance.glass on SUPER + SHIFT + G
+# and `animation` as appearance.animation on SUPER + CTRL + A: three cells the A to Z table
+# in data/design/keybinds.json allocates to them. They are here because the two CLIs they
+# drive -- iarch-anim and iarch-theme -- each own a list of presets and neither offers a
+# "next" of its own, so a cycle is the thing that was missing, and a launcher that only did
+# the one cycle a key asks for would leave the other two reachable only by typing a preset
+# name. Two of the three were unbound when this script was written, and this header said a
+# second key for one action was a second place to keep in sync; the fourth pass of that
+# table filled every cell it had left and took both. What makes the argument wrong rather
+# than merely lost is that neither cycle keeps a list: each reads the state from the CLI
+# that owns it and writes it back there, so a key and a terminal stepping the same cycle
+# agree without either one remembering where the other got to. The cost of the blur half is
+# still the one this header named -- an intensity carries rounding, shadow, opacity and the
+# dim values with it -- and there is no blur-only leaf to step instead.
 #
 # Usage: scripts/iarch-cycle.sh {animation,blur,theme}
 #
