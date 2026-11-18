@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from iarch.cli import theme_pack_archive, theme_pack_cli
+from iarch.cli import theme, theme_pack_archive, theme_pack_cli
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,6 +19,11 @@ class PackCliTests(unittest.TestCase):
         with contextlib.redirect_stdout(output):
             self.assertEqual(theme_pack_cli.main(['list', '--json']), 0)
         self.assertEqual(set(json.loads(output.getvalue())), {'classic', 'dynamic'})
+
+    def test_planned_dynamic_apply_refuses_without_falling_back(self):
+        with contextlib.redirect_stderr(io.StringIO()) as output:
+            self.assertEqual(theme.main(['apply', 'ember']), 1)
+        self.assertIn('no files were changed', output.getvalue())
 
     def test_validate_reference(self):
         with contextlib.redirect_stdout(io.StringIO()):

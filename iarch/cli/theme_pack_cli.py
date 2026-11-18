@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 
-from iarch.cli import theme_pack_archive, theme_packs, theme_records
+from iarch.cli import theme_pack_archive, theme_pack_preview, theme_packs, theme_records
 from iarch.cli.theme_pack_validate import PackError, validate_pack
 
 
@@ -18,6 +18,8 @@ def main(argv=None):
     p = sub.add_parser('export')
     p.add_argument('id')
     p.add_argument('file')
+    p = sub.add_parser('preview')
+    p.add_argument('id')
     p = sub.add_parser('import')
     p.add_argument('file')
     p.add_argument('--force', action='store_true')
@@ -40,11 +42,13 @@ def main(argv=None):
             print(f"valid pack: {doc['theme']['id']}")
         elif args.command == 'export':
             print(theme_pack_archive.export_pack(theme_packs.find_dynamic(args.id), args.file))
+        elif args.command == 'preview':
+            print(theme_pack_preview.render_preview(theme_packs.find_dynamic(args.id)))
         elif args.command == 'import':
             print(theme_pack_archive.import_pack(args.file, theme_packs.user_packs_dir(),
                                                   force=args.force, reserved_ids={'dynamic-reference'}))
         return 0
-    except (PackError, ValueError, OSError) as exc:
+    except (PackError, ValueError, OSError, ImportError) as exc:
         print(f'iarch-theme: {exc}', file=sys.stderr)
         return 1
 

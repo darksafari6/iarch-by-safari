@@ -18,6 +18,7 @@ a preset, renders a configuration file, and can verify what it previously wrote:
 | `python3 iarch/cli/theme.py apply [PRESET]` | all of the above at once, under the live `~/.config`, from one preset and intensity | the contrast gate before it writes, then skips any file whose rendered bytes already match |
 | `python3 iarch/cli/theme.py list --json` | nothing — it reports | Classic and Dynamic catalogue groups |
 | `python3 iarch/cli/theme.py validate PATH` | nothing — it reports | validates a dynamic pack directory |
+| `python3 iarch/cli/theme.py preview ID` | an illustrative cached PNG | validates the dynamic pack first |
 | `python3 iarch/cli/theme.py export ID FILE` | a bounded pack archive | validates before exporting |
 | `python3 iarch/cli/theme.py import FILE [--force]` | a user pack directory | rejects unsafe archive members before extraction |
 | `python3 iarch/cli/theme_pack_validate.py DIRECTORY` | nothing — it reports | pack schemas, cross-file references and filesystem safety |

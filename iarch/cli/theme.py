@@ -664,10 +664,19 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     values = list(sys.argv[1:] if argv is None else argv)
     # Pack operations do not change the established Classic command routes.
-    if values and (values[0] in ("validate", "export", "import")
+    if values and (values[0] in ("validate", "export", "import", "preview")
                    or (values[0] in ("list", "current") and "--json" in values)):
         from iarch.cli import theme_pack_cli
         return theme_pack_cli.main(values)
+    # Never send a dynamic id through the older glass-preset parser: until the
+    # dynamic renderer is integrated, doing so could change the wrong theme.
+    if values and values[0] == "apply" and len(values) > 1:
+        from iarch.cli import theme_packs
+        dynamic_ids = {item["id"] for item in theme_packs.catalogue()["dynamic"]}
+        if values[1] in dynamic_ids or values[1] == "dynamic-reference":
+            print("iarch-theme: dynamic apply is not available until its renderer "
+                  "and shell runtime are ready; no files were changed", file=sys.stderr)
+            return EXIT_REFUSED
     # The six closed session-pack ids take precedence over the older glass
     # preset catalogue. The older subcommands remain available for the
     # intensity/settings machinery that still imports cmd_apply directly.
