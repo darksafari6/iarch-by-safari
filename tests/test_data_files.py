@@ -19,6 +19,8 @@ import iarch_brand as brand  # noqa: E402
 
 PAIRS = {
     "data/settings.default.json": "data/schemas/settings.schema.json",
+    "data/design/themes.json": "data/schemas/design-themes.schema.json",
+    "data/theme-overrides.default.json": "data/schemas/theme-overrides.schema.json",
     "data/themes/dynamic-reference/theme.json": "data/schemas/theme-pack.schema.json",
     "data/themes/dynamic-reference/palette.json": "data/schemas/theme-pack-palette.schema.json",
     "data/themes/dynamic-reference/layout.json": "data/schemas/theme-pack-layout.schema.json",

@@ -42,7 +42,7 @@ def export_pack(source, destination):
     return destination
 
 
-def import_pack(archive_path, destination, *, force=False):
+def import_pack(archive_path, destination, *, force=False, reserved_ids=()):
     archive_path, destination = Path(archive_path), Path(destination)
     try:
         if archive_path.stat().st_size > MAX_ARCHIVE:
@@ -87,6 +87,8 @@ def import_pack(archive_path, destination, *, force=False):
                             shutil.copyfileobj(stream, out)
             source = temp / root
             validate_pack(source)
+            if root in reserved_ids:
+                raise PackError(f'reserved pack id: {root}')
             target = destination / root
             if target.exists() or target.is_symlink():
                 if not force:

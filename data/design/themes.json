@@ -1,0 +1,111 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "verified_against": "fetched 2026-11-09",
+  "source": "User-provided Dynamic Themes build plan and existing data/themes/ids.json",
+  "themes": [
+    {
+      "id": "greenhouse",
+      "name": "Greenhouse",
+      "group": "classic",
+      "engine": "classic",
+      "status": "shipped",
+      "source_screenshot": null
+    },
+    {
+      "id": "amber-bloom",
+      "name": "Amber Bloom",
+      "group": "classic",
+      "engine": "classic",
+      "status": "shipped",
+      "source_screenshot": null
+    },
+    {
+      "id": "neon-rain",
+      "name": "Neon Rain",
+      "group": "classic",
+      "engine": "classic",
+      "status": "shipped",
+      "source_screenshot": null
+    },
+    {
+      "id": "forest-night",
+      "name": "Forest Night",
+      "group": "classic",
+      "engine": "classic",
+      "status": "shipped",
+      "source_screenshot": null
+    },
+    {
+      "id": "violet-glass",
+      "name": "Violet Glass",
+      "group": "classic",
+      "engine": "classic",
+      "status": "shipped",
+      "source_screenshot": null
+    },
+    {
+      "id": "crimson-silk",
+      "name": "Crimson Silk",
+      "group": "classic",
+      "engine": "classic",
+      "status": "shipped",
+      "source_screenshot": null
+    },
+    {
+      "id": "ember",
+      "name": "Ember",
+      "group": "dynamic",
+      "engine": "ishell",
+      "status": "planned",
+      "source_screenshot": "Theme 1 — user-provided reference, not included"
+    },
+    {
+      "id": "gold-noir",
+      "name": "Gold Noir",
+      "group": "dynamic",
+      "engine": "ishell",
+      "status": "planned",
+      "source_screenshot": "Theme 2 — user-provided reference, not included"
+    },
+    {
+      "id": "violet-dusk",
+      "name": "Violet Dusk",
+      "group": "dynamic",
+      "engine": "ishell",
+      "status": "planned",
+      "source_screenshot": "Theme 3 — user-provided reference, not included"
+    },
+    {
+      "id": "forest-mist",
+      "name": "Forest Mist",
+      "group": "dynamic",
+      "engine": "ishell",
+      "status": "planned",
+      "source_screenshot": "Theme 4 — user-provided reference, not included"
+    },
+    {
+      "id": "mauve-eclipse",
+      "name": "Mauve Eclipse",
+      "group": "dynamic",
+      "engine": "ishell",
+      "status": "planned",
+      "source_screenshot": "Theme 5 — user-provided reference, not included"
+    },
+    {
+      "id": "crimson-flow",
+      "name": "Crimson Flow",
+      "group": "dynamic",
+      "engine": "ishell",
+      "status": "planned",
+      "source_screenshot": "Theme 6 — user-provided reference, not included"
+    },
+    {
+      "id": "dynamic-reference",
+      "name": "Dynamic Reference",
+      "group": "dynamic",
+      "engine": "ishell",
+      "status": "reference",
+      "source_screenshot": null
+    }
+  ]
+}

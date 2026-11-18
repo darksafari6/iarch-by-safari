@@ -663,6 +663,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     values = list(sys.argv[1:] if argv is None else argv)
+    # Pack operations do not change the established Classic command routes.
+    if values and (values[0] in ("validate", "export", "import")
+                   or (values[0] in ("list", "current") and "--json" in values)):
+        from iarch.cli import theme_pack_cli
+        return theme_pack_cli.main(values)
     # The six closed session-pack ids take precedence over the older glass
     # preset catalogue. The older subcommands remain available for the
     # intensity/settings machinery that still imports cmd_apply directly.
