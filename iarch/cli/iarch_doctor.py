@@ -51,19 +51,33 @@ The contract, shared with iarch-anim and iarch-theme:
 * exit 0 when the checks ran (including when they could not be run), 1 when the
   shell answered with an error, 2 on a usage error.
 
+``shell`` adds a third subject in the dynamic-themes work: which of the two shell
+engines is running, whether exactly one is, and who owns the notification server.
+It changes nothing -- ``iarch-shell-switch`` is the command that acts.
+
 Usage:
     python3 iarch/cli/iarch_doctor.py notify-test [--force] [--dry-run] [--json]
     python3 iarch/cli/iarch_doctor.py dnd on|off|toggle|status [--json]
+    python3 iarch/cli/iarch_doctor.py shell [--json]
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
 import time
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from iarch.cli import engine_state, theme_engine as engines  # noqa: E402
+from iarch.lib import runner  # noqa: E402  (the runner the shell check injects)
 
 EXIT_OK = 0
 EXIT_FAILED = 1     # the shell answered, and its answer was an error
@@ -189,24 +203,28 @@ def dnd_toggle() -> Optional[Answer]:
 # --------------------------------------------------------------- other daemons
 
 
-def competing_daemons() -> Dict[str, Any]:
+def competing_daemons(run: Optional[Callable[[Tuple[str, ...]], Any]] = None) -> Dict[str, Any]:
     """Other notification daemons in the process table.
 
     ``searched`` keeps "nothing found" and "nothing looked" apart: without
     ``pgrep`` the list is empty *and* ``searched`` is false, and the caller must
     not print the empty list as a clean bill of health. The check is read-only —
     nothing here is ever stopped, disabled or removed.
+
+    ``run`` is injectable so ``shell`` can ask through the same runner the rest of
+    that check uses; only ``returncode`` and ``stdout`` are read from the answer,
+    which both answer shapes in this repository carry.
     """
-    if shutil.which(PGREP_BIN) is None:
+    execute = run or _run
+    pattern = "|".join(KNOWN_NOTIFICATION_DAEMONS)
+    answer = execute((PGREP_BIN, "-x", "-l", pattern))
+    if answer is None:
         return {"names": [], "searched": False,
                 "note": f"{PGREP_BIN} is not installed, so the process table was not searched"}
-    pattern = "|".join(KNOWN_NOTIFICATION_DAEMONS)
-    answer = _run((PGREP_BIN, "-x", "-l", pattern))
-    if answer is None or answer.returncode not in (0, 1):
+    if answer.returncode not in (0, 1):
         # pgrep exits 1 when nothing matched; anything else means it could not answer.
         return {"names": [], "searched": False,
-                "note": f"{PGREP_BIN} gave no usable answer "
-                        f"(exit {answer.returncode if answer else 'n/a'})"}
+                "note": f"{PGREP_BIN} gave no usable answer (exit {answer.returncode})"}
     found: List[str] = []
     for line in answer.stdout.splitlines():
         parts = line.split(None, 1)
@@ -560,6 +578,67 @@ def cmd_dnd(args: argparse.Namespace) -> int:
     return EXIT_OK if verdict == "ok" else EXIT_FAILED
 
 
+# --------------------------------------------------------------- shell
+
+
+def cmd_shell(args: argparse.Namespace) -> int:
+    """One shell engine and one notification server: report both, change nothing.
+
+    The verdicts are the three this tool already uses: ``ok`` when the session says
+    one engine is running and the notification server belongs to it, ``error`` when
+    it says something a person has to fix, and ``unverified`` when the probes could
+    not run at all -- no ``pgrep``, no ``dbus-send``, no session. An unverified
+    answer is exit 0 with the reason printed, because a check that could not happen
+    is not a failure of the desktop.
+    """
+    report = engine_state.state(os.environ)
+    report["check"] = "shell"
+    report["daemons"] = competing_daemons(run=runner.run)
+    running = [key for key, scan in sorted(report["engines"].items()) if scan["pids"]]
+    notification = report["notification"]
+    problems: List[str] = list(report["violations"])
+    searchable = any(scan["searched"] for scan in report["engines"].values())
+    if searchable and not running:
+        problems.append("no shell engine is running, so the session has no bar, "
+                        "launcher or notification server")
+    if not notification["searched"]:
+        problems.append(f"the notification server could not be asked: {notification['note']}")
+    elif notification["unique_name"] is None:
+        problems.append("no process owns org.freedesktop.Notifications")
+    elif notification["engine"] is not None and notification["engine"] not in running:
+        problems.append("the notification server belongs to "
+                        f"{engines.engine(notification['engine']).name}, which is not the "
+                        "engine running now")
+    for daemon in report["daemons"]["names"]:
+        problems.append(f"another notification daemon is running: {daemon}")
+    if not report["daemons"]["searched"]:
+        report["notes"] = [report["daemons"]["note"]]
+    report["running"] = running
+    report["selected"] = report["record"]["engine"]
+    report["problems"] = problems
+    report["verdict"] = ("error" if problems and searchable else
+                         "unverified" if not searchable and not notification["searched"]
+                         else "ok" if not problems else "error")
+
+    if args.json:
+        json.dump(report, sys.stdout, indent=2, ensure_ascii=False, default=str)
+        sys.stdout.write("\n")
+    else:
+        print("iarch-doctor: shell engines")
+        for engine_id, scan in sorted(report["engines"].items()):
+            state = "running" if scan["pids"] else ("not running" if scan["searched"] else "unknown")
+            pids = f" (pid {', '.join(str(pid) for pid in scan['pids'])})" if scan["pids"] else ""
+            print(f"  {engines.engine(engine_id).name:<12} {state}{pids}")
+        print(f"  selected:    {engines.engine(report['selected']).name}")
+        owner = notification["engine"] or (notification["unique_name"] or "nobody")
+        print(f"  notifications: {owner} owns {notification['name']}")
+        for problem in problems:
+            print(f"  problem: {problem}")
+        if not problems:
+            print("  one shell engine, one notification server")
+    return EXIT_OK if report["verdict"] in ("ok", "unverified") else EXIT_FAILED
+
+
 # --------------------------------------------------------------- entry point
 
 
@@ -597,6 +676,16 @@ def build_parser() -> argparse.ArgumentParser:
     dnd.add_argument("action", choices=("on", "off", "toggle", "status"))
     dnd.add_argument("--json", action="store_true", help="print one JSON object and nothing else")
     dnd.set_defaults(func=cmd_dnd)
+
+    shell = sub.add_parser(
+        "shell",
+        help="report which shell engine is running and who owns the notification server",
+        description="Read-only: reports whether exactly one shell engine is running, which one "
+                    "the record selects, and which process owns org.freedesktop.Notifications. "
+                    "iarch-shell-switch is the command that changes any of it.",
+    )
+    shell.add_argument("--json", action="store_true", help="print one JSON object and nothing else")
+    shell.set_defaults(func=cmd_shell)
     return parser
 
 

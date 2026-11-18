@@ -95,7 +95,33 @@ SETTINGS_TEST_FILES = (
     "tests/test_settings_system.py",
 )
 
-NEW_SOURCE_FILES = PART_ONE_TO_THREE_FILES + SETTINGS_APP_FILES + SETTINGS_TEST_FILES
+#: The dynamic-themes work (docs/PART-PLAN-T1.md): the engine catalogue, the switch
+#: that enforces one shell at a time, and the four shared libraries both are built
+#: on. Every later part of that schedule adds its files here.
+THEMES_ENGINE_FILES = (
+    "iarch/lib/compositor.py",
+    "iarch/lib/dbus_probe.py",
+    "iarch/lib/processes.py",
+    "iarch/lib/runner.py",
+    "iarch/cli/engine_state.py",
+    "iarch/cli/engine_steps.py",
+    "iarch/cli/iarch_shell_switch.py",
+    "iarch/cli/shell_switch.py",
+    "iarch/cli/theme_engine.py",
+    "scripts/iarch-shell-switch.sh",
+    "tests/session_fake.py",
+)
+
+#: The tests that hold the engine switch to the contract in docs/THEMES-ARCHITECTURE.md.
+THEMES_ENGINE_TEST_FILES = (
+    "tests/test_shell_switch.py",
+    "tests/test_shell_switch_cli.py",
+    "tests/test_shell_switch_rollback.py",
+    "tests/test_theme_engine.py",
+)
+
+NEW_SOURCE_FILES = (PART_ONE_TO_THREE_FILES + SETTINGS_APP_FILES + SETTINGS_TEST_FILES
+                    + THEMES_ENGINE_FILES + THEMES_ENGINE_TEST_FILES)
 
 #: Not in the list above, and deliberately: a stylesheet has no ``#`` comment, so the
 #: header it carries is the same sentence inside ``/* */``. It gets its own test rather
@@ -134,6 +160,24 @@ class CopyrightHeaders(unittest.TestCase):
         self.assertEqual(found, set(SETTINGS_APP_FILES),
                          "SETTINGS_APP_FILES and the package's own contents disagree, so "
                          "either a file is unchecked or the list names one that is gone")
+
+    def test_the_engine_list_names_every_engine_module_the_cli_directory_has(self):
+        """The same rule as the settings app's, for the dynamic-themes modules."""
+        stems = ("engine_", "theme_engine", "shell_switch", "iarch_shell_switch")
+        found = {str(path.relative_to(ROOT))
+                 for path in (ROOT / "iarch" / "cli").glob("*.py")
+                 if path.stem.startswith(stems)}
+        listed = {relative for relative in THEMES_ENGINE_FILES
+                  if relative.startswith("iarch/cli/")}
+        self.assertEqual(found, listed,
+                         "THEMES_ENGINE_FILES and iarch/cli disagree, so an engine module is "
+                         "either unchecked or the list names one that is gone")
+
+    def test_the_engine_test_list_is_every_engine_test(self):
+        found = {str(path.relative_to(ROOT))
+                 for path in (ROOT / "tests").glob("test_shell_switch*.py")}
+        found.add("tests/test_theme_engine.py")
+        self.assertEqual(found, set(THEMES_ENGINE_TEST_FILES))
 
     def test_the_settings_test_list_is_every_settings_test(self):
         found = {str(path.relative_to(ROOT))

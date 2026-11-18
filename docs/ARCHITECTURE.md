@@ -44,8 +44,14 @@ the map. Read it before changing anything.
 │   ├── lib/renderers.py      Generators. Contract shipped; renderers land in Parts 2 and 5.
 │   ├── lib/modes.py          Mode switches: the compositor and shell calls, the modes.<name>
 │   │                         record, and the matches/differs/unverified vocabulary both share.
+│   ├── lib/runner.py         One way to run a command: argument lists, timeouts, and a
+│   │                         "could not be asked" that is never printed as a clean answer.
+│   ├── lib/processes.py      The process table, spawning detached, and a guarded terminate.
+│   ├── lib/compositor.py     hyprctl reload, configerrors, and "only new lines count".
+│   ├── lib/dbus_probe.py     Who owns a session-bus name, and which pid is behind it.
 │   ├── cli/                  iarch-theme (Part 2), iarch-anim, iarch-doctor, iarch-gamemode and
-│   │                         iarch-focus (Part 3); iarch-keybinds (Part 5).
+│   │                         iarch-focus (Part 3); iarch-keybinds (Part 5); iarch-shell-switch
+│   │                         and the theme-pack modules (themes T1).
 │   │   ├── contrast_check.py  WCAG gate every preset clears; iarch-theme refuses failures.
 │   │   ├── gen_wallpapers.py  Seeded 4K WebP renders of the generated presets.
 │   │   ├── gen_glass_lua.py   Hyprland decoration, layer and window rules from the tokens.
@@ -67,7 +73,12 @@ the map. Read it before changing anything.
 │   │   │                      the state they replaced, and read four leaves back to check.
 │   │   ├── iarch_focus.py     iarch-focus: Do Not Disturb, caffeine and a runtime dim on every
 │   │                          unfocused window. Writes no file, so a reload ends it.
-│   └── iarch_keybinds.py  iarch-keybinds: render .config/hypr/generated/keybinds.lua from
+│   │   ├── theme_engine.py    The two shell engines as data, and the read-only probes over them.
+│   │   ├── engine_state.py    Which engine is selected, and the snapshot a rollback restores.
+│   │   ├── engine_steps.py    Stop, start, prove: the three actions a switch is made of.
+│   │   ├── shell_switch.py    The switch sequence, its preflight and its rollback.
+│   │   ├── iarch_shell_switch.py  iarch-shell-switch: run one shell engine, never two.
+│   │   └── iarch_keybinds.py  iarch-keybinds: render .config/hypr/generated/keybinds.lua from
 │                              data/keybinds.default.json, validate the map, and list it for a UI.
 │   └── settings-app/         GTK4 + libadwaita settings application (Part 4).
 │
@@ -395,10 +406,14 @@ never touch `~/.config`, never call a package manager and never start a session.
 | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Current. This file |
 | [BRANDING.md](BRANDING.md) | Current. Naming and credit policy |
+| [DECISIONS.md](DECISIONS.md) | Current. Every decision that changed the shape of the project, with the alternatives it rejected |
 | [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) | Current. Tokens, roles, the four intensities, the seven glass classes, and the toolkit contract |
 | [MOTION.md](MOTION.md) | Current. Animation presets, hover/press/focus, reduce motion, and the QA walk-through |
 | [ROADMAP.md](ROADMAP.md) | Current. The six-part glass plan |
 | [SETTINGS-APP.md](SETTINGS-APP.md) | Current. The settings window: its five layers, the rules each one enforces, and how to start it |
+| [THEMES.md](THEMES.md) | Current. The six Classic session theme packs and what a theme renders |
+| [THEMES-ARCHITECTURE.md](THEMES-ARCHITECTURE.md) | Current. The two shell engines, what they share, and the ten-second switch contract |
+| [PART-PLAN-T1.md](PART-PLAN-T1.md) | Current. The plan and research behind the dynamic-themes part 1 |
 | [UNVERIFIED.md](UNVERIFIED.md) | Current. Open verification items |
 | [glass-experience.md](glass-experience.md) | Current. Glass profile and recovery |
 | [V4-SESSION.md](../legacy/docs/V4-SESSION.md), [V4-INSTALL-NOTES.md](../legacy/docs/V4-INSTALL-NOTES.md) | Historical. Legacy isolated session |

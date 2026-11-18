@@ -1,5 +1,9 @@
 # Session themes
 
+These six packs are the **Classic** engine's themes. The second engine, and the pack
+format the dynamic themes are written in, are documented in
+[THEMES-ARCHITECTURE.md](THEMES-ARCHITECTURE.md); nothing below changes for it.
+
 iArch's six session themes are complete data packs. The data pack is the only
 place a per-theme value is defined; the files under `~/.config` are projections
 written by the theme renderer.
