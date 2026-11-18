@@ -27,6 +27,9 @@ def catalogue(env=None):
             except PackError:
                 continue
             if pack['id'] in known:
+                for record in result:
+                    if record['group'] == 'dynamic' and record['id'] == pack['id']:
+                        record['status'] = 'imported'
                 continue
             result.append({'id': pack['id'], 'name': pack['name'], 'group': 'dynamic',
                            'engine': 'ishell', 'status': 'imported', 'source_screenshot': None})

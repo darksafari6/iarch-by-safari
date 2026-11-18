@@ -22,6 +22,7 @@ PAIRS = {
     "data/design/themes.json": "data/schemas/design-themes.schema.json",
     "data/theme-overrides.default.json": "data/schemas/theme-overrides.schema.json",
     "data/themes/dynamic-reference/theme.json": "data/schemas/theme-pack.schema.json",
+    "data/themes/dynamic-reference/wallpapers/example.json": "data/schemas/theme-pack-wallpaper.schema.json",
     "data/themes/dynamic-reference/palette.json": "data/schemas/theme-pack-palette.schema.json",
     "data/themes/dynamic-reference/layout.json": "data/schemas/theme-pack-layout.schema.json",
     "data/themes/dynamic-reference/motion.json": "data/schemas/theme-pack-motion.schema.json",

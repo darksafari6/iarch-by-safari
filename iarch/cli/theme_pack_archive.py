@@ -51,8 +51,12 @@ def import_pack(archive_path, destination, *, force=False, reserved_ids=()):
         with tempfile.TemporaryDirectory(prefix='.iarch-import-', dir=destination) as temp:
             temp = Path(temp)
             with tarfile.open(archive_path, 'r:gz') as archive:
-                members = archive.getmembers()
-                if not members or len(members) > MAX_MEMBERS:
+                members = []
+                for member in archive:
+                    members.append(member)
+                    if len(members) > MAX_MEMBERS:
+                        raise PackError('invalid archive member count')
+                if not members:
                     raise PackError('invalid archive member count')
                 seen, root, total = set(), None, 0
                 for member in members:

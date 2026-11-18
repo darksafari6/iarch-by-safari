@@ -12,9 +12,8 @@ seeds and generator versions with their output. Preview images must be generated
 from redistributable assets. Anime wallpapers and album artwork visible in
 reference screenshots are not included: a screenshot is not a licence to
 redistribute its contents. Users may select their own wallpaper locally without
-committing or redistributing it. Wallpaper recipe ingestion is not implemented
-yet; the current pack validator refuses recipe files rather than accepting an
-unvalidated format.
+committing or redistributing it. Wallpaper recipes are validated as data; their rendering is scheduled for a
+later milestone.
 
 ## Sounds, fonts and icons
 

@@ -379,6 +379,7 @@ Every visual effect must be switchable, and a lower-cost preset must always exis
 | `python3 iarch/cli/contrast_check.py --quiet` | Every preset clears 4.5:1 for text and 3:1 for non-text UI |
 | `python3 iarch/cli/gen_wallpapers.py --check` | Generated wallpapers exist, are 4K WebP and inside 600 KB; nothing orphaned |
 | `python3 iarch/cli/gen_glass_lua.py --check` | The committed `glass.lua` still matches a fresh render of the tokens |
+| `python3 iarch/cli/gen_theme_status.py --check` | Dynamic theme status matches the catalogue |
 | `python3 iarch/cli/gen_animations_lua.py --check` | The committed `animations.lua` still matches a fresh render of the default intensity's motion preset |
 | `python3 iarch/cli/gen_startup_lua.py --check` | The committed `startup.lua` still matches a fresh render of the startup record, and both installers' `sed` anchors are still in it |
 | `python3 iarch/cli/render_noctalia.py --check` | The committed `config.toml` and all six palettes still match a fresh render |
@@ -423,3 +424,7 @@ never touch `~/.config`, never call a package manager and never start a session.
 
 Historical documents are kept because they record why the current safety rules exist. They are
 marked with a banner and are not instructions for today's session.
+
+Dynamic theme boundaries, assets, and milestone gates are documented in
+[THEMES-ARCHITECTURE.md](THEMES-ARCHITECTURE.md), [THEMES-ASSETS.md](THEMES-ASSETS.md),
+and [THEMES-MILESTONES.md](THEMES-MILESTONES.md).

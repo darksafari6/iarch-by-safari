@@ -23,7 +23,7 @@ class PackCliTests(unittest.TestCase):
     def test_planned_dynamic_apply_refuses_without_falling_back(self):
         with contextlib.redirect_stderr(io.StringIO()) as output:
             self.assertEqual(theme.main(['apply', 'ember']), 1)
-        self.assertIn('no files were changed', output.getvalue())
+        self.assertIn('no installed dynamic pack', output.getvalue())
 
     def test_validate_reference(self):
         with contextlib.redirect_stdout(io.StringIO()):

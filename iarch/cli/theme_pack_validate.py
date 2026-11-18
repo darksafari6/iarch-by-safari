@@ -1,8 +1,8 @@
 # Copyright (C) 2026 Safari — GPL-3.0-or-later
 """Validate an untrusted dynamic theme directory without executing its contents.
 
-Validation is read-only. Wallpaper recipe files are not yet supported. Archive
-extraction has additional requirements and must not rely on this directory
+Validation is read-only. Wallpaper recipes are validated but not rendered here.
+Archive extraction has additional requirements and must not rely on this directory
 validator to make unsafe extraction safe.
 """
 import argparse
@@ -85,6 +85,7 @@ def _inventory(path):
             allowed = rel in {f'{n}.json' for n in FILES}
             allowed |= bool(re.fullmatch(r'sounds/[a-zA-Z0-9._-]+\.(ogg|wav)', rel))
             allowed |= bool(re.fullmatch(r'preview/[a-zA-Z0-9._-]+\.png', rel))
+            allowed |= bool(re.fullmatch(r'wallpapers/[a-zA-Z0-9._-]+\.json', rel))
             if not allowed:
                 raise PackError(f'{rel}: unknown file')
             if info.st_size > MAX_FILE:
@@ -148,6 +149,16 @@ def validate_pack(path, *, require_directory_id=True):
     for token in (hypr['active_border'], hypr['inactive_border'], hypr['shadow']['color'], apps['gtk']['accent'], apps['kitty']['foreground'], apps['kitty']['background'], apps['kitty']['cursor'], apps['fish']['command'], apps['fish']['error'], apps['starship']['accent']):
         if token not in colors:
             raise PackError(f'unknown colour token: {token}')
+    recipe_schema = _load(ROOT / 'data/schemas/theme-pack-wallpaper.schema.json')
+    for recipe_path in sorted((path / 'wallpapers').glob('*.json')):
+        recipe = _load(recipe_path)
+        errors = list(Draft7Validator(recipe_schema).iter_errors(recipe))
+        if errors:
+            raise PackError(f'{recipe_path.name}: {errors[0].message}')
+        for value in _strings(recipe):
+            _safe_string(value, 'wallpapers')
+        if recipe['id'] != theme['id'] or recipe['size'] not in sizes or set(recipe['colors']) - colors.keys():
+            raise PackError(f'{recipe_path.name}: invalid wallpaper references')
     for event in docs['sounds']['events'].values():
         if event['enabled'] and not (path / PurePosixPath(event['file'])).is_file():
             raise PackError(f"missing sound: {event['file']}")

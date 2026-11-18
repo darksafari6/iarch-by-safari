@@ -88,6 +88,13 @@ class PackValidation(unittest.TestCase):
                 self.rejected()
                 (self.pack / (name + '.json')).write_text(original)
 
+    def test_wallpaper_references_are_checked(self):
+        path = self.pack / 'wallpapers/example.json'
+        data = json.loads(path.read_text())
+        data['colors'] = ['accent', 'unknown']
+        path.write_text(json.dumps(data))
+        self.rejected()
+
     def test_enabled_sound_must_exist(self):
         self.change('sounds', lambda d: d['events']['switch'].update(enabled=True))
         self.rejected()

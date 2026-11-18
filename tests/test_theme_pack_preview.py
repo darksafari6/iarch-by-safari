@@ -16,7 +16,7 @@ class PreviewTests(unittest.TestCase):
             root = Path(tmp)
             pack = root / 'example-pack'
             shutil.copytree(ROOT / 'data/themes/dynamic-reference', pack)
-            for p in pack.glob('*.json'):
+            for p in pack.rglob('*.json'):
                 doc = json.loads(p.read_text())
                 doc['id'] = 'example-pack'
                 p.write_text(json.dumps(doc))

@@ -23,7 +23,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "iarch-settings"
-version = "0.4.0"
+version = "0.5.0"
 description = "Glass settings window for the iArch by Safari Hyprland session"
 readme = "README.md"
 requires-python = ">=3.11"

@@ -163,3 +163,17 @@ notification audio is played by `iarch-theme apply`.
 
 For asset licensing and production rules see [THEMES-ASSETS.md](THEMES-ASSETS.md);
 for milestone gates see [THEMES-MILESTONES.md](THEMES-MILESTONES.md).
+
+Dynamic directories use the versioned pack schemas; `iarch-theme list --json`
+reports Classic and Dynamic groups. `validate`, `import`, `export`, and `preview`
+operate on packs, while `apply` snapshots its output, asks the shell and
+compositor to reload, and rolls back if either refuses. `rollback` restores the
+last successful dynamic apply. The reference pack is a format example, never an
+applicable theme. The runtime IPC contract and live compositor integration are
+unverified until M1; the shell skeleton cannot acknowledge an apply today.
+The settings and cursor projections do not guarantee a live refresh in already
+running applications, and wallpaper recipe rendering and sound generation are
+scheduled for later milestones.
+
+Dynamic pack validation requires Python `jsonschema`; previews require Pillow.
+The installer does not yet provision these dependencies.

@@ -76,7 +76,7 @@ class ThemePacks(unittest.TestCase):
                         "apply", "forest-night", "--config-home", str(config_home), "--no-reload"
                     ])
             self.assertEqual(0, code, err.getvalue())
-            self.assertEqual({"id": "forest-night"},
+            self.assertEqual({"schema_version": 1, "id": "forest-night", "engine": "classic", "overrides": {}},
                              json.loads((config_home / "iarch" / "theme.json").read_text()))
             self.assertTrue((config_home / "hypr/generated/theme.lua").is_file())
             self.assertTrue((config_home / "noctalia/palettes/iarch-active.json").is_file())

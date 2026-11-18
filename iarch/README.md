@@ -20,10 +20,11 @@ Everything this project authors lives under this directory, named with the
 | `cli/iarch_doctor.py` | `iarch-doctor`: asks a running session whether the settings took — notification probes and Do Not Disturb today, the rest of the session in Part 5 | shipped, tested |
 | `cli/theme_records.py` | Theme selection migration and validated user overrides | shipped, tested |
 | `cli/theme_packs.py` | Classic and dynamic catalogue and user-pack discovery | shipped, tested |
-| `cli/theme_pack_cli.py` | Pack list, validation and archive commands | partial |
+| `cli/theme_pack_cli.py` | Pack commands, apply and rollback | live verification pending |
 | `cli/gen_theme_status.py` | Generate the theme status document | shipped, tested |
 | `cli/theme_pack_preview.py` | Generate an illustrative palette preview for an installed dynamic pack | shipped, tested |
-| `cli/theme_pack_apply.py` | Transaction with byte rollback and verified shell/compositor reload; renderer integration pending | partial |
+| `cli/theme_pack_apply.py` | Transaction with byte rollback and verified shell/compositor reload | live verification pending |
+| `cli/theme_pack_render.py` | Render dynamic pack tokens into shared application configuration | live verification pending |
 | `cli/theme_pack_archive.py` | Bounded archive export and safe import of dynamic packs | shipped, tested |
 | `cli/theme_pack_validate.py` | Validates dynamic pack schemas, references and filesystem safety | reference format |
 | `cli/theme_engine.py` | The two shell engines as data — ids, names, binaries, launch and stop commands — and the read-only probes over them | shipped, tested |

@@ -668,15 +668,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                    or (values[0] in ("list", "current") and "--json" in values)):
         from iarch.cli import theme_pack_cli
         return theme_pack_cli.main(values)
-    # Never send a dynamic id through the older glass-preset parser: until the
-    # dynamic renderer is integrated, doing so could change the wrong theme.
+    if values == ["list"]:
+        from iarch.cli import theme_pack_cli
+        return theme_pack_cli.main(values)
+    if values == ["current"]:
+        from iarch.cli import theme_pack_cli, theme_records
+        if theme_records.read_selection().get("engine") == "dynamic":
+            return theme_pack_cli.main(values)
+    if values and values[0] == "rollback":
+        from iarch.cli import theme_pack_cli
+        return theme_pack_cli.main(values)
     if values and values[0] == "apply" and len(values) > 1:
         from iarch.cli import theme_packs
         dynamic_ids = {item["id"] for item in theme_packs.catalogue()["dynamic"]}
         if values[1] in dynamic_ids or values[1] == "dynamic-reference":
-            print("iarch-theme: dynamic apply is not available until its renderer "
-                  "and shell runtime are ready; no files were changed", file=sys.stderr)
-            return EXIT_REFUSED
+            from iarch.cli import theme_pack_cli
+            return theme_pack_cli.main(values)
     # The six closed session-pack ids take precedence over the older glass
     # preset catalogue. The older subcommands remain available for the
     # intensity/settings machinery that still imports cmd_apply directly.
