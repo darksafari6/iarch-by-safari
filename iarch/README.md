@@ -18,6 +18,7 @@ Everything this project authors lives under this directory, named with the
 | `cli/theme.py` | `iarch-theme`: applies one preset across every surface at once — contrast gate first, all-or-nothing render, verified reload | shipped, tested |
 | `cli/iarch_anim.py` | `iarch-anim`: switches the motion preset, speed, reduce-motion and per-event overrides, verifies against the compositor and rolls back a rejection | shipped, tested |
 | `cli/iarch_doctor.py` | `iarch-doctor`: asks a running session whether the settings took — notification probes and Do Not Disturb today, the rest of the session in Part 5 | shipped, tested |
+| `cli/theme_pack_validate.py` | Validates dynamic pack schemas, references and filesystem safety | reference format |
 | `cli/theme_engine.py` | The two shell engines as data — ids, names, binaries, launch and stop commands — and the read-only probes over them | shipped, tested |
 | `cli/engine_state.py` | The selected-engine record, the switch snapshot, and the one report of what the session says about itself | shipped, tested |
 | `cli/engine_steps.py` | Stop, start and prove: the three actions a shell switch is made of | shipped, tested |

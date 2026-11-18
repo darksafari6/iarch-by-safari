@@ -1,0 +1,37 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "schema_version": 1,
+  "id": "dynamic-reference",
+  "durations": {
+    "fast": 120,
+    "normal": 220,
+    "slow": 380
+  },
+  "easing": "InOutCubic",
+  "surfaces": {
+    "bar": {
+      "duration": "normal",
+      "style": "fade"
+    },
+    "overview": {
+      "duration": "normal",
+      "style": "fade"
+    },
+    "sidebar-right": {
+      "duration": "normal",
+      "style": "fade"
+    },
+    "sidebar-left": {
+      "duration": "normal",
+      "style": "fade"
+    },
+    "dock": {
+      "duration": "normal",
+      "style": "fade"
+    },
+    "osk": {
+      "duration": "normal",
+      "style": "fade"
+    }
+  }
+}

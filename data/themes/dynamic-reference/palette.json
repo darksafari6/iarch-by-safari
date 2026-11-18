@@ -1,0 +1,16 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "schema_version": 1,
+  "id": "dynamic-reference",
+  "mode": "dark",
+  "colors": {
+    "background": "#0c0e0c",
+    "surface": "#161916",
+    "text": "#e7f0e4",
+    "accent": "#8fcb6a",
+    "on-accent": "#10200c",
+    "secondary": "#c6e6a0",
+    "error": "#e08a7a",
+    "outline": "#5c7456"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "schema_version": 1,
+  "id": "dynamic-reference",
+  "gaps_in": "small",
+  "gaps_out": "medium",
+  "border_width": "small",
+  "rounding": "md",
+  "active_border": "accent",
+  "inactive_border": "outline",
+  "blur": {
+    "enabled": false,
+    "size": "small",
+    "passes": 1
+  },
+  "shadow": {
+    "enabled": false,
+    "range": "medium",
+    "color": "background"
+  },
+  "window_rules": [],
+  "animations": {
+    "enabled": true,
+    "preset": "smooth"
+  }
+}

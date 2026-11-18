@@ -1,0 +1,22 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "schema_version": 1,
+  "id": "dynamic-reference",
+  "events": {
+    "notification": {
+      "file": "sounds/notification.ogg",
+      "volume": 0.3,
+      "enabled": false
+    },
+    "volume": {
+      "file": "sounds/volume.ogg",
+      "volume": 0.3,
+      "enabled": false
+    },
+    "switch": {
+      "file": "sounds/switch.ogg",
+      "volume": 0.3,
+      "enabled": false
+    }
+  }
+}

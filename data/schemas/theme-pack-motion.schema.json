@@ -1,0 +1,229 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/theme-pack-motion.schema.json",
+  "title": "Dynamic theme pack motion",
+  "description": "Closed version 1 motion document. Cross-file references and filesystem safety are checked by theme_pack_validate.",
+  "type": "object",
+  "required": [
+    "_copyright",
+    "schema_version",
+    "id",
+    "durations",
+    "easing",
+    "surfaces"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "durations": {
+      "type": "object",
+      "required": [
+        "fast",
+        "normal",
+        "slow"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fast": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "normal": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "slow": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        }
+      }
+    },
+    "easing": {
+      "enum": [
+        "Linear",
+        "InOutCubic",
+        "OutCubic",
+        "InOutQuad"
+      ]
+    },
+    "surfaces": {
+      "type": "object",
+      "required": [
+        "bar",
+        "overview",
+        "sidebar-right",
+        "sidebar-left",
+        "dock",
+        "osk"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bar": {
+          "type": "object",
+          "required": [
+            "duration",
+            "style"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "duration": {
+              "enum": [
+                "fast",
+                "normal",
+                "slow"
+              ]
+            },
+            "style": {
+              "enum": [
+                "none",
+                "fade",
+                "slide",
+                "scale"
+              ]
+            }
+          }
+        },
+        "overview": {
+          "type": "object",
+          "required": [
+            "duration",
+            "style"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "duration": {
+              "enum": [
+                "fast",
+                "normal",
+                "slow"
+              ]
+            },
+            "style": {
+              "enum": [
+                "none",
+                "fade",
+                "slide",
+                "scale"
+              ]
+            }
+          }
+        },
+        "sidebar-right": {
+          "type": "object",
+          "required": [
+            "duration",
+            "style"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "duration": {
+              "enum": [
+                "fast",
+                "normal",
+                "slow"
+              ]
+            },
+            "style": {
+              "enum": [
+                "none",
+                "fade",
+                "slide",
+                "scale"
+              ]
+            }
+          }
+        },
+        "sidebar-left": {
+          "type": "object",
+          "required": [
+            "duration",
+            "style"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "duration": {
+              "enum": [
+                "fast",
+                "normal",
+                "slow"
+              ]
+            },
+            "style": {
+              "enum": [
+                "none",
+                "fade",
+                "slide",
+                "scale"
+              ]
+            }
+          }
+        },
+        "dock": {
+          "type": "object",
+          "required": [
+            "duration",
+            "style"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "duration": {
+              "enum": [
+                "fast",
+                "normal",
+                "slow"
+              ]
+            },
+            "style": {
+              "enum": [
+                "none",
+                "fade",
+                "slide",
+                "scale"
+              ]
+            }
+          }
+        },
+        "osk": {
+          "type": "object",
+          "required": [
+            "duration",
+            "style"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "duration": {
+              "enum": [
+                "fast",
+                "normal",
+                "slow"
+              ]
+            },
+            "style": {
+              "enum": [
+                "none",
+                "fade",
+                "slide",
+                "scale"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

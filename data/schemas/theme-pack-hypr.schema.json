@@ -1,0 +1,177 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/theme-pack-hypr.schema.json",
+  "title": "Dynamic theme pack hypr",
+  "description": "Closed version 1 hypr document. Cross-file references and filesystem safety are checked by theme_pack_validate.",
+  "type": "object",
+  "required": [
+    "_copyright",
+    "schema_version",
+    "id",
+    "gaps_in",
+    "gaps_out",
+    "border_width",
+    "rounding",
+    "active_border",
+    "inactive_border",
+    "blur",
+    "shadow",
+    "window_rules",
+    "animations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "gaps_in": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "gaps_out": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "border_width": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "rounding": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "active_border": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "inactive_border": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "blur": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "size",
+        "passes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "size": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "passes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "shadow": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "range",
+        "color"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "range": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "color": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        }
+      }
+    },
+    "window_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "class",
+          "effect",
+          "enabled"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "effect": {
+            "enum": [
+              "float",
+              "no_blur",
+              "no_shadow"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "maxItems": 100
+    },
+    "animations": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "preset"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "preset": {
+          "enum": [
+            "smooth",
+            "snappy",
+            "bouncy",
+            "minimal",
+            "off"
+          ]
+        }
+      }
+    }
+  }
+}

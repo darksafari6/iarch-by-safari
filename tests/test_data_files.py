@@ -19,6 +19,13 @@ import iarch_brand as brand  # noqa: E402
 
 PAIRS = {
     "data/settings.default.json": "data/schemas/settings.schema.json",
+    "data/themes/dynamic-reference/theme.json": "data/schemas/theme-pack.schema.json",
+    "data/themes/dynamic-reference/palette.json": "data/schemas/theme-pack-palette.schema.json",
+    "data/themes/dynamic-reference/layout.json": "data/schemas/theme-pack-layout.schema.json",
+    "data/themes/dynamic-reference/motion.json": "data/schemas/theme-pack-motion.schema.json",
+    "data/themes/dynamic-reference/sounds.json": "data/schemas/theme-pack-sounds.schema.json",
+    "data/themes/dynamic-reference/hypr.json": "data/schemas/theme-pack-hypr.schema.json",
+    "data/themes/dynamic-reference/apps.json": "data/schemas/theme-pack-apps.schema.json",
     "data/contacts.default.json": "data/schemas/contacts.schema.json",
     "data/keybinds.default.json": "data/schemas/keybinds.schema.json",
     "data/design/glass.tokens.json": "data/schemas/design-tokens.schema.json",

@@ -1,0 +1,59 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "schema_version": 1,
+  "id": "dynamic-reference",
+  "name": "Dynamic Reference",
+  "description": "A minimal reference for the dynamic theme pack format.",
+  "engine": "ishell",
+  "mode": "dark",
+  "fonts": {
+    "ui": "Inter",
+    "display": "Inter Display",
+    "mono": "JetBrainsMono Nerd Font"
+  },
+  "shape": {
+    "radius": {
+      "none": 0,
+      "xs": 4,
+      "sm": 8,
+      "md": 12,
+      "lg": 16,
+      "xl": 24,
+      "pill": 999
+    },
+    "components": {
+      "window": "md",
+      "panel": "lg",
+      "card": "md",
+      "button": "sm",
+      "input": "sm",
+      "tooltip": "xs",
+      "chip": "pill",
+      "osk-key": "sm"
+    },
+    "chamfer": 0,
+    "border_width": 1,
+    "border_style": "solid"
+  },
+  "surfaceStyle": "solid",
+  "accentStrategy": "fixed",
+  "variants": [
+    "bar:default",
+    "overview:default",
+    "sidebar-right:default",
+    "sidebar-left:default",
+    "dock:default",
+    "osk:default"
+  ],
+  "capabilities": {
+    "packages": [
+      "quickshell"
+    ],
+    "hyprland": [
+      "animations"
+    ]
+  },
+  "credits": [
+    "jetbrains-mono"
+  ]
+}

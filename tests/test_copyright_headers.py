@@ -120,8 +120,10 @@ THEMES_ENGINE_TEST_FILES = (
     "tests/test_theme_engine.py",
 )
 
+THEME_PACK_FILES = ("iarch/cli/theme_pack_validate.py", "tests/test_theme_pack_schema.py")
+
 NEW_SOURCE_FILES = (PART_ONE_TO_THREE_FILES + SETTINGS_APP_FILES + SETTINGS_TEST_FILES
-                    + THEMES_ENGINE_FILES + THEMES_ENGINE_TEST_FILES)
+                    + THEMES_ENGINE_FILES + THEMES_ENGINE_TEST_FILES + THEME_PACK_FILES)
 
 #: Not in the list above, and deliberately: a stylesheet has no ``#`` comment, so the
 #: header it carries is the same sentence inside ``/* */``. It gets its own test rather

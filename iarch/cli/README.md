@@ -16,6 +16,7 @@ a preset, renders a configuration file, and can verify what it previously wrote:
 | `python3 iarch/cli/render_kvantum.py` | `~/.config/Kvantum/kvantum.kvconfig` and `~/.config/Kvantum/iarch/iarch.kvconfig` | that the committed theme matches a fresh render of the tokens |
 | `python3 iarch/cli/gen_fontconfig.py` | `~/.config/fontconfig/fonts.conf` | that the committed file matches a fresh render of the tokens |
 | `python3 iarch/cli/theme.py apply [PRESET]` | all of the above at once, under the live `~/.config`, from one preset and intensity | the contrast gate before it writes, then skips any file whose rendered bytes already match |
+| `python3 iarch/cli/theme_pack_validate.py DIRECTORY` | nothing — it reports | pack schemas, cross-file references and filesystem safety |
 | `python3 iarch/cli/theme.py current` | nothing — it reports | which preset and intensity an `apply` would use, and where it would write |
 | `python3 iarch/cli/iarch_anim.py list` | nothing — it reports | the five motion presets, how many events each animates, and which one is active |
 | `python3 iarch/cli/iarch_anim.py set PRESET` | `~/.config/hypr/generated/animations.lua` | the render against the animation surface, then `luac -p`, then the compositor's own `configerrors` after a reload — and rolls the file back if that reports anything new |

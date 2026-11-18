@@ -1,0 +1,37 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "schema_version": 1,
+  "id": "dynamic-reference",
+  "gtk": {
+    "theme": "adw-gtk3-dark",
+    "accent": "accent"
+  },
+  "qt": {
+    "theme": "adwaita-dark"
+  },
+  "kitty": {
+    "foreground": "text",
+    "background": "background",
+    "cursor": "accent",
+    "font": "mono"
+  },
+  "fish": {
+    "command": "accent",
+    "error": "error"
+  },
+  "starship": {
+    "accent": "accent"
+  },
+  "cursor": {
+    "theme": "Bibata-Modern-Classic",
+    "size": "large"
+  },
+  "icons": {
+    "theme": "Papirus-Dark"
+  },
+  "fonts": {
+    "ui": "ui",
+    "display": "display",
+    "mono": "mono"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "schema_version": 1,
+  "id": "dynamic-reference",
+  "sizes": {
+    "small": 4,
+    "medium": 12,
+    "large": 24
+  },
+  "surfaces": {
+    "bar": {
+      "enabled": true,
+      "variant": "default",
+      "position": "top",
+      "size": "medium",
+      "order": []
+    },
+    "overview": {
+      "enabled": false,
+      "variant": "default",
+      "position": "center",
+      "size": "medium",
+      "order": []
+    },
+    "sidebar-right": {
+      "enabled": false,
+      "variant": "default",
+      "position": "center",
+      "size": "medium",
+      "order": []
+    },
+    "sidebar-left": {
+      "enabled": false,
+      "variant": "default",
+      "position": "center",
+      "size": "medium",
+      "order": []
+    },
+    "dock": {
+      "enabled": false,
+      "variant": "default",
+      "position": "center",
+      "size": "medium",
+      "order": []
+    },
+    "osk": {
+      "enabled": false,
+      "variant": "default",
+      "position": "center",
+      "size": "medium",
+      "order": []
+    }
+  }
+}

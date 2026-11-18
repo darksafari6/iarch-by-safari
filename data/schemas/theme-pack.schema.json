@@ -1,0 +1,303 @@
+{
+  "_copyright": "Copyright (C) 2026 Safari — GPL-3.0-or-later",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/darksafari6/iarch-by-safari/data/schemas/theme-pack.schema.json",
+  "title": "iArch by Safari dynamic theme pack: the manifest",
+  "description": "Schema for data/themes/<id>/theme.json, the manifest of a dynamic theme pack. A pack is a directory of seven JSON documents -- theme.json, palette.json, layout.json, motion.json, sounds.json, hypr.json, apps.json -- plus optional preview/ and sounds/ assets. Wallpaper recipe files are not yet supported by the validator. It is data and assets, never code: nothing in a pack is executed at install time, and iarch/cli/theme_pack_validate.py refuses a pack that carries an executable bit, a symlink, an absolute path, a colour literal outside palette.json, or a size that is not a declared token. This schema checks the manifest's own shape and the closed vocabularies it names; the agreements between files -- that every variant names a surface layout.json declares, that every credit id exists in data/licenses.json, that every font family is one data/design/tokens.json records -- are checked by the validator and asserted by tests/test_theme_pack_schema.py, because a schema cannot compare two documents.",
+  "type": "object",
+  "required": [
+    "_copyright",
+    "schema_version",
+    "id",
+    "name",
+    "description",
+    "engine",
+    "mode",
+    "fonts",
+    "shape",
+    "surfaceStyle",
+    "accentStrategy",
+    "variants",
+    "capabilities",
+    "credits"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_copyright": {
+      "const": "Copyright (C) 2026 Safari — GPL-3.0-or-later"
+    },
+    "_note": {
+      "type": "string",
+      "minLength": 20
+    },
+    "schema_version": {
+      "const": 1,
+      "description": "The pack format version. A reader that meets a higher number refuses the pack rather than guessing what changed; there is no version 0, so a pack without this key is not a pack."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "minLength": 3,
+      "maxLength": 40,
+      "description": "The pack id: lowercase words joined by single hyphens. It must equal the name of the directory the pack lives in, must equal the id in the pack's other six files, and must not be one of the six Classic pack ids in data/themes/ids.json -- two packs answering to one name would make 'iarch-theme apply <id>' ambiguous. All three agreements are checked by theme_pack_validate.py."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 40,
+      "description": "What the Settings app shows. This is a product surface, so it names the theme and nothing else: no upstream project name may appear in it (tools/naming_audit.py and tools/branding_lint.py both scan it)."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 240,
+      "description": "One or two sentences for the theme page in docs/themes/ and the Settings card. It describes the look, not the implementation."
+    },
+    "engine": {
+      "const": "ishell",
+      "description": "The renderer this pack is written for. The pack format's word is 'ishell'; the runtime engine id is 'dynamic', and exactly one table translates between them (PACK_ENGINE_TO_ENGINE in iarch/cli/theme_engine.py, decision D-T1-03). A pack that says 'classic' is refused: the Classic engine reads the flat data/themes/<id>.json packs against data/themes/schema.json and cannot read a directory pack."
+    },
+    "mode": {
+      "enum": [
+        "dark",
+        "light"
+      ],
+      "description": "Which polarity the palette is written for. It must equal palette.json's own mode, so a pack cannot carry a dark manifest over a light palette. The Settings app groups themes by this value beside the engine group."
+    },
+    "fonts": {
+      "type": "object",
+      "required": [
+        "ui",
+        "display",
+        "mono"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ui": {
+          "$ref": "#/definitions/font_family"
+        },
+        "display": {
+          "$ref": "#/definitions/font_family"
+        },
+        "mono": {
+          "$ref": "#/definitions/font_family"
+        }
+      },
+      "description": "The three font roles a pack may name: interface text, large display text, and monospace. apps.json maps each application onto one of these three roles and never onto a family of its own, so a theme changes its typography in one place."
+    },
+    "shape": {
+      "type": "object",
+      "required": [
+        "radius",
+        "components",
+        "chamfer",
+        "border_width",
+        "border_style"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "radius": {
+          "type": "object",
+          "required": [
+            "none",
+            "xs",
+            "sm",
+            "md",
+            "lg",
+            "xl",
+            "pill"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "none": {
+              "$ref": "#/definitions/pixels"
+            },
+            "xs": {
+              "$ref": "#/definitions/pixels"
+            },
+            "sm": {
+              "$ref": "#/definitions/pixels"
+            },
+            "md": {
+              "$ref": "#/definitions/pixels"
+            },
+            "lg": {
+              "$ref": "#/definitions/pixels"
+            },
+            "xl": {
+              "$ref": "#/definitions/pixels"
+            },
+            "pill": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 9999,
+              "description": "The fully-rounded tier. data/design/tokens.json radius.pill is 999, a number large enough that any surface reads as a capsule; a pack keeps the same convention so a renderer can special-case it."
+            }
+          },
+          "description": "Declared radius tiers, in pixels. Other pack files refer to these tiers by name."
+        },
+        "components": {
+          "type": "object",
+          "required": [
+            "window",
+            "panel",
+            "card",
+            "button",
+            "input",
+            "tooltip",
+            "chip",
+            "osk-key"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "window": {
+              "$ref": "#/definitions/radius_tier"
+            },
+            "panel": {
+              "$ref": "#/definitions/radius_tier"
+            },
+            "card": {
+              "$ref": "#/definitions/radius_tier"
+            },
+            "button": {
+              "$ref": "#/definitions/radius_tier"
+            },
+            "input": {
+              "$ref": "#/definitions/radius_tier"
+            },
+            "tooltip": {
+              "$ref": "#/definitions/radius_tier"
+            },
+            "chip": {
+              "$ref": "#/definitions/radius_tier"
+            },
+            "osk-key": {
+              "$ref": "#/definitions/radius_tier"
+            }
+          },
+          "description": "Which radius tier each kind of surface takes. The key set mirrors data/design/tokens.json radius (window, panel, card, button, input, tooltip) and adds the two the shell needs and the compositor does not: a chip, and an on-screen-keyboard key. Every value must be a tier this file declares, which theme_pack_validate.py checks."
+        },
+        "chamfer": {
+          "$ref": "#/definitions/pixels",
+          "description": "How much of a corner is cut rather than rounded, in pixels. 0 means the pack has no chamfer; the shell draws it as a straight segment between the two rounded ends."
+        },
+        "border_width": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "The stroke width every bordered surface in the shell uses, in pixels. The compositor's own general:border_size in hypr.json is a separate integer with Hyprland's own bound (0 to 20, recorded in data/design/tokens.json hyprland.ranges); the two are usually equal and are never silently linked."
+        },
+        "border_style": {
+          "enum": [
+            "solid",
+            "gradient",
+            "double"
+          ],
+          "description": "How a border is drawn: one colour, a gradient between two palette roles, or two concentric strokes. 'gradient' is the style data/design/tokens.json layout.border already emits for the compositor, as the { colors = {...}, angle = <degrees> } table CLuaConfigGradient::parse accepts."
+        }
+      }
+    },
+    "surfaceStyle": {
+      "enum": [
+        "solid",
+        "glass",
+        "outlined"
+      ],
+      "description": "The one word that says how every surface in this pack is filled: an opaque role colour, a translucent role colour with blur behind it, or a transparent fill with a visible stroke. The camelCase spelling is the format's own, kept from the pack specification so an exported pack reads the same in any tool that understands schema_version 1."
+    },
+    "accentStrategy": {
+      "enum": [
+        "fixed",
+        "from-wallpaper"
+      ],
+      "description": "Where the accent comes from. 'fixed' means palette.json's accent role is the accent, everywhere, always. 'from-wallpaper' means the shell may sample the wallpaper and override that role at apply time; the override is written to ~/.config/iarch/theme-overrides.json under data/schemas/theme-overrides.schema.json, never back into the pack, so the pack stays read-only data."
+    },
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 24,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$",
+        "description": "'<surface>:<variant>', for example bar:center or overview:grid. The surface half must be a name layout.json declares and the variant half must equal what that surface declares for itself, in both directions: a variant with no surface is a drawing nobody loads, and a surface with no variant is a drawing the manifest does not describe."
+      },
+      "description": "The surface variants this theme uses. A variant is a named alternative drawing of one surface -- a hexagonal bar, a pill bar, a centred bar -- so the shell can ship several drawings of a surface and let the pack choose one without any code deciding."
+    },
+    "capabilities": {
+      "type": "object",
+      "required": [
+        "packages",
+        "hyprland"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "packages": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9.+_-]*$",
+            "description": "A package name as a distribution spells it. Names are not resolved here: which repository carries one is ENG-01 in docs/UNVERIFIED.md, so the installer reports a capability it cannot satisfy instead of guessing a substitute."
+          },
+          "description": "Packages this pack needs that the session does not already have. The shell itself is always required and is always listed, so a reader can tell a pack that was written for this engine from one that was merely converted."
+        },
+        "hyprland": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "animations",
+              "blur",
+              "glow",
+              "hyprctl-ipc",
+              "layer-rules",
+              "session-lock",
+              "shadows",
+              "window-rules"
+            ],
+            "description": "Each name is a compositor capability this repository has a verified record of: animations in data/design/animations.json, blur, glow, shadows, window-rules and layer-rules in data/design/tokens.json hyprland, hyprctl-ipc in data/design/keybinds.json and data/design/monitors.json, session-lock in data/design/hyprlock.json. theme_pack_validate.py refuses a feature no record covers, so a pack cannot claim a capability nobody has read."
+          },
+          "description": "Compositor features this pack uses beyond a plain window."
+        }
+      }
+    },
+    "credits": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$",
+        "description": "A component id from data/licenses.json. The validator reads that file and refuses an id it does not carry, so a credit cannot point at a licence this repository has not actually recorded."
+      },
+      "description": "The third-party work this pack uses: fonts, cursor and icon themes, the GTK theme, the terminal and prompt. Credits are ids into data/licenses.json, never free text, because the About dialog renders them from that one file."
+    }
+  },
+  "definitions": {
+    "pixels": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 512,
+      "description": "A whole number of pixels. Fractions are refused on purpose: a half-pixel radius renders differently on every scale factor, and a pack is meant to look the same on the machine that wrote it and the machine that imported it."
+    },
+    "radius_tier": {
+      "enum": [
+        "none",
+        "xs",
+        "sm",
+        "md",
+        "lg",
+        "xl",
+        "pill"
+      ],
+      "description": "The name of a tier this manifest declares under shape.radius. The tier's pixel value may differ per pack; the name may not be invented per component."
+    },
+    "font_family": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 60,
+      "description": "An upstream font family name, not a package name. It must be one data/design/tokens.json font records -- ui, ui_display, mono, emoji, or a family in its fallback list -- because iarch/cli/gen_fontconfig.py maps recorded families onto whatever the distribution installed, and an unrecorded family silently falls through to a system default with no error (data/design/fontconfig.json, diagnostics.uninstalled_family)."
+    }
+  }
+}
