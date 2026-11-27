@@ -49,6 +49,10 @@
       "minimum": 0,
       "maximum": 1
     },
+    "quality": {
+      "enum": ["ultra", "high", "balanced", "low", null],
+      "description": "Optional shell quality preference; omitted or null uses balanced."
+    },
     "variants": {
       "type": "object",
       "propertyNames": {

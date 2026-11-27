@@ -1,5 +1,6 @@
 # Copyright (C) 2026 Safari — GPL-3.0-or-later
 """Archive round trips and untrusted-member rejection."""
+import gzip
 import io
 import tarfile
 import tempfile
@@ -44,6 +45,15 @@ class ArchiveTests(unittest.TestCase):
                         tar.addfile(info, io.BytesIO(b'x'))
                 with self.assertRaises(PackError):
                     archive.import_pack(file, self.path / 'dest')
+
+    def test_compressed_bomb_is_rejected_before_tar_parsing(self):
+        file = self.path / 'bomb.tar.gz'
+        with gzip.open(file, 'wb') as stream:
+            stream.write(b'0' * (archive.MAX_TAR_BYTES + 1))
+        self.assertLess(file.stat().st_size, archive.MAX_ARCHIVE)
+        with self.assertRaisesRegex(PackError, 'decompressed tar size'):
+            archive.import_pack(file, self.path / 'dest')
+        self.assertEqual(list((self.path / 'dest').iterdir()), [])
 
     def test_oversize(self):
         file = self.path / 'big.tar.gz'

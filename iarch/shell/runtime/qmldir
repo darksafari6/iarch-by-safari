@@ -1,0 +1,3 @@
+singleton Theme 1.0 Theme.qml
+ThemeRuntime 1.0 ThemeRuntime.qml
+SurfaceRegistry 1.0 SurfaceRegistry.qml

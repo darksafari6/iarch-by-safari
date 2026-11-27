@@ -209,3 +209,7 @@ Every one of those modules keeps to the repository's rules: one responsibility, 
 more than 300 lines, a header comment naming purpose, inputs, outputs and
 dependencies, and an injectable runner so the logic is testable with no compositor,
 no shell and no display in the room.
+
+Dynamic theme rollback checks the saved post-apply file fingerprints and current
+selection before restoring; changed files or stale checkpoints are refused. Pack
+archive import also bounds decompressed tar bytes before parsing extended metadata.

@@ -304,7 +304,60 @@ in this file is a claim about code, and it goes stale in exactly the way code do
 | --- | --- | --- | --- |
 | ENG-01 | Which package installs the second engine's toolkit, on Arch and on Fedora | Everything about the toolkit was read out of its own source tree (`quickshell-mirror/quickshell`, `master`, tag `v0.3.2`: `src/launch/parsecommand.cpp`, `BUILD.md`), but neither package index could be reached from the environment this was written in — `archlinux.org` and `aur.archlinux.org` both closed the connection — so the package name, its repository and whether it is in the official repos or only in the AUR/COPR are unknown. `BUILD.md` names a Fedora COPR (`errornointernet/quickshell`) as an example `-DDISTRIBUTOR=` value, which is a hint about packaging, not evidence about a repository | The installer's dependency step for the dynamic engine (milestone M5), and any claim in the documentation that a package by a given name installs it |
 | ENG-02 | That `--config iarch --daemonize --no-duplicate` leaves an instance `list --json` reports | The three flags and the `list` subcommand are read out of `src/launch/parsecommand.cpp`, and `iarch/cli/engine_steps.py` asks for the instance list rather than trusting the spawn. What has not happened is a start: this sandbox has no Qt, no toolkit binary and no compositor, so `is_up()` has only ever been exercised against a fake runner. `--no-duplicate`'s exit status when an instance is already running is likewise read rather than observed | The proof step of `iarch-shell-switch`, and the claim that the switch verifies an engine is up rather than assuming it |
-| ENG-03 | That `ipc call iarch.theme apply <id>` reaches an `IpcHandler` in this repository's `shell.qml` | The subcommand and its argument order are read out of `src/launch/parsecommand.cpp` (`ipc call <target> <function> [arguments…]`, with `msg` as its deprecated spelling), and `Quickshell.Io` declares `IpcHandler` in `src/io/module.md`. Neither side has been run: no toolkit here to call, and no shell.qml loaded by one. Argument types crossing the boundary (an id as a string, an optional no-transition argument, and a reply) are therefore a design and not an observation | The theme hot-swap signal in the dynamic apply pipeline (milestone M1), and every claim that a running shell re-reads a pack without a restart |
+| ENG-03 | That `ipc call iarch.theme apply <id>` reaches an `IpcHandler` in this repository's `shell.qml` | The subcommand and its argument order are read out of `src/launch/parsecommand.cpp` (`ipc call <target> <function> [arguments…]`, with `msg` as its deprecated spelling), and `Quickshell.Io` declares `IpcHandler` in `src/io/module.md`. Neither side has been run: no toolkit here to call, and no shell.qml loaded by one. Argument types crossing the boundary (an id as a string, a separate `applyImmediate` method for no-transition, and a reply) are therefore a design and not an observation | The theme hot-swap signal in the dynamic apply pipeline (milestone M1), and every claim that a running shell re-reads a pack without a restart |
 | ENG-04 | How quickly the Classic engine releases `org.freedesktop.Notifications` when it is stopped | The dynamic engine's server re-registers when the name is released — `NotificationServer::onServiceUnregistered` and `tryRegister` in `src/services/notifications/server.hpp`, with a `QDBusServiceWatcher` — but the other side of that handover is the pinned Classic release, whose exit path this project does not control and could not observe. Whether the name is released before the process is gone, and whether a watcher in a shell that is starting sees it, decides whether a switch leaves a session with no notification server for a moment | The single-notification-server rule of `iarch-doctor shell` during and after a switch, and the M1 acceptance item that a switch leaves exactly one server |
 | ENG-05 | The two session-bus lookups that name the notification server's owner | `iarch/lib/dbus_probe.py` calls `org.freedesktop.DBus.GetNameOwner` and `org.freedesktop.DBus.GetConnectionUnixProcessID` through `dbus-send` and parses `string ":1.42"` and `uint32 1234`. Both are standard session-bus methods, but neither could be called from here — there is no bus and no `dbus-send` in the sandbox — so the reply parsing is written against the documented shapes and marked unverified. The code treats a `NameHasNoOwner` reply as an answer ("no process owns this name") and a missing binary as "not searched", which is the honest split, but only a real bus proves it | The `iarch-doctor shell` report naming which engine owns the notification server, and the M1 acceptance item about one server |
 | ENG-06 | That the Classic engine has no graceful-exit command | The 66 verbs recorded in `data/design/noctalia-ipc.json`, read out of `src/cli/schema_msg.h` at v5.4.1, contain no quit, exit or restart; `session logout` ends the whole session rather than the shell and this project refuses to send it. So `iarch/cli/engine_steps.py` signals the pids the process table named, after asking the dynamic engine's own `kill` where one exists. What has not been observed is how the pinned release behaves on `SIGTERM`: whether it saves state, releases the lock and the bus name cleanly, or leaves a session that has to be logged out of | The stop step of a switch *away* from Classic, and whether switching back to Classic restores a session that is as good as the one that was stopped |
+| ENG-07 | Shell service parser formats and runtime IPC integration | The initial parser model is tested on synthetic data but the exact nmcli, cava, MPRIS and Linux proc formats and QML IPC responses have not been verified against a pinned installed session in this environment | Connecting service adapters and claiming live runtime interoperability |
+
+| ENG-08 | Isolated component gallery launcher and theme selector | The toolkit path option, process argument-list API, stream-finished ordering, and exit callback were read from upstream source at `9b0f339b19057f4731bf3b48293307d7ef241671`; this sandbox cannot run the toolkit or a compositor. The pure gallery passes static Qt QML lint, while its toolkit adapter has not been loaded. | Claiming the gallery starts, renders icons/fonts, or switches themes in a live session |
+
+| ENG-09 | Two-phase theme IPC bridge | The fixed typed IPC signatures and process exit/collector ordering were read from toolkit source at `9b0f339b19057f4731bf3b48293307d7ef241671`; the client protocol is covered with fake replies. No real toolkit, session bus or compositor was available to run the adapter. Theme animation and session surfaces are not implemented. | Removing the unfinished-shell guard, or claiming live theme switching and rollback |
+
+| ENG-10 | Local statistics adapter | Synthetic proc/thermal fixtures and the local helper CLI are tested; the QML Process integration and timer behavior were checked against source but not run inside a toolkit session. Disk is filesystem allocation rather than per-device I/O and the first readable thermal zone may not represent CPU temperature. | Claiming live statistics or measured resource use |
+
+| ENG-11 | Battery and network service adapters | UPower properties and normalized percentage were read from toolkit `device.hpp`/`device.cpp`; cached Wi-Fi arguments were read from NetworkManager 1.50.0 `man/nmcli.xml`. Synthetic counters, escaped Wi-Fi data and missing binary are tested, but no real toolkit, daemon or device was available. The throughput totals all non-loopback interfaces and can double-count tunnels. | Claiming live hardware status or exact per-connection throughput |
+
+| ENG-12 | Game-mode file watcher | `FileView` load, error and watch/reload signals and parent-directory watches were read from toolkit source; a pure parser test checks the existing settings record. No toolkit session has exercised atomic file replacement or absent-directory creation here. | Claiming automatic live game-mode quality changes |
+
+| ENG-13 | Audio adapter | PipeWire singleton, default nodes, tracker lifecycle, node readiness, stream flags and writable audio properties were read from toolkit `src/services/pipewire/qml.hpp` and its object model source. No PipeWire or toolkit session is available here, so routing, mute and volume changes have not been observed. | Claiming live volume, stream or device control |
+
+| ENG-14 | Media adapter | Toolkit MPRIS player list, metadata, controls and position notification guidance were read from `src/services/mpris/player.hpp` and `watcher.hpp`. No real player or session bus was available here. | Claiming live metadata, position, player ordering or controls |
+
+| ENG-15 | Brightness service adapter | Machine-readable output format and `set` syntax were read from brightnessctl 0.5.1 source. Parser cases are tested; no backlight or toolkit session exists here, and permissions vary by installation (KB-07). | Claiming live backlight reads or changes |
+
+| ENG-16 | Lazy surface host and startup theme load | `LazyLoader.activeAsync`, panel anchors/exclusive zones and File/Process source APIs were read from toolkit source. Loader/state tests inspect QML and exercise the JS registry; no toolkit or compositor is present. The windows are placeholders, not the final six themes. | Removing the shell guard or claiming a visible, usable desktop |
+
+| ENG-17 | Compositor event adapter | Hyprland singleton model, active objects, and raw event signal were read from Quickshell `src/wayland/hyprland/ipc/qml.hpp`; no compositor or Quickshell session was available to exercise them. | Claiming live workspaces, windows, monitors or events |
+
+### ENG-18 — Sound, keyboard and idle adapters
+
+**UNTESTED-LIVE / TODO(verify).** The experimental `Sounds.qml`, `Keyboard.qml`
+and `Idle.qml` adapters are based on the source pins recorded in
+`docs/SHELL-SERVICES.md`. Verify event playback, keyboard layout state and
+switching, timeout/failure paths, and idle/inhibitor behavior on the installed
+session. Their presence is not proof of a working dynamic shell, idle locking,
+or notification ownership. The adapters are not wired to consumer surfaces.
+
+### ENG-19 — Night-light adapter
+
+**UNTESTED-LIVE / TODO(verify).** `NightLight.qml` and its helper use the
+hyprsunset IPC pinned in `docs/SHELL-SERVICES.md`. Verify the installed version,
+queries, range, timeout and changes on a target Wayland session. They never
+start the daemon automatically or configure its schedule.
+
+### ENG-20 — Capture, input and frame sampling
+
+**UNTESTED-LIVE / TODO(verify).** Verify capture permission and cancellation,
+recording finalization and crash cleanup, temporary input requests and the Qt
+frame-interval sample in a real session. See `docs/SHELL-SERVICES.md` for pinned
+APIs and the distinction between requests and verified state. Raw input can cause
+cursor desynchronization; pointer names are not proof that a device is a touchpad.
+
+### ENG-21 — Opt-in shell setup and transitions
+
+**UNTESTED-LIVE / TODO(verify).** Check the development configuration link,
+user-unit startup, inherited helper paths, Qt fade/wipe overlay and the
+reference-pack gallery preview on a real Wayland session. The generated unit is
+not enabled automatically and the switch refuses the incomplete shell. Neither
+the link nor the unit is a completed installer or proof of notification handoff.

@@ -80,6 +80,9 @@ CLASSIC_BIN = "noctalia"
 #: functions this project calls on it. TODO(verify) ENG-03.
 IPC_TARGET_THEME = "iarch.theme"
 IPC_FUNCTION_APPLY = "apply"
+IPC_FUNCTION_APPLY_IMMEDIATE = "applyImmediate"
+IPC_FUNCTION_STATUS = "status"
+IPC_FUNCTION_COMMIT = "commit"
 IPC_FUNCTION_PING = "ping"
 
 ENGINE_RECORD_NAME = "shell-engine.json"   #: the selected engine's record

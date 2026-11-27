@@ -49,7 +49,7 @@ SHELL_BUCKETS = (
                                       "popup_borders", "card_borders", "show_close_buttons",
                                       "popup_shadows")),
     ("Type and time", ("font_family", "time_format", "date_format")),
-    ("The shell's own window", ("settings_", "app_icon_colorize")),
+    ("The shell's own window", ("settings_",)),
 )
 
 SHELL_ICONS = {

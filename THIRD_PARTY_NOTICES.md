@@ -380,6 +380,58 @@ Selectable artwork for the system information display.
 - **Notes:** Seven .icon files of artwork derived from anime franchises. Authorship and redistribution rights are not established.
 - **Open verification items:** `TP-04` in `docs/UNVERIFIED.md`
 
+### Outfit
+
+Vendored variable typeface for the dynamic shell.
+
+- **License:** OFL-1.1
+- **Copyright:** Copyright 2021 The Outfit Project Authors
+- **Version checked:** Google Fonts repository commit 06bfe0d62a98375cb09c942fa18e68bd32cff057
+- **Upstream:** https://github.com/Outfitio/Outfit-Fonts
+- **Used by:**
+  - `assets/fonts/display/regular.ttf`
+  - `assets/fonts/display/OFL.txt`
+- **Notes:** Redistributed unmodified; the full license and copyright notice are included alongside the font.
+
+### JetBrains Mono
+
+Vendored variable typeface for the dynamic shell.
+
+- **License:** OFL-1.1
+- **Copyright:** Copyright 2020 The JetBrains Mono Project Authors
+- **Version checked:** Google Fonts repository commit 06bfe0d62a98375cb09c942fa18e68bd32cff057
+- **Upstream:** https://github.com/JetBrains/JetBrainsMono
+- **Used by:**
+  - `assets/fonts/mono/regular.ttf`
+  - `assets/fonts/mono/OFL.txt`
+- **Notes:** Redistributed unmodified; the full license and copyright notice are included alongside the font.
+
+### Nunito
+
+Vendored variable typeface for the dynamic shell.
+
+- **License:** OFL-1.1
+- **Copyright:** Copyright 2014 The Nunito Project Authors
+- **Version checked:** Google Fonts repository commit 06bfe0d62a98375cb09c942fa18e68bd32cff057
+- **Upstream:** https://github.com/googlefonts/nunito
+- **Used by:**
+  - `assets/fonts/rounded/regular.ttf`
+  - `assets/fonts/rounded/OFL.txt`
+- **Notes:** Redistributed unmodified; the full license and copyright notice are included alongside the font.
+
+### Inter
+
+Vendored variable typeface for the dynamic shell.
+
+- **License:** OFL-1.1
+- **Copyright:** Copyright 2020 The Inter Project Authors
+- **Version checked:** Google Fonts repository commit 06bfe0d62a98375cb09c942fa18e68bd32cff057
+- **Upstream:** https://github.com/rsms/inter
+- **Used by:**
+  - `assets/fonts/ui/regular.ttf`
+  - `assets/fonts/ui/OFL.txt`
+- **Notes:** Redistributed unmodified; the full license and copyright notice are included alongside the font.
+
 ### HeSuVi HRIR audio assets
 
 Impulse response WAV files selectable by the virtual surround convolver profile.
@@ -390,6 +442,18 @@ Impulse response WAV files selectable by the virtual surround convolver profile.
   - `pipewire/hrir/`
 - **Notes:** 624 WAV files, about 32 MB. Several names refer to commercial vendor surround products, so the redistribution rights are not established. Review before publishing a release or mirroring this repository.
 - **Open verification items:** `TP-03` in `docs/UNVERIFIED.md`
+
+### Lucide icons
+
+A small set of icons for the dynamic shell.
+
+- **License:** ISC AND MIT
+- **Copyright:** Copyright (c) 2026 Lucide Icons and Contributors; Copyright (c) 2013-present Cole Bemis
+- **Version checked:** e00b2b26350fe4dfb6f5273aa366f94974430903
+- **Upstream:** https://github.com/lucide-icons/lucide
+- **Used by:**
+  - `assets/icons/shell/`
+- **Notes:** Unmodified SVG files and the complete upstream license; the upstream license identifies which icons derive from Feather and carry the additional MIT notice.
 
 ## Third-party services, repositories and registries
 

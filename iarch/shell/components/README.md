@@ -1,14 +1,19 @@
-# components — dynamic shell skeleton
+# Pure QtQuick components
 
 ## Purpose
 
-This directory reserves the components boundary for the dynamic shell.
+Reusable theme-aware controls for the planned dynamic shell.
 
 ## Inputs
 
-Future implementations consume validated theme data and session state.
+The shared Theme defaults, caller-provided data and user interaction.
 
 ## Outputs
 
-Future implementations expose their results to the shell runtime.
-No live surface or service is implemented in Part 1.
+Controls and signals. They do not call shell services or fetch network data.
+The gallery and live theme binding are not implemented yet.
+
+`WorkspaceIndicator.qml` is a pure view of ten workspace states with dots,
+bubbles and pill-group styles. It emits requests for the embedding adapter to
+validate; it does not itself contact the compositor. Wheel and middle-click,
+keyboard behavior and visuals remain UNTESTED-LIVE.

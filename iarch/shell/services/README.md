@@ -1,14 +1,16 @@
-# services — dynamic shell skeleton
+# Dynamic shell services
 
 ## Purpose
 
-This directory reserves the services boundary for the dynamic shell.
+Adapters expose session data and guarded requests to the dynamic shell.
 
 ## Inputs
 
-Future implementations consume validated theme data and session state.
+Local system tools, validated state and Quickshell service models.
 
 ## Outputs
 
-Future implementations expose their results to the shell runtime.
-No live surface or service is implemented in Part 1.
+Live properties, bounded persistent state and explicit request signals.
+Most adapters are active only when a consumer needs them. See
+`docs/SHELL-SERVICES.md` for dependencies, failure behavior and verification.
+No live integration is claimed; the dynamic session remains guarded.

@@ -7,8 +7,11 @@ not an implicit success. The transaction does not launch a shell.
 """
 import base64
 import copy
+import hashlib
 import json
 import os
+import re
+import time
 from pathlib import Path
 
 from iarch.cli import session_theme, theme_engine, theme_records
@@ -22,13 +25,35 @@ class ApplyError(RuntimeError):
 
 def _signal(theme_id, run, no_transition=False):
     answer = theme_engine.ipc_call(theme_engine.IPC_TARGET_THEME,
-                                   theme_engine.IPC_FUNCTION_APPLY,
-                                   (theme_id, 'no-transition') if no_transition else (theme_id,), run=run)
+                                   (theme_engine.IPC_FUNCTION_APPLY_IMMEDIATE if no_transition
+                                    else theme_engine.IPC_FUNCTION_APPLY),
+                                   (theme_id,), run=run)
     if answer is None or answer.timed_out or not answer.ok:
         return False
     # Exit zero means only that IPC was transported. A handler must explicitly
     # acknowledge the apply; an empty or negative reply is not verification.
     reply = answer.stdout.strip()
+    match = re.fullmatch(r'pending:([1-9][0-9]{0,9})', reply)
+    if match:
+        # The shell validates asynchronously but cannot mutate its live state
+        # until this caller explicitly commits the unique prepared request.
+        token = match.group(1)
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            status = theme_engine.ipc_call(theme_engine.IPC_TARGET_THEME,
+                                           theme_engine.IPC_FUNCTION_STATUS, (token,), run=run)
+            if status is None or status.timed_out or not status.ok:
+                return False
+            state = status.stdout.strip()
+            if state == 'ready':
+                committed = theme_engine.ipc_call(theme_engine.IPC_TARGET_THEME,
+                                                   theme_engine.IPC_FUNCTION_COMMIT, (token,), run=run)
+                return (committed is not None and not committed.timed_out and committed.ok
+                        and committed.stdout.strip().lower() == 'true')
+            if state != 'pending':
+                return False
+            time.sleep(0.05)
+        return False
     if reply.lower() in ('true', 'ok'):
         return True
     try:
@@ -42,25 +67,56 @@ def _checkpoint_path(env):
     return configstore.state_dir(env) / 'theme-rollback.json'
 
 
-def _encode_snapshots(snapshots, modes, previous):
+def _fingerprint(path):
+    """Describe the current target so rollback cannot overwrite later edits."""
+    if path.is_symlink():
+        return {'kind': 'symlink', 'target': os.readlink(path)}
+    if not path.exists():
+        return {'kind': 'missing'}
+    if not path.is_file():
+        raise ApplyError(f'not a regular file: {path}')
+    return {'kind': 'file', 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+            'mode': path.stat().st_mode & 0o7777}
+
+
+def _encode_snapshots(snapshots, modes, previous, applied_id):
     entries = []
     for path, (kind, data, link) in snapshots.items():
         entries.append({'path': str(path), 'kind': kind,
                         'data': base64.b64encode(data).decode('ascii') if data is not None else None,
                         'link': link, 'mode': modes.get(path)})
-    return {'schema_version': 1, 'previous': previous, 'files': entries}
+    return {'schema_version': 2, 'previous': previous, 'applied_id': applied_id,
+            'files': entries, 'after': {str(p): _fingerprint(p) for p in snapshots}}
+
+
+def _safe_target(path, env):
+    """Keep writes in config roots even when an ancestor is a symlink."""
+    path = Path(path)
+    roots = (configstore.home_dir(env) / '.config', configstore.config_dir(env))
+    if not path.is_absolute() or '..' in path.parts:
+        return False
+    for root in roots:
+        if not root.is_absolute() or not path.is_relative_to(root) or path == root:
+            continue
+        try:
+            # Resolve parents, but not the leaf: a leaf symlink is itself a
+            # snapshot that can be restored without following its target.
+            if path.parent.resolve().is_relative_to(root.resolve()):
+                return True
+        except (OSError, RuntimeError):
+            return False
+    return False
 
 
 def _decode_snapshots(payload, env):
-    if not isinstance(payload, dict) or payload.get('schema_version') != 1 or not isinstance(payload.get('files'), list):
+    if not isinstance(payload, dict) or payload.get('schema_version') != 2 or not isinstance(payload.get('files'), list):
         raise ApplyError('invalid rollback record')
-    allowed_roots = (configstore.home_dir(env) / '.config', configstore.config_dir(env))
     snapshots, modes = {}, {}
     for item in payload['files']:
         if not isinstance(item, dict) or set(item) != {'path', 'kind', 'data', 'link', 'mode'}:
             raise ApplyError('invalid rollback entry')
         path = Path(item['path'])
-        if not path.is_absolute() or '..' in path.parts or not any(path.is_relative_to(root) and path != root for root in allowed_roots):
+        if not _safe_target(path, env):
             raise ApplyError('rollback path outside configuration roots')
         if path in snapshots or item['kind'] not in ('file', 'missing', 'symlink'):
             raise ApplyError('invalid rollback path or kind')
@@ -105,10 +161,19 @@ def rollback(*, env=None, run=None):
     previous = payload.get('previous')
     if not isinstance(previous, dict) or previous.get('engine') not in ('classic', 'dynamic') or not isinstance(previous.get('id'), str):
         raise ApplyError('invalid previous selection')
+    current_selection = theme_records.read_selection(env)
+    after = payload.get('after')
+    if (not isinstance(after, dict) or set(after) != {str(p) for p in snapshots}
+            or not isinstance(payload.get('applied_id'), str)):
+        raise ApplyError('rollback record has no complete post-apply state')
+    if current_selection['engine'] != 'dynamic' or current_selection['id'] != payload['applied_id']:
+        raise ApplyError('theme selection changed since apply; refusing stale rollback')
+    for path in snapshots:
+        if _fingerprint(path) != after[str(path)]:
+            raise ApplyError(f'{path} changed since apply; refusing to overwrite it')
     baseline = compositor.config_errors(run=run)
     if baseline is None:
         raise ApplyError('cannot read compositor errors before rollback')
-    current_selection = theme_records.read_selection(env)
     current = {path: session_theme._snapshot(path) for path in snapshots}
     current_modes = {p: p.stat().st_mode & 0o7777 for p in current if not p.is_symlink() and p.is_file()}
     try:
@@ -154,6 +219,8 @@ def apply(pack_path, render, *, env=None, run=None, play_sound=None, no_transiti
         raise ApplyError('renderer supplied no output actions')
     record_path = theme_records.selection_path(env)
     paths = [Path(item[1]) for item in actions]
+    if any(not _safe_target(p, env) for p in paths + [record_path]):
+        raise ApplyError('output path escapes configuration roots')
     if len(set(paths)) != len(paths) or record_path in paths:
         raise ApplyError('duplicate output path')
     if any(item[0] not in ('generated', 'generated-existing', 'preserving') for item in actions):
@@ -184,7 +251,7 @@ def apply(pack_path, render, *, env=None, run=None, play_sound=None, no_transiti
         fresh = compositor.new_errors(baseline, after)
         if fresh:
             raise ApplyError('compositor rejected theme: ' + '; '.join(fresh))
-        checkpoint = _encode_snapshots(snapshots, modes, previous)
+        checkpoint = _encode_snapshots(snapshots, modes, previous, docs['theme']['id'])
         configstore.atomic_write(_checkpoint_path(env), json.dumps(checkpoint, indent=2) + '\n', validate_json=True)
     except Exception as exc:
         failures = []

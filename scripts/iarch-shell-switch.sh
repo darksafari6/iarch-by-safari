@@ -20,4 +20,5 @@ if ! command -v python3 >/dev/null 2>&1; then
     printf "Error: python3 is not on PATH.\n" >&2
     exit 127
 fi
+export IARCH_SHELL_ROOT="$root"
 exec python3 "$cli" "$@"

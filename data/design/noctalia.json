@@ -264,9 +264,6 @@
         "settings_expand_all_groups": {
           "type": "bool"
         },
-        "app_icon_colorize": {
-          "type": "bool"
-        },
         "clipboard_enabled": {
           "type": "bool"
         },

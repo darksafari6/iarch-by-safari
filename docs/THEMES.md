@@ -177,3 +177,26 @@ scheduled for later milestones.
 
 Dynamic pack validation requires Python `jsonschema`; previews require Pillow.
 The installer does not yet provision these dependencies.
+
+Rollback refuses a stale checkpoint or any target edited since the apply, rather
+than overwriting newer user changes. Checkpoints made by older unguarded versions
+are refused; retain the regular backup files for manual recovery.
+
+### Noctalia legacy icon-colorization warning
+
+Newly generated configurations omit the obsolete global `shell.app_icon_colorize`
+setting. Both the older global setting and the newer per-component icon settings
+default to false. Existing configurations are not overwritten automatically. To
+inspect an existing configuration and then remove the old **false** value:
+
+```sh
+iarch-shell fix-legacy-icons
+iarch-shell fix-legacy-icons --write
+noctalia config validate
+```
+
+The write creates a backup in the iArch state backup directory and preserves
+other settings. Reload or restart Noctalia if the warning remains. If the legacy
+value is true, the command refuses to change it: migrate the desired icon colors
+using your Noctalia version's per-component settings instead. You can also supply
+an absolute path with `--config`; the default honors `XDG_CONFIG_HOME`.

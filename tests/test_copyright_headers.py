@@ -129,7 +129,11 @@ THEME_PACK_FILES = ("iarch/cli/theme_pack_validate.py", "tests/test_theme_pack_s
                     "iarch/cli/theme_pack_apply.py", "tests/test_theme_pack_apply.py",
                     "iarch/cli/theme_pack_preview.py", "tests/test_theme_pack_preview.py",
                     "iarch/cli/theme_pack_render.py", "tests/test_theme_pack_render.py",
-                    "tests/test_part_t1_acceptance.py")
+                    "tests/test_part_t1_acceptance.py", "iarch/cli/shell_runtime.py",
+                    "tests/test_shell_runtime.py", "iarch/lib/shell_data.py",
+                    "tests/test_shell_data.py", "iarch/lib/shell_store.py",
+                    "tests/test_shell_store.py", "tools/lint_no_hex_qml.py",
+                    "tests/test_shell_qml_lint.py", "tests/test_shell_components.py")
 
 NEW_SOURCE_FILES = (PART_ONE_TO_THREE_FILES + SETTINGS_APP_FILES + SETTINGS_TEST_FILES
                     + THEMES_ENGINE_FILES + THEMES_ENGINE_TEST_FILES + THEME_PACK_FILES)

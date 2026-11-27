@@ -441,10 +441,10 @@ class TestTheReplyIsReadRatherThanGuessed(unittest.TestCase):
     def test_a_known_key_is_accepted_before_anything_is_sent(self):
         self.assertEqual([], noctalia.check_path("audio.sound_volume"))
         self.assertTrue(noctalia.check_path("nonsense.key"))
-        self.assertEqual(230, len(noctalia.known_paths()))
+        self.assertEqual(229, len(noctalia.known_paths()))
 
     def test_a_table_key_is_a_prefix_of_leaves_and_not_a_leaf_itself(self):
-        """230 leaves and 12 tables: a table is a container, so it is in neither list twice.
+        """229 leaves and 12 tables: a table is a container, so it is in neither list twice.
 
         ``known_paths()`` answers leaves only. A table path is therefore *not* in it, and
         the thing that makes it known is that at least one leaf hangs off it -- which is
@@ -453,7 +453,7 @@ class TestTheReplyIsReadRatherThanGuessed(unittest.TestCase):
         tables = noctalia.table_paths()
         leaves = noctalia.known_paths()
         self.assertEqual(12, len(tables))
-        self.assertEqual(230, len(leaves))
+        self.assertEqual(229, len(leaves))
         for path in tables:
             with self.subTest(path=path):
                 self.assertNotIn(path, leaves,

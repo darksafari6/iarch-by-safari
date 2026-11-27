@@ -4,6 +4,7 @@
 Archives contain one top-level pack directory. Members are checked before any
 are written, and extraction never uses tarfile.extract or follows links.
 """
+import gzip
 import os
 import re
 import shutil
@@ -15,6 +16,8 @@ from iarch.cli.theme_pack_validate import MAX_FILE, MAX_TOTAL, PackError, valida
 
 MAX_ARCHIVE = 2 * 1024 * 1024
 MAX_MEMBERS = 256
+# Include tar headers, padding and bounded metadata in the expansion budget.
+MAX_TAR_BYTES = MAX_TOTAL + MAX_MEMBERS * 2048
 PACK_ID = re.compile(r'^[a-z][a-z0-9]*(-[a-z0-9]+)*$')
 
 
@@ -50,45 +53,60 @@ def import_pack(archive_path, destination, *, force=False, reserved_ids=()):
         destination.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='.iarch-import-', dir=destination) as temp:
             temp = Path(temp)
-            with tarfile.open(archive_path, 'r:gz') as archive:
-                members = []
-                for member in archive:
-                    members.append(member)
-                    if len(members) > MAX_MEMBERS:
+            # Bound gzip expansion before tarfile parses extended metadata. A
+            # tiny compressed PAX header can otherwise consume unbounded memory
+            # before getmembers yields its first entry.
+            with tempfile.SpooledTemporaryFile(max_size=1024 * 1024, mode='w+b') as spool:
+                with gzip.open(archive_path, 'rb') as compressed:
+                    total_uncompressed = 0
+                    while True:
+                        chunk = compressed.read(min(65536, MAX_TAR_BYTES + 1 - total_uncompressed))
+                        if not chunk:
+                            break
+                        total_uncompressed += len(chunk)
+                        if total_uncompressed > MAX_TAR_BYTES:
+                            raise PackError('archive exceeds decompressed tar size limit')
+                        spool.write(chunk)
+                spool.seek(0)
+                with tarfile.open(fileobj=spool, mode='r:') as archive:
+                    members = []
+                    for member in archive:
+                        members.append(member)
+                        if len(members) > MAX_MEMBERS:
+                            raise PackError('invalid archive member count')
+                    if not members:
                         raise PackError('invalid archive member count')
-                if not members:
-                    raise PackError('invalid archive member count')
-                seen, root, total = set(), None, 0
-                for member in members:
-                    raw = member.name
-                    parts = PurePosixPath(raw).parts
-                    if (not parts or raw.startswith('/') or '\\' in raw or
-                            any(p in ('.', '..') for p in raw.split('/')) or
-                            not PACK_ID.fullmatch(parts[0])):
-                        raise PackError(f'unsafe archive path: {raw}')
-                    if root is None:
-                        root = parts[0]
-                    if parts[0] != root or raw in seen:
-                        raise PackError('multiple roots or duplicate archive entry')
-                    seen.add(raw)
-                    if not (member.isdir() or member.isfile()) or member.mode & 0o111 and member.isfile():
-                        raise PackError(f'unsafe archive member: {raw}')
-                    if member.size > MAX_FILE:
-                        raise PackError('archive member exceeds size limit')
-                    total += member.size
-                    if total > MAX_TOTAL:
-                        raise PackError('archive exceeds unpacked size limit')
-                for member in members:
-                    target = temp.joinpath(*PurePosixPath(member.name).parts)
-                    if member.isdir():
-                        target.mkdir(parents=True, exist_ok=True)
-                    else:
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        stream = archive.extractfile(member)
-                        if stream is None:
-                            raise PackError('unreadable archive member')
-                        with stream, target.open('xb') as out:
-                            shutil.copyfileobj(stream, out)
+                    seen, root, total = set(), None, 0
+                    for member in members:
+                        raw = member.name
+                        parts = PurePosixPath(raw).parts
+                        if (not parts or raw.startswith('/') or '\\' in raw or
+                                any(p in ('.', '..') for p in raw.split('/')) or
+                                not PACK_ID.fullmatch(parts[0])):
+                            raise PackError(f'unsafe archive path: {raw}')
+                        if root is None:
+                            root = parts[0]
+                        if parts[0] != root or raw in seen:
+                            raise PackError('multiple roots or duplicate archive entry')
+                        seen.add(raw)
+                        if not (member.isdir() or member.isfile()) or member.mode & 0o111 and member.isfile():
+                            raise PackError(f'unsafe archive member: {raw}')
+                        if member.size > MAX_FILE:
+                            raise PackError('archive member exceeds size limit')
+                        total += member.size
+                        if total > MAX_TOTAL:
+                            raise PackError('archive exceeds unpacked size limit')
+                    for member in members:
+                        target = temp.joinpath(*PurePosixPath(member.name).parts)
+                        if member.isdir():
+                            target.mkdir(parents=True, exist_ok=True)
+                        else:
+                            target.parent.mkdir(parents=True, exist_ok=True)
+                            stream = archive.extractfile(member)
+                            if stream is None:
+                                raise PackError('unreadable archive member')
+                            with stream, target.open('xb') as out:
+                                shutil.copyfileobj(stream, out)
             source = temp / root
             validate_pack(source)
             if root in reserved_ids:

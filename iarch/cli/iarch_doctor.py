@@ -581,6 +581,35 @@ def cmd_dnd(args: argparse.Namespace) -> int:
 # --------------------------------------------------------------- shell
 
 
+def shell_diagnostics(env, dynamic_running=False, run=None):
+    """Read-only dynamic-shell prerequisites; absence is reported, not guessed."""
+    from iarch.cli import shell_runtime, theme_records
+    tools = {name: shutil.which(name, path=env.get('PATH')) is not None
+             for name in ('cava', 'wf-recorder', 'grim', 'brightnessctl')}
+    fonts = {name: (ROOT / 'assets/fonts' / name / 'regular.ttf').is_file()
+             for name in ('ui', 'mono', 'display', 'rounded')}
+    pack = {'status': 'not-selected', 'id': None, 'error': None}
+    try:
+        selection = theme_records.read_selection(env)
+        pack['id'] = selection['id']
+        if selection['engine'] == 'dynamic':
+            shell_runtime.ThemeRuntime(env).load(selection['id'])
+            pack['status'] = 'valid'
+    except (OSError, ValueError, ImportError) as exc:
+        pack['status'] = 'invalid-or-unavailable'
+        pack['error'] = str(exc)
+    ipc = {'status': 'not-checked', 'detail': None}
+    if dynamic_running:
+        answer = engines.ipc_call(engines.IPC_TARGET_THEME, engines.IPC_FUNCTION_PING, run=run)
+        if answer is None or answer.timed_out:
+            ipc = {'status': 'unavailable', 'detail': 'IPC could not be reached'}
+        elif not answer.ok or answer.stdout.strip().lower() != 'true':
+            ipc = {'status': 'unavailable', 'detail': 'IPC did not report ready'}
+        else:
+            ipc = {'status': 'reachable', 'detail': None}
+    return {'tools': tools, 'font_assets': fonts, 'pack': pack, 'ipc': ipc}
+
+
 def cmd_shell(args: argparse.Namespace) -> int:
     """One shell engine and one notification server: report both, change nothing.
 
@@ -615,6 +644,7 @@ def cmd_shell(args: argparse.Namespace) -> int:
         report["notes"] = [report["daemons"]["note"]]
     report["running"] = running
     report["selected"] = report["record"]["engine"]
+    report["dynamic_diagnostics"] = shell_diagnostics(os.environ, "dynamic" in running, runner.run)
     report["problems"] = problems
     report["verdict"] = ("error" if problems and searchable else
                          "unverified" if not searchable and not notification["searched"]
@@ -632,6 +662,15 @@ def cmd_shell(args: argparse.Namespace) -> int:
         print(f"  selected:    {engines.engine(report['selected']).name}")
         owner = notification["engine"] or (notification["unique_name"] or "nobody")
         print(f"  notifications: {owner} owns {notification['name']}")
+        diagnostics = report["dynamic_diagnostics"]
+        for tool, found in diagnostics["tools"].items():
+            print(f"  {tool}: {'available' if found else 'not found'}")
+        for font, found in diagnostics["font_assets"].items():
+            print(f"  bundled font {font}: {'present' if found else 'missing'}")
+        print(f"  dynamic pack: {diagnostics['pack']['status']}")
+        if diagnostics['pack']['error']:
+            print(f"    {diagnostics['pack']['error']}")
+        print(f"  dynamic IPC: {diagnostics['ipc']['status']}")
         for problem in problems:
             print(f"  problem: {problem}")
         if not problems:
