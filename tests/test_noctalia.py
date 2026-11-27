@@ -188,6 +188,15 @@ class EveryCombinationIsValid(unittest.TestCase):
                 parsed = tomllib.loads(body)
                 self.assertEqual(flat(render(preset, intensity)), flat(parsed))
 
+    def test_legacy_global_icon_colorization_is_never_emitted(self):
+        # Old and new releases both default to false, while recent shells warn
+        # about the former global spelling even when its value is false.
+        self.assertNotIn('app_icon_colorize', SURFACE['sections']['shell']['keys'])
+        for preset, intensity in COMBINATIONS:
+            with self.subTest(preset=preset, intensity=intensity):
+                self.assertNotIn('app_icon_colorize', render(preset, intensity)['shell'])
+        self.assertNotIn('app_icon_colorize', noctalia.REPO_CONFIG.read_text())
+
     def test_bar_order_names_every_bar_and_nothing_else(self):
         for preset, intensity in COMBINATIONS:
             with self.subTest(preset=preset, intensity=intensity):

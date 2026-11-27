@@ -90,7 +90,9 @@ PROFILE: Dict[str, Any] = OrderedDict(
     date_format="%a, %x",
     settings_show_advanced=False,
     settings_expand_all_groups=False,
-    app_icon_colorize=False,
+    # Do not emit the former global app-icon colorization key. Both the
+    # v5.4.1 global default and the later per-component defaults are false;
+    # emitting the old key on newer shells causes a persistent legacy warning.
     clipboard_enabled=True,
     clipboard_confirm_clear_history=True,
     shadow_direction="down",
@@ -422,7 +424,6 @@ def shell_section(tokens: Dict[str, Any], intensity: Dict[str, Any]) -> Dict[str
         settings_window_translucent=bool(shell["settings_translucent"]),
         settings_show_advanced=PROFILE["settings_show_advanced"],
         settings_expand_all_groups=PROFILE["settings_expand_all_groups"],
-        app_icon_colorize=PROFILE["app_icon_colorize"],
         clipboard_enabled=PROFILE["clipboard_enabled"],
         clipboard_confirm_clear_history=PROFILE["clipboard_confirm_clear_history"],
     )

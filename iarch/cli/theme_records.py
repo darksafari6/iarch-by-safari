@@ -1,6 +1,10 @@
 # Copyright (C) 2026 Safari — GPL-3.0-or-later
 """Read and write the theme selection and user overrides without changing packs."""
+import fcntl
 import json
+import os
+import stat
+from contextlib import contextmanager
 from pathlib import Path
 
 from iarch.lib import configstore
@@ -58,6 +62,47 @@ def validate_overrides(data):
         raise ValueError('invalid overrides: ' + errors[0].message)
 
 
-def write_overrides(data, env=None):
+@contextmanager
+def _overrides_lock(env=None):
+    """Serialize cooperating read-modify-write operations in the private state dir."""
+    directory = configstore.state_dir(env)
+    directory.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(directory / '.theme-overrides.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, 'r+') as lock:
+        if not stat.S_ISREG(os.fstat(lock.fileno()).st_mode):
+            raise ValueError('override lock is not a regular file')
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def _write_overrides_locked(data, env):
     validate_overrides(data)
-    configstore.atomic_write(overrides_path(env), json.dumps(data, indent=2, ensure_ascii=False) + '\n', validate_json=True)
+    path = overrides_path(env)
+    if path.is_symlink():
+        raise ValueError('refusing a symlink override file')
+    # Preserve malformed existing records, rather than replacing them with a
+    # seemingly valid update. Also avoid backups and writes for an unchanged file.
+    if path.exists():
+        previous = read_overrides(env)
+        if previous == data:
+            return False
+        configstore.backup_of(path, env)
+    configstore.atomic_write(path, json.dumps(data, indent=2, ensure_ascii=False) + '\n', validate_json=True)
+    return True
+
+
+def write_overrides(data, env=None):
+    with _overrides_lock(env):
+        _write_overrides_locked(data, env)
+
+
+def set_quality(quality, env=None):
+    """Atomically update just the quality preference, preserving other overrides."""
+    if quality is not None and quality not in ('ultra', 'high', 'balanced', 'low'):
+        raise ValueError('invalid shell quality')
+    with _overrides_lock(env):
+        if overrides_path(env).is_symlink():
+            raise ValueError('refusing a symlink override file')
+        data = read_overrides(env)
+        data['quality'] = quality
+        return _write_overrides_locked(data, env)

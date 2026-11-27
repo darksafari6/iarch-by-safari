@@ -53,6 +53,10 @@
         }
       }
     },
+    "transition": {
+      "enum": ["none", "fade", "wipe"],
+      "description": "Optional theme-switch overlay; omitted uses fade."
+    },
     "easing": {
       "enum": [
         "Linear",

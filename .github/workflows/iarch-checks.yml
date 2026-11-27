@@ -147,6 +147,7 @@ jobs:
           python tools/notices.py --check           # THIRD_PARTY_NOTICES.md + data/licenses.json
           python tools/iarch_brand.py --check       # product.env is self-consistent
           python tools/branding_lint.py             # no old name on an everyday-UI surface
+          python tools/lint_no_hex_qml.py            # QML colours belong in theme defaults
           python iarch/cli/iarch_keybinds.py --check  # generated/keybinds.lua + docs/SHORTCUTS.md vs data/keybinds.default.json (the source)
           python tools/render_shortcuts.py --check  # docs/SHORTCUTS.md vs the keybind data (also run by the line above; kept explicit so the tool is named)
           python tools/naming_audit.py --check      # old names only where allowlisted, with a reason

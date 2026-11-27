@@ -27,9 +27,10 @@ class ShellLayout(unittest.TestCase):
                 lines = path.read_text().splitlines()
                 self.assertLess(len(lines), 150 if path.name == 'shell.qml' else 400)
                 self.assertTrue(lines[0].startswith('// Copyright (C) 2026 Safari'))
-                if path.name != 'shell.qml' and 'services' not in path.relative_to(SHELL).parts:
+                if path.name not in ('shell.qml', 'ShellCore.qml', 'PreviewShell.qml', 'GalleryShell.qml') and 'services' not in path.relative_to(SHELL).parts:
                     self.assertNotRegex('\n'.join(lines), r'(?m)^\s*import\s+Quickshell')
-                self.assertNotRegex('\n'.join(lines), r'#[0-9a-fA-F]{6}\b')
+                if path.relative_to(SHELL).as_posix() != 'runtime/Theme.qml':
+                    self.assertNotRegex('\n'.join(lines), r'#[0-9a-fA-F]{6}\b')
 
 
 if __name__ == '__main__':

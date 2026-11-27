@@ -28,7 +28,6 @@ telemetry_enabled = false
 settings_window_translucent = true
 settings_show_advanced = false
 settings_expand_all_groups = false
-app_icon_colorize = false
 clipboard_enabled = true
 clipboard_confirm_clear_history = true
 

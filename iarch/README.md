@@ -24,6 +24,9 @@ Everything this project authors lives under this directory, named with the
 | `cli/gen_theme_status.py` | Generate the theme status document | shipped, tested |
 | `cli/theme_pack_preview.py` | Generate an illustrative palette preview for an installed dynamic pack | shipped, tested |
 | `cli/theme_pack_apply.py` | Transaction with byte rollback and verified shell/compositor reload | live verification pending |
+| `lib/shell_store.py` | Local validated todo, timer and stopwatch state; adapters pending | tested model |
+| `lib/shell_data.py` | Pure CPU, memory, Wi-Fi, spectrum and media parsers for shell adapters | tested; adapters pending |
+| `cli/shell_runtime.py` | Validated last-known-good theme and surface state model; not a live shell | under development |
 | `cli/theme_pack_render.py` | Render dynamic pack tokens into shared application configuration | live verification pending |
 | `cli/theme_pack_archive.py` | Bounded archive export and safe import of dynamic packs | shipped, tested |
 | `cli/theme_pack_validate.py` | Validates dynamic pack schemas, references and filesystem safety | reference format |

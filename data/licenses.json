@@ -166,6 +166,74 @@
       "open_items": []
     },
     {
+      "id": "font-display",
+      "name": "Outfit",
+      "kind": "asset",
+      "license": "OFL-1.1",
+      "unverified": false,
+      "purpose": "Vendored variable typeface for the dynamic shell.",
+      "copyright": "Copyright 2021 The Outfit Project Authors",
+      "version": "Google Fonts repository commit 06bfe0d62a98375cb09c942fa18e68bd32cff057",
+      "upstream": "https://github.com/Outfitio/Outfit-Fonts",
+      "used_by": [
+        "assets/fonts/display/regular.ttf",
+        "assets/fonts/display/OFL.txt"
+      ],
+      "notes": "Redistributed unmodified; the full license and copyright notice are included alongside the font.",
+      "open_items": []
+    },
+    {
+      "id": "font-mono-vendored",
+      "name": "JetBrains Mono",
+      "kind": "asset",
+      "license": "OFL-1.1",
+      "unverified": false,
+      "purpose": "Vendored variable typeface for the dynamic shell.",
+      "copyright": "Copyright 2020 The JetBrains Mono Project Authors",
+      "version": "Google Fonts repository commit 06bfe0d62a98375cb09c942fa18e68bd32cff057",
+      "upstream": "https://github.com/JetBrains/JetBrainsMono",
+      "used_by": [
+        "assets/fonts/mono/regular.ttf",
+        "assets/fonts/mono/OFL.txt"
+      ],
+      "notes": "Redistributed unmodified; the full license and copyright notice are included alongside the font.",
+      "open_items": []
+    },
+    {
+      "id": "font-rounded",
+      "name": "Nunito",
+      "kind": "asset",
+      "license": "OFL-1.1",
+      "unverified": false,
+      "purpose": "Vendored variable typeface for the dynamic shell.",
+      "copyright": "Copyright 2014 The Nunito Project Authors",
+      "version": "Google Fonts repository commit 06bfe0d62a98375cb09c942fa18e68bd32cff057",
+      "upstream": "https://github.com/googlefonts/nunito",
+      "used_by": [
+        "assets/fonts/rounded/regular.ttf",
+        "assets/fonts/rounded/OFL.txt"
+      ],
+      "notes": "Redistributed unmodified; the full license and copyright notice are included alongside the font.",
+      "open_items": []
+    },
+    {
+      "id": "font-ui",
+      "name": "Inter",
+      "kind": "asset",
+      "license": "OFL-1.1",
+      "unverified": false,
+      "purpose": "Vendored variable typeface for the dynamic shell.",
+      "copyright": "Copyright 2020 The Inter Project Authors",
+      "version": "Google Fonts repository commit 06bfe0d62a98375cb09c942fa18e68bd32cff057",
+      "upstream": "https://github.com/rsms/inter",
+      "used_by": [
+        "assets/fonts/ui/regular.ttf",
+        "assets/fonts/ui/OFL.txt"
+      ],
+      "notes": "Redistributed unmodified; the full license and copyright notice are included alongside the font.",
+      "open_items": []
+    },
+    {
       "id": "gitlab-minimadots",
       "name": "The original dotfiles this repository started from",
       "kind": "provenance",
@@ -479,6 +547,22 @@
       "open_items": [
         "TP-11"
       ]
+    },
+    {
+      "id": "shell-icon-assets",
+      "name": "Lucide icons",
+      "kind": "asset",
+      "license": "ISC AND MIT",
+      "unverified": false,
+      "purpose": "A small set of icons for the dynamic shell.",
+      "copyright": "Copyright (c) 2026 Lucide Icons and Contributors; Copyright (c) 2013-present Cole Bemis",
+      "version": "e00b2b26350fe4dfb6f5273aa366f94974430903",
+      "upstream": "https://github.com/lucide-icons/lucide",
+      "used_by": [
+        "assets/icons/shell/"
+      ],
+      "notes": "Unmodified SVG files and the complete upstream license; the upstream license identifies which icons derive from Feather and carry the additional MIT notice.",
+      "open_items": []
     },
     {
       "id": "starship",

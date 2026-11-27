@@ -64,6 +64,7 @@ COMMANDS=(
     "iarch-settings:scripts/iarch-settings.sh"
     "iarch-theme:scripts/iarch-theme.sh"
     "iarch-shell-switch:scripts/iarch-shell-switch.sh"
+    "iarch-shell:scripts/iarch-shell.sh"
     "iarch-control-center:scripts/iarch-control-center.sh"
     "iarch-healthcheck:scripts/iarch-healthcheck.sh"
     "iarch-focus:scripts/iarch-focus.sh"
