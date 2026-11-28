@@ -4,7 +4,16 @@
 
 ### Latest implementation work
 
-The latest full Python discovery ran 2,478 tests with seven skips; all six shell
+The generic transaction journal now uses private files, syncs each write and
+its parent directory before proceeding, and refuses world-readable, hardlinked
+or unowned journal files. Tests include real process death during an operation
+and during undo, followed by repeated recovery. Engine and handoff records now
+also sync their containing directory after atomic replacement. Persistence of
+newly created ancestor directories and filesystem-specific power-loss behavior
+are not proven by these tests. This hardening does not wire the runner into
+Classic or Dynamic apply, and the fault matrix is not complete.
+
+The latest full Python discovery ran 2,482 tests with eight skips; all six shell
 suites, shellcheck, bash syntax, generators, schema and workflow gates passed.
 Dynamic selection is published after shell and compositor verification, and a
 failed compositor verification restores the previous selection and requests the

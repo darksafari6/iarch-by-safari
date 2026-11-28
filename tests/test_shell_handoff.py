@@ -3,8 +3,10 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from iarch.cli import engine_state, shell_handoff as handoff, theme_engine
+from iarch.lib import configstore
 
 
 class FakeSession:
@@ -50,6 +52,14 @@ class HandoffTests(unittest.TestCase):
         self.assertEqual([], self.fake.pids('classic'))
         self.assertEqual(22, self.fake.owner.pid)
         self.assertEqual('dynamic', engine_state.selected_id(self.env))
+
+    def test_journal_directory_sync_failure_before_handoff_stops_nothing(self):
+        with mock.patch.object(configstore, 'sync_directory', side_effect=OSError('sync failed')):
+            with self.assertRaisesRegex(OSError, 'sync failed'):
+                handoff.handoff('classic', 'dynamic', **self.args())
+        self.assertEqual([11], self.fake.pids('classic'))
+        self.assertEqual([], self.fake.pids('dynamic'))
+        self.assertEqual(11, self.fake.owner.pid)
 
     def test_timeout_restores_old_engine_and_owner(self):
         self.fake.no_claim = True

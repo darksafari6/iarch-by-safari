@@ -10,6 +10,7 @@ import json
 import os
 import re
 import stat
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -27,6 +28,14 @@ class TransactionError(RuntimeError):
         self.journal_path = journal_path
 
 
+def _sync_directory(directory):
+    fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def _directory(env):
     directory = configstore.state_dir(env) / 'transactions'
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -34,6 +43,8 @@ def _directory(env):
     if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid()
             or info.st_mode & 0o077):
         raise TransactionError('transaction directory must be private and owned by the user')
+    # Persist the transactions directory entry before relying on any journal.
+    _sync_directory(directory.parent)
     return directory
 
 
@@ -47,13 +58,30 @@ def _write(path, journal):
     text = json.dumps(journal, indent=2, ensure_ascii=False, allow_nan=False) + '\n'
     if len(text.encode('utf-8')) > MAX_JOURNAL_BYTES:
         raise TransactionError('transaction journal exceeds size limit', path)
-    configstore.atomic_write(path, text, validate_json=True)
+    # A durable write-ahead record needs both the file contents and the rename
+    # persisted before the handler mutates anything. Keep journals private even
+    # when the caller's umask normally makes configuration files world-readable.
+    fd, name = tempfile.mkstemp(prefix='.' + path.name + '.', suffix='.tmp', dir=path.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        _sync_directory(path.parent)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
 
 
 def _read(path):
     try:
-        if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_JOURNAL_BYTES:
-            raise ValueError('invalid journal file')
+        info = path.lstat()
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                or info.st_nlink != 1 or info.st_mode & 0o077
+                or info.st_size > MAX_JOURNAL_BYTES):
+            raise ValueError('journal must be a private, owned, unlinked regular file within the size limit')
         value = json.loads(path.read_text(encoding='utf-8'))
         if (not isinstance(value, dict) or value.get('schema_version') != 1
                 or value.get('id') != path.stem or value.get('state') not in

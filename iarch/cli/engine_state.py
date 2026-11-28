@@ -45,9 +45,9 @@ def read_json(path: Path) -> Optional[Dict[str, Any]]:
 
 
 def write_json(path: Path, payload: Mapping[str, Any]) -> Path:
-    """Write a record atomically: a half-written record is a record nobody trusts."""
+    """Write and persist an atomic engine or handoff record before proceeding."""
     configstore.atomic_write(Path(path), json.dumps(dict(payload), indent=2) + "\n",
-                             validate_json=True)
+                             validate_json=True, durable=True)
     return Path(path)
 
 
