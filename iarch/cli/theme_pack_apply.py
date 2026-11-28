@@ -16,7 +16,7 @@ from pathlib import Path
 
 from iarch.cli import session_theme, theme_engine, theme_records
 from iarch.cli.theme_pack_validate import validate_pack
-from iarch.lib import compositor, configstore
+from iarch.lib import compositor, configstore, session_lock
 
 
 class ApplyError(RuntimeError):
@@ -108,6 +108,20 @@ def _safe_target(path, env):
     return False
 
 
+def _classic_shell_target(path, env):
+    """Dynamic transactions must never modify Classic shell configuration."""
+    home = configstore.home_dir(env)
+    roots = [home / '.config' / 'noctalia']
+    xdg = (env or os.environ).get('XDG_CONFIG_HOME')
+    if xdg and Path(xdg).is_absolute():
+        roots.append(Path(xdg) / 'noctalia')
+    try:
+        target = Path(path).resolve()
+        return any(target.is_relative_to(root.resolve()) for root in roots)
+    except (OSError, RuntimeError):
+        return True
+
+
 def _decode_snapshots(payload, env):
     if not isinstance(payload, dict) or payload.get('schema_version') != 2 or not isinstance(payload.get('files'), list):
         raise ApplyError('invalid rollback record')
@@ -118,6 +132,8 @@ def _decode_snapshots(payload, env):
         path = Path(item['path'])
         if not _safe_target(path, env):
             raise ApplyError('rollback path outside configuration roots')
+        if _classic_shell_target(path, env):
+            raise ApplyError('dynamic rollback cannot modify Classic shell configuration')
         if path in snapshots or item['kind'] not in ('file', 'missing', 'symlink'):
             raise ApplyError('invalid rollback path or kind')
         try:
@@ -149,7 +165,18 @@ def _restore_snapshots(snapshots, modes):
     return failures
 
 
+def _transaction_lock(env):
+    """Share the shell-switch lock with cooperating theme transactions."""
+    return session_lock.session_lock(env)
+
+
 def rollback(*, env=None, run=None):
+    """Restore the last successful dynamic apply under the transaction lock."""
+    with _transaction_lock(env):
+        return _rollback_locked(env=env, run=run)
+
+
+def _rollback_locked(*, env=None, run=None):
     """Restore the last successful apply; recover the current state on failure."""
     env = os.environ if env is None else env
     checkpoint = _checkpoint_path(env)
@@ -199,6 +226,13 @@ def rollback(*, env=None, run=None):
 
 
 def apply(pack_path, render, *, env=None, run=None, play_sound=None, no_transition=False):
+    """Apply one dynamic pack under the same lock as dynamic rollback."""
+    with _transaction_lock(env):
+        return _apply_locked(pack_path, render, env=env, run=run,
+                             play_sound=play_sound, no_transition=no_transition)
+
+
+def _apply_locked(pack_path, render, *, env=None, run=None, play_sound=None, no_transition=False):
     """Validate, render and apply one pack; restore bytes and reload on failure.
 
     ``render`` receives validated documents and returns session_theme action
@@ -221,6 +255,8 @@ def apply(pack_path, render, *, env=None, run=None, play_sound=None, no_transiti
     paths = [Path(item[1]) for item in actions]
     if any(not _safe_target(p, env) for p in paths + [record_path]):
         raise ApplyError('output path escapes configuration roots')
+    if any(_classic_shell_target(p, env) for p in paths + [record_path]):
+        raise ApplyError('dynamic themes cannot write Classic shell configuration')
     if len(set(paths)) != len(paths) or record_path in paths:
         raise ApplyError('duplicate output path')
     if any(item[0] not in ('generated', 'generated-existing', 'preserving') for item in actions):
@@ -238,8 +274,6 @@ def apply(pack_path, render, *, env=None, run=None, play_sound=None, no_transiti
     try:
         started = True
         changed, _ = session_theme._apply_actions(actions, env)
-        theme_records.write_selection({'schema_version': 1, 'id': docs['theme']['id'],
-                                       'engine': 'dynamic', 'overrides': previous['overrides']}, env)
         if not _signal(docs['theme']['id'], run, no_transition):
             raise ApplyError('dynamic shell did not acknowledge the theme')
         reload_result = compositor.reload(run=run)
@@ -251,6 +285,9 @@ def apply(pack_path, render, *, env=None, run=None, play_sound=None, no_transiti
         fresh = compositor.new_errors(baseline, after)
         if fresh:
             raise ApplyError('compositor rejected theme: ' + '; '.join(fresh))
+        # Publish the selected theme only after the shell and compositor accepted it.
+        theme_records.write_selection({'schema_version': 1, 'id': docs['theme']['id'],
+                                       'engine': 'dynamic', 'overrides': previous['overrides']}, env)
         checkpoint = _encode_snapshots(snapshots, modes, previous, docs['theme']['id'])
         configstore.atomic_write(_checkpoint_path(env), json.dumps(checkpoint, indent=2) + '\n', validate_json=True)
     except Exception as exc:

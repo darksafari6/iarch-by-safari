@@ -3,7 +3,7 @@
 """engine_state — what the session says about its shell engine, and what is really running.
 
 Purpose
-    Two records and one probe. ``~/.config/iarch/shell-engine.json`` is the engine
+    Two records and one probe. ``~/.local/state/iarch/engine.json`` is the engine
     the user selected; ``~/.local/state/iarch/shell-switch.json`` is the snapshot a
     rollback restores; the process table is the only authority on what is actually
     running. Keeping the three in one module is what stops a caller from reading
@@ -45,9 +45,9 @@ def read_json(path: Path) -> Optional[Dict[str, Any]]:
 
 
 def write_json(path: Path, payload: Mapping[str, Any]) -> Path:
-    """Write a record atomically: a half-written record is a record nobody trusts."""
+    """Write and persist an atomic engine or handoff record before proceeding."""
     configstore.atomic_write(Path(path), json.dumps(dict(payload), indent=2) + "\n",
-                             validate_json=True)
+                             validate_json=True, durable=True)
     return Path(path)
 
 
@@ -65,14 +65,29 @@ def engine_record(env: Optional[Mapping[str, str]] = None) -> Dict[str, Any]:
     switched is the normal case.
     """
     path = engines.engine_record_path(env)
-    stored = read_json(path) or {}
+    legacy = engines.legacy_engine_record_path(env)
+    # Read the old location only until the new authoritative file exists. Never
+    # overwrite or delete the old record as a side effect of this read.
+    source = legacy if not path.exists() and not path.is_symlink() else path
+    stored = {} if source.is_symlink() else (read_json(source) or {})
     engine_id = stored.get("engine")
-    known = engine_id in engines.engine_ids()
-    return {"schema_version": int(stored.get("schema_version") or SCHEMA_VERSION),
+    version = stored.get("schema_version", SCHEMA_VERSION)
+    known = engine_id in engines.engine_ids() and type(version) is int and version == SCHEMA_VERSION
+    return {"schema_version": version if type(version) is int else SCHEMA_VERSION,
             "engine": engine_id if known else engines.DEFAULT_ENGINE_ID,
             "switched_at": stored.get("switched_at"),
             "previous": stored.get("previous"),
             "path": str(path), "stored": known}
+
+
+def dynamic_engine_enabled(env: Optional[Mapping[str, str]] = None) -> bool:
+    """Explicit opt-in; absence, malformed data and symlinks all fail closed."""
+    path = configstore.config_dir(env) / 'dynamic-engine.json'
+    if path.is_symlink():
+        return False
+    payload = read_json(path)
+    return (isinstance(payload, dict) and set(payload) == {'dynamic_engine_enabled'}
+            and payload['dynamic_engine_enabled'] is True)
 
 
 def write_engine_record(engine_id: str, previous: Optional[str],
@@ -81,7 +96,14 @@ def write_engine_record(engine_id: str, previous: Optional[str],
     """Record the selected engine, keeping the one it replaced beside it."""
     if engines.engine(engine_id) is None:
         raise ValueError(f"unknown engine id: {engine_id!r}")
-    return write_json(engines.engine_record_path(env),
+    target = engines.engine_record_path(env)
+    if target.is_symlink():
+        raise ValueError('refusing a symlink engine record')
+    if target.exists():
+        if not target.is_file():
+            raise ValueError('engine record must be a regular file')
+        configstore.backup_of(target, env)
+    return write_json(target,
                       {"schema_version": SCHEMA_VERSION, "engine": engine_id,
                        "switched_at": when or timestamp(), "previous": previous})
 

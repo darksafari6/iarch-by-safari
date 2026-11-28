@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -152,13 +153,17 @@ def cmd_to(args: argparse.Namespace) -> int:
     global _JSON_MODE
     _JSON_MODE = bool(args.json)
     budget = args.budget
-    if budget <= 0:
-        raise shell_switch.SwitchError(f"--budget must be positive, not {budget:g}")
+    if not math.isfinite(budget) or budget <= 0:
+        raise shell_switch.SwitchError(f"--budget must be positive and finite, not {budget:g}")
     if budget > engines.SWITCH_BUDGET_SECONDS:
         _warn(f"--budget {budget:g}s is longer than the {engines.SWITCH_BUDGET_SECONDS:g}s the "
               "switch is designed to roll back inside; a rollback may not finish in time")
     _say(f"iArch by Safari — switching the shell engine to {_label(args.engine)}")
-    report = shell_switch.switch(args.engine, os.environ, budget=budget, dry_run=args.dry_run)
+    daemons = iarch_doctor.competing_daemons()
+    for daemon in daemons.get('names', []):
+        _warn(f"another notification daemon could claim the bus name: {daemon}")
+    report = shell_switch.verified_switch(args.engine, os.environ, budget=budget, dry_run=args.dry_run)
+    report['daemons'] = daemons
     _print_steps(report)
     if args.dry_run:
         _say("  dry run: nothing was stopped, started or written")
@@ -172,10 +177,35 @@ def cmd_rollback(args: argparse.Namespace) -> int:
     global _JSON_MODE
     _JSON_MODE = bool(args.json)
     _say("iArch by Safari — rolling the shell engine back")
-    report = shell_switch.rollback(os.environ)
+    snapshot = engine_state.switch_record(os.environ)
+    if snapshot and snapshot.get('schema_version') == 2:
+        if snapshot.get('phase') != 'VERIFIED':
+            raise shell_switch.SwitchError('handoff is not in VERIFIED state; use recover')
+        report = shell_switch.verified_switch(snapshot.get('previous_engine', ''), os.environ)
+        report['verdict'] = 'rolled-back'
+    elif snapshot and snapshot.get('schema_version') == 1:
+        report = shell_switch.verified_switch(snapshot.get('previous_engine', ''), os.environ)
+        report['verdict'] = 'rolled-back'
+    else:
+        raise shell_switch.SwitchError('no switch to roll back or unsupported switch snapshot')
     _print_steps(report)
     _say(f"  verdict      {report['verdict']}")
     _emit(report)
+    return EXIT_OK
+
+
+def cmd_recover(args: argparse.Namespace) -> int:
+    from iarch.cli import shell_handoff
+    global _JSON_MODE
+    _JSON_MODE = bool(args.json)
+    try:
+        report = shell_handoff.recover(env=os.environ)
+    except shell_handoff.HandoffError as exc:
+        _emit({'command': 'recover', 'error': str(exc), 'state': exc.state})
+        print(f'iarch-shell-switch: {exc}', file=sys.stderr)
+        return EXIT_REFUSED
+    _emit(report)
+    _say(f"  recovery     {report['phase']}")
     return EXIT_OK
 
 
@@ -203,6 +233,10 @@ def build_parser() -> argparse.ArgumentParser:
     back_p = sub.add_parser("rollback", help="restore the engine the last switch snapshotted")
     back_p.add_argument("--json", action="store_true", help="print the report as JSON only")
     back_p.set_defaults(func=cmd_rollback)
+
+    recover_p = sub.add_parser("recover", help="recover an interrupted notification handoff")
+    recover_p.add_argument("--json", action="store_true", help="print the report as JSON only")
+    recover_p.set_defaults(func=cmd_recover)
 
     return parser
 

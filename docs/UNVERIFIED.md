@@ -361,3 +361,25 @@ user-unit startup, inherited helper paths, Qt fade/wipe overlay and the
 reference-pack gallery preview on a real Wayland session. The generated unit is
 not enabled automatically and the switch refuses the incomplete shell. Neither
 the link nor the unit is a completed installer or proof of notification handoff.
+
+### ENG-22 — Scoped process inspection and notification preflight
+
+**TODO(verify) / UNTESTED-LIVE.** The shell switch now uses the named toolkit
+configuration's instance list before signalling a toolkit PID, and refuses a
+switch if the notification-bus owner is unknown or belongs to another process.
+The empty-list message and JSON `pid` field were read from pinned toolkit
+`src/launch/command.cpp` at `9b0f339b19057f4731bf3b48293307d7ef241671`; tests
+use fake processes and bus replies. Verify actual list output, display selection,
+daemon PID lifecycle, bus ownership and recovery on a real Wayland session.
+The check is a snapshot, not a lock against independent launch or subsequent bus
+ownership changes. It does not establish a safe handoff or justify removing the
+readiness guard.
+
+### ENG-23 — Input and night-light asynchronous request timeouts
+
+**TODO(verify) / UNTESTED-LIVE.** QML adapters limit input-helper requests to
+15 seconds and night-light requests to 20 seconds, accounting for their helpers'
+multiple five-second compositor calls. A timeout terminates the helper but does
+not prove the compositor rejected an already-issued change. Verify late exits,
+rapid hide/show refreshes, and actual state after timeouts on a real session.
+QML harness checks use process mocks and synthetic graphics/bus libraries.

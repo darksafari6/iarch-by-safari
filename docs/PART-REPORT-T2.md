@@ -96,3 +96,21 @@ fake core harness also checks demand gating and preview isolation, recorder
 startup queues early stop requests and has a timeout, and PipeWire stream nodes
 are bound while active for volume and mute requests. Real recording, audio,
 notification ownership and orphan handling are still UNTESTED-LIVE.
+
+### Input and night-light request lifecycle
+
+The experimental input and night-light adapters now time out stalled helpers,
+report that a timed-out request may still have taken effect, ignore late exits,
+limit helper response sizes, and queue a refresh when a consumer is hidden then
+shown while a request is in flight. Pointer names are checked against the same
+bounded safe character set as the Python helper. Tests exercised success and
+late-exit timeout paths using QML test doubles and synthetic GL/EGL/D-Bus
+libraries; this is not a real toolkit, compositor, graphics or bus test. The
+adapters and timeout effects remain UNTESTED-LIVE.
+
+### Audio input controls
+
+The experimental PipeWire adapter exposes bounded microphone volume and mute
+requests and rejects input and stream changes when PipeWire is not ready. The
+QML mock harness checks those paths using synthetic graphics and bus libraries;
+actual PipeWire behavior remains UNTESTED-LIVE.

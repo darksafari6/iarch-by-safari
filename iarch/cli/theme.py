@@ -545,6 +545,14 @@ def planned_paths(preset: Optional[str] = None, intensity: Optional[str] = None,
 
 
 def cmd_apply(args: argparse.Namespace, env: Dict[str, str]) -> int:
+    from iarch.lib import session_lock
+    if args.dry_run:
+        return _cmd_apply_locked(args, env)
+    with session_lock.session_lock(env):
+        return _cmd_apply_locked(args, env)
+
+
+def _cmd_apply_locked(args: argparse.Namespace, env: Dict[str, str]) -> int:
     config_home = _config_home(args.config_home)
     # Fail before touching the desktop. A settings file nobody can parse is
     # knowable right now, and this command writes eleven generated files before it

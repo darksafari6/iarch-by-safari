@@ -174,11 +174,23 @@ def default_mode() -> int:
     return 0o666 & ~umask
 
 
-def atomic_write(path: Path, text: str, validate_json: Optional[bool] = None) -> None:
+def sync_directory(path: Path) -> None:
+    """Persist directory-entry changes, or raise if the filesystem cannot do so."""
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def atomic_write(path: Path, text: str, validate_json: Optional[bool] = None,
+                 *, durable: bool = False) -> None:
     """Write ``text`` to ``path`` without ever leaving a half-written file.
 
     The temp file is created in the destination directory so the rename is
     atomic on the same filesystem; JSON payloads are parsed before the rename.
+    When ``durable`` is true, sync the containing directory after replacement;
+    callers must separately ensure that newly created ancestor directories persist.
 
     Permissions are carried over from the file being replaced, and a new file
     gets the usual 0666-less-umask. ``NamedTemporaryFile`` creates 0600, so
@@ -203,9 +215,11 @@ def atomic_write(path: Path, text: str, validate_json: Optional[bool] = None) ->
         with handle:
             handle.write(text)
             handle.flush()
+            os.fchmod(handle.fileno(), mode)
             os.fsync(handle.fileno())
-        os.chmod(tmp, mode)
         os.replace(tmp, path)
+        if durable:
+            sync_directory(path.parent)
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise

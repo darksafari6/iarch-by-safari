@@ -867,6 +867,15 @@ def reload_active_surfaces(pack: Dict[str, Any], config_home: Path,
 
 def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
                 no_reload: bool = False, dry_run: bool = False) -> int:
+    from iarch.lib import session_lock
+    if dry_run:
+        return _apply_theme_locked(theme_id, config_home, env, no_reload, dry_run)
+    with session_lock.session_lock(env):
+        return _apply_theme_locked(theme_id, config_home, env, no_reload, dry_run)
+
+
+def _apply_theme_locked(theme_id: str, config_home: Path, env: Mapping[str, str],
+                        no_reload: bool = False, dry_run: bool = False) -> int:
     pack = load_theme(theme_id)
     state = choice_path(env)
     actions = _build_actions(pack, config_home, env)
@@ -878,7 +887,9 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
         print("  reload: skipped (dry run); no files changed")
         return 0
 
-    old_choice = _write_choice(state, theme_id, env)
+    # Snapshot every target before changing the choice; snapshot failures must
+    # never leave the selection pointing at a theme that was not rendered.
+    old_choice = _snapshot(state)
     sound_paths = [
         configstore.config_dir(env) / "sounds" / name
         for name in ("active-notify.ogg", "active-urgent.ogg")
@@ -891,6 +902,7 @@ def apply_theme(theme_id: str, config_home: Path, env: Mapping[str, str],
     old_settings = _snapshot(settings_path)
     snapshots: Dict[Path, Tuple[str, Optional[bytes], Optional[str]]] = {}
     try:
+        _write_choice(state, theme_id, env)
         changed, snapshots = _apply_actions(actions, env)
         _sync_focus_restore_target(pack, env)
         # Sound is optional until each original OGG asset is included. A missing

@@ -12,7 +12,8 @@ QtObject {
     readonly property string error: available ? "" : (active ? "Audio output unavailable" : "")
     readonly property real volume: available ? sink.audio.volume : 0
     readonly property bool muted: available ? sink.audio.muted : false
-    readonly property bool microphoneAvailable: active && source !== null && source.ready && source.audio !== null
+    readonly property bool microphoneAvailable: active && Pipewire.ready && source !== null && source.ready && source.audio !== null
+    readonly property real microphoneVolume: microphoneAvailable ? source.audio.volume : 0
     readonly property bool microphoneMuted: microphoneAvailable ? source.audio.muted : false
     readonly property var nodes: active ? Pipewire.nodes.values : []
     readonly property var streams: Array.from(nodes).filter(function(node) { return node && node.isStream && node.audio !== null })
@@ -29,13 +30,18 @@ QtObject {
         sink.audio.muted = value
         return true
     }
+    function setMicrophoneVolume(value) {
+        if (!microphoneAvailable || typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) return false
+        source.audio.volume = value
+        return true
+    }
     function setMicrophoneMuted(value) {
         if (!microphoneAvailable || typeof value !== "boolean") return false
         source.audio.muted = value
         return true
     }
     function streamReady(stream) {
-        return active && streams.indexOf(stream) >= 0 && stream.ready && stream.audio !== null
+        return active && Pipewire.ready && streams.indexOf(stream) >= 0 && stream.ready && stream.audio !== null
     }
     function setStreamVolume(stream, value) {
         if (!streamReady(stream) || typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) return false

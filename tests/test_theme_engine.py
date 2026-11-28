@@ -87,8 +87,10 @@ class TheCatalogue(unittest.TestCase):
 
     def test_the_two_records_live_where_the_rest_of_the_user_state_lives(self):
         with session_fake.environment() as env:
-            self.assertEqual(Path(env["IARCH_CONFIG_DIR"]) / "shell-engine.json",
+            self.assertEqual(Path(env["IARCH_STATE_DIR"]) / "engine.json",
                              engines.engine_record_path(env))
+            self.assertEqual(Path(env["IARCH_CONFIG_DIR"]) / "shell-engine.json",
+                             engines.legacy_engine_record_path(env))
             self.assertEqual(Path(env["IARCH_STATE_DIR"]) / "shell-switch.json",
                              engines.switch_record_path(env))
 
@@ -115,6 +117,28 @@ class TheProbes(unittest.TestCase):
             self.assertEqual([], list(scans["dynamic"].pids))
             self.assertTrue(scans["dynamic"].searched)
             self.assertEqual([], engines.one_shell_violations(scans))
+
+    def test_unrelated_toolkit_instance_is_not_an_iarch_shell(self):
+        with session_fake.session(running={'quickshell': [222, 333]},
+                                  replies={('quickshell', 'list'): (0, '[{"pid":222}]')}) as fake:
+            scan = engines.running(engines.engine('dynamic'), run=fake.run)
+            self.assertTrue(scan.searched)
+            self.assertEqual((222,), scan.pids)
+
+    def test_malformed_or_inconsistent_instance_list_fails_closed(self):
+        for text in ('bad output', '[{"pid":"222"}]', '[{"pid":444}]'):
+            with self.subTest(text=text), session_fake.session(running={'quickshell': [222]},
+                    replies={('quickshell', 'list'): (0, text)}) as fake:
+                scan = engines.running(engines.engine('dynamic'), run=fake.run)
+                self.assertFalse(scan.searched)
+                self.assertFalse(scan.running)
+
+    def test_no_matching_instance_message_is_not_a_process(self):
+        with session_fake.session(running={'quickshell': [333]},
+                replies={('quickshell', 'list'): (0, 'No running instances for /x/shell.qml')}) as fake:
+            scan = engines.running(engines.engine('dynamic'), run=fake.run)
+            self.assertTrue(scan.searched)
+            self.assertFalse(scan.running)
 
     def test_two_engines_running_is_a_violation_naming_both(self):
         with session_fake.session(running={"noctalia": [111], "quickshell": [222]}) as fake:
@@ -165,6 +189,13 @@ class TheProbes(unittest.TestCase):
             self.assertEqual(999, report["pid"])
             self.assertIsNone(report["engine"])
 
+    def test_malformed_successful_bus_reply_is_unknown_not_unowned(self):
+        with session_fake.session(replies={('dbus-send',): (0, 'malformed reply')}) as fake:
+            owner = dbus_probe.notification_server(run=fake.run)
+            self.assertFalse(owner.searched)
+            self.assertFalse(owner.owned)
+            self.assertIn('without a unique name', owner.note)
+
     def test_a_bus_nobody_owns_is_an_answer_and_a_missing_dbus_send_is_not(self):
         with session_fake.session() as fake:
             self.assertFalse(dbus_probe.notification_server(run=fake.run).owned)
@@ -199,6 +230,36 @@ class TheRecords(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("{not json", encoding="utf-8")
             self.assertFalse(engine_state.engine_record(env)["stored"])
+
+    def test_legacy_record_is_read_without_overwriting_and_state_record_wins(self):
+        with session_fake.environment() as env:
+            old = engines.legacy_engine_record_path(env)
+            old.parent.mkdir(parents=True)
+            original = '{"schema_version": 1, "engine": "dynamic", "previous": "classic"}\n'
+            old.write_text(original)
+            self.assertEqual('dynamic', engine_state.selected_id(env))
+            self.assertFalse(engines.engine_record_path(env).exists())
+            target = engine_state.write_engine_record('classic', 'dynamic', env=env)
+            self.assertEqual('classic', engine_state.selected_id(env))
+            self.assertEqual(original, old.read_text())
+            target.write_text('{broken')
+            self.assertFalse(engine_state.engine_record(env)['stored'])
+            self.assertEqual('classic', engine_state.selected_id(env))
+
+    def test_engine_record_refuses_symlinks_and_keeps_a_backup(self):
+        with session_fake.environment() as env:
+            target = engine_state.write_engine_record('classic', None, env=env)
+            old = target.read_text()
+            engine_state.write_engine_record('dynamic', 'classic', env=env)
+            backups = list((Path(env['IARCH_STATE_DIR']) / 'backups').glob('*.bak'))
+            self.assertTrue(any(path.read_text() == old for path in backups))
+            target.unlink()
+            unrelated = Path(env['HOME']) / 'unrelated'
+            unrelated.write_text('untouched')
+            target.symlink_to(unrelated)
+            with self.assertRaises(ValueError):
+                engine_state.write_engine_record('dynamic', None, env=env)
+            self.assertEqual('untouched', unrelated.read_text())
 
     def test_writing_a_record_is_atomic_and_refuses_an_unknown_engine(self):
         with session_fake.environment() as env:

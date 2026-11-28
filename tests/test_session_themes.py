@@ -58,6 +58,26 @@ class ThemePacks(unittest.TestCase):
             self.assertIn("forest-night", current.getvalue())
             self.assertFalse((Path(tmp) / "theme.json").exists())
 
+    def test_snapshot_failure_does_not_publish_classic_choice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            env = {'HOME': tmp, 'IARCH_CONFIG_DIR': str(home / 'iarch'),
+                   'IARCH_STATE_DIR': str(home / 'state')}
+            choice = session_theme.choice_path(env)
+            choice.parent.mkdir(parents=True)
+            original = b'{"id":"violet-glass"}\n'
+            choice.write_bytes(original)
+            real_snapshot = session_theme._snapshot
+            def snapshot(path):
+                if path != choice:
+                    raise OSError('snapshot failed')
+                return real_snapshot(path)
+            with patch.object(session_theme, '_build_actions', return_value=[]), \
+                 patch.object(session_theme, '_snapshot', side_effect=snapshot):
+                with self.assertRaisesRegex(OSError, 'snapshot failed'):
+                    session_theme.apply_theme('greenhouse', home / '.config', env, no_reload=True)
+            self.assertEqual(original, choice.read_bytes())
+
     def test_apply_writes_the_saved_choice_and_all_local_projections_without_audio(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
