@@ -69,32 +69,36 @@ class TheStatusCommand(unittest.TestCase):
             self.assertFalse(engines.switch_record_path(env).exists())
 
 
+def auto_owner_session(**kwargs):
+    kwargs['auto_owner'] = True
+    return session_fake.session(**kwargs)
+
+
 class TheSwitchCommand(unittest.TestCase):
     def test_a_switch_that_works_exits_zero_and_reports_its_steps(self):
         with session_fake.environment() as env, \
-                session_fake.session(running={"noctalia": [111]}) as fake:
+                auto_owner_session(running={"noctalia": [111]}) as fake:
             session_fake.install_shell(env)
             code, out, _err = call(["to", "dynamic"], env)
             self.assertEqual(0, code)
-            for needle in ("snapshot", "stop", "start", "verify", "record", "switched"):
+            for needle in ("STOPPING_OLD", "WAITING_RELEASE", "STARTING_NEW", "WAITING_CLAIM", "VERIFIED", "switched"):
                 self.assertIn(needle, out)
             self.assertEqual(1, len(fake.pids("quickshell")))
 
     def test_a_switch_that_rolls_back_exits_one_with_the_reason_on_stderr(self):
         with session_fake.environment() as env, \
-                session_fake.session(running={"noctalia": [111]},
+                auto_owner_session(running={"noctalia": [111]},
                                      spawn_policy={"quickshell": session_fake.INVISIBLE}):
             session_fake.install_shell(env)
             code, _out, err = call(["to", "dynamic"], env)
             self.assertEqual(1, code)
-            self.assertIn("not up within", err)
-            self.assertIn("started again", err)
+            self.assertIn("notification ownership timed out", err)
             self.assertEqual("classic", json.loads(
                 engines.engine_record_path(env).read_text(encoding="utf-8"))["engine"])
 
     def test_the_json_report_of_a_rollback_carries_the_steps_that_ran(self):
         with session_fake.environment() as env, \
-                session_fake.session(running={"noctalia": [111]},
+                auto_owner_session(running={"noctalia": [111]},
                                      spawn_policy={"quickshell": session_fake.INVISIBLE}):
             session_fake.install_shell(env)
             code, out, _err = call(["to", "dynamic", "--json", "--budget", "1"], env)
@@ -103,13 +107,41 @@ class TheSwitchCommand(unittest.TestCase):
             self.assertEqual("rolled-back", payload["verdict"],
                              "a switch that undid itself says so, rather than only that it failed")
             self.assertIn("error", payload)
-            self.assertIn("snapshot", [step["step"] for step in payload["steps"]])
+            self.assertIn("STOPPING_OLD", [step["phase"] for step in payload["steps"]])
+            self.assertIn("FAILED_SAFE", [step["phase"] for step in payload["steps"]])
             self.assertTrue(payload["rollback"]["previous_is_up"])
             self.assertEqual("classic", payload["rollback"]["record_restored"])
 
+    def test_already_running_engine_is_verified_before_record_is_corrected(self):
+        with session_fake.environment() as env, auto_owner_session(running={'quickshell': [222]}) as fake:
+            session_fake.install_shell(env)
+            code, out, err = call(['to', 'dynamic', '--json'], env)
+            self.assertEqual(0, code, err)
+            self.assertEqual('already', json.loads(out)['verdict'])
+            self.assertEqual('dynamic', json.loads(engines.engine_record_path(env).read_text())['engine'])
+            self.assertEqual([], fake.spawned)
+
+    def test_already_running_engine_without_owner_does_not_update_record(self):
+        with session_fake.environment() as env, session_fake.session(running={'quickshell': [222]}) as fake:
+            session_fake.install_shell(env)
+            code, _out, err = call(['to', 'dynamic'], env)
+            self.assertEqual(1, code)
+            self.assertIn('owns notifications', err)
+            self.assertFalse(engines.engine_record_path(env).exists())
+            self.assertEqual([], fake.spawned)
+
+    def test_a_switch_without_a_notification_owner_never_stops_the_old_shell(self):
+        with session_fake.environment() as env, session_fake.session(running={'noctalia': [111]}) as fake:
+            session_fake.install_shell(env)
+            code, _out, err = call(['to', 'dynamic'], env)
+            self.assertEqual(1, code)
+            self.assertIn('owning notifications', err)
+            self.assertEqual([111], fake.pids('noctalia'))
+            self.assertEqual([], fake.spawned)
+
     def test_a_dry_run_says_it_changed_nothing(self):
         with session_fake.environment() as env, \
-                session_fake.session(running={"noctalia": [111]}) as fake:
+                auto_owner_session(running={"noctalia": [111]}) as fake:
             session_fake.install_shell(env)
             code, out, _err = call(["to", "dynamic", "--dry-run"], env)
             self.assertEqual(0, code)
@@ -118,20 +150,28 @@ class TheSwitchCommand(unittest.TestCase):
             self.assertEqual([111], fake.pids("noctalia"))
 
     def test_an_unknown_engine_is_refused_by_the_parser_with_status_two(self):
-        with session_fake.environment() as env, session_fake.session():
+        with session_fake.environment() as env, auto_owner_session():
             with self.assertRaises(SystemExit) as caught:
                 call(["to", "plasma"], env)
             self.assertEqual(2, caught.exception.code)
 
     def test_a_budget_that_cannot_work_is_a_usage_error(self):
-        with session_fake.environment() as env, session_fake.session():
+        with session_fake.environment() as env, auto_owner_session():
             code, _out, err = call(["to", "dynamic", "--budget", "0"], env)
             self.assertEqual(2, code)
             self.assertIn("--budget must be positive", err)
 
+    def test_nonfinite_budget_is_refused(self):
+        with session_fake.environment() as env, auto_owner_session():
+            for value in ('nan', 'inf', '-inf'):
+                with self.subTest(value=value):
+                    code, _out, err = call(['to', 'dynamic', '--budget=' + value], env)
+                    self.assertEqual(2, code)
+                    self.assertIn('finite', err)
+
     def test_a_budget_longer_than_the_contract_warns_rather_than_failing(self):
         with session_fake.environment() as env, \
-                session_fake.session(running={"noctalia": [111]}) as fake:
+                auto_owner_session(running={"noctalia": [111]}) as fake:
             session_fake.install_shell(env)
             code, _out, err = call(["to", "dynamic", "--budget", "60"], env)
             self.assertEqual(0, code)
@@ -143,7 +183,7 @@ class TheSwitchCommand(unittest.TestCase):
 class TheRollbackCommand(unittest.TestCase):
     def test_it_restores_the_previous_engine_and_exits_zero(self):
         with session_fake.environment() as env, \
-                session_fake.session(running={"noctalia": [111]}) as fake:
+                auto_owner_session(running={"noctalia": [111]}) as fake:
             session_fake.install_shell(env)
             self.assertEqual(0, call(["to", "dynamic"], env)[0])
             code, out, _err = call(["rollback"], env)
@@ -154,7 +194,7 @@ class TheRollbackCommand(unittest.TestCase):
             self.assertEqual([], fake.pids("quickshell"))
 
     def test_with_no_snapshot_it_is_a_usage_error_that_starts_nothing(self):
-        with session_fake.environment() as env, session_fake.session() as fake:
+        with session_fake.environment() as env, auto_owner_session() as fake:
             code, _out, err = call(["rollback"], env)
             self.assertEqual(2, code)
             self.assertIn("no switch to roll back", err)

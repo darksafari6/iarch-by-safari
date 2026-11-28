@@ -3,6 +3,7 @@
 import json
 import shutil
 import tempfile
+import threading
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -84,11 +85,58 @@ class ApplyTests(unittest.TestCase):
             return Answer(tuple(command), 0, stdout=response[command[-2]])
         self.assertFalse(theme_pack_apply._signal('example-pack', denied))
 
+    def test_transaction_lock_serializes_apply_and_rollback(self):
+        attempted = threading.Event()
+        entered = threading.Event()
+        errors = []
+        def contender():
+            attempted.set()
+            try:
+                with theme_pack_apply._transaction_lock(self.env):
+                    entered.set()
+            except Exception as exc:
+                errors.append(exc)
+        with theme_pack_apply._transaction_lock(self.env):
+            thread = threading.Thread(target=contender)
+            thread.start()
+            self.assertTrue(attempted.wait(2))
+            self.assertFalse(entered.wait(0.1))
+        thread.join(2)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual([], errors)
+        self.assertTrue(entered.is_set())
+
+    def test_shared_lock_is_reentrant_for_nested_switch_and_apply(self):
+        from iarch.lib import session_lock
+        with session_lock.session_lock(self.env):
+            with theme_pack_apply._transaction_lock(self.env):
+                self.assertTrue((Path(self.env['IARCH_STATE_DIR']) / 'shell-switch.lock').is_file())
+
+    def test_transaction_lock_refuses_symlink(self):
+        state = Path(self.env['IARCH_STATE_DIR'])
+        state.mkdir()
+        (state / 'shell-switch.lock').symlink_to(self.output)
+        with self.assertRaises(OSError):
+            theme_pack_apply.apply(self.pack, self.render, env=self.env, run=self.run_command)
+        self.assertEqual(self.output.read_text(), 'old bytes\n')
+        self.assertEqual([], self.calls)
+
     def test_success(self):
         result = theme_pack_apply.apply(self.pack, self.render, env=self.env, run=self.run_command)
         self.assertEqual(result['verdict'], 'applied')
         self.assertEqual(self.output.read_text(), 'new bytes\n')
         self.assertEqual(theme_records.read_selection(self.env)['engine'], 'dynamic')
+
+    def test_selection_is_committed_only_after_shell_and_compositor_verify(self):
+        observed = []
+        def run(command, timeout):
+            observed.append((tuple(command), theme_records.read_selection(self.env)['engine']))
+            return self.run_command(command, timeout)
+        theme_pack_apply.apply(self.pack, self.render, env=self.env, run=run)
+        self.assertTrue(any(command[0] == 'quickshell' for command, _ in observed))
+        self.assertTrue(any(command[:2] == ('hyprctl', 'reload') for command, _ in observed))
+        self.assertTrue(all(engine == 'classic' for _, engine in observed))
+        self.assertEqual('dynamic', theme_records.read_selection(self.env)['engine'])
 
     def test_no_transition_is_forwarded_to_shell(self):
         theme_pack_apply.apply(self.pack, self.render, env=self.env, run=self.run_command, no_transition=True)
@@ -166,6 +214,28 @@ class ApplyTests(unittest.TestCase):
         self.assertEqual(self.output.read_text(), 'old bytes\n')
         self.assertEqual(self.output.stat().st_mode & 0o777, 0o640)
         self.assertFalse(theme_records.selection_path(self.env).exists())
+
+    def test_dynamic_renderer_refuses_classic_shell_configuration(self):
+        target = self.root / '.config/noctalia/config.toml'
+        target.parent.mkdir(parents=True)
+        target.write_text('user preferences\n')
+        with self.assertRaisesRegex(theme_pack_apply.ApplyError, 'Classic shell'):
+            theme_pack_apply.apply(self.pack, lambda docs: [('preserving', target, 'changed')],
+                                   env=self.env, run=self.run_command)
+        self.assertEqual('user preferences\n', target.read_text())
+        self.assertEqual([], self.calls)
+
+    def test_failed_compositor_verification_restores_previous_dynamic_theme(self):
+        previous = {'schema_version': 1, 'id': 'previous-theme', 'engine': 'dynamic', 'overrides': {}}
+        theme_records.write_selection(previous, self.env)
+        before = theme_records.selection_path(self.env).read_bytes()
+        self.new_errors = True
+        with self.assertRaisesRegex(theme_pack_apply.ApplyError, 'new problem'):
+            theme_pack_apply.apply(self.pack, self.render, env=self.env, run=self.run_command)
+        self.assertEqual(before, theme_records.selection_path(self.env).read_bytes())
+        self.assertEqual('old bytes\n', self.output.read_text())
+        calls = [c[-2:] for c in self.calls if c[0] == 'quickshell']
+        self.assertEqual([('apply', 'example-pack'), ('apply', 'previous-theme')], calls)
 
     def test_renderer_cannot_write_outside_configuration(self):
         target = self.root / 'outside.txt'

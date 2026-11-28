@@ -17,6 +17,8 @@ Item {
     property var network: Services.Network { id: network; helper: "/fake/network" }
     property var brightness: Services.Brightness { id: brightness }
     property var audio: Services.Audio { id: audio }
+    property var input: Services.InputToggles { id: input; helper: "/fake/input" }
+    property var nightLight: Services.NightLight { id: nightLight; helper: "/fake/night-light" }
     property bool recordingSuccess: false
     property string recordingPath: ""
     property int recordingCompletions: 0
@@ -111,16 +113,44 @@ Item {
         if (!brightness.readProcess.running) return "brightness refresh missing"
         brightness.active = false
 
+        input.active = true
+        input.processObject.stdout.text = '{"pointers":["mouse-1"]}'
+        input.processObject.exited(0, 0); input.processObject.running = false
+        if (!input.available || input.pointers[0] !== "mouse-1") return "input list failed"
+        if (!input.setDevice("mouse-1", false)) return "input request rejected"
+        input.requestTimeout.triggered()
+        if (input.busy || input.available || input.error.indexOf("timed out") < 0) return "input timeout failed"
+        input.processObject.exited(0, 0) // Late exit cannot replace the timeout result.
+        if (input.error.indexOf("timed out") < 0) return "input late response accepted"
+        input.active = false
+
+        nightLight.active = true
+        nightLight.processObject.stdout.text = '{"enabled":true,"temperature":4200}'
+        nightLight.processObject.exited(0, 0); nightLight.processObject.running = false
+        if (!nightLight.available || nightLight.temperature !== 4200) return "night-light read failed"
+        if (!nightLight.request("set", 5000)) return "night-light request rejected"
+        nightLight.requestTimeout.triggered()
+        if (nightLight.busy || nightLight.available || nightLight.error.indexOf("timed out") < 0) return "night-light timeout failed"
+        nightLight.processObject.exited(0, 0)
+        if (nightLight.error.indexOf("timed out") < 0) return "night-light late response accepted"
+        nightLight.active = false
+
         let sink = {ready: true, isStream: false, audio: {volume: 0.5, muted: false}}
+        let source = {ready: true, isStream: false, audio: {volume: 0.4, muted: false}}
         let stream = {ready: true, isStream: true, audio: {volume: 0.7, muted: false}}
         let stranger = {ready: true, isStream: true, audio: {volume: 0.2, muted: false}}
         PipewireStub.Pipewire.ready = true
         PipewireStub.Pipewire.defaultAudioSink = sink
-        PipewireStub.Pipewire.nodes = {values: [sink, stream]}
+        PipewireStub.Pipewire.defaultAudioSource = source
+        PipewireStub.Pipewire.nodes = {values: [sink, source, stream]}
         audio.active = true
         if (!audio.available || audio.streams.length !== 1 || audio.tracker.objects.length !== 3) return "audio streams not tracked"
+        if (!audio.microphoneAvailable || audio.microphoneVolume !== 0.4 || !audio.setMicrophoneVolume(0.8) || !audio.setMicrophoneMuted(true)) return "microphone control failed"
+        if (source.audio.volume !== 0.8 || !source.audio.muted || audio.setMicrophoneVolume(NaN) || audio.setMicrophoneVolume(2)) return "microphone validation failed"
         if (!audio.setStreamVolume(stream, 0.3) || !audio.setStreamMuted(stream, true) || stream.audio.volume !== 0.3 || !stream.audio.muted) return "stream control failed"
         if (audio.setStreamVolume(stranger, 0.4) || audio.setStreamVolume(stream, 2) || audio.setStreamMuted(stream, "yes")) return "invalid stream control accepted"
+        PipewireStub.Pipewire.ready = false
+        if (audio.microphoneAvailable || audio.setMicrophoneVolume(0.5) || audio.setStreamMuted(stream, false)) return "unready audio accepted"
         audio.active = false
         if (audio.tracker.objects.length !== 0 || audio.setStreamMuted(stream, false)) return "audio tracking not stopped"
 

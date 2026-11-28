@@ -42,6 +42,12 @@ class ProjectionTests(unittest.TestCase):
         self.assertFalse(result['theme']['sounds']['switch']['enabled'])
         self.assertEqual(result, shell_projection.build('example-pack', self.env, 'high', True))
 
+    def test_explicit_projection_does_not_require_publishing_dynamic_selection(self):
+        self.assertEqual('classic', theme_records.read_selection(self.env)['engine'])
+        result = shell_projection.build('example-pack', self.env)
+        self.assertEqual('example-pack', result['theme']['id'])
+        self.assertEqual('classic', theme_records.read_selection(self.env)['engine'])
+
     def test_quality_preference_flows_through_cli_and_can_be_overridden(self):
         overrides = theme_records.read_overrides(self.env)
         overrides['quality'] = 'ultra'

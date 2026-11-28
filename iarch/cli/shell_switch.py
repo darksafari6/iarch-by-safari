@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Mapping, Optional
 
 from iarch.cli import engine_state, engine_steps, theme_engine as engines
-from iarch.lib import processes, runner
+from iarch.lib import processes, runner, session_lock
 
 #: The rollback contract: stop, start and prove all finish inside this, or the
 #: session goes back. Ten seconds is also the window Quickshell's own crash handler
@@ -67,6 +67,21 @@ def switch(target_id: str, env: Optional[Mapping[str, str]] = None, *,
            sleep: Optional[Callable[[float], None]] = None, budget: float = BUDGET_SECONDS,
            grace: float = engine_steps.STOP_GRACE_SECONDS,
            dry_run: bool = False) -> Dict[str, Any]:
+    """Serialize shell switches with cooperating theme transactions."""
+    kwargs = dict(run=run, spawn=spawn, clock=clock, sleep=sleep, budget=budget,
+                  grace=grace, dry_run=dry_run)
+    if dry_run:
+        return _switch_locked(target_id, env, **kwargs)
+    with session_lock.session_lock(env):
+        return _switch_locked(target_id, env, **kwargs)
+
+
+def _switch_locked(target_id: str, env: Optional[Mapping[str, str]] = None, *,
+           run: Optional[runner.Runner] = None, spawn: Optional[Spawner] = None,
+           clock: Optional[Callable[[], float]] = None,
+           sleep: Optional[Callable[[float], None]] = None, budget: float = BUDGET_SECONDS,
+           grace: float = engine_steps.STOP_GRACE_SECONDS,
+           dry_run: bool = False) -> Dict[str, Any]:
     """Switch the running engine, or refuse and leave the session as it was."""
     clock = clock or time.monotonic
     sleep = sleep or time.sleep
@@ -82,6 +97,10 @@ def switch(target_id: str, env: Optional[Mapping[str, str]] = None, *,
         "rollback": None, "verdict": "dry-run" if dry_run else "refused",
         "record_path": str(engines.engine_record_path(env)),
     }
+    unsearched = [key for key, scan in before["engines"].items() if not scan.get("searched")]
+    if unsearched:
+        raise RefusedError("cannot inspect every shell engine (" + ", ".join(unsearched)
+                           + "); no changes made", report)
     alive = engine_state.running_ids(before)
     if len(alive) > 1:
         # Two engines running is the state this command exists to end, but guessing
@@ -98,7 +117,7 @@ def switch(target_id: str, env: Optional[Mapping[str, str]] = None, *,
         report["steps"].append({"step": "already-running", "engine": target.id,
                                 "pids": previous_pids,
                                 "record_agreed": before["record"]["engine"] == target.id})
-        if before["record"]["engine"] != target.id:
+        if before["record"]["engine"] != target.id and not dry_run:
             engine_state.write_engine_record(target.id, before["record"]["engine"], env=env)
             report["steps"].append({"step": "record", "engine": target.id,
                                     "note": "the record named another engine and was corrected"})
@@ -113,6 +132,14 @@ def switch(target_id: str, env: Optional[Mapping[str, str]] = None, *,
         report["steps"].append({"step": "preflight", "engine": target.id, "missing": missing})
         raise RefusedError(f"{target.name} cannot run: {missing}. Nothing was stopped and the "
                            f"session is still running {previous.name}.", report)
+
+    # This point-in-time preflight is not proof of future ownership/handoff.
+    owner = before["notification"]
+    if not owner.get("searched"):
+        raise RefusedError("cannot inspect notification ownership; no changes made", report)
+    if owner.get("unique_name") and owner.get("pid") not in previous_pids:
+        raise RefusedError("notification server is owned by another or unknown process; "
+                           "no changes made", report)
 
     if dry_run:
         report["steps"] = [
@@ -136,10 +163,11 @@ def switch(target_id: str, env: Optional[Mapping[str, str]] = None, *,
     stop = engine_steps.stop(previous, previous_pids, run=run, grace=grace, clock=clock,
                              sleep=sleep)
     report["steps"].append(dict(stop, step="stop"))
-    if not stop["stopped"]:
-        raise RefusedError(f"{previous.name} could not be stopped, so {target.name} was not "
-                           f"started and the session is still running {previous.name}: "
-                           + str(stop.get("note")), report)
+    remaining = engines.running(previous, run=run)
+    if not stop["stopped"] or not remaining.searched or remaining.running:
+        raise RefusedError(f"{previous.name} could not be stopped or its exit could not be "
+                           f"verified, so {target.name} was not started: "
+                           + str(stop.get("note") or remaining.note or "process still running"), report)
 
     # 3. Start the engine that was asked for.
     start = engine_steps.start(target, spawn=spawn)
@@ -147,9 +175,9 @@ def switch(target_id: str, env: Optional[Mapping[str, str]] = None, *,
     if not start["started"]:
         _undo(previous, target, start, start["note"], env, run, spawn, clock, sleep,
               deadline, report)
-        raise RefusedError(f"{target.name} could not be started ({start['note']}), so "
-                           f"{previous.name} was started again and the session is running the "
-                           "engine it was running before", report)
+        recovery = "the target was stopped and the previous engine started again" if report["rollback"]["previous_is_up"] else (
+            "recovery was incomplete; inspect the rollback report and restore the shell manually")
+        raise RefusedError(f"{target.name} could not be started ({start['note']}); {recovery}", report)
 
     # 4. Prove it is up inside the budget, or put the session back.
     verify = engine_steps.is_up(target, run=run, deadline=deadline, clock=clock, sleep=sleep)
@@ -157,9 +185,10 @@ def switch(target_id: str, env: Optional[Mapping[str, str]] = None, *,
     if not verify["up"]:
         reason = verify.get("note") or f"proved only as {verify.get('how')}"
         _undo(previous, target, start, reason, env, run, spawn, clock, sleep, deadline, report)
-        raise RefusedError(f"{target.name} was not up within {budget:g} seconds ({reason}), so "
-                           f"it was stopped, {previous.name} was started again and the recorded "
-                           "engine was left as it was", report)
+        recovery = "the target was stopped and the previous engine started again" if report["rollback"]["previous_is_up"] else (
+            "recovery was incomplete; inspect the rollback report and restore the shell manually")
+        raise RefusedError(f"{target.name} was not up within {budget:g} seconds ({reason}); "
+                           f"{recovery}", report)
 
     # 5. It is up, so the choice is recorded and the snapshot stays for `rollback`.
     engine_state.write_engine_record(target.id, previous.id, env=env)
@@ -168,6 +197,57 @@ def switch(target_id: str, env: Optional[Mapping[str, str]] = None, *,
     report["steps"].append({"step": "record", "engine": target.id,
                             "path": report["record_path"]})
     return report
+
+
+def verified_switch(target_id, env=None, *, run=None, spawn=None, clock=None, sleep=None,
+                    budget=BUDGET_SECONDS, dry_run=False):
+    """Switch via journalled notification handoff; refuse without proof of ownership."""
+    from iarch.cli import shell_handoff
+    clock, sleep = clock or time.monotonic, sleep or time.sleep
+    if dry_run:
+        return _switch_locked(target_id, env, run=run, spawn=spawn, clock=clock,
+                              sleep=sleep, budget=budget, dry_run=True)
+    with session_lock.session_lock(env):
+        report = _switch_locked(target_id, env, run=run, spawn=spawn, clock=clock,
+                                sleep=sleep, budget=budget, dry_run=True)
+        report['dry_run'] = False
+        if report['verdict'] == 'already':
+            before = report['before']
+            pids = before['engines'][target_id]['pids']
+            owner = before['notification']
+            if (len(pids) != 1 or not owner.get('searched') or not owner.get('unique_name')
+                    or owner.get('pid') not in pids):
+                raise RefusedError('cannot verify the running engine owns notifications', report)
+            if before['record']['engine'] != target_id:
+                engine_state.write_engine_record(target_id, before['record']['engine'], env=env)
+                report['steps'].append({'step': 'record', 'engine': target_id,
+                                        'path': report['record_path']})
+            return report
+        alive = engine_state.running_ids(report['before'])
+        if len(alive) != 1:
+            raise RefusedError('cannot hand off without exactly one running engine', report)
+        control = shell_handoff.ProcessControl(run=run, spawn=spawn, clock=clock, sleep=sleep, env=env)
+        probe = shell_handoff.NameOwnerProbe(run=run)
+        try:
+            state = shell_handoff.handoff(alive[0], target_id, env=env, probe=probe,
+                                          control=control, clock=clock, sleep=sleep,
+                                          claim_seconds=min(budget, shell_handoff.CLAIM_SECONDS))
+        except shell_handoff.HandoffError as exc:
+            state = exc.state
+            restored = state.get('phase') == 'FAILED_SAFE'
+            report['verdict'] = 'rolled-back' if restored else 'rollback-incomplete'
+            report['handoff'] = state
+            report['steps'] = [{'step': 'handoff', 'phase': phase} for phase in state.get('history', [])]
+            report['rollback'] = {'previous_is_up': restored,
+                                  'record_restored': alive[0] if restored else None,
+                                  'reason': str(exc)}
+            raise RefusedError(f'notification handoff failed: {exc}', report) from exc
+        report['handoff'] = state
+        report['steps'] = [{'step': 'handoff', 'engine': target_id, 'phase': phase}
+                           for phase in state.get('history', [])]
+        report['verdict'] = 'switched'
+        report['after'] = engine_state.state(env, run=run)
+        return report
 
 
 def _preflight(record: engines.Engine, env: Optional[Mapping[str, str]]) -> Optional[str]:
@@ -184,6 +264,8 @@ def _preflight(record: engines.Engine, env: Optional[Mapping[str, str]]) -> Opti
                 return 'the installed dynamic shell is only a skeleton and is not ready to run'
         except (OSError, UnicodeError):
             return f'cannot read shell entry point {entry}'
+    if record.id == engines.ENGINE_DYNAMIC and not engine_state.dynamic_engine_enabled(env):
+        return 'dynamic_engine_enabled is false; explicit opt-in is required'
     return None
 
 
@@ -205,6 +287,16 @@ def _undo(previous: engines.Engine, target: engines.Engine, start: Mapping[str, 
         stopped = processes.terminate(stray.pids, clock=clock, sleep=sleep)
         undo["steps"].append({"step": "stop-target", "engine": target.id,
                               "survivors": stopped.get("survivors", [])})
+    # Never start the previous engine while the attempted target may still run.
+    # A failed process-table query is not evidence that it exited.
+    remaining = engines.running(target, run=run)
+    if not remaining.searched or remaining.running:
+        undo["previous_is_up"] = False
+        undo["record_restored"] = None
+        undo["note"] = "could not prove the target stopped; previous engine was not restarted"
+        report["rollback"] = undo
+        report["verdict"] = "rollback-incomplete"
+        return
     restarted = engine_steps.start(previous, spawn=launch)
     undo["steps"].append(dict(restarted, step="restart-previous"))
     if restarted["started"]:
@@ -232,6 +324,16 @@ def rollback(env: Optional[Mapping[str, str]] = None, *,
              clock: Optional[Callable[[], float]] = None,
              sleep: Optional[Callable[[float], None]] = None,
              budget: float = BUDGET_SECONDS) -> Dict[str, Any]:
+    """Serialize manual rollback with other session-changing operations."""
+    with session_lock.session_lock(env):
+        return _rollback_locked(env, run=run, spawn=spawn, clock=clock, sleep=sleep, budget=budget)
+
+
+def _rollback_locked(env: Optional[Mapping[str, str]] = None, *,
+             run: Optional[runner.Runner] = None, spawn: Optional[Spawner] = None,
+             clock: Optional[Callable[[], float]] = None,
+             sleep: Optional[Callable[[float], None]] = None,
+             budget: float = BUDGET_SECONDS) -> Dict[str, Any]:
     """Restore the engine the last switch snapshotted, and stop the other one."""
     clock = clock or time.monotonic
     sleep = sleep or time.sleep
@@ -248,6 +350,27 @@ def rollback(env: Optional[Mapping[str, str]] = None, *,
                               "snapshot": snapshot,
                               "record_path": str(engines.engine_record_path(env))}
     scan = engines.running(previous, run=run)
+    if not scan.searched:
+        raise RefusedError("cannot inspect the previous engine; no changes made", report)
+    if not scan.running:
+        missing = _preflight(previous, env)
+        if missing:
+            raise RefusedError(f"cannot restore {previous.name}: {missing}; no changes made", report)
+    for other in engines.ENGINES:
+        if other.id == previous.id:
+            continue
+        stray = engines.running(other, run=run)
+        if not stray.searched:
+            raise RefusedError(f"cannot inspect {other.name}; previous engine was not started", report)
+        if stray.running:
+            stopped = processes.terminate(stray.pids, clock=clock, sleep=sleep)
+            report["steps"].append({"step": "stop-other", "engine": other.id,
+                                    "survivors": stopped.get("survivors", []),
+                                    "refused": stopped.get("refused", [])})
+            remaining = engines.running(other, run=run)
+            if stopped.get("refused") or not remaining.searched or remaining.running:
+                raise RefusedError(f"could not prove {other.name} stopped; "
+                                   "previous engine was not started", report)
     if scan.running:
         report["steps"].append({"step": "already-running", "pids": list(scan.pids)})
     else:
@@ -261,14 +384,6 @@ def rollback(env: Optional[Mapping[str, str]] = None, *,
         if not verify["up"]:
             raise RefusedError(f"{previous.name} did not come up within {budget:g} seconds "
                                f"({verify.get('note')})", report)
-    for other in engines.ENGINES:
-        if other.id == previous.id:
-            continue
-        stray = engines.running(other, run=run)
-        if stray.running:
-            stopped = processes.terminate(stray.pids, clock=clock, sleep=sleep)
-            report["steps"].append({"step": "stop-other", "engine": other.id,
-                                    "survivors": stopped.get("survivors", [])})
     engine_state.write_engine_record(previous.id, None, env=env)
     report["verdict"] = "rolled-back"
     report["after"] = engine_state.state(env, run=run)

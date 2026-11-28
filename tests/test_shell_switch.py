@@ -23,6 +23,20 @@ class ASwitchThatWorks(unittest.TestCase):
         return shell_switch.switch(target, env, run=fake.run, spawn=fake.spawn,
                                    clock=fake.clock, sleep=fake.sleep, **kwargs)
 
+    def test_dynamic_opt_in_defaults_false_and_malformed_flag_is_refused(self):
+        with session_fake.environment() as env, session_fake.session(running={'noctalia': [123]}) as fake:
+            session_fake.install_shell(env)
+            flag = Path(env['IARCH_CONFIG_DIR']) / 'dynamic-engine.json'
+            for value in ('{}', '{"dynamic_engine_enabled": 1}', 'not json'):
+                flag.write_text(value)
+                with self.subTest(value=value), self.assertRaisesRegex(shell_switch.RefusedError, 'dynamic_engine_enabled'):
+                    self.switch(env, fake)
+                self.assertEqual([123], fake.pids('noctalia'))
+                self.assertEqual([], fake.spawned)
+            flag.unlink()
+            with self.assertRaisesRegex(shell_switch.RefusedError, 'dynamic_engine_enabled'):
+                self.switch(env, fake)
+
     def test_skeleton_is_refused_before_stopping_classic(self):
         with session_fake.environment() as env, \
                 session_fake.session(running={"noctalia": [123]}) as fake:
@@ -43,6 +57,22 @@ class ASwitchThatWorks(unittest.TestCase):
             self.assertEqual(1, len(fake.pids("quickshell")))
             self.assertEqual([("quickshell", "--config", "iarch", "--daemonize",
                                "--no-duplicate")], fake.spawned)
+
+    def test_only_the_iarch_toolkit_instance_is_signalled(self):
+        with session_fake.environment() as env, session_fake.session(
+                running={"quickshell": [222, 333]},
+                replies={('quickshell', 'list'): (0, '[{"pid": 222}]'),
+                         ('quickshell', 'kill'): (0, 'ok')}) as fake:
+            # The fake instance list must reflect the target disappearing.
+            def run(command, timeout):
+                if tuple(command[:2]) == ('quickshell', 'list') and 222 not in fake.pids('quickshell'):
+                    return session_fake.Answer(tuple(command), 0, '[]', '')
+                return fake.run(command, timeout)
+            report = shell_switch.switch('classic', env, run=run, spawn=fake.spawn,
+                                         clock=fake.clock, sleep=fake.sleep)
+            self.assertEqual('switched', report['verdict'])
+            self.assertEqual([333], fake.pids('quickshell'))
+            self.assertEqual([222], report['steps'][1]['terminate']['asked'])
 
     def test_the_snapshot_is_taken_before_anything_is_stopped(self):
         with session_fake.environment() as env, \
@@ -97,15 +127,15 @@ class ASwitchThatWorks(unittest.TestCase):
             self.assertEqual("instances", verify["how"])
             self.assertGreaterEqual(verify["attempts"], 1)
 
-    def test_a_process_without_an_instance_list_is_reported_as_the_weaker_proof(self):
+    def test_a_process_without_an_instance_list_is_not_accepted_as_our_shell(self):
         with session_fake.environment() as env, \
                 session_fake.session(running={"noctalia": [111]}, instances_ok=False) as fake:
             session_fake.install_shell(env)
-            report = self.switch(env, fake)
-            verify = next(step for step in report["steps"] if step["step"] == "verify")
-            self.assertEqual("process-only", verify["how"],
-                             "an engine that could be asked and did not list itself must not be "
-                             "reported as though it had")
+            with self.assertRaises(shell_switch.RefusedError) as caught:
+                self.switch(env, fake)
+            verify = next(step for step in caught.exception.report["steps"] if step["step"] == "verify")
+            self.assertEqual("unsearchable", verify["how"])
+            self.assertTrue(caught.exception.report["rollback"]["previous_is_up"])
 
     def test_switching_to_the_engine_that_is_already_running_changes_nothing(self):
         with session_fake.environment() as env, \
@@ -146,6 +176,38 @@ class ASwitchThatWorks(unittest.TestCase):
 
 
 class ASwitchThatFails(unittest.TestCase):
+    def test_unsearchable_process_table_refuses_without_starting(self):
+        with session_fake.environment() as env, session_fake.session(
+                binaries=[b for b in session_fake.DEFAULT_BINARIES if b != "pgrep"]) as fake:
+            session_fake.install_shell(env)
+            with self.assertRaises(shell_switch.RefusedError) as caught:
+                shell_switch.switch("dynamic", env, run=fake.run, spawn=fake.spawn,
+                                    clock=fake.clock, sleep=fake.sleep)
+            self.assertIn("cannot inspect", str(caught.exception))
+            self.assertEqual([], fake.spawned)
+            self.assertFalse(engines.switch_record_path(env).exists())
+
+    def test_foreign_notification_owner_refuses_before_stopping_shell(self):
+        with session_fake.environment() as env, session_fake.session(
+                running={'noctalia': [111]}, notification_owner=(':1.42', 888)) as fake:
+            session_fake.install_shell(env)
+            with self.assertRaisesRegex(shell_switch.RefusedError, 'notification server'):
+                shell_switch.switch('dynamic', env, run=fake.run, spawn=fake.spawn,
+                                    clock=fake.clock, sleep=fake.sleep)
+            self.assertEqual([111], fake.pids('noctalia'))
+            self.assertEqual([], fake.spawned)
+            self.assertFalse(engines.switch_record_path(env).exists())
+
+    def test_unknown_bus_owner_refuses_before_stopping_shell(self):
+        with session_fake.environment() as env, session_fake.session(
+                running={'noctalia': [111]}, replies={('dbus-send',): (0, 'malformed')}) as fake:
+            session_fake.install_shell(env)
+            with self.assertRaisesRegex(shell_switch.RefusedError, 'notification ownership'):
+                shell_switch.switch('dynamic', env, run=fake.run, spawn=fake.spawn,
+                                    clock=fake.clock, sleep=fake.sleep)
+            self.assertEqual([111], fake.pids('noctalia'))
+            self.assertEqual([], fake.spawned)
+
     def test_an_engine_that_never_comes_up_is_rolled_back_inside_the_budget(self):
         with session_fake.environment() as env, \
                 session_fake.session(running={"noctalia": [111]},
@@ -217,11 +279,10 @@ class ASwitchThatFails(unittest.TestCase):
             with self.assertRaises(shell_switch.RefusedError) as caught:
                 shell_switch.switch("dynamic", env, run=fake.run, spawn=fake.spawn,
                                     clock=fake.clock, sleep=fake.sleep, budget=1.0)
-            verify = next(step for step in caught.exception.report["steps"]
-                          if step["step"] == "verify")
-            self.assertEqual("unsearchable", verify["how"])
-            self.assertIn("not installed", verify["note"])
-            self.assertFalse(caught.exception.report["rollback"]["previous_is_up"])
+            self.assertIn("cannot inspect", str(caught.exception))
+            self.assertIn("not installed", caught.exception.report["before"]["engines"]["classic"]["note"])
+            self.assertIsNone(caught.exception.report["rollback"])
+            self.assertEqual([], fake.spawned)
 
     def test_the_default_budget_is_the_ten_seconds_the_contract_names(self):
         with session_fake.environment() as env, \

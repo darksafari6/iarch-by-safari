@@ -92,10 +92,10 @@ def stop(record: engines.Engine, pids: Sequence[int],
         answer = (run or runner.run)(record.stop_command, processes.PGREP_TIMEOUT_SECONDS)
         report["command"] = None if answer is None else answer.describe()
     report["terminate"] = processes.terminate(pids, grace=grace, clock=clock, sleep=sleep)
-    survivors = report["terminate"].get("survivors") or []
+    survivors = (report["terminate"].get("survivors") or []) + (report["terminate"].get("refused") or [])
     report["stopped"] = not survivors
     if survivors:
-        report["note"] = (f"{record.name} kept running as pid "
+        report["note"] = (f"{record.name} could not be stopped as pid "
                           + ", ".join(str(pid) for pid in survivors))
     return report
 

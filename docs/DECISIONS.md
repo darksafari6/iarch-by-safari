@@ -237,3 +237,56 @@ ship an empty command that reports success.
 
 **Rejected.** *A stub CLI.* A command that exists and does nothing is worse than a
 documented schedule: it reads as shipped.
+
+## D-T1-13 — Refuse recovery when the other shell cannot be proved stopped
+
+**Decision.** A process-table failure is not an empty process table. The switch
+refuses before taking action if either engine cannot be searched; after stopping
+an engine it checks again before launching another. Manual rollback checks the
+previous engine's preflight first, then stops and rechecks the other engine before
+starting the previous one. Automatic recovery also refuses to restart while the
+attempted target still runs or its state is unknown. The report identifies an
+incomplete recovery instead of claiming success.
+
+**Limit.** This is not a session-wide mutex: unrelated processes can appear after
+the check, and D-Bus ownership can change independently. Live verification and
+a safe notification handoff are still required before enabling Dynamic.
+
+## D-T1-14 — Scope toolkit process identification to the iArch configuration
+
+**Decision.** A toolkit binary may run unrelated configurations. A process-name
+match alone is not permission to stop every matching PID. When such processes
+exist, identify the iArch configuration through its scoped JSON instance list,
+intersect its PIDs with the process table, and refuse on ambiguous or inconsistent
+results. Pinned toolkit source `src/launch/command.cpp` at
+`9b0f339b19057f4731bf3b48293307d7ef241671` emits `pid` in nonempty JSON and a
+`No running instances for ...` message for an empty list. This behavior is
+UNTESTED-LIVE; scope and PID checks do not eliminate process-identity races.
+
+## D-T1-15 — Guard notification preflight and serialize Dynamic transactions
+
+**Decision.** Before a real or planned switch, reject an unknown notification
+owner or one that does not belong to the current engine. A malformed successful
+D-Bus reply is unknown, not an unowned name. Serialize Dynamic apply and rollback
+using one private advisory state lock, rejecting a symlink lock path.
+
+**Limit.** The bus probe is a point-in-time check, not a bus-name reservation;
+other clients can take the name after it runs. The advisory lock does not cover
+Classic writers or external editors. Safe live handoff and cross-engine
+transaction coordination remain incomplete and are not grounds to enable the
+experimental session shell.
+
+## D-T1-16 — Shared lock and explicit Dynamic opt-in
+
+**Decision.** Cooperating Classic/Dynamic apply commands, Dynamic rollback and
+shell switch use the same private `shell-switch.lock`; nesting within one thread
+is supported, and foreign symlinks or hard-linked lock files are refused. The
+Dynamic engine also requires an explicit boolean `dynamic_engine_enabled` in
+`~/.config/iarch/dynamic-engine.json`; missing, malformed or symlinked records
+mean false. This flag does not override the separate unfinished-shell guard.
+
+**Limit.** This is advisory and does not constrain independent programs, direct
+editing, or entry points that have not been integrated. The normal switch CLI
+now uses the experimental handoff/recovery primitive, but older programmatic
+switch and rollback entry points still use the legacy flow. Bus behavior remains
+UNTESTED-LIVE, and notification history is not transferred.

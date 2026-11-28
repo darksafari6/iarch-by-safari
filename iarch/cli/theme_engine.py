@@ -85,7 +85,8 @@ IPC_FUNCTION_STATUS = "status"
 IPC_FUNCTION_COMMIT = "commit"
 IPC_FUNCTION_PING = "ping"
 
-ENGINE_RECORD_NAME = "shell-engine.json"   #: the selected engine's record
+ENGINE_RECORD_NAME = "engine.json"   #: the selected engine's state record
+LEGACY_ENGINE_RECORD_NAME = "shell-engine.json"
 SWITCH_RECORD_NAME = "shell-switch.json"   #: the snapshot a rollback restores
 
 
@@ -210,8 +211,13 @@ def shell_entry(engine_id: str, env: Optional[Mapping[str, str]] = None) -> Opti
 
 
 def engine_record_path(env: Optional[Mapping[str, str]] = None) -> Any:
-    """``~/.config/iarch/shell-engine.json`` — the selected engine."""
-    return configstore.config_dir(env) / ENGINE_RECORD_NAME
+    """The authoritative selected-engine record in the iArch state directory."""
+    return configstore.state_dir(env) / ENGINE_RECORD_NAME
+
+
+def legacy_engine_record_path(env: Optional[Mapping[str, str]] = None) -> Any:
+    """The previous location, read only when the authoritative record is absent."""
+    return configstore.config_dir(env) / LEGACY_ENGINE_RECORD_NAME
 
 
 def switch_record_path(env: Optional[Mapping[str, str]] = None) -> Any:
@@ -223,8 +229,37 @@ def switch_record_path(env: Optional[Mapping[str, str]] = None) -> Any:
 
 
 def running(record: Engine, run: Optional[runner.Runner] = None) -> processes.ProcessScan:
-    """The pids of one engine, from the process table."""
-    return processes.pids_named(record.binary, run=run)
+    """Find engine processes without treating unrelated toolkit configs as ours.
+
+    The dynamic toolkit can host other configurations under the same executable
+    name. Never signal those PIDs. Its config-scoped instance list identifies our
+    processes; an unreadable or inconsistent list is unknown, not an empty result.
+    """
+    scan = processes.pids_named(record.binary, run=run)
+    if record.id != ENGINE_DYNAMIC or not scan.searched or not scan.running:
+        return scan
+    listed, answer = instances(record, run=run)
+    if answer is None or not answer.ok or answer.timed_out:
+        return processes.ProcessScan(record.binary, searched=False,
+                                     note='cannot identify dynamic shell instances')
+    if listed is None:
+        # Pinned upstream prints text rather than an empty JSON array when no
+        # instances match. All other non-JSON responses are ambiguous.
+        text = (answer.stdout + '\n' + answer.stderr).strip()
+        if text.startswith('No running instances for '):
+            return processes.ProcessScan(record.binary, searched=True)
+        return processes.ProcessScan(record.binary, searched=False,
+                                     note='invalid dynamic shell instance list')
+    pids = []
+    for item in listed:
+        if not isinstance(item, dict) or type(item.get('pid')) is not int or item['pid'] <= 1:
+            return processes.ProcessScan(record.binary, searched=False,
+                                         note='invalid dynamic shell instance PID')
+        pids.append(item['pid'])
+    if not set(pids).issubset(scan.pids):
+        return processes.ProcessScan(record.binary, searched=False,
+                                     note='dynamic shell process list changed during inspection')
+    return processes.ProcessScan(record.binary, pids=tuple(sorted(set(pids))), searched=True)
 
 
 def engines_running(run: Optional[runner.Runner] = None) -> Dict[str, Any]:

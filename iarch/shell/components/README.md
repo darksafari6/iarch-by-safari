@@ -11,7 +11,8 @@ The shared Theme defaults, caller-provided data and user interaction.
 ## Outputs
 
 Controls and signals. They do not call shell services or fetch network data.
-The gallery and live theme binding are not implemented yet.
+The development gallery and theme binding exist, but live rendering, all visual
+states and installed operation remain UNTESTED-LIVE.
 
 `WorkspaceIndicator.qml` is a pure view of ten workspace states with dots,
 bubbles and pill-group styles. It emits requests for the embedding adapter to

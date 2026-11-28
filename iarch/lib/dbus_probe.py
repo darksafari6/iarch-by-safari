@@ -93,7 +93,8 @@ def owner_of(name: str, run: Optional[Runner] = None) -> BusOwner:
         return BusOwner(name, searched=False, note=answer.describe(), answer=answer)
     match = _UNIQUE_NAME.search(answer.stdout)
     if match is None:
-        return BusOwner(name, searched=True, note="the bus answered without a unique name",
+        # A successful but malformed reply does not prove the name is free.
+        return BusOwner(name, searched=False, note="the bus answered without a unique name",
                         answer=answer)
     unique = match.group(1)
     pid_answer = _call("GetConnectionUnixProcessID", f"string:{unique}", execute)

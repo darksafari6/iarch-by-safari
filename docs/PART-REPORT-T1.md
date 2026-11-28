@@ -1,5 +1,88 @@
 # Part T1 report — dynamic theme foundations
 
+## Non-stop edition review — current status: PARTIAL
+
+### Latest implementation work
+
+The latest full Python discovery ran 2,478 tests with seven skips; all six shell
+suites, shellcheck, bash syntax, generators, schema and workflow gates passed.
+Dynamic selection is published after shell and compositor verification, and a
+failed compositor verification restores the previous selection and requests the
+previous Dynamic theme. Classic snapshots its choice and sound/settings targets
+before writing the choice. The engine record now lives in the state directory;
+legacy config records are read only until a state record exists, and are not
+removed. Updates back up an existing state record and reject symlink targets.
+An already-running engine is only recorded by the CLI after its notification
+ownership is verified. These improvements are not a crash-recoverable apply.
+Dynamic apply and rollback now refuse paths in Classic shell configuration,
+including canonical paths through directory aliases. The common session lock has
+an interprocess serialization test; journals exceeding the recovery size limit
+are refused before their first operation.
+`iarch/lib/theme_transaction.py` now provides a shared-lock step runner with
+private journals, verification, reverse idempotent compensation, interrupted
+transaction recovery, and fault-injection tests. It is infrastructure only:
+Classic and Dynamic apply do not yet invoke it or supply recovery handlers.
+
+A shared `shell-switch.lock` now serializes the main Classic and Dynamic theme
+apply paths, Dynamic rollback and engine switching. Dynamic switching requires an
+explicit `dynamic_engine_enabled: true` in `~/.config/iarch/dynamic-engine.json`,
+but the separate unfinished-shell guard still prevents production startup.
+`iarch/cli/shell_handoff.py` contains an injectable journalled notification
+handoff with release and claim timeouts, recovery and fake fault tests;
+`iarch-shell-switch to` now uses it and `iarch-shell-switch recover` can recover
+its interrupted journal. CLI rollback uses a verified reverse handoff. The older
+programmatic switch/rollback entry points still use their legacy flow, and the
+old switch journal has a different schema. Bus behavior is UNTESTED-LIVE.
+Notification history is not migrated. The requested shared crash-recoverable
+Classic/Dynamic transaction runner, automatic engine switching during theme
+apply and `iarch-theme recover` are not implemented. No completion is claimed.
+
+### Earlier hardening
+
+The engine probe now scopes toolkit PIDs to the named iArch configuration and
+fails closed on ambiguous instance lists, so unrelated toolkit configurations
+are not signalled. Switch preflight also refuses unknown or foreign notification
+owners. These checks do not prevent later bus takeover, and remain UNTESTED-LIVE.
+Dynamic apply and rollback now serialize with a shared advisory lock; the lock
+only covers cooperating Dynamic operations, not Classic writers or external
+editors. Malformed successful D-Bus owner replies are treated as unknown.
+
+Latest verification: `python -m unittest discover -s tests -p 'test_*.py'`
+ran 2,452 tests successfully, with eight skips. Shell syntax and warning-level
+shellcheck, all six shell suites, the full generator/branding/naming/contrast
+and schema/workflow checks passed. The schema check validated 49 documents against
+35 schemas. These checks used fakes; no live compositor, session bus handoff or
+Arch VM was available. No second version bump is made while tasks are partial.
+
+The following review supersedes the historical snapshot below where they differ.
+The foundations were merged previously (version 0.5.0); Part 2 work was later
+merged experimentally and is still guarded. This review does not claim that the
+Dynamic engine is ready, or that an Arch VM test was run.
+
+| Task | Status | Evidence / remaining work |
+| --- | --- | --- |
+| 1. Engine strategy and switch | Partial | `docs/THEMES-ARCHITECTURE.md`, `iarch/cli/{shell_switch,engine_steps,iarch_doctor}.py` and fake-process tests. The switch now refuses unsearchable process tables and verifies that an engine has stopped before starting another, including manual and automatic rollback. Independently started processes and later notification-bus takeover are not prevented; live handoff remains UNTESTED-LIVE. Installer/Settings opt-in is not implemented. |
+| 2. Pack format | Done | `data/schemas/theme-pack*.schema.json`, `data/themes/dynamic-reference/`; schema and bounded archive validation tests. Six actual packs are scheduled for Part 5. |
+| 3. Repository layout | Done | `iarch/shell/`, `data/themes/`, `assets/sounds/`, `docs/themes/`; `tests/test_shell_layout.py`. Shell implementation remains experimental, not a completed Part 2. |
+| 4. Theme CLI and atomic apply | Partial | `iarch/cli/theme_pack_{apply,archive,validate,preview}.py`, fake transaction and archive tests. The shell is blocked, so end-to-end live apply, complete app/cursor/font refresh, switch-sound and rollback cannot be established or claimed complete. Recovery itself can fail and is reported. |
+| 5. State and records | Done | `theme_records.py`, `data/design/themes.json`, overrides schema and generated `docs/themes/STATUS.md`; record and drift tests. |
+| 6. Legal/assets policy | Done | `docs/THEMES-ASSETS.md`, notices and licence checks. |
+| 7. Milestones | Done | `docs/THEMES-MILESTONES.md`; no theme is claimed complete without parity QA. |
+| 8. Tests and gates | Done, with live limitations | Full discovery: 2,443 tests, 7 skipped; six shell suites, bash syntax, warning-level shellcheck, generators, branding, naming, contrast, schema (49 documents/35 schemas), TOML and workflow sanity gates passed. Mock tests do not prove real session behaviour. |
+
+**Acceptance:** documentation, schema, grouped listing and fake rollback tests
+pass. Exactly-one-shell/notification ownership and a fully working dynamic apply
+remain partial, not guaranteed. `IARCH_SHELL_SKELETON_NOT_READY` is retained.
+The earlier Part 1 release already bumped `VERSION` and `CHANGELOG.md` to 0.5.0;
+no second completion bump is made while these gaps remain.
+
+**UNTESTED-LIVE / risks:** actual process identification and timing, D-Bus
+notification ownership/handoff, Quickshell IPC acknowledgements, Hyprland reload,
+application refresh and recovery, sound playback and an Arch VM install. See
+`docs/UNVERIFIED.md` ENG-01–ENG-06 and ENG-09. Screenshot parity, actual theme
+packs and installer integration belong to later milestones. Suggested commit
+message: `fix: fail closed when switching shell engines`.
+
 ## Phase A: repository findings
 
 1. The existing default was the Classic shell and remains so until M5 QA.

@@ -107,6 +107,13 @@ desktop nobody can diagnose. So:
   cannot be started by accident;
 - a violation is a sentence with the pids in it, not a boolean.
 
+These are safeguards, not a system-wide guarantee: independent processes can
+start outside the switch, and a notification server can acquire the D-Bus name
+later. Live handoff and ownership enforcement remain UNTESTED-LIVE; the dynamic
+session entry stays guarded until that and other readiness gaps are resolved.
+Manual rollback stops and rechecks the other engine before starting the previous
+one, and refuses to start it if the other engine cannot be proved stopped.
+
 ## Switching: the ten-second contract
 
 `iarch-shell-switch to <engine>` is the only command that changes the running
@@ -132,7 +139,9 @@ engine. Its steps, in `iarch/cli/shell_switch.py`, are:
 6. **Roll back on any failure.** Stop the half-started engine, start the previous
    one again, prove *it* is up, restore the record, and say what failed, why, and
    what the session is running now. The exit status is 1, never 0.
-7. **Record.** Only now write `~/.config/iarch/shell-engine.json`.
+7. **Record.** Only now write `~/.local/state/iarch/engine.json`. A legacy
+   `~/.config/iarch/shell-engine.json` is read only until the new record exists;
+   it is not deleted or overwritten by migration.
 
 Exit statuses: 0 when the session runs the engine that was asked for, 1 when the
 switch was refused or rolled back, 2 on a usage or data error. `--dry-run` prints
@@ -178,11 +187,11 @@ release. The dynamic engine starts as a skeleton with a layout and a set of enfo
 rules (`D-T1-11`), and becomes the default only when the M5 QA gate has been run on
 a real session and recorded. Until then:
 
-- the installer installs **both** engines' payloads and leaves the record at
-  `classic`;
-- a person opts in through the Welcome tour card and the Settings → Appearance
-  toggle (M5), both of which call `iarch-shell-switch` rather than starting a
-  process themselves;
+- the installer currently leaves Classic as the default; installing both engines
+  and their dependencies is planned for M5, not yet implemented;
+- the planned Welcome tour card and Settings → Appearance toggle (M5) will call
+  `iarch-shell-switch` rather than starting a process themselves; neither is a
+  completed Dynamic-engine opt-in flow yet;
 - a switch that fails leaves the session running the engine it was running, and says
   so in one sentence;
 - `docs/themes/STATUS.md`, generated from `data/design/themes.json`, is the only

@@ -63,7 +63,7 @@ class FakeSession:
                  instances_ok: bool = True, ipc_ok: bool = True,
                  notification_owner: Optional[Tuple[str, int]] = None,
                  replies: Optional[Dict[Tuple[str, ...], Any]] = None,
-                 protected: Sequence[int] = ()) -> None:
+                 protected: Sequence[int] = (), auto_owner: bool = False) -> None:
         self.binaries = set(binaries)
         self.running: Dict[str, List[int]] = {key: list(value)
                                               for key, value in (running or {}).items()}
@@ -72,6 +72,7 @@ class FakeSession:
         self.instances_ok = instances_ok
         self.ipc_ok = ipc_ok
         self.notification_owner = notification_owner
+        self.auto_owner = auto_owner
         self.replies: Dict[Tuple[str, ...], Any] = dict(replies or {})
         #: Pids that ignore a signal, so a test can stage an engine that will not stop.
         self.protected = set(protected)
@@ -146,16 +147,20 @@ class FakeSession:
 
     def _dbus(self, args: Tuple[str, ...]) -> Answer:
         method = next((arg for arg in args if arg.startswith("org.freedesktop.DBus.")), "")
+        owner = self.notification_owner
+        if self.auto_owner:
+            pids = self.running.get('noctalia', []) + self.running.get('quickshell', [])
+            owner = (':1.99', pids[0]) if pids else None
         if method.endswith("GetNameOwner"):
-            if self.notification_owner is None:
+            if owner is None:
                 return Answer(args, 1, "",
                               "org.freedesktop.DBus.Error.NameHasNoOwner: "
                               "Could not get an owner for this name")
-            return Answer(args, 0, f'      string "{self.notification_owner[0]}"\n', "")
+            return Answer(args, 0, f'      string "{owner[0]}"\n', "")
         if method.endswith("GetConnectionUnixProcessID"):
-            if self.notification_owner is None:
+            if owner is None:
                 return Answer(args, 1, "", "no such connection")
-            return Answer(args, 0, f"   uint32 {self.notification_owner[1]}\n", "")
+            return Answer(args, 0, f"   uint32 {owner[1]}\n", "")
         return Answer(args, 0, "", "")
 
     # --- the injected spawner ------------------------------------------
@@ -245,6 +250,9 @@ def install_shell(env: Dict[str, str], body: str = "// iArch Shell — entry poi
     entry = engines.shell_entry("dynamic", env)
     entry.parent.mkdir(parents=True, exist_ok=True)
     entry.write_text(body, encoding="utf-8")
+    config = Path(env['IARCH_CONFIG_DIR'])
+    config.mkdir(parents=True, exist_ok=True)
+    (config / 'dynamic-engine.json').write_text('{"dynamic_engine_enabled": true}\n', encoding='utf-8')
     return entry
 
 

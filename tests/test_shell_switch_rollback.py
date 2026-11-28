@@ -32,6 +32,29 @@ class RollingBackByHand(unittest.TestCase):
             self.assertEqual([], fake.pids("quickshell"))
             self.assertIn("stop-other", [step["step"] for step in report["steps"]])
 
+    def test_rollback_stops_other_before_starting_previous(self):
+        with session_fake.environment() as env, session_fake.session(running={"noctalia": [111]}) as fake:
+            self.switched(env, fake)
+            def spawn(command):
+                self.assertEqual([], fake.pids("quickshell"))
+                return fake.spawn(command)
+            report = shell_switch.rollback(env, run=fake.run, spawn=spawn,
+                                           clock=fake.clock, sleep=fake.sleep)
+            steps = [step["step"] for step in report["steps"]]
+            self.assertLess(steps.index("stop-other"), steps.index("restart-previous"))
+
+    def test_rollback_refuses_to_start_if_other_engine_survives(self):
+        with session_fake.environment() as env, session_fake.session(
+                running={"noctalia": [111]}, protected=[111]) as fake:
+            session_fake.install_shell(env)
+            engine_state.write_switch_snapshot("dynamic", [], {"engine": "dynamic"}, 10.0, env)
+            with self.assertRaises(shell_switch.RefusedError) as caught:
+                shell_switch.rollback(env, run=fake.run, spawn=fake.spawn,
+                                      clock=fake.clock, sleep=fake.sleep)
+            self.assertIn("could not prove", str(caught.exception))
+            self.assertEqual([], fake.spawned)
+            self.assertEqual([111], fake.pids("noctalia"))
+
     def test_rollback_of_an_engine_that_is_already_back_only_fixes_the_record(self):
         with session_fake.environment() as env, \
                 session_fake.session(running={"noctalia": [111]}) as fake:
